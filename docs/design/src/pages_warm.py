@@ -1,7 +1,7 @@
 """第二轮方向：Terracotta、Riso、Claude 暖编辑，同一张日刊页。期头文楷、元数据 Maple Mono 三稿共用。"""
 from common import *
 
-def doc(body, fonts_href, canvas, ink, font_body, extra_css='', min_height=1300):
+def doc(body, fonts_href, canvas, ink, font_body, extra_css='', min_height=1450):
     helmet = ('<helmet>\n  <link rel="stylesheet" href="' + fonts_href + '">\n  <style>\n' + font_css()
               + '    body { margin: 0; }\n' + extra_css + '  </style>\n</helmet>\n')
     root = ('<div style="width: 1440px; min-height: ' + str(min_height) + 'px; box-sizing: border-box; background: ' + canvas + '; color: ' + ink

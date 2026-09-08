@@ -27,11 +27,11 @@ SOURCES = [('Hacker News', '前 30 条', HN, '其余 22 条'), ('GitHub Trending
 
 # 1 晨光 ----------------------------------------------------------------
 def sunrise():
-    INK, MUTED, META, ACC, SOFT, FIELD = '#1A1A1A', '#6B6B6B', '#8A8A8A', '#F97316', '#FFEDD5', '#F5F5F5'
+    INK, MUTED, META, ACC, ACCT, SOFT, FIELD = '#1A1A1A', '#6B6B6B', '#707070', '#F97316', '#C2410C', '#FFEDD5', '#F5F5F5'
     SANS = "'Manrope', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif"
-    fonts = 'https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap'
-    css = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + ACC + '; text-decoration: underline; text-underline-offset: 3px; }\n'
-    f = dict(title_font=SANS, title_size=16, title_weight=600, title_color=INK, body_font=SANS, summary_color=MUTED, meta_color=META, rank_font=MONO, rank_color=ACC, row_pad='9px 0')
+    fonts = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap'
+    css = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + ACCT + '; text-decoration: underline; text-underline-offset: 3px; }\n'
+    f = dict(title_font=SANS, title_size=16, title_weight=600, title_color=INK, body_font=SANS, summary_color=MUTED, meta_color=META, rank_font=MONO, rank_color=ACCT, row_pad='9px 0')
     btn = lambda l, il, ir: button(l, 'border-radius: 10px; background: ' + FIELD + '; color: ' + INK + '; font-weight: 600;', INK, il, ir)
     btnd = lambda l, il, ir: button(l, 'border-radius: 10px; background: ' + FIELD + '; color: #BDBDBD; font-weight: 600;', '#BDBDBD', il, ir)
     nav = lambda l, a: ('<span style="font-size: 15px; font-weight: 600; color: ' + INK + '; border-bottom: 2px solid ' + ACC + '; padding-bottom: 3px;">' + l + '</span>' if a
@@ -41,21 +41,21 @@ def sunrise():
            '<div style="display: flex; gap: 28px;">' + nav('日刊', True) + nav('周刊', False) + nav('搜索', False) + '</div></div>'
            '<div style="display: flex; align-items: center; gap: 12px;">' + search_field(FIELD, 'none', '10px', MUTED, MUTED) + avatar(SOFT, ACC) + '</div></div>\n')
     head = ('<div style="display: flex; align-items: flex-end; justify-content: space-between; padding: 64px 64px 48px 64px;">'
-            '<div style="display: flex; flex-direction: column; gap: 14px;">' + mono('日刊 · 2026-09-08 · 06:12 发布', META) + date_h1(INK, ACC) + '</div>' + controls(btn, btnd) + '</div>\n')
+            '<div style="display: flex; flex-direction: column; gap: 14px;">' + mono('日刊 · 2026-09-08 · 06:12 发布', META) + date_h1(INK, ACCT) + '</div>' + controls(btn, btnd) + '</div>\n')
     def chapter(i, title, count, items, mr):
         return ('<section style="display: flex; flex-direction: column;">'
                 '<span style="display: block; width: 32px; height: 4px; border-radius: 2px; background: ' + ACC + '; margin-bottom: 14px;"></span>'
                 '<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;"><h2 style="margin: 0; font-size: 17px; font-weight: 700; color: ' + INK + ';">' + title + '</h2>' + mono(count, META) + '</div>'
-                + rows(items, f, '') + '<div style="margin-top: 16px;">' + more(mr, ACC) + '</div></section>\n')
+                + rows(items, f, '') + '<div style="margin-top: 16px;">' + more(mr, ACCT) + '</div></section>\n')
     grid = '<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 56px; padding: 0 64px 72px 64px;">' + ''.join(chapter(i, *s) for i, s in enumerate(SOURCES)) + '</div>\n'
     return doc(top + head + grid, fonts, '#FFFFFF', INK, SANS, css)
 
 # 2 来源分色 --------------------------------------------------------------
 def sources():
-    INK, MUTED, META, LINE, FIELD = '#17181C', '#6F7480', '#8B909B', '#EEF0F3', '#F2F3F5'
-    HUES = [('#F97316', '#FFF0E5'), ('#16A34A', '#EAF7EE'), ('#D69E00', '#FFF6D6')]
+    INK, MUTED, META, LINE, FIELD = '#17181C', '#6F7480', '#6F7480', '#EEF0F3', '#F2F3F5'
+    HUES = [('#C2410C', '#FFF0E5'), ('#15803D', '#EAF7EE'), ('#854D0E', '#FFF6D6')]
     SANS = "'Plus Jakarta Sans', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif"
-    fonts = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap'
+    fonts = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap'
     css = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + INK + '; text-decoration: underline; text-underline-offset: 3px; }\n'
     btn = lambda l, il, ir: button(l, 'border-radius: 10px; border: 1px solid #E5E7EB; background: #FFFFFF; color: ' + INK + '; font-weight: 600;', INK, il, ir)
     btnd = lambda l, il, ir: button(l, 'border-radius: 10px; border: 1px solid ' + LINE + '; background: #FFFFFF; color: #B8BCC5; font-weight: 600;', '#B8BCC5', il, ir)
@@ -79,7 +79,7 @@ def sources():
 
 # 3 柑橘渐变 --------------------------------------------------------------
 def citrus():
-    INK, MUTED, META, ACC, DEEP = '#1F1F1F', '#737373', '#8C8C8C', '#F59E0B', '#C2410C'
+    INK, MUTED, META, ACC, DEEP = '#1F1F1F', '#737373', '#737373', '#B45309', '#C2410C'
     SANS = "'Outfit', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif"
     fonts = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap'
     css = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + DEEP + '; text-decoration: underline; text-underline-offset: 3px; }\n'
@@ -88,7 +88,7 @@ def citrus():
     btn = lambda l, il, ir: button(l, pill + ' color: ' + INK + ';', INK, il, ir)
     btnd = lambda l, il, ir: button(l, 'border-radius: 999px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0, 0, 0, 0.05); color: #B0B0B0; font-weight: 600;', '#B0B0B0', il, ir)
     nav = lambda l, a: ('<span style="font-size: 15px; font-weight: 600; color: ' + INK + ';">' + l + '</span>' if a
-                        else '<span style="font-size: 15px; font-weight: 500; color: rgba(31, 31, 31, 0.6);">' + l + '</span>')
+                        else '<span style="font-size: 15px; font-weight: 500; color: rgba(31, 31, 31, 0.78);">' + l + '</span>')
     band = ('<div style="background: linear-gradient(120deg, #FFD9BF 0%, #FFF0B3 55%, #FFFFFF 100%); padding-bottom: 96px;">'
             '<div style="height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 64px;">'
             '<div style="display: flex; align-items: center; gap: 40px;"><span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">lowpass</span>'
@@ -105,14 +105,14 @@ def citrus():
 
 # 4 柔和粉彩 --------------------------------------------------------------
 def pastel():
-    INK, MUTED, META, FIELD = '#2B2B2B', '#5C5C5C', '#7A7A7A', '#F6F6F6'
-    BLOCKS = [('#FFE3D3', '#C2410C'), ('#FFF4C2', '#A16207'), ('#D9F5E6', '#047857')]
+    INK, MUTED, META, FIELD = '#2B2B2B', '#5C5C5C', '#666666', '#F6F6F6'
+    BLOCKS = [('#FFE3D3', '#9A3412'), ('#FFF4C2', '#854D0E'), ('#D9F5E6', '#065F46')]
     SANS = "'Nunito', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif"
-    fonts = 'https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap'
+    fonts = 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap'
     css = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + INK + '; text-decoration: underline; text-underline-offset: 3px; }\n'
     btn = lambda l, il, ir: button(l, 'border-radius: 999px; background: ' + FIELD + '; color: ' + INK + '; font-weight: 700;', INK, il, ir)
     btnd = lambda l, il, ir: button(l, 'border-radius: 999px; background: ' + FIELD + '; color: #BDBDBD; font-weight: 700;', '#BDBDBD', il, ir)
-    nav = lambda l, a: ('<span style="font-size: 15px; font-weight: 800; color: #C2410C; background: #FFE3D3; border-radius: 999px; padding: 6px 14px;">' + l + '</span>' if a
+    nav = lambda l, a: ('<span style="font-size: 15px; font-weight: 800; color: #9A3412; background: #FFE3D3; border-radius: 999px; padding: 6px 14px;">' + l + '</span>' if a
                         else '<span style="font-size: 15px; font-weight: 700; color: ' + MUTED + '; padding: 6px 14px;">' + l + '</span>')
     top = ('<div style="height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 64px;">'
            '<div style="display: flex; align-items: center; gap: 32px;"><span style="font-size: 20px; font-weight: 800;">lowpass</span>'
@@ -155,7 +155,7 @@ def yellow():
 
 # 6 清新绿 ----------------------------------------------------------------
 def green():
-    INK, MUTED, META, GREEN, DEEP, LEAF, LINE, SUN = '#1B2B22', '#4B5B50', '#6B7A70', '#16A34A', '#15803D', '#E8F5EC', '#EEF4F0', '#F5C518'
+    INK, MUTED, META, GREEN, DEEP, DEEPER, LEAF, LINE, SUN = '#1B2B22', '#4B5B50', '#5E6E63', '#16A34A', '#15803D', '#166534', '#E8F5EC', '#EEF4F0', '#F5C518'
     SANS = "'Figtree', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif"
     fonts = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap'
     css = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + DEEP + '; text-decoration: underline; text-underline-offset: 3px; }\n'
@@ -173,7 +173,7 @@ def green():
             + date_h1(INK, DEEP) + '</div>' + controls(btn, btnd) + '</div>\n')
     def chapter(i, title, count, items, mr):
         return ('<section style="display: flex; flex-direction: column;">'
-                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;"><h2 style="margin: 0; font-size: 14px; font-weight: 700; color: ' + DEEP + '; background: ' + LEAF + '; border-radius: 999px; padding: 6px 14px;">' + title + '</h2>' + mono(count, META) + '</div>'
+                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;"><h2 style="margin: 0; font-size: 14px; font-weight: 700; color: ' + DEEPER + '; background: ' + LEAF + '; border-radius: 999px; padding: 6px 14px;">' + title + '</h2>' + mono(count, META) + '</div>'
                 + rows(items, f, ' border-bottom: 1px solid ' + LINE + ';') + '<div style="margin-top: 16px;">' + more(mr, DEEP) + '</div></section>\n')
     grid = '<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; padding: 0 64px 72px 64px;">' + ''.join(chapter(i, *s) for i, s in enumerate(SOURCES)) + '</div>\n'
     return doc(top + head + grid, fonts, '#FFFFFF', INK, SANS, css)

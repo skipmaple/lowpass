@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #09090B; text-decoration: none; }
+    a:hover { color: #09090B; text-decoration: underline; }
+  </style>
+</helmet>
+<div style="width: 1440px; min-height: 1040px; box-sizing: border-box; background: #FFFFFF; color: #09090B; font-family: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif; display: flex;">
+
+  <div style="width: 240px; flex: none; border-right: 1px solid #E4E4E7; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box;">
+    <div style="font-size: 14px; font-weight: 600; padding: 8px 12px 16px 12px; letter-spacing: 0.02em;">lowpass</div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; background: #F4F4F5; font-size: 14px; font-weight: 500;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#09090B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+      <span>日刊</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #3F3F46;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      <span>周刊</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #3F3F46;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span>搜索</span>
+    </div>
+    <div style="height: 1px; background: #E4E4E7; margin: 12px 12px;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #3F3F46;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      <span>设置</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #3F3F46;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      <span>管理</span>
+    </div>
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 13px; color: #3F3F46;">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: #E4E4E7; display: inline-block;"></span>
+      <span>drew</span>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+    <div style="height: 56px; border-bottom: 1px solid #E4E4E7; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 14px; font-weight: 600;">2026-09-08 · 周二</span>
+        <span style="display: inline-flex; align-items: center; border: 1px solid #E4E4E7; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; color: #3F3F46;">已发布 06:12</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; height: 36px; width: 280px; border: 1px solid #E4E4E7; border-radius: 6px; padding: 0 12px; box-sizing: border-box; color: #71717A; font-size: 14px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span>搜标题、摘要或来源</span>
+        </div>
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #E4E4E7; border-radius: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#09090B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+        </span>
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #E4E4E7; border-radius: 6px; opacity: 0.5;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#09090B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+        </span>
+        <span style="display: inline-flex; align-items: center; height: 36px; border: 1px solid #E4E4E7; border-radius: 6px; padding: 0 12px; font-size: 14px; font-weight: 500;">归档</span>
+      </div>
+    </div>
+
+    <div style="padding: 24px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+
+      <div style="border: 1px solid #E4E4E7; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #E4E4E7;">
+          <span style="font-size: 14px; font-weight: 600;">Hacker News</span>
+          <span style="font-size: 12px; color: #71717A;">30 条</span>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">1</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Show HN: A terminal log viewer written in Rust</a>
+            <span style="font-size: 12px; color: #71717A;">312 分 · 145 评论 · 5 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">2</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Postgres full-text search in production: what we learned</a>
+            <span style="font-size: 12px; color: #71717A;">287 分 · 96 评论 · 7 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">3</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">The case against feature flags</a>
+            <span style="font-size: 12px; color: #71717A;">201 分 · 178 评论 · 9 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">4</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Ask HN: How do you keep up with tech news without burning out?</a>
+            <span style="font-size: 12px; color: #71717A;">156 分 · 233 评论 · 11 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">5</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">SQLite as an application file format</a>
+            <span style="font-size: 12px; color: #71717A;">143 分 · 41 评论 · 12 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">6</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Reverse engineering a $30 smart thermostat</a>
+            <span style="font-size: 12px; color: #71717A;">120 分 · 38 评论 · 14 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">7</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Kubernetes operators in Rust: a field report</a>
+            <span style="font-size: 12px; color: #71717A;">98 分 · 22 评论 · 15 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">8</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">A gentle introduction to io_uring</a>
+            <span style="font-size: 12px; color: #71717A;">91 分 · 17 评论 · 16 小时前</span>
+          </div>
+        </div>
+        <div style="padding: 10px 16px; border-top: 1px solid #E4E4E7; font-size: 13px; color: #3F3F46;">显示 8 / 30 · <a href="#">全部</a></div>
+      </div>
+
+      <div style="border: 1px solid #E4E4E7; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #E4E4E7;">
+          <span style="font-size: 14px; font-weight: 600;">GitHub Trending</span>
+          <span style="font-size: 12px; color: #71717A;">25 个</span>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">1</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">acme/lowlatency-db</a>
+            <span style="font-size: 13px; color: #3F3F46; line-height: 1.4;">An embedded time-series database with a tiny footprint</span>
+            <span style="font-size: 12px; color: #71717A;">Zig · 12.3k · 今日 +420</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">2</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">tinyfeeds/reader</a>
+            <span style="font-size: 13px; color: #3F3F46; line-height: 1.4;">Self-hosted RSS reader with full-text search</span>
+            <span style="font-size: 12px; color: #71717A;">TypeScript · 8.1k · 今日 +310</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">3</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">vlad/termlog</a>
+            <span style="font-size: 13px; color: #3F3F46; line-height: 1.4;">Structured log viewer for the terminal</span>
+            <span style="font-size: 12px; color: #71717A;">Rust · 2.4k · 今日 +288</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">4</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">mlx-tools/quant</a>
+            <span style="font-size: 13px; color: #3F3F46; line-height: 1.4;">Quantization toolkit for Apple Silicon</span>
+            <span style="font-size: 12px; color: #71717A;">Python · 5.6k · 今日 +240</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">5</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">deployhub/recipes</a>
+            <span style="font-size: 13px; color: #3F3F46; line-height: 1.4;">Single-server deployment recipes and checklists</span>
+            <span style="font-size: 12px; color: #71717A;">Ruby · 1.1k · 今日 +180</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">6</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">uikit/atlas</a>
+            <span style="font-size: 13px; color: #3F3F46; line-height: 1.4;">Copy-paste UI blocks for Tailwind v4</span>
+            <span style="font-size: 12px; color: #71717A;">TypeScript · 3.9k · 今日 +150</span>
+          </div>
+        </div>
+        <div style="padding: 10px 16px; border-top: 1px solid #E4E4E7; font-size: 13px; color: #3F3F46;">显示 6 / 25 · <a href="#">全部</a></div>
+      </div>
+
+      <div style="border: 1px solid #E4E4E7; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #E4E4E7;">
+          <span style="font-size: 14px; font-weight: 600;">Hackaday</span>
+          <span style="font-size: 12px; color: #71717A;">12 篇</span>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">1</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">A Mechanical Keyboard Built From Scrap Relays</a>
+            <span style="font-size: 12px; color: #71717A;">M. Okada · 3 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">2</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Reviving a 1980s Oscilloscope With an ESP32</a>
+            <span style="font-size: 12px; color: #71717A;">R. Alvarez · 6 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">3</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Open-Source Weather Station Survives Its First Typhoon</a>
+            <span style="font-size: 12px; color: #71717A;">S. Lindqvist · 9 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">4</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">The Physics of a Perfect Pour-Over</a>
+            <span style="font-size: 12px; color: #71717A;">M. Okada · 13 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #F4F4F5;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">5</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Retrotechtacular: The Telegraph Repeater</a>
+            <span style="font-size: 12px; color: #71717A;">R. Alvarez · 20 小时前</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; padding: 10px 16px;">
+          <span style="font-size: 12px; color: #A1A1AA; width: 18px; flex: none; padding-top: 2px; font-variant-numeric: tabular-nums;">6</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <a href="#" style="font-size: 14px; font-weight: 500; line-height: 1.4;">Hackaday Links: A Week of Small Radios</a>
+            <span style="font-size: 12px; color: #71717A;">S. Lindqvist · 22 小时前</span>
+          </div>
+        </div>
+        <div style="padding: 10px 16px; border-top: 1px solid #E4E4E7; font-size: 13px; color: #3F3F46;">显示 6 / 12 · <a href="#">全部</a></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -41,17 +41,17 @@ def source_head():
             '<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">'
             '<span style="font-size: 16px;">第 366 期：把信号从噪音里捞出来</span>'
             '<a href="#" style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; color: #000000;"><span>原文</span>' + icon('arrow-up-right', 16, INK) + '</a>'
-            '</div>' + mono('9月5日 发布 · 52 条 · 8 个板块') + '</div>\n')
+            '</div>' + mono('9月4日 发布 · 52 条 · 8 个板块') + '</div>\n')
 
 def weekly():
     controls = (button('第 35 周', 'outline', icon_left='chevron-left') + button('归档', 'outline')
                 + button('第 37 周', 'outline', icon_right='chevron-right', disabled=True))
-    header = issue_header('周刊 · 2026-W36', '第 36 周', '9月1日 至 9月7日', controls)
+    header = issue_header('周刊 · 2026-W36', '第 36 周', '8月31日 至 9月6日', controls)
     anchors = ''.join(
         '<a href="#" style="font-size: 15px; color: ' + (INK if s == '本周话题' else INK64) + '; font-weight: ' + ('500' if s == '本周话题' else '400') + ';">' + s + '</a>'
         for s in SECTIONS
     )
-    left = '<div style="display: flex; flex-direction: column; gap: 12px;">' + mono('板块', INK44) + anchors + '</div>\n'
+    left = '<div style="display: flex; flex-direction: column; gap: 12px;">' + label('板块') + anchors + '</div>\n'
     right = ('<div style="display: flex; flex-direction: column;">' + source_head()
              + section('本周话题', WEEKLY_ITEMS['本周话题'])
              + section('科技动态', WEEKLY_ITEMS['科技动态'])
@@ -60,22 +60,22 @@ def weekly():
              + '<div style="padding-top: 40px;">' + more_link('资源、图片、文摘、言论') + '</div>'
              + '</div>\n')
     content = ('<div style="display: grid; grid-template-columns: 200px minmax(0, 720px); gap: 64px; padding: 0 64px 80px 64px;">' + left + right + '</div>\n')
-    return document(topbar('周刊') + header + content, 1440, 1500)
+    return document(topbar('周刊') + header + content, 1440, 1900)
 
 def weekly_mobile():
     header = (
         '<div style="display: flex; flex-direction: column; gap: 10px; padding: 20px 24px 8px 24px;">\n'
         '  ' + mono('周刊 · 2026-W36') + '\n'
         '  <h1 style="margin: 0; font-family: ' + KAI + '; font-weight: 400; font-size: 34px; line-height: 1.1; display: flex; align-items: baseline; gap: 12px;">'
-        '<span>第 36 周</span><span style="font-size: 15px; color: ' + INK64 + ';">9月1日 至 9月7日</span></h1>\n'
+        '<span>第 36 周</span><span style="font-size: 16px; color: ' + INK64 + ';">8月31日 至 9月6日</span></h1>\n'
         '</div>\n'
-        '<div style="display: flex; gap: 4px; padding: 8px 16px 16px 16px;">'
-        + button('第 35 周', 'ghost', icon_left='chevron-left', height=36) + button('归档', 'ghost', height=36)
-        + button('第 37 周', 'ghost', icon_right='chevron-right', height=36, disabled=True) + '</div>\n'
+        '<div style="display: flex; gap: 4px; padding: 8px 10px 16px 10px;">'
+        + button('第 35 周', 'ghost', icon_left='chevron-left', height=44) + button('归档', 'ghost', height=44)
+        + button('第 37 周', 'ghost', icon_right='chevron-right', height=44, disabled=True) + '</div>\n'
     )
     anchors = ''.join(
         '<span style="font-size: 14px; white-space: nowrap; color: ' + (INK if s == '本周话题' else INK64) + '; font-weight: ' + ('500' if s == '本周话题' else '400') + ';">' + s + '</span>'
-        for s in SECTIONS[:6]
+        for s in SECTIONS
     )
     body = ('<div style="padding: 0 24px 40px 24px; display: flex; flex-direction: column; gap: 8px;">' + source_head()
             + '<div style="display: flex; gap: 20px; overflow: hidden; padding: 16px 0 4px 0; border-bottom: 1px solid ' + BORDER + ';">' + anchors + '</div>'
@@ -86,14 +86,14 @@ def weekly_mobile():
 
 def weekly_archive():
     controls = button('2025 年', 'outline', icon_left='chevron-left') + button('2027 年', 'outline', icon_right='chevron-right', disabled=True)
-    header = issue_header('周刊归档', '2026 年', '', controls)
+    header = issue_header('周刊归档', '2026 年', '', controls).replace(mono('周刊归档'), label('周刊归档'))
     weeks = [
-        ('第 36 周', '09-01 至 09-07', '阮一峰周刊 · 第 366 期：把信号从噪音里捞出来', INK),
-        ('第 35 周', '08-25 至 08-31', '阮一峰周刊 · 第 365 期：小而硬的工具', INK),
-        ('第 34 周', '08-18 至 08-24', '阮一峰周刊 · 第 364 期：从零开始的备份', INK),
-        ('第 33 周', '08-11 至 08-17', '本周无内容', INK44),
-        ('第 32 周', '08-04 至 08-10', '阮一峰周刊 · 第 363 期：慢一点的网络', INK),
-        ('第 31 周', '07-28 至 08-03', '阮一峰周刊 · 第 362 期：一台机器够用', INK),
+        ('第 36 周', '08-31 至 09-06', '阮一峰周刊 · 第 366 期：把信号从噪音里捞出来', INK),
+        ('第 35 周', '08-24 至 08-30', '阮一峰周刊 · 第 365 期：小而硬的工具', INK),
+        ('第 34 周', '08-17 至 08-23', '阮一峰周刊 · 第 364 期：从零开始的备份', INK),
+        ('第 33 周', '08-10 至 08-16', '本周无内容', INK44),
+        ('第 32 周', '08-03 至 08-09', '阮一峰周刊 · 第 363 期：慢一点的网络', INK),
+        ('第 31 周', '07-27 至 08-02', '阮一峰周刊 · 第 362 期：一台机器够用', INK),
     ]
     rows = ''
     for i, (w, rng, title, col) in enumerate(weeks):
@@ -101,7 +101,7 @@ def weekly_archive():
         rows += ('<a href="#" style="display: grid; grid-template-columns: 120px 160px minmax(0, 1fr) 20px; gap: 16px; align-items: center; padding: 14px 12px; border-radius: 8px; background: ' + bg + '; color: ' + col + ';">'
                  '<span style="font-size: 16px;">' + w + '</span>' + mono(rng) + '<span style="font-size: 16px;">' + title + '</span>' + icon('chevron-right', 18, INK44) + '</a>')
     years = ''.join('<span style="font-size: 15px; color: ' + (INK if y == '2026' else INK64) + '; font-weight: ' + ('500' if y == '2026' else '400') + ';">' + y + '</span>' for y in ['2026', '2025'])
-    left = '<div style="display: flex; flex-direction: column; gap: 12px;">' + mono('年份', INK44) + years + '</div>\n'
+    left = '<div style="display: flex; flex-direction: column; gap: 12px;">' + label('年份') + years + '</div>\n'
     right = '<div style="display: flex; flex-direction: column; gap: 4px;">' + rows + '</div>\n'
     content = ('<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; padding: 0 64px 80px 64px;">' + left + right + '</div>\n')
     return document(topbar('周刊') + header + content, 1440, 900)

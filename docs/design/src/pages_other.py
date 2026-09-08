@@ -26,10 +26,10 @@ def search():
               + '<div style="display: flex; gap: 8px; flex-wrap: wrap;">' + pill('Hacker News') + pill('GitHub Trending') + pill('Hackaday') + pill('阮一峰周刊', selected=True) + pill('近 30 天', icon_right='chevron-down') + '</div>'
               '</div></div>\n')
     results = [
-        ('<mark>termlog</mark>：<mark>终端</mark>里的结构化日志查看器', '按字段过滤、折叠与高亮，Rust 编写，单文件分发。', '周刊 · 阮一峰周刊 · 第 366 期 · 工具 · 2026-09-05'),
-        ('<mark>终端</mark>为什么仍是最好的界面', '可组合、可脚本、可搜索，四十年过去这三点没有被替代。', '周刊 · 阮一峰周刊 · 第 366 期 · 文章 · 2026-09-05'),
-        ('一个<mark>终端</mark>下的日志<mark>工具</mark>，以及它的十个替代品', '作者比较了十个<mark>终端</mark>日志<mark>工具</mark>的过滤语法与性能。', '周刊 · 阮一峰周刊 · 第 364 期 · 文章 · 2026-08-22'),
-        ('给<mark>终端</mark>加一层低通滤波', '过滤掉高频噪音输出，只保留值得看的行。', '周刊 · 阮一峰周刊 · 第 362 期 · <mark>工具</mark> · 2026-08-08'),
+        ('<mark>termlog</mark>：<mark>终端</mark>里的结构化日志查看器', '按字段过滤、折叠与高亮，Rust 编写，单文件分发。', '周刊 · 阮一峰周刊 · 第 366 期 · 工具 · 2026-09-04'),
+        ('<mark>终端</mark>为什么仍是最好的界面', '可组合、可脚本、可搜索，四十年过去这三点没有被替代。', '周刊 · 阮一峰周刊 · 第 366 期 · 文章 · 2026-09-04'),
+        ('一个<mark>终端</mark>下的日志<mark>工具</mark>，以及它的十个替代品', '作者比较了十个<mark>终端</mark>日志<mark>工具</mark>的过滤语法与性能。', '周刊 · 阮一峰周刊 · 第 364 期 · 文章 · 2026-08-21'),
+        ('给<mark>终端</mark>加一层低通滤波', '过滤掉高频噪音输出，只保留值得看的行。', '周刊 · 阮一峰周刊 · 第 365 期 · <mark>工具</mark> · 2026-08-28'),
     ]
     items = ''
     for t, s, m in results:
@@ -62,14 +62,14 @@ def settings():
                  + '<span style="font-size: 13px; color: ' + INK44 + '; padding-top: 8px;">两种方式登录的是同一个账号。</span></section>\n')
     session = ('<section style="display: flex; flex-direction: column; gap: 20px;">'
                '<h2 style="margin: 0; font-size: 18px; font-weight: 500;">会话</h2>'
-               '<div style="display: flex; align-items: center; gap: 16px;">' + button('登出', 'outline', icon_left='log-out') + mono('会话 30 天有效，活跃自动续期', INK44) + '</div></section>\n')
+               '<div style="display: flex; align-items: center; gap: 16px;">' + button('登出', 'outline', icon_left='log-out') + label('会话 30 天有效，活跃自动续期') + '</div></section>\n')
     body = '<div style="padding: 0 64px 80px 64px; display: flex; flex-direction: column; gap: 56px; max-width: 720px;">' + account + providers + session + '</div>\n'
     return document(topbar(active='') + header + body, 1440, 760)
 
 def components():
     def h(title, note=''):
         return ('<div style="display: flex; align-items: baseline; gap: 16px;"><h2 style="margin: 0; font-size: 18px; font-weight: 500;">' + title + '</h2>'
-                + (mono(note, INK44) if note else '') + '</div>')
+                + (label(note, INK64) if note else '') + '</div>')
     def sec(title, note, content):
         return '<section style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px;">' + h(title, note) + content + '</section>\n'
     # 颜色
@@ -96,7 +96,7 @@ def components():
         '<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">' + button('主要操作', 'primary') + button('次要操作', 'outline') + button('幽灵', 'ghost')
         + hover_btn + pressed_btn + button('停用', 'outline', disabled=True) + button('带图标', 'outline', icon_left='refresh-cw') + '</div>')
     # 输入
-    inputs = sec('输入', '默认描边 18%；聚焦描边 100% 加 3px 10% 外圈',
+    inputs = sec('输入', '默认描边 18%；聚焦描边 100% 加 3px 10% 外圈；搜索页主输入高 48',
         '<div style="display: flex; gap: 16px; flex-wrap: wrap;">'
         '<div style="display: flex; align-items: center; gap: 8px; height: 40px; width: 280px; padding: 0 12px; border: 1px solid ' + BORDER_STRONG + '; border-radius: 8px; box-sizing: border-box; color: ' + INK44 + '; font-size: 14px;">' + icon('search', 18, INK44) + '<span>搜标题、摘要或来源</span></div>'
         '<div style="display: flex; align-items: center; gap: 8px; height: 40px; width: 280px; padding: 0 12px; border: 1px solid #000000; border-radius: 8px; box-sizing: border-box; font-size: 14px; box-shadow: 0 0 0 3px ' + BORDER + ';">' + icon('search', 18, INK64) + '<span>终端 工具</span></div>'
@@ -126,7 +126,7 @@ def components():
         + row('02', 'nine-tails/termlog', 'Rust · ★ 2.4k · +288', 'Structured log viewer for the terminal') + '</div>')
     # 图标
     names = ['search', 'menu', 'x', 'chevron-left', 'chevron-right', 'chevron-down', 'arrow-right', 'arrow-up-right', 'calendar', 'book-open', 'archive', 'clock', 'user', 'settings', 'shield', 'check', 'triangle-alert', 'refresh-cw', 'log-out']
-    icons_html = ''.join('<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 96px;">' + icon(n, 24, INK64) + mono(n, INK44, 11) + '</div>' for n in names)
+    icons_html = ''.join('<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 108px;">' + icon(n, 24, INK64) + mono(n, INK44, 11) + '</div>' for n in names)
     icons = sec('图标', 'Lucide 描边图标，1.75 描边，64% 墨色；实现时经 morphicons 渲染，菜单与关闭、搜索与关闭、展开箭头之间做形变过渡',
         '<div style="display: flex; gap: 8px; flex-wrap: wrap;">' + icons_html + '</div>')
     # 间距
@@ -138,4 +138,4 @@ def components():
         '</div>')
     header = '<div style="padding: 56px 64px 40px 64px; display: flex; flex-direction: column; gap: 8px;"><h1 style="margin: 0; font-size: 28px; font-weight: 500;">组件与规范</h1>' + mono('对应 shadcn/ui 的 Button、Input、Tabs、Badge、Separator 结构；数值为实现时的令牌', INK44) + '</div>\n'
     body = '<div style="padding: 0 64px 40px 64px; display: flex; flex-direction: column;">' + colors + fonts + buttons + inputs + tabs + states + listrow + icons + spacing + '</div>\n'
-    return document(header + body, 1440, 2200)
+    return document(header + body, 1440, 2560)

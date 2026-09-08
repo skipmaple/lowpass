@@ -2,7 +2,7 @@
 from common import *
 from pages_warm import doc
 
-GROUND, INK, INK2, GREEN, RED = '#1D1D1B', '#1D1D1B', '#69645F', '#96B59F', '#C03F13'
+GROUND, INK, INK2, GREEN, RED = '#1D1D1B', '#1D1D1B', '#55504B', '#96B59F', '#C03F13'
 NAME = "'Bodoni Moda', 'Noto Serif SC', 'Songti SC', serif"
 SERIF = "'Newsreader', 'Noto Serif SC', 'Songti SC', serif"
 KICK = "'Oswald', 'Noto Sans SC', 'PingFang SC', sans-serif"

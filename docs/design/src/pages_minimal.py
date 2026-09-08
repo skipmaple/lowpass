@@ -7,7 +7,7 @@ ACC, ACCT, TINT, TINT2 = '#F26B3A', '#B8461C', '#FFF1EA', '#FFE3D5'
 SANS = "'Instrument Sans', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif"
 FONTS = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap'
 CSS = '    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + ACCT + '; text-decoration: underline; text-underline-offset: 3px; }\n'
-H = 1700
+H = 2000
 
 def page(body):
     return doc(body, FONTS, WHITE, INK, SANS, CSS, H)
@@ -57,9 +57,9 @@ def poster():
     header = ('<div style="display: grid; grid-template-columns: 5fr 7fr; gap: 64px; padding: 48px 64px 40px 64px; align-items: end;">'
               '<div style="display: flex; flex-direction: column; gap: 20px;">' + mono('日刊 · 06:12 发布 · 67 条', ACCT)
               + '<div style="display: flex; flex-direction: column; gap: 12px;">' + wk('9月8日', 168, INK, ' letter-spacing: -0.03em;') + wk('星期二 · 二〇二六', 28, MUTED) + '</div></div>'
-              '<div style="display: flex; flex-direction: column;">' + mono('今日来源', META).replace('<span', '<span style="padding-bottom: 6px;"', 1) + index_rows
+              '<div style="display: flex; flex-direction: column;"><div style="padding-bottom: 6px;">' + mono('今日来源', META) + '</div>' + index_rows
               + '<div style="display: flex; gap: 20px; padding-top: 20px;">' + '<a href="#" style="font-size: 14px; font-weight: 500; color: ' + MUTED + ';">← 9月7日</a><a href="#" style="font-size: 14px; font-weight: 500; color: ' + MUTED + ';">归档</a></div></div></div>\n')
-    grid = ('<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; padding: 24px 64px 48px 64px; border-top: 1px solid ' + INK + ';">'
+    grid = ('<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; padding: 24px 64px 48px 64px; border-top: 2px solid ' + INK + ';">'
             + col('Hacker News', 30, HN, '条', 8, False) + col('GitHub Trending', 25, GH, '个', 6, True) + col('Hackaday', 12, HAD, '篇', 6, True) + '</div>\n')
     foot = '<div style="display: flex; justify-content: space-between; padding: 20px 64px 48px 64px; border-top: 1px solid ' + HAIR + ';">' + mono('lowpass', META) + mono('明早 06:00 下一期', META) + '</div>\n'
     return page(topbar() + header + grid + foot)
@@ -68,17 +68,17 @@ def poster():
 def split():
     def side_nav(label, n, unit, active):
         return ('<a href="#" style="display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px solid ' + TINT2 + '; color: ' + (INK if active else BODY) + '; font-size: 16px; font-weight: ' + ('600' if active else '500') + ';">'
-                '<span>' + label + '</span>' + mono(str(n) + ' ' + unit, ACCT if active else META) + '</a>')
+                '<span>' + label + '</span>' + mono(str(n) + ' ' + unit, ACCT if active else MUTED) + '</a>')
     left = ('<div style="width: 420px; flex: none; background: ' + TINT + '; min-height: ' + str(H) + 'px; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 40px;">'
             '<span style="font-size: 16px; font-weight: 600;">lowpass</span>'
-            '<div style="display: flex; flex-direction: column; gap: 16px;">' + mono('日刊 · 2026-09-08', ACCT) + wk('9月8日', 80, INK, ' letter-spacing: -0.02em;') + wk('星期二', 26, MUTED) + mono('06:12 发布 · 67 条', META) + '</div>'
+            '<div style="display: flex; flex-direction: column; gap: 16px;">' + mono('日刊 · 2026-09-08', ACCT) + wk('9月8日', 80, INK, ' letter-spacing: -0.02em;') + wk('星期二', 26, MUTED) + mono('06:12 发布 · 67 条', MUTED) + '</div>'
             '<div style="display: flex; flex-direction: column;">' + side_nav('Hacker News', 30, '条', True) + side_nav('GitHub Trending', 25, '个', False) + side_nav('Hackaday', 12, '篇', False) + '</div>'
             '<div style="display: flex; gap: 8px;">'
             '<span style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: ' + WHITE + ';">' + icon('chevron-left', 18, INK) + '</span>'
             '<span style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: ' + WHITE + '; opacity: 0.45;">' + icon('chevron-right', 18, INK) + '</span>'
             '<span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: ' + WHITE + '; font-size: 14px; font-weight: 500;">归档</span></div>'
             '<div style="flex: 1;"></div>'
-            '<div style="display: flex; flex-direction: column; gap: 6px;">' + mono('本周周刊 · 第 36 周', META) + '<a href="#" style="font-size: 16px; font-weight: 500;">阮一峰周刊 · 第 366 期 →</a></div>'
+            '<div style="display: flex; flex-direction: column; gap: 6px;">' + mono('本周周刊 · 第 36 周', MUTED) + '<a href="#" style="font-size: 16px; font-weight: 500;">阮一峰周刊 · 第 366 期 →</a></div>'
             '<div style="display: flex; gap: 20px; font-size: 14px; color: ' + MUTED + ';"><span>周刊</span><span>搜索</span><span>设置</span></div></div>\n')
     def chapter(title, total, items, unit, n, with_summary):
         rows = ''.join('<div style="padding: 16px 0; border-bottom: 1px solid ' + HAIR + ';">' + item(r[0], r[1], r[2], (r[3] if with_summary and len(r) > 3 else None), 17, 20) + '</div>' for r in items[:n])
@@ -114,12 +114,12 @@ def bento():
                 + body + '<div>' + more('其余 ' + str(total - n) + ' ' + unit) + '</div></section>')
     date_tile = ('<div style="' + tile + ' grid-column: span 4; background: ' + TINT + '; justify-content: space-between; gap: 40px;">'
                  '<div style="display: flex; flex-direction: column; gap: 14px;">' + mono('日刊 · 2026-09-08', ACCT) + wk('9月8日', 80, INK, ' letter-spacing: -0.02em;') + wk('星期二', 24, MUTED) + '</div>'
-                 '<div style="display: flex; justify-content: space-between; align-items: center;">' + mono('06:12 发布', META) + '<div style="display: flex; gap: 8px;">'
+                 '<div style="display: flex; justify-content: space-between; align-items: center;">' + mono('06:12 发布', MUTED) + '<div style="display: flex; gap: 8px;">'
                  '<span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: ' + WHITE + ';">' + icon('chevron-left', 16, INK) + '</span>'
                  '<span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: ' + WHITE + '; opacity: 0.45;">' + icon('chevron-right', 16, INK) + '</span></div></div></div>')
-    stat_tile = ('<div style="' + tile + ' grid-column: span 2; background: ' + HAIR2 + '; justify-content: space-between; gap: 24px;">' + mono('今日', META)
-                 + '<div style="display: flex; align-items: baseline; gap: 6px;"><span style="font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em;">67</span><span style="font-size: 16px; color: ' + MUTED + ';">条</span></div>' + mono('3 个来源', META) + '</div>')
-    week_tile = ('<div style="' + tile + ' grid-column: span 2; background: ' + HAIR2 + '; justify-content: space-between; gap: 24px;">' + mono('本周周刊', META)
+    stat_tile = ('<div style="' + tile + ' grid-column: span 2; background: ' + HAIR2 + '; justify-content: space-between; gap: 24px;">' + mono('今日', MUTED)
+                 + '<div style="display: flex; align-items: baseline; gap: 6px;"><span style="font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em;">67</span><span style="font-size: 16px; color: ' + MUTED + ';">条</span></div>' + mono('3 个来源', MUTED) + '</div>')
+    week_tile = ('<div style="' + tile + ' grid-column: span 2; background: ' + HAIR2 + '; justify-content: space-between; gap: 24px;">' + mono('本周周刊', MUTED)
                  + '<a href="#" style="font-size: 17px; font-weight: 500; line-height: 1.4;">第 36 周 · 阮一峰周刊第 366 期</a>' + more('阅读') + '</div>')
     grid = ('<div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; padding: 8px 64px 64px 64px;">'
             + date_tile + list_tile('Hacker News', 30, HN, '条', 8, False, 8, two_col=True)

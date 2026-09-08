@@ -39,7 +39,7 @@ def document(body, width, min_height):
         "    body { margin: 0; }\n"
         "    a { color: #000000; text-decoration: none; }\n"
         "    a:hover { color: #000000; text-decoration: underline; text-underline-offset: 3px; }\n"
-        "    mark { background: rgba(0, 0, 0, 0.08); color: inherit; padding: 0 2px; border-radius: 2px; }\n"
+        "    mark { background: rgba(0, 0, 0, 0.09); color: inherit; padding: 0 2px; border-radius: 2px; }\n"
         "  </style>\n"
         "</helmet>\n"
     )
@@ -79,6 +79,10 @@ def icon(name, size=20, color=INK64, stroke=1.75):
     return ('<svg width="' + str(size) + '" height="' + str(size) + '" viewBox="0 0 24 24" fill="none" stroke="' + color +
             '" stroke-width="' + str(stroke) + '" stroke-linecap="round" stroke-linejoin="round" style="flex: none;">' + ICON_PATHS[name] + '</svg>')
 
+def label(text, color=INK44, size=13):
+    """无衬线小标签：眉题、图例、说明句。"""
+    return '<span style="font-size: ' + str(size) + 'px; color: ' + color + ';">' + text + '</span>'
+
 def mono(text, color=INK56, size=13):
     return '<span style="font-family: ' + MONO + '; font-size: ' + str(size) + 'px; color: ' + color + ';">' + text + '</span>'
 
@@ -111,14 +115,13 @@ def topbar_mobile():
 
 def button(label, kind='outline', icon_left=None, icon_right=None, height=40, disabled=False):
     base = 'display: inline-flex; align-items: center; gap: 8px; height: ' + str(height) + 'px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; box-sizing: border-box; white-space: nowrap;'
+    fg = INK44 if disabled else INK
     if kind == 'primary':
         style = base + ' background: #000000; color: #FFFFFF; border: 1px solid #000000;'
     elif kind == 'ghost':
-        style = base + ' color: #000000; border: 1px solid transparent;'
+        style = base + ' color: ' + fg + '; border: 1px solid transparent;'
     else:
-        style = base + ' color: #000000; border: 1px solid ' + BORDER_STRONG + '; background: #FFFFFF;'
-    if disabled:
-        style += ' color: ' + INK44 + '; border-color: ' + BORDER + ';'
+        style = base + ' color: ' + fg + '; border: 1px solid ' + (BORDER if disabled else BORDER_STRONG) + '; background: #FFFFFF;'
     ic_color = '#FFFFFF' if kind == 'primary' else (INK44 if disabled else INK)
     left = icon(icon_left, 16, ic_color) if icon_left else ''
     right = icon(icon_right, 16, ic_color) if icon_right else ''
@@ -131,7 +134,7 @@ def issue_header(label, title, subtitle, controls, kai_size=44, padding='56px 64
         '  <div style="display: flex; flex-direction: column; gap: 12px;">\n'
         '    ' + mono(label) + '\n'
         '    <h1 style="margin: 0; font-family: ' + KAI + '; font-weight: 400; font-size: ' + str(kai_size) + 'px; line-height: 1.1; display: flex; align-items: baseline; gap: 16px;">'
-        '<span>' + title + '</span><span style="font-size: ' + str(round(kai_size / 2)) + 'px; color: ' + INK64 + ';">' + subtitle + '</span></h1>\n'
+        '<span>' + title + '</span>' + ('<span style="font-size: ' + str(round(kai_size / 2)) + 'px; color: ' + INK64 + ';">' + subtitle + '</span>' if subtitle else '') + '</h1>\n'
         '  </div>\n'
         '  <div style="display: flex; gap: 8px; align-items: center;">' + controls + '</div>\n'
         '</div>\n'
@@ -170,7 +173,7 @@ GH = [
     ('01', 'acme/lowlatency-db', 'Zig · ★ 12.3k · +420', 'An embedded time-series database with a tiny footprint'),
     ('02', 'tinyfeeds/reader', 'TypeScript · ★ 8.1k · +310', 'Self-hosted RSS reader with full-text search'),
     ('03', 'nine-tails/termlog', 'Rust · ★ 2.4k · +288', 'Structured log viewer for the terminal'),
-    ('04', 'mlx-tools/quant', 'Python · ★ 5.6k · +240', 'Quantization toolkit for Apple Silicon'),
+    ('04', 'coreq/quant', 'Python · ★ 5.6k · +240', 'Quantization toolkit for laptop GPUs'),
     ('05', 'singlebox/recipes', 'Ruby · ★ 1.1k · +180', 'Single-server deployment recipes and checklists'),
     ('06', 'blocksmith/atlas', 'TypeScript · ★ 3.9k · +150', 'Copy-paste UI blocks for Tailwind v4'),
 ]
@@ -179,6 +182,6 @@ HAD = [
     ('02', 'Reviving a 1980s Oscilloscope With an ESP32', 'R. Alvarez · 6h', 'The CRT still works; the trigger board did not. A small microcontroller now stands in for it.'),
     ('03', 'Open-Source Weather Station Survives Its First Typhoon', 'S. Lindqvist · 9h', 'Solar, LoRa, and a 3D-printed housing that turned out to matter more than the electronics.'),
     ('04', 'The Physics of a Perfect Pour-Over', 'M. Okada · 13h', 'Flow rate, grind size and a load cell under the kettle.'),
-    ('05', 'Retrotechtacular: The Telegraph Repeater', 'R. Alvarez · 20h', 'How a nineteenth-century relay kept a signal alive across a continent.'),
-    ('06', 'Hackaday Links: A Week of Small Radios', 'S. Lindqvist · 22h', 'Three pocket receivers, one antenna theory refresher.'),
+    ('05', 'The Telegraph Repeater, Revisited', 'R. Alvarez · 20h', 'How a nineteenth-century relay kept a signal alive across a continent.'),
+    ('06', 'A Week of Small Radios', 'S. Lindqvist · 22h', 'Three pocket receivers, one antenna theory refresher.'),
 ]

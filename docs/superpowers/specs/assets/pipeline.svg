@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 296" role="img" aria-label="数据管道：调度器按时触发各源适配器，条目交给期生成器装订成不可变的一期，写入数据库并建立搜索索引，Web 页面读取数据库、搜索走索引；某源抓取失败只触发告警，不阻塞发布。">
+<style>
+svg{color:#3E4956;font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif}
+.box{fill:#FFFFFF;stroke:currentColor;stroke-width:1.2}
+.box.hi{stroke:#1F5F8B;stroke-width:1.6}
+.box.dash{stroke-dasharray:4 3}
+.ln{stroke:currentColor;fill:none;stroke-width:1.2}
+.ln.dash{stroke-dasharray:4 3}
+.sep{stroke:#B8C0CB;stroke-width:1}
+text{fill:currentColor;font-size:12px}
+.t{font-weight:600;font-size:13px;fill:#1B2430}
+.s{font-size:11px;fill:#6B7684}
+.f{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;fill:#6B7684}
+.lb{font-size:11px;fill:#6B7684}
+.ar{fill:currentColor}
+</style>
+<rect width="100%" height="100%" fill="#F5F6F8"/>
+
+      <defs>
+        <marker id="ar1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ar" d="M0,0 L8,4 L0,8 z"/></marker>
+      </defs>
+      <!-- sources -->
+      <rect class="box" x="16" y="20" width="184" height="40"/><text class="t" x="108" y="45" text-anchor="middle">Hacker News API</text>
+      <rect class="box" x="16" y="70" width="184" height="40"/><text class="t" x="108" y="95" text-anchor="middle">GitHub Trending 页面</text>
+      <rect class="box" x="16" y="120" width="184" height="40"/><text class="t" x="108" y="145" text-anchor="middle">Hackaday RSS</text>
+      <rect class="box" x="16" y="170" width="184" height="40"/><text class="t" x="108" y="195" text-anchor="middle">阮一峰周刊 Markdown</text>
+      <rect class="box dash" x="16" y="220" width="184" height="40"/><text class="t" x="108" y="245" text-anchor="middle">通用 RSS / Atom（可配置）</text>
+      <!-- bus -->
+      <line class="ln" x1="200" y1="40" x2="228" y2="40"/>
+      <line class="ln" x1="200" y1="90" x2="228" y2="90"/>
+      <line class="ln" x1="200" y1="140" x2="228" y2="140"/>
+      <line class="ln" x1="200" y1="190" x2="228" y2="190"/>
+      <line class="ln dash" x1="200" y1="240" x2="228" y2="240"/>
+      <line class="ln" x1="228" y1="40" x2="228" y2="240"/>
+      <line class="ln" x1="228" y1="140" x2="264" y2="140" marker-end="url(#ar1)"/>
+      <!-- scheduler -->
+      <rect class="box" x="264" y="16" width="168" height="44"/>
+      <text class="t" x="348" y="34" text-anchor="middle">调度器</text>
+      <text class="s" x="348" y="50" text-anchor="middle">06:00 日刊 · 09:00 查周刊新期</text>
+      <line class="ln" x1="348" y1="60" x2="348" y2="100" marker-end="url(#ar1)"/>
+      <text class="lb" x="356" y="84">触发抓取</text>
+      <!-- adapter -->
+      <rect class="box" x="264" y="100" width="168" height="80"/>
+      <text class="t" x="348" y="134" text-anchor="middle">适配器</text>
+      <text class="s" x="348" y="154" text-anchor="middle">每源一个 · 规范化为条目</text>
+      <!-- alert -->
+      <line class="ln dash" x1="348" y1="180" x2="348" y2="236" marker-end="url(#ar1)"/>
+      <text class="lb" x="356" y="212">某源失败</text>
+      <rect class="box dash" x="264" y="236" width="168" height="44"/>
+      <text class="t" x="348" y="262" text-anchor="middle">告警 · 邮件 / IM</text>
+      <!-- builder -->
+      <line class="ln" x1="432" y1="140" x2="496" y2="140" marker-end="url(#ar1)"/>
+      <text class="lb" x="464" y="132" text-anchor="middle">条目</text>
+      <rect class="box hi" x="496" y="100" width="168" height="80"/>
+      <text class="t" x="580" y="134" text-anchor="middle">期生成器</text>
+      <text class="s" x="580" y="154" text-anchor="middle">按周期装订 · 缺源照常发布</text>
+      <!-- db & index -->
+      <polyline class="ln" points="664,140 696,140 696,76 728,76" marker-end="url(#ar1)"/>
+      <text class="lb" x="702" y="112">写入</text>
+      <polyline class="ln" points="664,140 696,140 696,204 728,204" marker-end="url(#ar1)"/>
+      <text class="lb" x="702" y="180">索引</text>
+      <rect class="box" x="728" y="48" width="152" height="56"/>
+      <text class="t" x="804" y="72" text-anchor="middle">数据库</text>
+      <text class="s" x="804" y="88" text-anchor="middle">期 · 条目 · 抓取记录</text>
+      <rect class="box" x="728" y="176" width="152" height="56"/>
+      <text class="t" x="804" y="200" text-anchor="middle">搜索索引</text>
+      <text class="s" x="804" y="216" text-anchor="middle">标题 · 摘要 · 来源 · 板块</text>
+      <!-- web -->
+      <polyline class="ln" points="880,76 892,76 892,130 904,130" marker-end="url(#ar1)"/>
+      <text class="lb" x="898" y="66" text-anchor="middle">读取</text>
+      <polyline class="ln" points="880,204 892,204 892,150 904,150" marker-end="url(#ar1)"/>
+      <text class="lb" x="898" y="226" text-anchor="middle">查询</text>
+      <rect class="box" x="904" y="100" width="120" height="80"/>
+      <text class="t" x="964" y="134" text-anchor="middle">Web</text>
+      <text class="s" x="964" y="154" text-anchor="middle">日刊 · 周刊 · 搜索</text>
+    </svg>

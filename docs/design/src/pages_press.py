@@ -187,3 +187,56 @@ def press():
              + ears + nameplate + band + index_bar + hn + gh + had + footer + '</div>\n')
     css = ('    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + INK + '; text-decoration: underline; text-underline-offset: 3px; }\n')
     return doc(sheet, FONTS, GROUND, INK, SERIF, css, H)
+
+# ---- 定稿方向修订：每源只取前 10（产品负责人决定，少即是多）。三栏并排，一版看完。
+def front():
+    ears = ('<div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid ' + INK + ';">'
+            '<div style="display: flex; gap: 22px; align-items: baseline;"><span style="font-family: ' + KICK + '; font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 2px solid ' + INK + '; padding-bottom: 2px;">日刊</span>' + kicker('周刊', INK2) + kicker('搜索', INK2) + '</div>'
+            '<span style="font-family: ' + KAI + '; font-size: 20px;">2026年9月8日 · 星期二</span>'
+            '<div style="display: flex; align-items: center; gap: 14px;">' + mono('06:12 发布 · 30 条', INK2) + '<span style="width: 30px; height: 30px; border-radius: 50%; border: 1px solid ' + INK + '; display: inline-flex; align-items: center; justify-content: center;">' + icon('user', 15, INK) + '</span></div></div>')
+    nameplate = ('<div style="background: ' + INK + '; margin-top: 20px; padding: 6px 24px 18px 24px; display: flex; flex-direction: column; align-items: center; gap: 4px;">'
+                 '<span style="font-family: ' + NAME + '; font-size: 196px; line-height: 0.92; font-weight: 900; letter-spacing: 0.01em; text-transform: uppercase; color: ' + PAPER + ';">lowpass</span>'
+                 '<span style="font-family: ' + KAI + '; font-size: 22px; color: ' + PAPER + '; opacity: 0.85;">滤掉噪音，留下信号。</span></div>')
+    stat = lambda k, v: '<div style="display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid ' + RULE + ';"><span style="font-size: 16px;">' + k + '</span>' + mono(v, INK2) + '</div>'
+    band = ('<div style="display: grid; grid-template-columns: 5fr 4fr 3fr; gap: 40px; padding: 28px 0 24px 0; align-items: end;">'
+            '<div style="display: flex; flex-direction: column; gap: 10px;"><span style="font-family: ' + KAI + '; font-size: 64px; line-height: 1;">9月8日 <span style="font-size: 28px; color: ' + INK2 + ';">星期二</span></span>'
+            '<span style="font-size: 18px; font-style: italic; color: ' + INK2 + ';">每个来源只留前十，一版读完。</span></div>'
+            '<div style="display: flex; flex-direction: column;">' + stat('来源', '3 个') + stat('条目', '30 条 · 每源 10') + stat('抓取用时', '4 分 12 秒') + stat('昨日', '30 条 · 全部成功') + '</div>'
+            '<div style="display: flex; justify-content: flex-end;">' + frame(ill_sunrise(), 260, 138, '低通 · 每日 06:00 滤一遍') + '</div></div>')
+    ctrl = lambda l, il=None, ir=None, off=False: ('<span style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid ' + (RULE if off else INK) + '; font-family: ' + KICK + '; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: ' + (INK2 if off else INK) + ';">'
+                                                 + (icon(il, 14, INK2 if off else INK) if il else '') + '<span>' + l + '</span>' + (icon(ir, 14, INK2 if off else INK) if ir else '') + '</span>')
+    bar = ('<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 2px solid ' + INK + '; border-bottom: 1px solid ' + INK + ';">'
+           '<div style="display: flex; gap: 28px; align-items: baseline;">' + kicker('本期三栏') + mono('Hacker News 10 · GitHub Trending 10 · Hackaday 10', INK2) + '</div>'
+           '<div style="display: flex; gap: 8px;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + ctrl('9月9日', ir='chevron-right', off=True) + '</div></div>')
+    def col_head(title, sub, ill):
+        return ('<div style="display: flex; flex-direction: column; gap: 12px; padding: 20px 0 14px 0; border-bottom: 1px solid ' + INK + ';">' + ill
+                + '<div style="display: flex; flex-direction: column; gap: 6px;"><h2 style="margin: 0; font-family: ' + NAME + '; font-size: 30px; font-weight: 700; line-height: 1.05;">' + title + '</h2>' + mono(sub, INK2) + '</div></div>')
+    def row(r, title, meta, desc=None, badge_text=None):
+        parts = ['<a href="#" style="font-size: 17px; line-height: 1.35; font-weight: 500;">' + title + '</a>']
+        if desc:
+            parts.append('<span style="font-size: 14.5px; line-height: 1.45; color: ' + INK2 + ';">' + desc + '</span>')
+        meta_html = mono(meta, INK2) if not badge_text else ('<span style="display: inline-flex; align-items: center; gap: 8px;">' + mono(meta, INK2) + badge(badge_text) + '</span>')
+        parts.append(meta_html)
+        return ('<div style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid ' + RULE + ';">'
+                '<span style="font-family: ' + NAME + '; font-size: 20px; font-weight: 700; line-height: 1.1; width: 30px; flex: none;">' + r.lstrip('0') + '</span>'
+                '<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">' + ''.join(parts) + '</div></div>')
+    def col_foot(label):
+        return ('<a href="#" style="display: inline-flex; align-items: center; gap: 6px; padding: 16px 0 0 0; font-family: ' + KICK + '; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500;"><span>' + label + '</span>' + icon('arrow-up-right', 14, INK) + '</a>')
+    hn_col = ('<div style="display: flex; flex-direction: column;">' + col_head('Hacker News', '前 10 条 · 榜单顺序', frame(ill_bubbles(), 120, 78, '讨论'))
+              + ''.join(row(r, t, m) for r, t, m in HN30[:10]) + col_foot('去 Hacker News 看完整榜单') + '</div>')
+    def gh_row(r, name, m, desc):
+        lang, stars, delta = [x.strip() for x in m.split('·')]
+        return row(r, name, lang + ' · ' + stars, desc, delta)
+    gh_col = ('<div style="display: flex; flex-direction: column; border-left: 1px solid ' + RULE + '; padding-left: 28px;">' + col_head('GitHub Trending', '今日前 10 · 新增 star 降序', frame(ill_branches(), 120, 78, '分支'))
+              + ''.join(gh_row(*x) for x in GH25[:10]) + col_foot('去 GitHub 看完整榜单') + '</div>')
+    had_col = ('<div style="display: flex; flex-direction: column; border-left: 1px solid ' + RULE + '; padding-left: 28px;">' + col_head('Hackaday', '近 24 小时最新 10 篇', frame(ill_solder(), 120, 78, '焊接'))
+               + ''.join(row(r, t, m, s) for r, t, m, s in HAD12[:10]) + col_foot('去 Hackaday 看全部') + '</div>')
+    columns = '<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; padding: 0 0 28px 0;">' + hn_col + gh_col + had_col + '</div>'
+    footer = (rule(2) + '<div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 0 8px 0;">'
+              '<div style="display: flex; align-items: center; gap: 16px;">' + stamp() + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono('明早 06:00 · 下一期', INK2) + '<a href="#" style="font-size: 16px; font-weight: 500;">本周周刊 · 第 36 周 · 阮一峰周刊第 366 期 →</a></div></div>'
+              '<div style="display: flex; gap: 8px;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + '</div></div>')
+    sheet = ('<div style="width: 1240px; margin: 40px auto 56px auto; padding: 0 40px 28px 40px; box-sizing: border-box; background: ' + PAPER + '; color: ' + INK + '; '
+             'background-image: repeating-linear-gradient(0deg, rgba(29, 29, 27, 0.03) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px 4px); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);">'
+             + ears + nameplate + band + bar + columns + footer + '</div>\n')
+    css = ('    a { color: ' + INK + '; text-decoration: none; }\n    a:hover { color: ' + INK + '; text-decoration: underline; text-underline-offset: 3px; }\n')
+    return doc(sheet, FONTS, GROUND, INK, SERIF, css, 2500)

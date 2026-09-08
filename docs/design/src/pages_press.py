@@ -68,16 +68,20 @@ HAD12 = list(HAD) + [
 
 # ---- 插图：墨线木刻手法，原创。
 def frame(svg_inner, w, h, caption):
-    return ('<figure style="margin: 0; display: flex; flex-direction: column; gap: 6px; width: ' + str(w) + 'px;">'
-            '<div style="border: 1px solid ' + INK + '; background: ' + PAPER + '; padding: 6px;"><svg viewBox="0 0 ' + str(w) + ' ' + str(h) + '" width="' + str(w - 14) + '" height="' + str(h - 14) + '" style="display: block;" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + svg_inner + '</svg></div>'
+    return ('<figure style="margin: 0; display: flex; flex-direction: column; gap: 6px; width: ' + str(w + 14) + 'px;">'
+            '<div style="border: 1px solid ' + INK + '; background: ' + PAPER + '; padding: 6px;"><svg viewBox="0 0 ' + str(w) + ' ' + str(h) + '" width="' + str(w) + '" height="' + str(h) + '" style="display: block;" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + svg_inner + '</svg></div>'
             '<figcaption style="font-family: ' + KICK + '; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: ' + INK2 + ';">' + caption + '</figcaption></figure>')
 
 def hatch(x, y, w, h, step=5):
     out = ''
     d = -h
     while d < w:
-        x1, y1 = x + max(d, 0), y + (max(d, 0) - d)
-        x2, y2 = x + min(d + h, w), y + h - (min(d + h, w) - d)
+        t1, t2 = max(d, 0), min(d + h, w)
+        if t2 <= t1:
+            d += step
+            continue
+        x1, y1 = x + t1, y + (t1 - d)
+        x2, y2 = x + t2, y + (t2 - d)
         out += '<line x1="' + str(round(x1, 1)) + '" y1="' + str(round(y1, 1)) + '" x2="' + str(round(x2, 1)) + '" y2="' + str(round(y2, 1)) + '" stroke-width="0.9"></line>'
         d += step
     return out
@@ -85,17 +89,17 @@ def hatch(x, y, w, h, step=5):
 def ill_sunrise():
     rays = ''.join('<line x1="%s" y1="%s" x2="%s" y2="%s"></line>' % (round(130 + 44 * __import__('math').cos(a), 1), round(84 - 44 * __import__('math').sin(a), 1), round(130 + 56 * __import__('math').cos(a), 1), round(84 - 56 * __import__('math').sin(a), 1))
                    for a in [0.35, 0.7, 1.05, 1.4, 1.75, 2.1, 2.45, 2.8])
-    return ('<path d="M130 84 a34 34 0 0 1 68 0 z" fill="' + GREEN + '"></path>' + hatch(130, 62, 68, 22, 5)
-            + '<path d="M96 84 a34 34 0 0 1 68 0" ></path>' + rays
+    return ('<path d="M96 84 a34 34 0 0 1 68 0 z" fill="' + GREEN + '"></path>'
+            + '<path d="M96 84 a34 34 0 0 1 68 0"></path>' + rays
             + '<line x1="14" y1="84" x2="246" y2="84" stroke-width="2"></line>'
             '<path d="M14 118 C 50 100 84 104 118 112 S 190 122 246 108"></path><path d="M14 126 C 70 112 120 118 160 124 S 220 130 246 122" stroke-width="1"></path>'
-            '<path d="M14 42 l6 -12 l6 16 l6 -20 l6 18 l6 -14 l6 16 l6 -12 l6 10 l6 -14 l6 12" stroke-width="1.4"></path>'
-            '<rect x="90" y="24" width="30" height="32" fill="' + PAPER + '"></rect>' + hatch(90, 24, 30, 32, 4)
+            '<path d="M14 42 l6 -12 l6 16 l6 -20 l6 18 l6 -14 l6 16 l6 -12 l6 10 l6 -14 l6 12 l6 -12 l6 10 l4 -6" stroke-width="1.4"></path>'
+            '<rect x="90" y="24" width="30" height="32" fill="' + PAPER + '"></rect>' + hatch(92, 26, 26, 28, 4)
             + '<path d="M120 40 c 14 -18 28 -18 42 0 s 28 18 42 0 s 28 -18 42 0" stroke-width="1.6"></path>')
 
 def ill_bubbles():
     return ('<rect x="10" y="10" width="62" height="34" rx="8" fill="' + PAPER + '"></rect><path d="M22 44 l-4 10 l12 -10"></path>'
-            '<rect x="48" y="30" width="62" height="34" rx="8" fill="' + PAPER + '"></rect>' + hatch(48, 30, 62, 34, 6)
+            '<rect x="48" y="30" width="62" height="34" rx="8" fill="' + PAPER + '"></rect>' + hatch(54, 35, 50, 24, 6)
             + '<path d="M96 64 l4 10 l-12 -10"></path>'
             '<polygon points="24,22 30,32 18,32" fill="' + INK + '"></polygon><line x1="36" y1="27" x2="62" y2="27"></line>')
 
@@ -108,8 +112,8 @@ def ill_branches():
 
 def ill_solder():
     return ('<path d="M14 68 L 52 40" stroke-width="6"></path><path d="M52 40 L 82 20" stroke-width="1.8"></path>'
-            '<path d="M84 16 c 4 -6 -2 -8 2 -14 s 8 -4 4 -10"></path>'
-            '<rect x="58" y="48" width="34" height="22" fill="' + PAPER + '"></rect>' + hatch(58, 48, 34, 22, 5)
+            '<path d="M84 20 c 3 -4 -2 -6 2 -10 s 5 -2 3 -5"></path>'
+            '<rect x="58" y="48" width="34" height="22" fill="' + PAPER + '"></rect>' + hatch(60, 50, 30, 18, 5)
             + ''.join('<line x1="%d" y1="70" x2="%d" y2="76" stroke-width="1.2"></line>' % (x, x) for x in (64, 72, 80, 88))
             + ''.join('<line x1="%d" y1="48" x2="%d" y2="42" stroke-width="1.2"></line>' % (x, x) for x in (64, 72, 80, 88)))
 
@@ -145,7 +149,7 @@ def press():
             '<div style="display: flex; flex-direction: column; gap: 10px;"><span style="font-family: ' + KAI + '; font-size: 64px; line-height: 1;">9月8日 <span style="font-size: 28px; color: ' + INK2 + ';">星期二</span></span>'
             '<span style="font-size: 18px; font-style: italic; color: ' + INK2 + ';">今天的一期在 06:12 装订完成，三个来源，读完就能合上。</span></div>'
             '<div style="display: flex; flex-direction: column;">' + stat('来源', '3 个') + stat('条目', '67 条 · 30 / 25 / 12') + stat('抓取用时', '4 分 12 秒') + stat('昨日', '71 条 · 全部成功') + '</div>'
-            '<div style="display: flex; justify-content: flex-end;">' + frame(ill_sunrise(), 260, 138, '低通 · 每日 06:00 滤一遍') + '</div></div>')
+            '<div style="display: flex; justify-content: flex-end;">' + frame(ill_sunrise(), 260, 138, '低通滤波') + '</div></div>')
     idx = lambda t, n, active=False: ('<a href="#" style="display: inline-flex; align-items: baseline; gap: 8px; font-family: ' + KICK + '; font-size: 14px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: ' + INK + ';' + (' border-bottom: 2px solid ' + INK + '; padding-bottom: 2px;' if active else '') + '"><span>' + t + '</span>' + mono(str(n), INK2) + '</a>')
     ctrl = lambda l, il=None, ir=None, off=False: ('<span style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid ' + (RULE if off else INK) + '; font-family: ' + KICK + '; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: ' + (INK2 if off else INK) + ';">'
                                                  + (icon(il, 14, INK2 if off else INK) if il else '') + '<span>' + l + '</span>' + (icon(ir, 14, INK2 if off else INK) if ir else '') + '</span>')
@@ -180,7 +184,7 @@ def press():
     had = ('<div id="had">' + section_head('Hackaday', '近 24 小时 12 篇 · 发布时间倒序 · 摘要取自原文首段', frame(ill_solder(), 120, 78, '焊接')) + rule(1)
            + '<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 28px; padding: 12px 0 28px 0;">' + ''.join(had_card(*x) for x in HAD12) + '</div></div>')
     footer = (rule(2) + '<div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 0 8px 0;">'
-              '<div style="display: flex; align-items: center; gap: 16px;">' + stamp() + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono('明早 06:00 · 下一期', INK2) + '<a href="#" style="font-size: 16px; font-weight: 500;">本周周刊 · 第 36 周 · 阮一峰周刊第 366 期 →</a></div></div>'
+              '<div style="display: flex; align-items: center; gap: 16px;">' + stamp() + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono('明早 06:00 · 下一期', INK2) + '<a href="#" style="font-size: 16px; font-weight: 500;">最新周刊 · 第 36 周 · 阮一峰周刊第 366 期 →</a></div></div>'
               '<div style="display: flex; gap: 8px;">' + ctrl('回到顶部', il='chevron-left') + ctrl('9月7日', il='chevron-left') + ctrl('归档') + '</div></div>')
     sheet = ('<div style="width: 1240px; margin: 40px auto 56px auto; padding: 0 40px 28px 40px; box-sizing: border-box; background: ' + PAPER + '; color: ' + INK + '; '
              'background-image: repeating-linear-gradient(0deg, rgba(29, 29, 27, 0.03) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px 4px); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);">'
@@ -202,7 +206,7 @@ def front():
             '<div style="display: flex; flex-direction: column; gap: 10px;"><span style="font-family: ' + KAI + '; font-size: 64px; line-height: 1;">9月8日 <span style="font-size: 28px; color: ' + INK2 + ';">星期二</span></span>'
             '<span style="font-size: 18px; font-style: italic; color: ' + INK2 + ';">每个来源只留前十，一版读完。</span></div>'
             '<div style="display: flex; flex-direction: column;">' + stat('来源', '3 个') + stat('条目', '30 条 · 每源 10') + stat('抓取用时', '4 分 12 秒') + stat('昨日', '30 条 · 全部成功') + '</div>'
-            '<div style="display: flex; justify-content: flex-end;">' + frame(ill_sunrise(), 260, 138, '低通 · 每日 06:00 滤一遍') + '</div></div>')
+            '<div style="display: flex; justify-content: flex-end;">' + frame(ill_sunrise(), 260, 138, '低通滤波') + '</div></div>')
     ctrl = lambda l, il=None, ir=None, off=False: ('<span style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid ' + (RULE if off else INK) + '; font-family: ' + KICK + '; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: ' + (INK2 if off else INK) + ';">'
                                                  + (icon(il, 14, INK2 if off else INK) if il else '') + '<span>' + l + '</span>' + (icon(ir, 14, INK2 if off else INK) if ir else '') + '</span>')
     bar = ('<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 2px solid ' + INK + '; border-bottom: 1px solid ' + INK + ';">'
@@ -233,8 +237,8 @@ def front():
                + ''.join(row(r, t, m, s) for r, t, m, s in HAD12[:10]) + col_foot('去 Hackaday 看全部') + '</div>')
     columns = '<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; padding: 0 0 28px 0;">' + hn_col + gh_col + had_col + '</div>'
     footer = (rule(2) + '<div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 0 8px 0;">'
-              '<div style="display: flex; align-items: center; gap: 16px;">' + stamp() + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono('明早 06:00 · 下一期', INK2) + '<a href="#" style="font-size: 16px; font-weight: 500;">本周周刊 · 第 36 周 · 阮一峰周刊第 366 期 →</a></div></div>'
-              '<div style="display: flex; gap: 8px;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + '</div></div>')
+              '<div style="display: flex; align-items: center; gap: 16px;">' + stamp() + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono('明早 06:00 · 下一期', INK2) + '<a href="#" style="font-size: 16px; font-weight: 500;">最新周刊 · 第 36 周 · 阮一峰周刊第 366 期 →</a></div></div>'
+              '<div style="display: flex; gap: 8px;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + ctrl('9月9日', ir='chevron-right', off=True) + '</div></div>')
     sheet = ('<div style="width: 1240px; margin: 40px auto 56px auto; padding: 0 40px 28px 40px; box-sizing: border-box; background: ' + PAPER + '; color: ' + INK + '; '
              'background-image: repeating-linear-gradient(0deg, rgba(29, 29, 27, 0.03) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px 4px); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);">'
              + ears + nameplate + band + bar + columns + footer + '</div>\n')

@@ -88,4 +88,46 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert entries.first.url.start_with?("https://github.com/ruanyf/weekly/blob/master/"), entries.first.url
     assert entries.all?(&:valid?)
   end
+
+  test "图片板块条目链接指向原文锚点" do
+    stub_request(:get, "#{RAW}/docs/issue-997.md").to_return(body: <<~MARKDOWN)
+      # 科技爱好者周刊（第 997 期）：图片测试
+
+      ## 科技动态
+
+      1、[第一条](https://example.com/1)
+
+      正文一。
+
+      2、[第二条](https://example.com/2)
+
+      正文二。
+
+      3、[第三条](https://example.com/3)
+
+      正文三。
+
+      4、[第四条](https://example.com/4)
+
+      正文四。
+
+      5、[第五条](https://example.com/5)
+
+      正文五。
+
+      ## 图片
+
+      1、**一张图**
+
+      [来源](https://example.com/source)
+    MARKDOWN
+
+    entries = Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(997)
+    image_entry = entries.find { |e| e.section == "图片" }
+
+    assert image_entry.present?, "Should have an entry in 图片 section"
+    assert image_entry.url.start_with?("https://github.com/ruanyf/weekly/blob/master/docs/issue-997.md#"), image_entry.url
+    assert_not_equal "https://example.com/source", image_entry.url
+    assert entries.all?(&:valid?)
+  end
 end

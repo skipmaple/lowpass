@@ -45,7 +45,10 @@ module Adapters
       end
 
       # 相对链接以原文地址为基解析成绝对地址；没有链接的条目（言论、图注）指向原文的板块锚点。
+      # 图片板块必须使用原文锚点，忽略条目内的链接（R24）。
       def url_for(item, number)
+        return anchor_url(item[:section], number) if item[:section] == "图片"
+
         absolute(item[:url], number) || anchor_url(item[:section], number)
       end
 

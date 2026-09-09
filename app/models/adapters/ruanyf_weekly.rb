@@ -35,7 +35,7 @@ module Adapters
       def entry(item, parsed, number, rank)
         Entry.new(
           title: item[:title],
-          url: url_for(item, number),
+          url: url_for(item, number, rank),
           summary: item[:summary],
           section: item[:section],
           published_at: parsed[:published_on]&.in_time_zone(PeriodKey::ZONE)&.beginning_of_day&.utc,
@@ -44,12 +44,14 @@ module Adapters
         )
       end
 
-      # 相对链接以原文地址为基解析成绝对地址；没有链接的条目（言论、图注）指向原文的板块锚点。
-      # 图片板块必须使用原文锚点，忽略条目内的链接（R24）。
-      def url_for(item, number)
-        return anchor_url(item[:section], number) if item[:section] == "图片"
-
-        absolute(item[:url], number) || anchor_url(item[:section], number)
+      # 相对链接以原文地址为基解析成绝对地址；没有链接的条目（言论、图注）回退到原文的板块锚点。
+      # 图片板块必须用回退地址，忽略条目内的链接（R24）。
+      def url_for(item, number, rank)
+        if item[:section] == "图片"
+          fallback_url(item[:section], number, rank)
+        else
+          absolute(item[:url], number) || fallback_url(item[:section], number, rank)
+        end
       end
 
       def absolute(href, number)
@@ -58,17 +60,20 @@ module Adapters
         nil
       end
 
-      # 锚点要转义，否则中文板块名过不了 URI 解析，条目会被当成非法链接丢掉。
-      def anchor_url(section, number)
-        "#{original(number)}##{URI::DEFAULT_PARSER.escape(anchor(section))}"
+      # 归一化会丢掉 fragment，同期回退到同一板块的条目会撞 url_hash 唯一索引，所以带上条目序号；
+      # GitHub 忽略这个查询参数，UrlNormalizer 不当它是跟踪参数（R25）。
+      # 锚点还要转义，否则中文板块名过不了 URI 解析，条目会被当成非法链接丢掉。
+      def fallback_url(section, number, rank)
+        "#{original(number)}?item=#{rank}##{URI::DEFAULT_PARSER.escape(anchor(section))}"
       end
 
       def original(number)
         "#{ORIGINAL}/issue-#{number}.md"
       end
 
+      # 对齐 GitHub 的锚点算法：转小写，去掉非单词字符，空格换连字符。
       def anchor(section)
-        section.to_s.downcase.gsub(/\s+/, "-")
+        section.to_s.downcase.gsub(/[^\p{Word}\s-]/, "").gsub(/\s+/, "-")
       end
   end
 end

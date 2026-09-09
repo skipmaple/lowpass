@@ -324,7 +324,9 @@ def admin_users():
 
 def admin_settings():
     sec = lambda title, body: '<div style="padding-top: 32px;"><div style="padding-bottom: 8px;">' + kai(title, 22) + '</div>' + hrule() + '<div style="padding-top: 20px;">' + body + '</div></div>'
-    sched = ('<div style="display: flex; gap: 24px; align-items: flex-end;">' + field('日刊生成时间', '06:00', mono=True, width='160px', note='Asia/Shanghai，精确到分') + field('周刊检查时间', '09:00', mono=True, width='160px') + btn('保存', primary=True) + '</div>')
+    # 字段顶对齐；按钮与说明文字用上边距对齐到输入框那一行（标签 20px + 间距 6px = 26px）
+    sched = ('<div style="display: flex; gap: 24px; align-items: flex-start;">' + field('日刊生成时间', '06:00', mono=True, width='160px', note='Asia/Shanghai，精确到分') + field('周刊检查时间', '09:00', mono=True, width='160px')
+             + '<div style="padding-top: 26px;">' + btn('保存', primary=True) + '</div></div>')
     alerts = ('<div style="display: flex; flex-direction: column; gap: 14px;">'
               '<div style="display: flex; align-items: center; gap: 12px;">' + mark('ok') + kai('邮件', 15) + mono2('drew@example.com', INK2, 13) + kai('已配置', 13, INK2) + '</div>'
               '<div style="display: flex; align-items: center; gap: 12px;">' + mark('empty') + kai('IM webhook', 15) + kai('未配置', 13, INK2) + '</div>'
@@ -333,7 +335,8 @@ def admin_settings():
     irows = ''.join('<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 80px; gap: 0 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid ' + RULE + ';">' + kai(n, 15) + txt(k, 15, INK2) + '<span style="display: flex; gap: 12px; justify-content: flex-end;">' + link('编辑', 13) + '</span></div>' for n, k in INTERESTS)
     interests = ('<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 80px; gap: 0 16px; padding-bottom: 10px; border-bottom: 1px solid ' + INK + ';">' + kai('领域', 12, INK2) + kai('关键词', 12, INK2) + '<span></span></div>' + irows
                  + '<div style="display: flex; align-items: center; gap: 16px; padding-top: 16px;">' + btn('添加领域', il='plus') + mixed('改动只影响之后生成的期', INK2, 13) + '</div>')
-    reasons = ('<div style="display: flex; gap: 24px; align-items: flex-end;">' + field('月费用上限', '50', mono=True, width='160px', note='超限停止生成并告警') + '<div style="padding-bottom: 12px;">' + mixed('今日调用 30 次 · 本月 ¥3.20 · 理由缺失 0 条', INK2, 13) + '</div>' + btn('重生成今日理由', il='refresh-cw') + '</div>')
+    reasons = ('<div style="display: flex; gap: 24px; align-items: flex-start;">' + field('月费用上限', '50', mono=True, width='160px', note='超限停止生成并告警')
+               + '<div style="padding-top: 26px; display: flex; align-items: center; gap: 24px; height: 66px; box-sizing: border-box;">' + mixed('今日调用 30 次 · 本月 ¥3.20 · 理由缺失 0 条', INK2, 13) + btn('重生成今日理由', il='refresh-cw') + '</div></div>')
     inner = (masthead('') + '<div style="padding: 0 40px 28px 40px;">' + page_head('管理后台', 'admin', '设置', '') + admin_nav('设置')
              + sec('调度', sched) + sec('告警', alerts) + sec('管理员白名单（只读）', allow) + sec('兴趣画像', interests) + sec('推荐理由', reasons) + '</div>')
     return doc(sheet(inner), FONTS, GROUND, INK, SERIF, css(), 1900)

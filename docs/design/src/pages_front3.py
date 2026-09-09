@@ -135,5 +135,65 @@ def front3_states():
     k = {'hn': '抓取失败 · 上次成功 9月7日 06:11', 'gh': '今日无新内容'}
     return doc(sheet(page('hn', status='延迟生成于 07:05', kickers=k, failed=True)), FONTS, GROUND, INK, SERIF, css(), 900)
 
+# ---------- 手机版：按手机的阅读节奏单独排，不照搬桌面 ----------
+
+def sq(name, off=False):
+    """44px 方形图标按钮。"""
+    col = INK2 if off else INK
+    return ('<span style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid ' + (RULE if off else INK) + ';">'
+            + icon(name, 18, col) + '</span>')
+
+def head_m(status=None):
+    """期头：日期与星期一行，发布时间一行；前后期缩成两个方形图标按钮放在右侧。"""
+    tag = ('<span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid ' + INK + '; padding: 3px 8px; margin-top: 2px;">' + icon('clock', 13, INK) + mono2(status, INK, 12) + '</span>') if status else ''
+    return ('<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 32px 0 24px 0; border-bottom: 2px solid ' + INK + ';">'
+            '<div style="display: flex; flex-direction: column; gap: 12px;">'
+            '<span style="font-family: ' + KAI + '; font-size: 40px; line-height: 1;">9月8日 <span style="font-size: 15px; color: ' + INK2 + ';">星期二</span></span>'
+            + mono2('06:12 发布') + tag + '</div>'
+            '<div style="display: flex; gap: 8px; flex: none;">' + sq('chevron-left') + sq('chevron-right', off=True) + '</div></div>')
+
+def tabs_m(active):
+    """来源切换：三格等宽，图标在上、来源名在下；名字允许折两行（GitHub Trending），图标与首行对齐。"""
+    cells = []
+    for i, (key, name, _kick, ill) in enumerate(SOURCES):
+        on = key == active
+        fg = PAPER if on else INK
+        inner = ill().replace(PAPER, INK) if on else ill()
+        st = ('flex: 1 1 0; display: flex; flex-direction: column; align-items: center; padding: 14px 8px 12px 8px; border: 1px solid ' + INK + '; min-width: 0;'
+              + (' background: ' + INK + ';' if on else '') + (' margin-left: -1px;' if i else ''))
+        cells.append('<a href="#" style="' + st + '"><span style="display: flex; align-items: center; height: 28px;">' + isvg(inner, 24, fg) + '</span>'
+                     + '<span style="display: block; height: 32px; margin-top: 8px; text-align: center; font-family: ' + SERIF + '; font-size: 13px; font-weight: 600; line-height: 1.2; color: ' + fg + ';">' + name + '</span></a>')
+    return '<div style="display: flex; margin-top: 24px;">' + ''.join(cells) + '</div>'
+
+def item_m(rank, title, meta_html, tag, reason, secondary=None):
+    """手机条目：眉行（序号左、兴趣标签右）、整宽标题、说明、元数据、推荐理由；上下留 24px。"""
+    eyebrow = ('<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">'
+               + '<span style="font-family: ' + MONOF + '; font-size: 13px; color: ' + INK2 + ';">' + rank.lstrip('0') + '</span>' + chip(tag) + '</div>')
+    title_html = '<a href="#" class="t" style="display: block; margin-top: 10px; font-size: 20px; line-height: 1.3; font-weight: 500;">' + title + '</a>'
+    sec = ('<div style="margin-top: 8px; font-size: 15px; line-height: 1.5; color: ' + INK2 + ';">' + secondary + '</div>') if secondary else ''
+    meta = '<div style="margin-top: 10px;">' + meta_html + '</div>'
+    reason_html = ('<div style="margin-top: 14px; border-left: 2px solid ' + GREEN + '; padding: 1px 0 1px 12px; font-family: ' + KAIF + '; font-size: 15px; line-height: 1.7; color: ' + INK2 + ';">' + reason + '</div>')
+    return '<div style="padding: 24px 0; border-bottom: 1px solid ' + RULE + ';">' + eyebrow + title_html + sec + meta + reason_html + '</div>'
+
+def rows_m(active):
+    if active == 'hn':
+        return ''.join(item_m(r, t, hn_meta(m), tag, why) for (r, t, m), (tag, why) in zip(HN30[:10], REASON_HN))
+    if active == 'gh':
+        return ''.join(item_m(r, n, gh_meta(m, r), tag, why, d) for (r, n, m, d), (tag, why) in zip(GH25[:10], REASON_GH))
+    return ''.join(item_m(r, t, had_meta(m), tag, why, s) for (r, t, m, s), (tag, why) in zip(HAD12[:10], REASON_HAD))
+
+def footer_m():
+    stamp = ('<svg viewBox="0 0 64 64" width="44" height="44" fill="none" stroke="' + INK + '" stroke-width="1.6" style="display: block; flex: none;"><circle cx="32" cy="32" r="29"></circle><circle cx="32" cy="32" r="23" stroke-dasharray="3 3" stroke-width="1"></circle>'
+             '<text x="32" y="37" text-anchor="middle" font-family="Bodoni Moda, serif" font-size="15" font-weight="700" fill="' + INK + '" stroke="none">LP</text></svg>')
+    link = lambda t: '<a href="#" class="t" style="font-family: ' + KAIF + '; font-size: 15px;">' + t + '</a>'
+    return ('<div style="border-top: 2px solid ' + INK + '; margin-top: 40px; padding: 24px 0 8px 0; display: flex; gap: 16px; align-items: flex-start;">' + stamp
+            + '<div style="display: flex; flex-direction: column; gap: 12px;">' + mono2('明早 06:00 · 下一期') + link('最新周刊 · 第 36 周 · 阮一峰周刊第 366 期') + link('日刊归档') + '</div></div>')
+
+def page_m(active, status=None, failed=False):
+    body = failure_box(compact=True) if failed else rows_m(active)
+    return (masthead(compact=True) + '<div style="padding: 0 24px 32px 24px;">' + head_m(status) + tabs_m(active)
+            + '<div style="border-top: 1px solid ' + INK + '; margin-top: 24px;">' + body + '</div>'
+            + '<div style="padding-top: 8px;">' + foot_link(NAMES[active] + ' 完整榜单') + '</div>' + footer_m() + '</div>')
+
 def front3_mobile():
-    return doc(sheet(page('hn', compact=True), width=390, margin='0'), FONTS, PAPER, INK, SERIF, css(), 2500)
+    return doc(sheet(page_m('hn'), width=390, margin='0'), FONTS, PAPER, INK, SERIF, css(), 3200)

@@ -76,15 +76,6 @@
       "page": "page-1"
     },
     {
-      "file": "TypeSpec.dc.html",
-      "x": 0,
-      "y": 2250,
-      "w": 1440,
-      "h": 1500,
-      "title": "字体审核样张：现状 / 方案 A / 方案 B",
-      "page": "page-1"
-    },
-    {
       "file": "FrontLead.dc.html",
       "x": 6240,
       "y": 0,
@@ -410,11 +401,11 @@
     },
     {
       "id": "x3",
-      "x": 1560,
-      "y": 2250,
+      "x": 3120,
+      "y": -320,
       "w": 720,
       "page": "page-1",
-      "text": "字体审核（2026-09-09）\n现状：五个家族加一个回退（Noto Serif SC），中文分散在文楷与 Noto 两种字体里，元数据一行两种字体，Bodoni 在 24px 发虚，字号 13 档。\n方案 A（推荐）：一个角色一个家族。品牌 Bodoni 只留报头；拉丁内容 Newsreader；所有中文霞鹜文楷 Screen；数字 Maple Mono。字号收成 8 档。\n方案 B（备选）：中文改 Noto Serif SC，文楷只留日期。更中性也更冷。\n完整审核见 docs/design/notes/type-audit-2026-09-09.md。"
+      "text": "字体审核（2026-09-09，已定方案 A）\n现状：五个家族加一个回退（Noto Serif SC），中文分散在文楷与 Noto 两种字体里，元数据一行两种字体，Bodoni 在 24px 发虚，字号 13 档。\n方案 A（推荐）：一个角色一个家族。品牌 Bodoni 只留报头；拉丁内容 Newsreader；所有中文霞鹜文楷 Screen；数字 Maple Mono。字号收成 8 档。\n方案 B（备选）：中文改 Noto Serif SC，文楷只留日期。更中性也更冷。\n样张已按产品负责人的操作从画布移除，完整审核与决定见 docs/design/notes/type-audit-2026-09-09.md，字体规范写入 PRD 6.3。"
     },
     {
       "id": "p1",

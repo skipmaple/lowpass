@@ -106,7 +106,7 @@ def rows(active, compact=False):
 
 def failure_box(compact=False):
     text = ('<div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: ' + KAIF + '; font-size: 20px;">今日抓取失败，已通知管理员</span>'
-            + mixed('上次成功 9月7日 06:11 · 修复后本栏自动补齐', INK2, 13) + '</div>')
+            + mixed('上次成功 9月7日 06:11', INK2, 13) + '</div>')
     art = ('<svg viewBox="0 0 260 138" width="130" height="69" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display: block; opacity: 0.8;">' + ill_sunrise() + '</svg>')
     if compact:
         return '<div style="display: flex; flex-direction: column; gap: 16px; padding: 24px 0 20px 0; border-bottom: 1px solid ' + RULE + ';">' + art + text + '</div>'

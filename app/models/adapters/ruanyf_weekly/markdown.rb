@@ -6,7 +6,7 @@ module Adapters
     module Markdown
       TITLE = /\A#\s*科技爱好者周刊（第\s*(\d+)\s*期）[：:]\s*(.+?)\s*\z/
       SECTION = /\A##\s+(.+?)\s*\z/
-      LIST_SECTIONS = [ "科技动态", "文章", "工具", "资源", "AI 相关", "图片", "文摘", "言论" ].freeze
+      LIST_SECTIONS = [ "科技动态", "文章", "工具", "资源", "AI 相关", "图片", "文摘", "言论", "一句话消息" ].freeze
       SKIPPED_SECTIONS = [ "封面图", "往年回顾" ].freeze
       TRAILING_COLON = /[:：]\s*\z/
       ITEM_START = /\A(?:\d+、\s*|（\d+）\s*|\d+\.\s+|[-*]\s+)/

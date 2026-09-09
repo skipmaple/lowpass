@@ -258,4 +258,14 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert_equal 2, quotes.map { |e| UrlNormalizer.hash(e.url) }.uniq.size
     assert entries.all?(&:valid?)
   end
+
+  test "一句话消息按列表拆条" do
+    text = file_fixture("ruanyf/issue-401.md").read
+    parsed = Adapters::RuanyfWeekly::Markdown.parse(text)
+    section = parsed[:sections].find { |s| s[:name].include?("一句话消息") }
+
+    assert section.present?, "Should have 一句话消息 section"
+    assert_operator section[:items].size, :>=, 3, "一句话消息 should have at least 3 items"
+    assert section[:items].all? { |item| item[:title].present? }, "All items should have titles"
+  end
 end

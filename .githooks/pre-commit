@@ -1,0 +1,4 @@
+#!/bin/sh
+files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.rb$')
+[ -z "$files" ] && exit 0
+exec bin/rubocop --force-exclusion $files

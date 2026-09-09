@@ -1,0 +1,26 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("PGHOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("PGPORT", "5432") %>
+  username: <%= ENV.fetch("PGUSER", "postgres") %>
+  password: <%= ENV.fetch("PGPASSWORD", "postgres") %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+
+development:
+  <<: *default
+  database: lowpass_development
+
+test:
+  <<: *default
+  database: lowpass_test
+
+production:
+  primary: &primary_production
+    <<: *default
+    database: lowpass_production
+    url: <%= ENV["DATABASE_URL"] %>
+  queue:
+    <<: *primary_production
+    database: lowpass_production_queue
+    migrations_paths: db/queue_migrate

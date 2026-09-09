@@ -1,7 +1,7 @@
 """生成 lowpass 设计画板。用法：python3 docs/design/src/build.py <输出目录>"""
 import json, os, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pages_reader as R, pages_weekly as W, pages_other as O, pages_warm as T, pages_bright as B, pages_minimal as M, pages_paper as P, pages_press as X, pages_front2 as F, pages_front3 as G
+import pages_reader as R, pages_weekly as W, pages_other as O, pages_warm as T, pages_bright as B, pages_minimal as M, pages_paper as P, pages_press as X, pages_front2 as F, pages_front3 as G, pages_typespec as TS
 
 out = sys.argv[1]
 os.makedirs(out, exist_ok=True)
@@ -11,6 +11,7 @@ pages = {
     # 第九轮：单栏、tab 切换、每条带推荐理由
     'Main.dc.html': G.front3(), 'FrontGitHub.dc.html': G.front3_gh(), 'FrontHackaday.dc.html': G.front3_had(),
     'FrontStates.dc.html': G.front3_states(), 'FrontMobile.dc.html': G.front3_mobile(),
+    'TypeSpec.dc.html': TS.typespec(),
     # 第八轮：头条放大分两栏（已否，存档）
     'FrontLead.dc.html': F.front2(),
     # 第七轮：三栏并列（已否，存档）
@@ -49,6 +50,7 @@ canvas = {
         {'file': 'FrontHackaday.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 2300, 'title': '日刊 · Hackaday 标签', 'page': P1},
         {'file': 'FrontStates.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 900, 'title': '日刊 · 状态：延迟、抓取失败、无新内容', 'page': P1},
         {'file': 'FrontMobile.dc.html', 'x': 6240, 'y': 0, 'w': 390, 'h': 2350, 'title': '日刊 · 手机', 'page': P1},
+        {'file': 'TypeSpec.dc.html', 'x': 0, 'y': 2250, 'w': 1440, 'h': 1500, 'title': '字体审核样张：现状 / 方案 A / 方案 B', 'page': P1},
         {'file': 'FrontLead.dc.html', 'x': 6240, 'y': 0, 'w': 1440, 'h': 2700, 'title': '头条放大分两栏（已否）', 'page': P7},
         {'file': 'FrontColumns.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 2500, 'title': '三栏并列（已否）', 'page': P7},
         {'file': 'PressFull.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 4000, 'title': '对照 · 完整一期 67 条（已否）', 'page': P7},
@@ -87,6 +89,7 @@ canvas = {
     'annotations': [
         {'id': 'x1', 'x': 0, 'y': -320, 'w': 760, 'page': P1, 'text': '第九轮 · 产品负责人 2026-09-09 意见\n一栏：每个来源十条一致，不再放大头条，不再分两栏。\ntab 切换：三个来源做成并排的索引条，当前来源反白成墨色块，与报头黑带呼应，其余描边；每个索引条只有小图标与来源名（产品负责人删去了说明行，也删去了期头的条数与来源数）。一次只看一个来源，页面从 2600px 缩到 1900px 以内。\n推荐理由：每条新增一段推荐理由（约 50 字，绿色细竖线标出）与一个兴趣标签（右侧描边小签），依据可配置的兴趣画像生成；相关度低时理由里直说。PRD 同步新增 D16。'},
         {'id': 'x2', 'x': 1560, 'y': -320, 'w': 700, 'page': P1, 'text': '三个标签各一稿：GitHub 条目多一行英文简介与语言、star、今日新增（前三名绿徽章）；Hackaday 条目多一行摘要与作者。\n状态稿：期头带延迟标签；失败的来源在索引条说明里直接写“抓取失败 · 上次成功时间”，内容区只留失败说明；无新内容的来源同样写在索引条上。\n手机稿：三个索引条等宽 44px 高，兴趣标签并入元数据行。'},
+        {'id': 'x3', 'x': 1560, 'y': 2250, 'w': 720, 'page': P1, 'text': '字体审核（2026-09-09）\n现状：五个家族加一个回退（Noto Serif SC），中文分散在文楷与 Noto 两种字体里，元数据一行两种字体，Bodoni 在 24px 发虚，字号 13 档。\n方案 A（推荐）：一个角色一个家族。品牌 Bodoni 只留报头；拉丁内容 Newsreader；所有中文霞鹜文楷 Screen；数字 Maple Mono。字号收成 8 档。\n方案 B（备选）：中文改 Noto Serif SC，文楷只留日期。更中性也更冷。\n完整审核见 docs/design/notes/type-audit-2026-09-09.md。'},
         {'id': 'p1', 'x': 0, 'y': -300, 'w': 640, 'page': P7, 'text': '纸报初稿 · 参考 niccolomiranda.com 的气质迁移\n迁移了什么：深色桌面 #1D1D1B 上一张有纸纹的纸；1px 墨线做栏框与表格；巨型高对比衬线报头（Bodoni Moda 替代 Canopee）；轻衬线正文与斜体导语（Newsreader 替代 Editorial New）；窄体大写栏目标题（Oswald 替代 Domaine Display Condensed）；一点鼠尾草绿 #96B59F 做徽章。\n没有搬的：它的标志、插画、作品图与文案。\n日刊本来就是一份报纸：报耳放日期与导航，报头下是标语，头条加双栏编号，GitHub 做成表格，Hackaday 做成带编号方块的三栏卡。文楷用在报耳日期与标语，元数据 Maple Mono。'},
         {'id': 'p2', 'x': 1560, 'y': -300, 'w': 560, 'page': P7, 'text': '浅纸色变体（已选）\n结构完全相同，纸色从 #CDC6BE 提到 #E8E3DA。给你比较"忠实参考"与"更亮一点"哪种更舒服。'},
         {'id': 'min-note', 'x': 0, 'y': -240, 'w': 560, 'page': P2, 'text': '第四轮六稿，已否：仍不够有设计感。'},

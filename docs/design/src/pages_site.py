@@ -91,19 +91,15 @@ def footer_site(note, link_text, right=''):
     return ('<div style="border-top: 2px solid ' + INK + '; margin-top: 36px; padding: 18px 0 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">'
             '<div style="display: flex; align-items: center; gap: 16px;">' + stamp + '<div style="display: flex; flex-direction: column; gap: 6px;">' + mono2(note) + link(link_text) + '</div></div>' + right + '</div>')
 
-def item(rank, title, summary, tag, reason, compact=False):
-    """周刊条目：与日刊条目同一结构，标题与摘要是中文所以用文楷。"""
-    reason_html = ('<div style="border-left: 2px solid ' + GREEN + '; padding: 1px 0 1px 12px; margin-top: 4px; max-width: 820px; font-family: ' + KAIF + '; font-size: 15px; line-height: 1.7; color: ' + INK2 + ';">' + reason + '</div>')
+def item(rank, title, summary, compact=False):
+    """周刊条目：序号、标题、摘要。产品负责人定（D19）：阮一峰周刊的内容不加模型生成的推荐理由，也就没有兴趣标签。"""
     title_html = '<a href="#" class="t" style="font-family: ' + KAIF + '; font-size: 20px; line-height: 1.35;">' + title + '</a>'
     sec = '<span style="font-family: ' + KAIF + '; font-size: 15px; line-height: 1.7; color: ' + INK2 + ';">' + summary + '</span>'
     if compact:
-        eyebrow = '<div style="display: flex; align-items: center; justify-content: space-between;">' + mono2(str(rank)) + chip(tag) + '</div>'
-        return ('<div style="padding: 24px 0; border-bottom: 1px solid ' + RULE + ';">' + eyebrow + '<div style="margin-top: 10px;">' + title_html + '</div><div style="margin-top: 8px;">' + sec + '</div>'
-                + reason_html.replace('margin-top: 4px', 'margin-top: 12px') + '</div>')
-    return ('<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; padding: 18px 0; border-bottom: 1px solid ' + RULE + ';">'
+        return ('<div style="padding: 20px 0; border-bottom: 1px solid ' + RULE + ';">' + mono2(str(rank)) + '<div style="margin-top: 8px;">' + title_html + '</div><div style="margin-top: 8px;">' + sec + '</div></div>')
+    return ('<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; padding: 18px 0; border-bottom: 1px solid ' + RULE + ';">'
             '<span style="padding-top: 5px; font-family: ' + MONOF + '; font-size: 13px; color: ' + INK2 + ';">' + str(rank) + '</span>'
-            '<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">' + title_html + sec + reason_html + '</div>'
-            '<div style="padding-top: 3px;">' + chip(tag) + '</div></div>')
+            '<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">' + title_html + sec + '</div></div>')
 
 # ---------- 示例数据（虚构） ----------
 
@@ -161,7 +157,7 @@ def weekly_sections(compact=False):
     out = []
     for s in ['本周话题', '科技动态', '文章', '工具']:
         head = '<div style="padding: ' + ('28px 0 4px 0' if compact else '32px 0 8px 0') + ';">' + kai(s, 22) + '</div>' + hrule()
-        rows = ''.join(item(i + 1, t, sm, tag, why, compact) for i, (t, sm, tag, why) in enumerate(WEEKLY_ITEMS[s]))
+        rows = ''.join(item(i + 1, t, sm, compact) for i, (t, sm, _tag, _why) in enumerate(WEEKLY_ITEMS[s]))
         out.append('<section>' + head + rows + '</section>')
     return ''.join(out)
 
@@ -169,14 +165,14 @@ def weekly():
     inner = (masthead('周刊') + '<div style="padding: 0 40px 28px 40px;">' + page_head(WEEKLY['week'], WEEKLY['year'], WEEKLY['range'], controls('第 35 周', '第 37 周'))
              + source_band() + anchors() + weekly_sections() + foot_link(WEEKLY['src'] + ' 原文')
              + footer_site('下周 · 第 37 周 · 9月7日起', '最新日刊 · 9月8日', controls('第 35 周', '第 37 周')) + '</div>')
-    return doc(sheet(inner), FONTS, GROUND, INK, SERIF, css(), 2500)
+    return doc(sheet(inner), FONTS, GROUND, INK, SERIF, css(), 2000)
 
 def weekly_mobile():
     ctl = '<div style="display: flex; gap: 8px; padding: 14px 0 0 0;">' + ctrl('第 35 周', il='chevron-left', h=44) + ctrl('归档', h=44) + ctrl('第 37 周', ir='chevron-right', off=True, h=44) + '</div>'
     inner = (masthead(compact=True) + '<div style="padding: 0 24px 32px 24px;">' + page_head(WEEKLY['week'], WEEKLY['year'], WEEKLY['range'], '', compact=True) + ctl
              + source_band(True) + anchors(True) + weekly_sections(True) + '<div style="padding-top: 8px;">' + foot_link(WEEKLY['src'] + ' 原文') + '</div>'
              + '<div style="border-top: 2px solid ' + INK + '; margin-top: 40px; padding-top: 24px; display: flex; flex-direction: column; gap: 12px;">' + mono2('下周 · 第 37 周 · 9月7日起') + link('最新日刊 · 9月8日') + link('周刊归档') + '</div></div>')
-    return doc(sheet(inner, width=390, margin='0'), FONTS, PAPER, INK, SERIF, css(), 3000)
+    return doc(sheet(inner, width=390, margin='0'), FONTS, PAPER, INK, SERIF, css(), 2300)
 
 # ---------- 归档 ----------
 

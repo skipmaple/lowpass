@@ -148,8 +148,9 @@ def head_m(status=None):
     tag = ('<span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid ' + INK + '; padding: 3px 8px; margin-top: 2px;">' + icon('clock', 13, INK) + mono2(status, INK, 12) + '</span>') if status else ''
     return ('<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 32px 0 24px 0; border-bottom: 2px solid ' + INK + ';">'
             '<div style="display: flex; flex-direction: column; gap: 12px;">'
-            '<span style="font-family: ' + KAI + '; font-size: 40px; line-height: 1;">9月8日 <span style="font-size: 15px; color: ' + INK2 + ';">星期二</span></span>'
-            + mono2('06:12 发布') + tag + '</div>'
+            '<div style="display: flex; align-items: flex-end; gap: 12px;"><span style="font-family: ' + KAI + '; font-size: 40px; line-height: 1;">9月8日</span>'
+            '<div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 3px;">' + mono2('06:12 发布', INK2, 12) + '<span style="font-family: ' + KAI + '; font-size: 15px; line-height: 1; color: ' + INK2 + ';">星期二</span></div></div>'
+            + tag + '</div>'
             '<div style="display: flex; gap: 8px; flex: none;">' + sq('chevron-left') + sq('chevron-right', off=True) + '</div></div>')
 
 def tabs_m(active):

@@ -2,7 +2,7 @@
 from common import *
 from pages_warm import doc
 from pages_press import HN30, GH25, HAD12, ill_bubbles, ill_branches, ill_solder, ill_sunrise
-from pages_front2 import (GROUND, PAPER, INK, INK2, GREEN, RULE, NAME, SERIF, KAIF, MONOF, FONTS, css, mixed, mono2, label, mm,
+from pages_front2 import (GROUND, PAPER, INK, INK2, GREEN, RULE, NAME, SERIF, KAIF, MONOF, FONTS, css, mixed, mono2, label, mm, sheet as sheet2,
                           hn_meta, gh_meta, had_meta, ctrl, masthead, issue_head, footer, sheet, foot_link)
 
 PAPER_DIM = 'rgba(232, 227, 218, 0.72)'
@@ -99,30 +99,77 @@ def item(rank, title, meta_html, tag, reason, secondary=None, compact=False):
             '<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">' + title_html + sec + meta_html + reason_html + '</div>'
             '<div style="padding-top: 3px;">' + chip(tag) + '</div></div>')
 
-def rows(active, compact=False):
+def rows(active, compact=False, limit=10):
     if active == 'hn':
-        return ''.join(item(r, t, hn_meta(m), tag, why, None, compact) for (r, t, m), (tag, why) in zip(HN30[:10], REASON_HN))
+        return ''.join(item(r, t, hn_meta(m), tag, why, None, compact) for (r, t, m), (tag, why) in zip(HN30[:limit], REASON_HN))
     if active == 'gh':
-        return ''.join(item(r, n, gh_meta(m, r), tag, why, d, compact) for (r, n, m, d), (tag, why) in zip(GH25[:10], REASON_GH))
-    return ''.join(item(r, t, had_meta(m), tag, why, s, compact) for (r, t, m, s), (tag, why) in zip(HAD12[:10], REASON_HAD))
+        return ''.join(item(r, n, gh_meta(m, r), tag, why, d, compact) for (r, n, m, d), (tag, why) in zip(GH25[:limit], REASON_GH))
+    return ''.join(item(r, t, had_meta(m), tag, why, s, compact) for (r, t, m, s), (tag, why) in zip(HAD12[:limit], REASON_HAD))
 
-def failure_box(compact=False):
+def failure_box(compact=False, last='9月7日 06:11'):
     text = ('<div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: ' + KAIF + '; font-size: 20px;">今日抓取失败，已通知管理员</span>'
-            + mixed('上次成功 9月7日 06:11', INK2, 13) + '</div>')
+            + mixed('上次成功 ' + last, INK2, 13) + '</div>')
     art = ('<svg viewBox="0 0 260 138" width="130" height="69" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display: block; opacity: 0.8;">' + ill_sunrise() + '</svg>')
     if compact:
         return '<div style="display: flex; flex-direction: column; gap: 16px; padding: 24px 0 20px 0; border-bottom: 1px solid ' + RULE + ';">' + art + text + '</div>'
     return ('<div style="display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 24px; align-items: center; padding: 28px 0 24px 0; border-bottom: 1px solid ' + RULE + ';">' + art + text + '</div>')
 
-def body(active, compact=False, failed=False):
-    inner = failure_box(compact) if failed else rows(active, compact)
-    return ('<div style="border-top: 1px solid ' + INK + '; margin-top: ' + ('16px' if compact else '20px') + ';">' + inner + '</div>'
+def body(active, compact=False, failed=False, limit=10, last='9月7日 06:11'):
+    inner = failure_box(compact, last) if failed else rows(active, compact, limit)
+    return ('<div style="border-top: 1px solid ' + INK + '; margin-top: ' + ('16px' if compact else '0') + ';">' + inner + '</div>'
             + foot_link(NAMES[active] + ' 完整榜单'))
 
-def page(active, compact=False, status=None, kickers=None, failed=False):
-    controls = ('<div style="display: flex; gap: 8px; padding: 14px 0 0 0;">' + ctrl('9月7日', il='chevron-left', h=44) + ctrl('归档', h=44) + ctrl('9月9日', ir='chevron-right', off=True, h=44) + '</div>') if compact else ''
-    return (masthead(compact=compact) + '<div style="padding: ' + ('0 20px 24px 20px' if compact else '0 40px 28px 40px') + ';">'
-            + issue_head(status=status, compact=compact) + controls + tabs(active, kickers, compact) + body(active, compact, failed) + footer(compact) + '</div>')
+def page(active, compact=False, status=None, kickers=None, failed=False, limit=10, date='9月8日', weekday='星期二', info='06:12 发布', last='9月7日 06:11', content=None, prev='9月7日', nxt='9月9日', next_off=True):
+    """content 传入时替换列表区（期级状态用）。"""
+    if compact:
+        controls = '<div style="display: flex; gap: 8px; padding: 14px 0 0 0;">' + ctrl('9月7日', il='chevron-left', h=44) + ctrl('归档', h=44) + ctrl('9月9日', ir='chevron-right', off=True, h=44) + '</div>'
+        return (masthead(compact=True) + '<div style="padding: 0 20px 24px 20px;">' + issue_head(status=status, compact=True) + controls
+                + tabs(active, kickers, True) + body(active, True, failed) + footer(True) + '</div>')
+    middle = content if content is not None else body(active, False, failed, limit, last)
+    return (masthead() + '<div style="padding: 0 40px 28px 40px;">' + issue_head(status=status, date=date, weekday=weekday, info=info, prev=prev, nxt=nxt, next_off=next_off)
+            + tabs(active, kickers) + middle + footer(prev=prev, nxt=nxt, next_off=next_off) + '</div>')
+
+def message(text, sub=None, action=None):
+    """期级状态说明：一句附录 B 的事实，可带一个时间和一个动作。"""
+    return ('<div style="border-top: 1px solid ' + INK + ';"><div style="display: flex; flex-direction: column; gap: 12px; padding: 28px 0 24px 0; border-bottom: 1px solid ' + RULE + ';">'
+            '<span style="font-family: ' + KAIF + '; font-size: 20px;">' + text + '</span>' + (mixed(sub, INK2, 13) if sub else '') + ('<div style="padding-top: 4px;">' + action + '</div>' if action else '') + '</div></div>')
+
+def front3_issue_states():
+    """六种期级状态，各一张纸：生成中、空刊、缺期（成员）、缺期（管理员）、凌晨显示昨日、已修订。"""
+    failed_all = {'hn': '抓取失败', 'gh': '抓取失败', 'had': '抓取失败'}
+    sheets = [
+        page(None, status='生成中，约 1 分钟后刷新', info='06:00', content='<div style="border-top: 1px solid ' + INK + '; height: 48px;"></div>'),
+        page(None, status='空刊', info='06:20', kickers=failed_all, content=message('今日为空刊，管理员已收到通知', '上次成功 9月6日 06:11')),
+        page(None, status='本期未生成', date='9月3日', weekday='星期四', info='', content=message('本期未生成'), prev='9月2日', nxt='9月4日', next_off=False),
+        page(None, status='本期未生成', date='9月3日', weekday='星期四', info='', prev='9月2日', nxt='9月4日', next_off=False, content=message('本期未生成', '管理员可补生成，只有支持回填的来源会产出内容', '<span style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; background: ' + INK + '; color: ' + PAPER + ';">' + icon('refresh-cw', 14, PAPER) + '<span style="font-family: ' + KAIF + '; font-size: 15px; color: ' + PAPER + ';">补生成</span></span>')),
+        page('hn', status='昨日日刊，今日将于 06:00 生成', date='9月7日', weekday='星期一', info='07:05 发布', kickers={'had': '抓取失败', 'gh': '今日无新内容'}, limit=2, prev='9月6日', nxt='9月8日', next_off=True),
+        page('had', status='已于 06:42 修订', info='06:12 发布', limit=2),
+    ]
+    inner = ''.join(sheet2(x, h=0, margin=('32px auto 0 auto' if i == 0 else '48px auto 0 auto')) for i, x in enumerate(sheets)) + '<div style="height: 48px;"></div>'
+    return doc(inner, FONTS, GROUND, INK, SERIF, css(), 4200)
+
+def menu_sheet(admin=True):
+    items = ['设置'] + (['管理'] if admin else []) + ['登出']
+    menu = ('<div style="position: absolute; right: 40px; top: 66px; width: 220px; background: ' + PAPER + '; border: 1px solid ' + INK + '; padding: 6px 0; box-shadow: 0 12px 30px rgba(0,0,0,0.25);">'
+            '<div style="padding: 8px 16px 10px 16px; border-bottom: 1px solid ' + RULE + ';">' + mono2('drew@example.com', INK2, 12) + '</div>'
+            + ''.join('<a href="#" style="display: block; padding: 10px 16px; font-family: ' + KAIF + '; font-size: 15px; color: ' + INK + ';">' + i + '</a>' for i in items) + '</div>')
+    return '<div style="position: relative;">' + masthead() + menu + '</div>' + '<div style="height: 200px;"></div>'
+
+def front3_menu():
+    inner = sheet2(menu_sheet(True), h=0, margin='32px auto 0 auto') + sheet2(menu_sheet(False), h=0, margin='48px auto 48px auto')
+    return doc(inner, FONTS, GROUND, INK, SERIF, css(), 800)
+
+def error_sheet(code, text):
+    return (masthead('') + '<div style="padding: 0 40px 40px 40px;">'
+            '<div style="display: flex; align-items: flex-end; gap: 16px; padding: 32px 0 20px 0; border-bottom: 2px solid ' + INK + ';">'
+            '<span style="font-family: ' + KAI + '; font-size: 40px; line-height: 1;">' + text + '</span>' + mono2(code, INK2, 13) + '</div>'
+            '<div style="padding-top: 20px;"><a href="#" class="t" style="font-family: ' + KAIF + '; font-size: 15px;">回到首页</a></div></div>')
+
+def front3_errors():
+    inner = (sheet2(error_sheet('403', '你没有权限访问这个页面。'), h=0, margin='32px auto 0 auto')
+             + sheet2(error_sheet('404', '这一页不存在。'), h=0, margin='48px auto 0 auto')
+             + sheet2(error_sheet('500', '出了点问题，我们已记录。请稍后重试。'), h=0, margin='48px auto 48px auto'))
+    return doc(inner, FONTS, GROUND, INK, SERIF, css(), 1100)
 
 def front3():
     return doc(sheet(page('hn')), FONTS, GROUND, INK, SERIF, css(), 2200)
@@ -134,8 +181,8 @@ def front3_had():
     return doc(sheet(page('had')), FONTS, GROUND, INK, SERIF, css(), 2400)
 
 def front3_states():
-    k = {'hn': '抓取失败 · 上次成功 9月7日 06:11', 'gh': '今日无新内容'}
-    return doc(sheet(page('hn', status='延迟生成于 07:05', kickers=k, failed=True)), FONTS, GROUND, INK, SERIF, css(), 900)
+    k = {'had': '抓取失败 · 上次成功 9月6日 06:11', 'gh': '今日无新内容'}
+    return doc(sheet(page('had', status='延迟生成于 07:05', kickers=k, failed=True, date='9月7日', weekday='星期一', info='07:05 发布', last='9月6日 06:11', prev='9月6日', nxt='9月8日', next_off=False)), FONTS, GROUND, INK, SERIF, css(), 900)
 
 # ---------- 手机版：按手机的阅读节奏单独排，不照搬桌面 ----------
 

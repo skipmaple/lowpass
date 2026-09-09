@@ -86,13 +86,13 @@ def masthead(active='日刊', compact=False):
             '<div style="display: flex; align-items: center; gap: 40px;"><span style="font-family: ' + NAME + '; font-size: ' + str(size) + 'px; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; color: ' + PAPER + '; line-height: 1;">lowpass</span>' + navs + '</div>'
             + right + '</div>')
 
-def issue_head(status=None, compact=False):
+def issue_head(status=None, compact=False, date='9月8日', weekday='星期二', info='06:12 发布', prev='9月7日', nxt='9月9日', next_off=True):
     date_size, wk_size = (40, 15) if compact else (56, 20)
-    controls = ('' if compact else '<div style="display: flex; gap: 8px; align-items: center;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + ctrl('9月9日', ir='chevron-right', off=True) + '</div>')
+    controls = ('' if compact else '<div style="display: flex; gap: 8px; align-items: center;">' + ctrl(prev, il='chevron-left') + ctrl('归档') + ctrl(nxt, ir='chevron-right', off=next_off) + '</div>')
     tag = ('<span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid ' + INK + '; padding: 3px 8px;">' + icon('clock', 13, INK) + mono2(status, INK, 12) + '</span>' if status else '')
     return ('<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: ' + ('24px 0 16px 0' if compact else '32px 0 20px 0') + '; border-bottom: 2px solid ' + INK + ';">'
-            '<div style="display: flex; align-items: flex-end; gap: 16px;"><span style="font-family: ' + KAI + '; font-size: ' + str(date_size) + 'px; line-height: 1;">9月8日</span>'
-            '<div style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px;">' + mono2('06:12 发布') + '<span style="font-family: ' + KAI + '; font-size: ' + str(wk_size) + 'px; line-height: 1; color: ' + INK2 + ';">星期二</span></div>'
+            '<div style="display: flex; align-items: flex-end; gap: 16px;"><span style="font-family: ' + KAI + '; font-size: ' + str(date_size) + 'px; line-height: 1;">' + date + '</span>'
+            '<div style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px;">' + (mono2(info) if info else '') + '<span style="font-family: ' + KAI + '; font-size: ' + str(wk_size) + 'px; line-height: 1; color: ' + INK2 + ';">' + weekday + '</span></div>'
             + ('<div style="padding-bottom: 4px;">' + tag + '</div>' if tag else '') + '</div>' + controls + '</div>')
 
 def section_head(title, kicker_text, ill, compact=False):
@@ -166,12 +166,12 @@ def empty_section(title, kicker_text, ill, compact=False):
            + mm([('近 24 小时该来源没有新文章', 's'), ('·', 'm'), ('06:12', 'm'), ('检查', 's')]) + '</div>')
     return '<section>' + section_head(title, kicker_text, ill, compact) + box + foot_link(title + ' 全部') + '</section>'
 
-def footer(compact=False):
+def footer(compact=False, prev='9月7日', nxt='9月9日', next_off=True):
     stamp = ('<svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="' + INK + '" stroke-width="1.6" style="display: block;"><circle cx="32" cy="32" r="29"></circle><circle cx="32" cy="32" r="23" stroke-dasharray="3 3" stroke-width="1"></circle>'
              '<text x="32" y="37" text-anchor="middle" font-family="Bodoni Moda, serif" font-size="15" font-weight="700" fill="' + INK + '" stroke="none">LP</text></svg>')
     return ('<div style="border-top: 2px solid ' + INK + '; margin-top: 36px; padding: 18px 0 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">'
             '<div style="display: flex; align-items: center; gap: 16px;">' + stamp + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono2('明早 06:00 · 下一期') + '<a href="#" class="t" style="font-family: ' + KAIF + '; font-size: 15px;">最新周刊 · 第 36 周 · 阮一峰周刊第 366 期</a></div></div>'
-            + ('' if compact else '<div style="display: flex; gap: 8px;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + ctrl('9月9日', ir='chevron-right', off=True) + '</div>') + '</div>')
+            + ('' if compact else '<div style="display: flex; gap: 8px;">' + ctrl(prev, il='chevron-left') + ctrl('归档') + ctrl(nxt, ir='chevron-right', off=next_off) + '</div>') + '</div>')
 
 def sheet(inner, width=1240, pad=40, h=2400, margin='32px auto 48px auto'):
     return ('<div style="width: ' + str(width) + 'px; margin: ' + margin + '; box-sizing: border-box; background: ' + PAPER + '; color: ' + INK + '; '

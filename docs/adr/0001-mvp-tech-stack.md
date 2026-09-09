@@ -36,6 +36,17 @@ PRD v0.3.3 新增 D16：每条条目带模型生成的推荐理由与兴趣标�
 
 对已接受决议的影响：T4 不变，理由生成作为 Solid Queue 任务跑在 job 容器；T2 不变，生成任务在期发布后入队。产品负责人定 T8 后，更新决议表并在实现计划里加上生成任务与后台的重生成入口。
 
+## 补充决议（2026-09-09）：借鉴 basecamp/fizzy 后由产品负责人定的四项
+
+| 编号 | 决议 | 说明 |
+|---|---|---|
+| T9 | 主键照搬 fizzy：UUIDv7，base36 编码为 25 字符字符串列 | 在 PostgreSQL 上不用原生 uuid 列型；生成与 fixture 规则见 AGENTS.md |
+| T10 | 引入 fizzy 的 `surfguard` gem 做出站请求的 SSRF 策略 | 管理员填的 feed 地址连接前解析为公网 IP，拒绝内网与回环 |
+| T11 | 工具版本用 mise 管理 | `.mise.toml` 钉 Ruby 与 Node；`bin/setup` 负责安装；prek 不引入 |
+| T12 | 引入 `mission_control-jobs` 作为队列面板 | 挂在 `/admin/jobs`，仅 admin |
+
+四项都不改变 T1 到 T7 的结论；AGENTS.md 是代理执行时的默认值汇总。
+
 ## 逐项评估
 
 | 组件 | 对 PRD 的覆盖 | 注意点 |

@@ -80,7 +80,9 @@ def tabs(active, kickers=None, compact=False):
     return '<div style="display: flex; padding: ' + ('16px 0 0 0' if compact else '24px 0 0 0') + ';">' + ''.join(items) + '</div>'
 
 def chip(text):
-    return ('<span style="display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid ' + RULE + '; white-space: nowrap;">' + mixed(text, INK2, 12) + '</span>')
+    """兴趣标签：参照样例站的分类标签，墨色反白小块，纸色文字，无圆角无描边。"""
+    return ('<span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; background: ' + INK + '; letter-spacing: 0.06em; white-space: nowrap;">'
+            + mixed(text, PAPER, 12) + '</span>')
 
 def item(rank, title, meta_html, tag, reason, secondary=None, compact=False):
     """十条一致的条目：序号、标题、说明、元数据、兴趣标签、推荐理由（绿色细竖线）。"""

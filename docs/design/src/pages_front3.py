@@ -56,9 +56,8 @@ def isvg(inner, size, color):
     return ('<svg viewBox="0 0 120 78" width="' + str(round(size * 120 / 78)) + '" height="' + str(size) + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; display: block;">' + inner + '</svg>')
 
 def tabs(active, kickers=None, compact=False):
-    """来源切换。桌面版参照样例站 /work 的书脊画廊：三条 56px 宽的竖排书脊并排立在列表左侧，
-    来源名竖排在顶端（Newsreader 600），状态词竖排在名字下（文楷直立），小图标在底端；当前来源反白成墨块。
-    手机版保留三格横排（图标在上、名字在下）。"""
+    """来源切换：三个并排的纸报式索引条。当前项反白成墨色块，与报头黑带呼应；其余描边。
+    产品负责人在画布上删掉了索引条下的说明行，这里只在有状态要报（抓取失败、无新内容）时才出现一行。"""
     kickers = kickers or {}
     items = []
     for i, (key, name, _kick, ill) in enumerate(SOURCES):
@@ -72,17 +71,13 @@ def tabs(active, kickers=None, compact=False):
         fg = PAPER if on else INK
         fg2 = PAPER_DIM if on else INK2
         inner = ill().replace(PAPER, INK) if on else ill()
-        state = kickers.get(key)
-        state_html = ('<span style="writing-mode: vertical-lr; text-orientation: upright; font-family: ' + KAIF + '; font-size: 12px; letter-spacing: 0.12em; line-height: 1; color: ' + fg2 + '; margin-top: 18px;">' + state + '</span>') if state else ''
-        st = ('flex: none; width: 56px; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 22px 0 18px 0; border: 1px solid ' + INK + ';'
+        st = ('flex: 1 1 0; display: flex; align-items: center; gap: 16px; padding: 18px 24px 18px 18px; border: 1px solid ' + INK + '; min-width: 0;'
               + (' background: ' + INK + ';' if on else '') + join)
-        items.append('<a href="#" style="' + st + '">'
-                     '<span style="display: flex; flex-direction: column; align-items: center;">'
-                     '<span style="writing-mode: vertical-lr; text-orientation: mixed; font-family: ' + SERIF + '; font-size: 22px; font-weight: 600; letter-spacing: 0.02em; line-height: 1; color: ' + fg + '; white-space: nowrap;">' + name + '</span>' + state_html + '</span>'
-                     + isvg(inner, 26, fg) + '</a>')
-    if compact:
-        return '<div style="display: flex; padding: 16px 0 0 0;">' + ''.join(items) + '</div>'
-    return '<div style="display: flex; align-self: stretch;">' + ''.join(items) + '</div>'
+        state = kickers.get(key)
+        line = ('<span style="white-space: nowrap;">' + mixed(state, fg2, 12) + '</span>') if state else ''
+        items.append('<a href="#" style="' + st + '">' + isvg(inner, 44, fg)
+                     + '<div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-family: ' + SERIF + '; font-size: 32px; font-weight: 600; line-height: 1; letter-spacing: -0.01em; color: ' + fg + ';">' + name + '</span>' + line + '</div></a>')
+    return '<div style="display: flex; padding: ' + ('16px 0 0 0' if compact else '24px 0 0 0') + ';">' + ''.join(items) + '</div>'
 
 def chip(text):
     """兴趣标签：参照样例站的分类标签，墨色反白小块，纸色文字，无圆角无描边。"""
@@ -121,17 +116,13 @@ def failure_box(compact=False):
 
 def body(active, compact=False, failed=False):
     inner = failure_box(compact) if failed else rows(active, compact)
-    return ('<div style="border-top: 1px solid ' + INK + '; margin-top: ' + ('16px' if compact else '0') + ';">' + inner + '</div>'
+    return ('<div style="border-top: 1px solid ' + INK + '; margin-top: ' + ('16px' if compact else '20px') + ';">' + inner + '</div>'
             + foot_link(NAMES[active] + ' 完整榜单'))
 
 def page(active, compact=False, status=None, kickers=None, failed=False):
-    if compact:
-        controls = '<div style="display: flex; gap: 8px; padding: 14px 0 0 0;">' + ctrl('9月7日', il='chevron-left', h=44) + ctrl('归档', h=44) + ctrl('9月9日', ir='chevron-right', off=True, h=44) + '</div>'
-        return (masthead(compact=True) + '<div style="padding: 0 20px 24px 20px;">' + issue_head(status=status, compact=True) + controls
-                + tabs(active, kickers, True) + body(active, True, failed) + footer(True) + '</div>')
-    return (masthead() + '<div style="padding: 0 40px 28px 40px;">' + issue_head(status=status)
-            + '<div style="display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 0 40px; align-items: stretch; margin-top: 24px;">'
-            + tabs(active, kickers) + '<div>' + body(active, False, failed) + '</div></div>' + footer() + '</div>')
+    controls = ('<div style="display: flex; gap: 8px; padding: 14px 0 0 0;">' + ctrl('9月7日', il='chevron-left', h=44) + ctrl('归档', h=44) + ctrl('9月9日', ir='chevron-right', off=True, h=44) + '</div>') if compact else ''
+    return (masthead(compact=compact) + '<div style="padding: ' + ('0 20px 24px 20px' if compact else '0 40px 28px 40px') + ';">'
+            + issue_head(status=status, compact=compact) + controls + tabs(active, kickers, compact) + body(active, compact, failed) + footer(compact) + '</div>')
 
 def front3():
     return doc(sheet(page('hn')), FONTS, GROUND, INK, SERIF, css(), 2200)
@@ -143,7 +134,7 @@ def front3_had():
     return doc(sheet(page('had')), FONTS, GROUND, INK, SERIF, css(), 2400)
 
 def front3_states():
-    k = {'hn': '抓取失败', 'gh': '今日无新内容'}  # 书脊上只放短状态词，细节在内容区
+    k = {'hn': '抓取失败 · 上次成功 9月7日 06:11', 'gh': '今日无新内容'}
     return doc(sheet(page('hn', status='延迟生成于 07:05', kickers=k, failed=True)), FONTS, GROUND, INK, SERIF, css(), 900)
 
 # ---------- 手机版：按手机的阅读节奏单独排，不照搬桌面 ----------

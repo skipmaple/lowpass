@@ -1,15 +1,18 @@
 """生成 lowpass 设计画板。用法：python3 docs/design/src/build.py <输出目录>"""
 import json, os, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pages_reader as R, pages_weekly as W, pages_other as O, pages_warm as T, pages_bright as B, pages_minimal as M, pages_paper as P, pages_press as X, pages_front2 as F
+import pages_reader as R, pages_weekly as W, pages_other as O, pages_warm as T, pages_bright as B, pages_minimal as M, pages_paper as P, pages_press as X, pages_front2 as F, pages_front3 as G
 
 out = sys.argv[1]
 os.makedirs(out, exist_ok=True)
 design_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 
 pages = {
-    # 第八轮：纵向有重心
-    'Main.dc.html': F.front2(), 'FrontStates.dc.html': F.front2_states(), 'FrontMobile.dc.html': F.front2_mobile(),
+    # 第九轮：单栏、tab 切换、每条带推荐理由
+    'Main.dc.html': G.front3(), 'FrontGitHub.dc.html': G.front3_gh(), 'FrontHackaday.dc.html': G.front3_had(),
+    'FrontStates.dc.html': G.front3_states(), 'FrontMobile.dc.html': G.front3_mobile(),
+    # 第八轮：头条放大分两栏（已否，存档）
+    'FrontLead.dc.html': F.front2(),
     # 第七轮：三栏并列（已否，存档）
     'FrontColumns.dc.html': X.front(),
     # 第六轮：完整一期 67 条（存档，对照）
@@ -39,11 +42,14 @@ for name in ['DirectionA.dc.html', 'DirectionB.dc.html', 'DirectionC.dc.html']:
 P1, P2, P3, P4, P5, P6, P7 = 'page-1', 'page-2', 'page-3', 'page-4', 'page-5', 'page-6', 'page-7'
 HP, H, HB = 2300, 2000, 1450
 canvas = {
-    'pages': [{'id': P1, 'name': '纸报 · 完整一期（第六轮）'}, {'id': P7, 'name': '纸报初稿（第五轮）'}, {'id': P2, 'name': '版面结构（第四轮，已否）'}, {'id': P3, 'name': '明亮配色（第三轮，已否）'}, {'id': P4, 'name': '暖色（第二轮，已否）'}, {'id': P5, 'name': '斯堪的纳维亚（已否）'}, {'id': P6, 'name': '早期方向（存档）'}],
+    'pages': [{'id': P1, 'name': '日刊 · 当前稿（第九轮）'}, {'id': P7, 'name': '纸报初稿（第五轮）'}, {'id': P2, 'name': '版面结构（第四轮，已否）'}, {'id': P3, 'name': '明亮配色（第三轮，已否）'}, {'id': P4, 'name': '暖色（第二轮，已否）'}, {'id': P5, 'name': '斯堪的纳维亚（已否）'}, {'id': P6, 'name': '早期方向（存档）'}],
     'artboards': [
-        {'file': 'Main.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': 2700, 'title': '日刊 · 纵向有重心（Main）', 'page': P1},
-        {'file': 'FrontStates.dc.html', 'x': 1560, 'y': 0, 'w': 1440, 'h': 1850, 'title': '日刊 · 状态：延迟、抓取失败、无新内容', 'page': P1},
-        {'file': 'FrontMobile.dc.html', 'x': 3120, 'y': 0, 'w': 390, 'h': 4400, 'title': '日刊 · 手机', 'page': P1},
+        {'file': 'Main.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': 2000, 'title': '日刊 · Hacker News 标签（Main）', 'page': P1},
+        {'file': 'FrontGitHub.dc.html', 'x': 1560, 'y': 0, 'w': 1440, 'h': 2300, 'title': '日刊 · GitHub Trending 标签', 'page': P1},
+        {'file': 'FrontHackaday.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 2300, 'title': '日刊 · Hackaday 标签', 'page': P1},
+        {'file': 'FrontStates.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 900, 'title': '日刊 · 状态：延迟、抓取失败、无新内容', 'page': P1},
+        {'file': 'FrontMobile.dc.html', 'x': 6240, 'y': 0, 'w': 390, 'h': 2350, 'title': '日刊 · 手机', 'page': P1},
+        {'file': 'FrontLead.dc.html', 'x': 6240, 'y': 0, 'w': 1440, 'h': 2700, 'title': '头条放大分两栏（已否）', 'page': P7},
         {'file': 'FrontColumns.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 2500, 'title': '三栏并列（已否）', 'page': P7},
         {'file': 'PressFull.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 4000, 'title': '对照 · 完整一期 67 条（已否）', 'page': P7},
         {'file': 'PaperBeige.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': HP, 'title': '初稿 · 纸色忠实参考', 'page': P7},
@@ -79,8 +85,8 @@ canvas = {
         {'file': 'DirectionC.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 1040, 'title': '方向 C · 杂志（存档）', 'page': P6},
     ],
     'annotations': [
-        {'id': 'x1', 'x': 0, 'y': -300, 'w': 720, 'page': P1, 'text': '第八轮 · 按评审修订清单\n重心：不再三栏并列。每个来源一节，头条横贯整节做重心，第 2 到 10 条在其下分两栏；一屏只有一个焦点，自上而下阅读。\n首屏：报头缩成 80px 一行式黑带，日期与发布信息同一行，右侧前后期与归档；数据带与索引条删除，内容在 250px 内出现。\n减噪：插图缩为节名旁 44px 的图标；绿徽章只给前三名；序号降为等宽灰字；字体收敛为四个家族：Bodoni、Newsreader（中文回退 Noto Serif SC）、文楷、Maple Mono。\n可点性：标题统一 30% 墨色细下划线，悬停变实；栏尾外链措辞统一。\n文案：读者页面上没有任何非数据文字。每个元素对应一条真实字段：报耳的日期、发布时间与条目数；数据带里的来源数、条目数、抓取用时、昨日条数（来自抓取记录）；索引条里的三个来源与计数（滚动时吸顶，点击跳到该栏）；列表里的序号、标题、分数、评论、时间、语言、star、今日新增、作者、摘要。\n易读：正文 17px Newsreader 400，行高 1.35 以上；次级墨色 #55504B 在浅纸上对比度约 6:1；大写只用于拉丁栏目标题；标题整行可点，悬停下划线。'},
-        {'id': 'x2', 'x': 1560, 'y': -300, 'w': 640, 'page': P1, 'text': '状态稿与手机稿\n中间一稿展示三种状态：期头带“延迟生成于 07:05”标签；Hacker News 一节抓取失败，保留节头，正文说明上次成功时间与自动补齐；GitHub 一节今日无新内容。\n右侧是 390 宽手机版：56px 报头，日期缩小，前后期按钮 44 高，每节头条放大后接列表。\n\n插图\n与参考相同的手法：墨线木刻感、细线排线做阴影、装在 1px 框里并配大写图注，纸色留白，一点鼠尾草绿。四幅全部原创：报头旁的"低通日出"（噪声波经滤波器变成平滑波，太阳从地平线升起）、Hacker News 的"讨论"（两个对话气泡与向上箭头）、GitHub 的"分支"（提交节点与合流的枝，顶端一颗星）、Hackaday 的"焊接"（烙铁、烟和一枚芯片），页脚一枚 LP 邮戳。\n没有沿用参考站的刺猬角色和作品照片。若你希望有一个自己的角色形象，另起一轮单独定。'},
+        {'id': 'x1', 'x': 0, 'y': -320, 'w': 760, 'page': P1, 'text': '第九轮 · 产品负责人 2026-09-09 意见\n一栏：每个来源十条一致，不再放大头条，不再分两栏。\ntab 切换：三个来源做成并排的索引条，当前来源反白成墨色块，与报头黑带呼应，其余描边；每个索引条带小图标、来源名与一行说明。一次只看一个来源，页面从 2600px 缩到 1900px 以内。\n推荐理由：每条新增一段推荐理由（约 50 字，绿色细竖线标出）与一个兴趣标签（右侧描边小签），依据可配置的兴趣画像生成；相关度低时理由里直说。PRD 同步新增 D16。'},
+        {'id': 'x2', 'x': 1560, 'y': -320, 'w': 700, 'page': P1, 'text': '三个标签各一稿：GitHub 条目多一行英文简介与语言、star、今日新增（前三名绿徽章）；Hackaday 条目多一行摘要与作者。\n状态稿：期头带延迟标签；失败的来源在索引条说明里直接写“抓取失败 · 上次成功时间”，内容区只留失败说明；无新内容的来源同样写在索引条上。\n手机稿：三个索引条等宽 44px 高，兴趣标签并入元数据行。'},
         {'id': 'p1', 'x': 0, 'y': -300, 'w': 640, 'page': P7, 'text': '纸报初稿 · 参考 niccolomiranda.com 的气质迁移\n迁移了什么：深色桌面 #1D1D1B 上一张有纸纹的纸；1px 墨线做栏框与表格；巨型高对比衬线报头（Bodoni Moda 替代 Canopee）；轻衬线正文与斜体导语（Newsreader 替代 Editorial New）；窄体大写栏目标题（Oswald 替代 Domaine Display Condensed）；一点鼠尾草绿 #96B59F 做徽章。\n没有搬的：它的标志、插画、作品图与文案。\n日刊本来就是一份报纸：报耳放日期与导航，报头下是标语，头条加双栏编号，GitHub 做成表格，Hackaday 做成带编号方块的三栏卡。文楷用在报耳日期与标语，元数据 Maple Mono。'},
         {'id': 'p2', 'x': 1560, 'y': -300, 'w': 560, 'page': P7, 'text': '浅纸色变体（已选）\n结构完全相同，纸色从 #CDC6BE 提到 #E8E3DA。给你比较"忠实参考"与"更亮一点"哪种更舒服。'},
         {'id': 'min-note', 'x': 0, 'y': -240, 'w': 560, 'page': P2, 'text': '第四轮六稿，已否：仍不够有设计感。'},

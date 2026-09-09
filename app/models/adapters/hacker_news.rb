@@ -11,6 +11,7 @@ module Adapters
         ids.each do |id|
           break if picked.size >= count
           story = JSON.parse(http("#{API}/item/#{id}.json").body)
+          next if story.nil?
           next unless story["type"] == "story" && story["score"].to_i >= min_score && !story["dead"] && !story["deleted"]
           picked << build(story, picked.size + 1)
         end

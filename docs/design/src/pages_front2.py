@@ -31,7 +31,8 @@ def mixed(text, color=INK2, size=13, latin_extra=''):
             out.append('<span style="font-family: ' + KAIF + '; font-size: ' + str(size) + 'px; color: ' + color + ';">' + run + '</span>')
         else:
             out.append('<span style="font-family: ' + MONOF + '; font-size: ' + str(size) + 'px; color: ' + color + ';' + latin_extra + '">' + run + '</span>')
-    return ''.join(out)
+    # 始终包成一个行内元素，放进纵向 flex 容器时不会被拆成多行
+    return '<span style="line-height: 1.6;">' + ''.join(out) + '</span>'
 
 def mono2(text, color=INK2, size=13):
     return '<span style="white-space: nowrap;">' + mixed(text, color, size) + '</span>'

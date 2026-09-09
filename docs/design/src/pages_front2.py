@@ -86,7 +86,7 @@ def issue_head(status=None, compact=False):
     tag = ('<span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid ' + INK + '; padding: 3px 8px;">' + icon('clock', 13, INK) + mono2(status, INK, 12) + '</span>' if status else '')
     return ('<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: ' + ('24px 0 16px 0' if compact else '32px 0 20px 0') + '; border-bottom: 2px solid ' + INK + ';">'
             '<div style="display: flex; flex-direction: column; gap: 10px;"><span style="font-family: ' + KAI + '; font-size: ' + str(date_size) + 'px; line-height: 1;">9月8日 <span style="font-size: ' + str(wk_size) + 'px; color: ' + INK2 + ';">星期二</span></span>'
-            '<div style="display: flex; align-items: center; gap: 12px;">' + mono2('06:12 发布 · 30 条 · 3 个来源') + tag + '</div></div>' + controls + '</div>')
+            '<div style="display: flex; align-items: center; gap: 12px;">' + mono2('06:12 发布') + tag + '</div></div>' + controls + '</div>')
 
 def section_head(title, kicker_text, ill, compact=False):
     return ('<div style="display: flex; align-items: center; gap: 16px; padding: ' + ('28px 0 12px 0' if compact else '40px 0 14px 0') + ';">' + icon_svg(ill, 36 if compact else 44)

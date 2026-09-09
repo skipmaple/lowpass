@@ -56,10 +56,11 @@ def isvg(inner, size, color):
     return ('<svg viewBox="0 0 120 78" width="' + str(round(size * 120 / 78)) + '" height="' + str(size) + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; display: block;">' + inner + '</svg>')
 
 def tabs(active, kickers=None, compact=False):
-    """来源切换：三个并排的纸报式索引条。当前项反白成墨色块，与报头黑带呼应；其余描边。"""
+    """来源切换：三个并排的纸报式索引条。当前项反白成墨色块，与报头黑带呼应；其余描边。
+    产品负责人在画布上删掉了索引条下的说明行，这里只在有状态要报（抓取失败、无新内容）时才出现一行。"""
     kickers = kickers or {}
     items = []
-    for i, (key, name, kick, ill) in enumerate(SOURCES):
+    for i, (key, name, _kick, ill) in enumerate(SOURCES):
         on = key == active
         join = ' margin-left: -1px;' if i else ''
         if compact:
@@ -70,11 +71,12 @@ def tabs(active, kickers=None, compact=False):
         fg = PAPER if on else INK
         fg2 = PAPER_DIM if on else INK2
         inner = ill().replace(PAPER, INK) if on else ill()
-        st = ('flex: 1 1 0; display: flex; align-items: center; gap: 14px; padding: 14px 24px 14px 18px; border: 1px solid ' + INK + '; min-width: 0;'
+        st = ('flex: 1 1 0; display: flex; align-items: center; gap: 14px; padding: 16px 24px 16px 18px; border: 1px solid ' + INK + '; min-width: 0;'
               + (' background: ' + INK + ';' if on else '') + join)
+        state = kickers.get(key)
+        line = ('<span style="white-space: nowrap;">' + mixed(state, fg2, 12) + '</span>') if state else ''
         items.append('<a href="#" style="' + st + '">' + isvg(inner, 40, fg)
-                     + '<div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-family: ' + NAME + '; font-size: 24px; font-weight: 700; line-height: 1; color: ' + fg + ';">' + name + '</span>'
-                     + '<span style="white-space: nowrap;">' + mixed(kickers.get(key, kick), fg2, 12) + '</span></div></a>')
+                     + '<div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-family: ' + NAME + '; font-size: 24px; font-weight: 700; line-height: 1; color: ' + fg + ';">' + name + '</span>' + line + '</div></a>')
     return '<div style="display: flex; padding: ' + ('16px 0 0 0' if compact else '24px 0 0 0') + ';">' + ''.join(items) + '</div>'
 
 def chip(text):

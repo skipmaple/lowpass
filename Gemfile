@@ -65,7 +65,6 @@ gem "surfguard", github: "basecamp/surfguard"
 gem "mission_control-jobs"
 
 group :development, :test do
-  gem "bundler-audit", require: false
   gem "webmock"
   gem "mocha"
 end

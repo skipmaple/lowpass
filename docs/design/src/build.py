@@ -1,7 +1,16 @@
 """生成 lowpass 设计画板。用法：python3 docs/design/src/build.py <输出目录>"""
 import json, os, shutil, sys
+import common
+
+def minfont(fn):
+    """存档画板用旧的小字子集，画布总体积才能留在 16 MB 以内。"""
+    common.SUBSET = 'wenkai-sub-min.woff2'
+    try:
+        return fn()
+    finally:
+        common.SUBSET = 'wenkai-sub.woff2'
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import pages_reader as R, pages_weekly as W, pages_other as O, pages_warm as T, pages_bright as B, pages_minimal as M, pages_paper as P, pages_press as X, pages_front2 as F, pages_front3 as G, pages_typespec as TS
+import pages_reader as R, pages_weekly as W, pages_other as O, pages_warm as T, pages_bright as B, pages_minimal as M, pages_paper as P, pages_press as X, pages_front2 as F, pages_front3 as G, pages_typespec as TS, pages_site as S
 
 out = sys.argv[1]
 os.makedirs(out, exist_ok=True)
@@ -12,27 +21,31 @@ pages = {
     'Main.dc.html': G.front3(), 'FrontGitHub.dc.html': G.front3_gh(), 'FrontHackaday.dc.html': G.front3_had(),
     'FrontStates.dc.html': G.front3_states(), 'FrontMobile.dc.html': G.front3_mobile(),
     # 字体样张 TypeSpec 已在 2026-09-09 定稿后由产品负责人从画布删除，不再构建；模块 pages_typespec.py 保留作记录
+    # 第十轮：周刊、归档、搜索、登录、设置、管理后台
+    'SiteWeekly.dc.html': S.weekly(), 'SiteWeeklyMobile.dc.html': S.weekly_mobile(), 'SiteArchiveDaily.dc.html': S.archive_daily(), 'SiteArchiveWeekly.dc.html': S.archive_weekly(),
+    'SiteSearch.dc.html': S.search(), 'SiteSearchStates.dc.html': S.search_states(), 'SiteLogin.dc.html': S.login(), 'SiteSettings.dc.html': S.settings(),
+    'SiteAdminSources.dc.html': S.admin_sources(), 'SiteAdminSourceForm.dc.html': S.admin_source_form(), 'SiteAdminIssues.dc.html': S.admin_issues(), 'SiteAdminUsers.dc.html': S.admin_users(), 'SiteAdminSettings.dc.html': S.admin_settings(),
     # 第八轮：头条放大分两栏（已否，存档）
-    'FrontLead.dc.html': F.front2(),
+    'FrontLead.dc.html': minfont(lambda: F.front2()),
     # 第七轮：三栏并列（已否，存档）
-    'FrontColumns.dc.html': X.front(),
+    'FrontColumns.dc.html': minfont(lambda: X.front()),
     # 第六轮：完整一期 67 条（存档，对照）
-    'PressFull.dc.html': X.press(),
+    'PressFull.dc.html': minfont(lambda: X.press()),
     # 第五轮：纸报初稿（存档）
-    'PaperBeige.dc.html': P.paper_beige(), 'PaperLight.dc.html': P.paper_light(),
+    'PaperBeige.dc.html': minfont(lambda: P.paper_beige()), 'PaperLight.dc.html': minfont(lambda: P.paper_light()),
     # 第四轮：六种版面结构（已否，存档）
-    'MinPoster.dc.html': M.poster(), 'MinSplit.dc.html': M.split(), 'MinCover.dc.html': M.cover(),
-    'MinBento.dc.html': M.bento(), 'MinRail.dc.html': M.rail(), 'MinJournal.dc.html': M.journal(),
+    'MinPoster.dc.html': minfont(lambda: M.poster()), 'MinSplit.dc.html': minfont(lambda: M.split()), 'MinCover.dc.html': minfont(lambda: M.cover()),
+    'MinBento.dc.html': minfont(lambda: M.bento()), 'MinRail.dc.html': minfont(lambda: M.rail()), 'MinJournal.dc.html': minfont(lambda: M.journal()),
     # 第三轮：六个明亮方向（已否，存档）
-    'BrightSunrise.dc.html': B.sunrise(), 'BrightSources.dc.html': B.sources(), 'BrightCitrus.dc.html': B.citrus(),
-    'BrightPastel.dc.html': B.pastel(), 'BrightYellow.dc.html': B.yellow(), 'BrightGreen.dc.html': B.green(),
+    'BrightSunrise.dc.html': minfont(lambda: B.sunrise()), 'BrightSources.dc.html': minfont(lambda: B.sources()), 'BrightCitrus.dc.html': minfont(lambda: B.citrus()),
+    'BrightPastel.dc.html': minfont(lambda: B.pastel()), 'BrightYellow.dc.html': minfont(lambda: B.yellow()), 'BrightGreen.dc.html': minfont(lambda: B.green()),
     # 第二轮：暖色方向（已否，存档）
-    'TerracottaDaily.dc.html': T.terracotta(), 'RisoDaily.dc.html': T.riso(), 'ClaudeWarmDaily.dc.html': T.claude_warm(),
+    'TerracottaDaily.dc.html': minfont(lambda: T.terracotta()), 'RisoDaily.dc.html': minfont(lambda: T.riso()), 'ClaudeWarmDaily.dc.html': minfont(lambda: T.claude_warm()),
     # 第一轮全套：斯堪的纳维亚（已否，存档）
-    'Login.dc.html': R.login(), 'Home.dc.html': R.home(), 'ScandiDaily.dc.html': R.daily(),
-    'DailyMobile.dc.html': R.daily_mobile(), 'DailyArchive.dc.html': R.daily_archive(),
-    'Weekly.dc.html': W.weekly(), 'WeeklyMobile.dc.html': W.weekly_mobile(), 'WeeklyArchive.dc.html': W.weekly_archive(),
-    'Search.dc.html': O.search(), 'Settings.dc.html': O.settings(), 'Components.dc.html': O.components(),
+    'Login.dc.html': minfont(lambda: R.login()), 'Home.dc.html': minfont(lambda: R.home()), 'ScandiDaily.dc.html': minfont(lambda: R.daily()),
+    'DailyMobile.dc.html': minfont(lambda: R.daily_mobile()), 'DailyArchive.dc.html': minfont(lambda: R.daily_archive()),
+    'Weekly.dc.html': minfont(lambda: W.weekly()), 'WeeklyMobile.dc.html': minfont(lambda: W.weekly_mobile()), 'WeeklyArchive.dc.html': minfont(lambda: W.weekly_archive()),
+    'Search.dc.html': minfont(lambda: O.search()), 'Settings.dc.html': minfont(lambda: O.settings()), 'Components.dc.html': minfont(lambda: O.components()),
 }
 for name, html in pages.items():
     with open(os.path.join(out, name), 'w', encoding='utf-8') as f:
@@ -40,16 +53,29 @@ for name, html in pages.items():
 for name in ['DirectionA.dc.html', 'DirectionB.dc.html', 'DirectionC.dc.html']:
     shutil.copy(os.path.join(design_dir, name), os.path.join(out, name))
 
-P1, P2, P3, P4, P5, P6, P7 = 'page-1', 'page-2', 'page-3', 'page-4', 'page-5', 'page-6', 'page-7'
+P1, P2, P3, P4, P5, P6, P7, P8 = 'page-1', 'page-2', 'page-3', 'page-4', 'page-5', 'page-6', 'page-7', 'page-8'
 HP, H, HB = 2300, 2000, 1450
 canvas = {
-    'pages': [{'id': P1, 'name': '日刊 · 当前稿（第九轮）'}, {'id': P7, 'name': '纸报初稿（第五轮）'}, {'id': P2, 'name': '版面结构（第四轮，已否）'}, {'id': P3, 'name': '明亮配色（第三轮，已否）'}, {'id': P4, 'name': '暖色（第二轮，已否）'}, {'id': P5, 'name': '斯堪的纳维亚（已否）'}, {'id': P6, 'name': '早期方向（存档）'}],
+    'pages': [{'id': P1, 'name': '日刊 · 当前稿（第九轮）'}, {'id': P8, 'name': '全站页面（第十轮）'}, {'id': P7, 'name': '纸报初稿（第五轮）'}, {'id': P2, 'name': '版面结构（第四轮，已否）'}, {'id': P3, 'name': '明亮配色（第三轮，已否）'}, {'id': P4, 'name': '暖色（第二轮，已否）'}, {'id': P5, 'name': '斯堪的纳维亚（已否）'}, {'id': P6, 'name': '早期方向（存档）'}],
     'artboards': [
         {'file': 'Main.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': 2200, 'title': '日刊 · Hacker News 标签（Main）', 'page': P1},
         {'file': 'FrontGitHub.dc.html', 'x': 1560, 'y': 0, 'w': 1440, 'h': 2400, 'title': '日刊 · GitHub Trending 标签', 'page': P1},
         {'file': 'FrontHackaday.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 2400, 'title': '日刊 · Hackaday 标签', 'page': P1},
         {'file': 'FrontStates.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 900, 'title': '日刊 · 状态：延迟、抓取失败、无新内容', 'page': P1},
         {'file': 'FrontMobile.dc.html', 'x': 6240, 'y': 0, 'w': 390, 'h': 3200, 'title': '日刊 · 手机', 'page': P1},
+        {'file': 'SiteWeekly.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': 2500, 'title': '周刊详情', 'page': P8},
+        {'file': 'SiteWeeklyMobile.dc.html', 'x': 1560, 'y': 0, 'w': 390, 'h': 3000, 'title': '周刊详情 · 手机', 'page': P8},
+        {'file': 'SiteArchiveDaily.dc.html', 'x': 2070, 'y': 0, 'w': 1440, 'h': 1500, 'title': '日刊归档', 'page': P8},
+        {'file': 'SiteArchiveWeekly.dc.html', 'x': 3630, 'y': 0, 'w': 1440, 'h': 1400, 'title': '周刊归档', 'page': P8},
+        {'file': 'SiteSearch.dc.html', 'x': 0, 'y': 3200, 'w': 1440, 'h': 1500, 'title': '搜索 · 有结果', 'page': P8},
+        {'file': 'SiteSearchStates.dc.html', 'x': 1560, 'y': 3200, 'w': 1440, 'h': 1500, 'title': '搜索 · 未搜索与无结果', 'page': P8},
+        {'file': 'SiteLogin.dc.html', 'x': 3120, 'y': 3200, 'w': 1440, 'h': 900, 'title': '登录 · 默认、已取消、无法合并', 'page': P8},
+        {'file': 'SiteSettings.dc.html', 'x': 4680, 'y': 3200, 'w': 1440, 'h': 1000, 'title': '设置', 'page': P8},
+        {'file': 'SiteAdminSources.dc.html', 'x': 0, 'y': 4900, 'w': 1440, 'h': 900, 'title': '管理后台 · 信息源', 'page': P8},
+        {'file': 'SiteAdminSourceForm.dc.html', 'x': 1560, 'y': 4900, 'w': 1440, 'h': 1500, 'title': '管理后台 · 新建来源与测试抓取', 'page': P8},
+        {'file': 'SiteAdminIssues.dc.html', 'x': 3120, 'y': 4900, 'w': 1440, 'h': 1000, 'title': '管理后台 · 期', 'page': P8},
+        {'file': 'SiteAdminUsers.dc.html', 'x': 4680, 'y': 4900, 'w': 1440, 'h': 800, 'title': '管理后台 · 用户', 'page': P8},
+        {'file': 'SiteAdminSettings.dc.html', 'x': 6240, 'y': 4900, 'w': 1440, 'h': 1900, 'title': '管理后台 · 设置', 'page': P8},
         {'file': 'FrontLead.dc.html', 'x': 6240, 'y': 0, 'w': 1440, 'h': 2700, 'title': '头条放大分两栏（已否）', 'page': P7},
         {'file': 'FrontColumns.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 2500, 'title': '三栏并列（已否）', 'page': P7},
         {'file': 'PressFull.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 4000, 'title': '对照 · 完整一期 67 条（已否）', 'page': P7},
@@ -89,6 +115,8 @@ canvas = {
         {'id': 'x1', 'x': 0, 'y': -320, 'w': 760, 'page': P1, 'text': '第九轮 · 产品负责人 2026-09-09 意见\n一栏：每个来源十条一致，不再放大头条，不再分两栏。\n来源切换：三条横向索引条，当前来源反白成墨块，其余描边；来源名按样例站的显示字体尺度放大到 32px（竖排书脊方案已被产品负责人否掉：交互反直觉）。一次只看一个来源。\n推荐理由：每条新增一段推荐理由（约 50 字，绿色细竖线标出）与一个兴趣标签（右侧描边小签），依据可配置的兴趣画像生成；相关度低时理由里直说。PRD 同步新增 D16。'},
         {'id': 'x2', 'x': 1560, 'y': -320, 'w': 700, 'page': P1, 'text': '三个标签各一稿：GitHub 条目多一行英文简介与语言、star、今日新增（前三名绿徽章）；Hackaday 条目多一行摘要与作者。\n状态稿：期头带延迟标签；失败的来源在索引条名字下写“抓取失败 · 上次成功时间”，无新内容的来源写“今日无新内容”；内容区只留失败说明与上次成功时间。\n手机稿（2026-09-09 重排）：24px 边距；期头只剩日期与两个方形前后期按钮；三格来源切换图标在上名字在下，长名字折两行；条目去掉序号列，眉行放序号与兴趣标签，标题整宽 20px，上下各留 24px。'},
         {'id': 'x3', 'x': 3120, 'y': -320, 'w': 720, 'page': P1, 'text': '字体审核（2026-09-09，已定方案 A）\n现状：五个家族加一个回退（Noto Serif SC），中文分散在文楷与 Noto 两种字体里，元数据一行两种字体，Bodoni 在 24px 发虚，字号 13 档。\n方案 A（推荐）：一个角色一个家族。品牌 Bodoni 只留报头；拉丁内容 Newsreader；所有中文霞鹜文楷 Screen；数字 Maple Mono。字号收成 8 档。\n方案 B（备选）：中文改 Noto Serif SC，文楷只留日期。更中性也更冷。\n样张已按产品负责人的操作从画布移除，完整审核与决定见 docs/design/notes/type-audit-2026-09-09.md，字体规范写入 PRD 6.3。'},
+        {'id': 's1', 'x': 0, 'y': -320, 'w': 760, 'page': P8, 'text': '第十轮 · 全站页面（2026-09-09）\n全部沿用日刊页定稿的令牌与装置：墨色报头黑带、文楷期头、索引条式切换、1px 线、反白标签、鼠尾草绿只给推荐理由与徽章。中文一律文楷，拉丁内容 Newsreader，数字 Maple。\n第一行：周刊详情（期头“第 36 周”、来源反白横带、板块锚点行、按板块分节的条目，条目与日刊同构，周刊条目也带推荐理由，见 PRD D16 与待定 D19）、周刊手机、日刊归档（按月、状态记号与各源结果）、周刊归档（按年、无内容周标注）。\n第二行：搜索（查询词作期头、三组筛选、命中词 2px 墨色下划线、所在期与原文链接、分页）、搜索的未搜索与无结果两态、登录（三张卡：默认、已取消、邮箱无法合并）、设置。\n第三行：管理后台四个分页（信息源、期、用户、设置）与新建来源表单含测试抓取预览。'},
+        {'id': 's2', 'x': 1560, 'y': -320, 'w': 640, 'page': P8, 'text': '待产品负责人定：\nD19 周刊条目是否也生成推荐理由（样稿里生成了）。\n搜索命中词的标记方式：样稿用 2px 墨色下划线，不用颜色块。\n登录页是唯一允许一句口号的页面（PRD 附录 B）。\n管理后台的数字与统计是运维数据，允许出现。'},
         {'id': 'p1', 'x': 0, 'y': -300, 'w': 640, 'page': P7, 'text': '纸报初稿 · 参考 niccolomiranda.com 的气质迁移\n迁移了什么：深色桌面 #1D1D1B 上一张有纸纹的纸；1px 墨线做栏框与表格；巨型高对比衬线报头（Bodoni Moda 替代 Canopee）；轻衬线正文与斜体导语（Newsreader 替代 Editorial New）；窄体大写栏目标题（Oswald 替代 Domaine Display Condensed）；一点鼠尾草绿 #96B59F 做徽章。\n没有搬的：它的标志、插画、作品图与文案。\n日刊本来就是一份报纸：报耳放日期与导航，报头下是标语，头条加双栏编号，GitHub 做成表格，Hackaday 做成带编号方块的三栏卡。文楷用在报耳日期与标语，元数据 Maple Mono。'},
         {'id': 'p2', 'x': 1560, 'y': -300, 'w': 560, 'page': P7, 'text': '浅纸色变体（已选）\n结构完全相同，纸色从 #CDC6BE 提到 #E8E3DA。给你比较"忠实参考"与"更亮一点"哪种更舒服。'},
         {'id': 'min-note', 'x': 0, 'y': -240, 'w': 560, 'page': P2, 'text': '第四轮六稿，已否：仍不够有设计感。'},

@@ -19,12 +19,14 @@ SANS = "'Inter', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, s
 KAI = "'LXGW WenKai Screen', 'Songti SC', 'STSong', serif"
 MONO = "'Maple Mono NL', ui-monospace, Menlo, monospace"
 
+SUBSET = 'wenkai-sub.woff2'  # 当前稿用全字子集；存档稿由 build.py 切到 wenkai-sub-min.woff2 以控制画布体积
+
 def font_css():
     def b64(name):
         with open(os.path.join(FONT_DIR, name), 'rb') as f:
             return base64.b64encode(f.read()).decode()
     return (
-        "@font-face { font-family: 'LXGW WenKai Screen'; src: url(data:font/woff2;base64," + b64('wenkai-sub.woff2') +
+        "@font-face { font-family: 'LXGW WenKai Screen'; src: url(data:font/woff2;base64," + b64(SUBSET) +
         ") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }\n"
         "@font-face { font-family: 'Maple Mono NL'; src: url(data:font/woff2;base64," + b64('maple-sub.woff2') +
         ") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }\n"
@@ -70,6 +72,7 @@ ICON_PATHS = {
     'x': '<path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>',
     'archive': '<rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path>',
     'clock': '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>',
+    'plus': '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
     'message-square': '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>',
     'log-out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line>',
     'settings': '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>',

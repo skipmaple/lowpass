@@ -5,6 +5,10 @@
       "name": "日刊 · 当前稿（第九轮）"
     },
     {
+      "id": "page-8",
+      "name": "全站页面（第十轮）"
+    },
+    {
       "id": "page-7",
       "name": "纸报初稿（第五轮）"
     },
@@ -74,6 +78,123 @@
       "h": 3200,
       "title": "日刊 · 手机",
       "page": "page-1"
+    },
+    {
+      "file": "SiteWeekly.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2500,
+      "title": "周刊详情",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteWeeklyMobile.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 3000,
+      "title": "周刊详情 · 手机",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteArchiveDaily.dc.html",
+      "x": 2070,
+      "y": 0,
+      "w": 1440,
+      "h": 1500,
+      "title": "日刊归档",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteArchiveWeekly.dc.html",
+      "x": 3630,
+      "y": 0,
+      "w": 1440,
+      "h": 1400,
+      "title": "周刊归档",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteSearch.dc.html",
+      "x": 0,
+      "y": 3200,
+      "w": 1440,
+      "h": 1500,
+      "title": "搜索 · 有结果",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteSearchStates.dc.html",
+      "x": 1560,
+      "y": 3200,
+      "w": 1440,
+      "h": 1500,
+      "title": "搜索 · 未搜索与无结果",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteLogin.dc.html",
+      "x": 3120,
+      "y": 3200,
+      "w": 1440,
+      "h": 900,
+      "title": "登录 · 默认、已取消、无法合并",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteSettings.dc.html",
+      "x": 4680,
+      "y": 3200,
+      "w": 1440,
+      "h": 1000,
+      "title": "设置",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteAdminSources.dc.html",
+      "x": 0,
+      "y": 4900,
+      "w": 1440,
+      "h": 900,
+      "title": "管理后台 · 信息源",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteAdminSourceForm.dc.html",
+      "x": 1560,
+      "y": 4900,
+      "w": 1440,
+      "h": 1500,
+      "title": "管理后台 · 新建来源与测试抓取",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteAdminIssues.dc.html",
+      "x": 3120,
+      "y": 4900,
+      "w": 1440,
+      "h": 1000,
+      "title": "管理后台 · 期",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteAdminUsers.dc.html",
+      "x": 4680,
+      "y": 4900,
+      "w": 1440,
+      "h": 800,
+      "title": "管理后台 · 用户",
+      "page": "page-8"
+    },
+    {
+      "file": "SiteAdminSettings.dc.html",
+      "x": 6240,
+      "y": 4900,
+      "w": 1440,
+      "h": 1900,
+      "title": "管理后台 · 设置",
+      "page": "page-8"
     },
     {
       "file": "FrontLead.dc.html",
@@ -406,6 +527,22 @@
       "w": 720,
       "page": "page-1",
       "text": "字体审核（2026-09-09，已定方案 A）\n现状：五个家族加一个回退（Noto Serif SC），中文分散在文楷与 Noto 两种字体里，元数据一行两种字体，Bodoni 在 24px 发虚，字号 13 档。\n方案 A（推荐）：一个角色一个家族。品牌 Bodoni 只留报头；拉丁内容 Newsreader；所有中文霞鹜文楷 Screen；数字 Maple Mono。字号收成 8 档。\n方案 B（备选）：中文改 Noto Serif SC，文楷只留日期。更中性也更冷。\n样张已按产品负责人的操作从画布移除，完整审核与决定见 docs/design/notes/type-audit-2026-09-09.md，字体规范写入 PRD 6.3。"
+    },
+    {
+      "id": "s1",
+      "x": 0,
+      "y": -320,
+      "w": 760,
+      "page": "page-8",
+      "text": "第十轮 · 全站页面（2026-09-09）\n全部沿用日刊页定稿的令牌与装置：墨色报头黑带、文楷期头、索引条式切换、1px 线、反白标签、鼠尾草绿只给推荐理由与徽章。中文一律文楷，拉丁内容 Newsreader，数字 Maple。\n第一行：周刊详情（期头“第 36 周”、来源反白横带、板块锚点行、按板块分节的条目，条目与日刊同构，周刊条目也带推荐理由，见 PRD D16 与待定 D19）、周刊手机、日刊归档（按月、状态记号与各源结果）、周刊归档（按年、无内容周标注）。\n第二行：搜索（查询词作期头、三组筛选、命中词 2px 墨色下划线、所在期与原文链接、分页）、搜索的未搜索与无结果两态、登录（三张卡：默认、已取消、邮箱无法合并）、设置。\n第三行：管理后台四个分页（信息源、期、用户、设置）与新建来源表单含测试抓取预览。"
+    },
+    {
+      "id": "s2",
+      "x": 1560,
+      "y": -320,
+      "w": 640,
+      "page": "page-8",
+      "text": "待产品负责人定：\nD19 周刊条目是否也生成推荐理由（样稿里生成了）。\n搜索命中词的标记方式：样稿用 2px 墨色下划线，不用颜色块。\n登录页是唯一允许一句口号的页面（PRD 附录 B）。\n管理后台的数字与统计是运维数据，允许出现。"
     },
     {
       "id": "p1",

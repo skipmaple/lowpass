@@ -5,3 +5,4 @@
 
 生成方式：`uvx --with brotli --from fonttools pyftsubset <源字体> --text=... --flavor=woff2`。
 生产环境不使用这两个子集，按 ADR 与实现计划自托管完整拆片字体。
+- `wenkai-sub-min.woff2`：早期的小子集（期头与标语用字），只给已否决的存档画板嵌入，控制画布总体积。

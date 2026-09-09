@@ -10,13 +10,14 @@ KAIF = "'LXGW WenKai Screen', 'Noto Serif SC', 'Songti SC', serif"
 NOTOF = "'Noto Serif SC', 'Songti SC', serif"
 NEWSF = "'Newsreader', 'Noto Serif SC', 'Songti SC', serif"
 PAPER_DIM = 'rgba(232, 227, 218, 0.72)'
+FONTS_SPEC = FONTS + '&family=Noto+Serif+SC:wght@400;600'
 
 SCHEMES = [
     dict(key='now', title='现状', families='Bodoni Moda · Newsreader · Noto Serif SC（回退）· 霞鹜文楷 · Maple Mono',
          cjk=NOTOF, ui=NEWSF, week=NEWSF, tab=NAME, tab_size=24, tab_weight=700, reason_size=15, reason_lh=1.55, ui_size=15),
-    dict(key='A', title='方案 A · 推荐：中文全部文楷', families='Bodoni Moda（仅报头）· Newsreader · 霞鹜文楷 · Maple Mono',
+    dict(key='A', title='方案 A · 已采用：中文全部文楷', families='Bodoni Moda（仅报头）· Newsreader · 霞鹜文楷 · Maple Mono',
          cjk=KAIF, ui=KAIF, week=KAIF, tab=NEWSF, tab_size=22, tab_weight=600, reason_size=15, reason_lh=1.7, ui_size=15),
-    dict(key='B', title='方案 B · 备选：中文用 Noto Serif SC', families='Bodoni Moda（仅报头）· Newsreader · Noto Serif SC · 霞鹜文楷（仅日期）· Maple Mono',
+    dict(key='B', title='方案 B · 未采用：中文用 Noto Serif SC', families='Bodoni Moda（仅报头）· Newsreader · Noto Serif SC · 霞鹜文楷（仅日期）· Maple Mono',
          cjk=NOTOF, ui=NOTOF, week=NOTOF, tab=NEWSF, tab_size=22, tab_weight=600, reason_size=14, reason_lh=1.65, ui_size=14),
 ]
 
@@ -86,4 +87,4 @@ def scale_table():
 def typespec():
     cols = '<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px;">' + ''.join(column(s) for s in SCHEMES) + '</div>'
     inner = '<div style="padding: 40px;">' + span('字体审核样张 · 2026-09-09', KAIF, 13, INK2) + '<div style="height: 18px;"></div>' + cols + scale_table() + '</div>'
-    return doc(sheet(inner, width=1360), FONTS, GROUND, INK, NEWSF, css(), 1500)
+    return doc(sheet(inner, width=1360), FONTS_SPEC, GROUND, INK, NEWSF, css(), 1500)

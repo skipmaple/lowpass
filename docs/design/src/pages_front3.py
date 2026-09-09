@@ -2,7 +2,7 @@
 from common import *
 from pages_warm import doc
 from pages_press import HN30, GH25, HAD12, ill_bubbles, ill_branches, ill_solder, ill_sunrise
-from pages_front2 import (GROUND, PAPER, INK, INK2, GREEN, RULE, NAME, SERIF, MONOF, FONTS, css, mixed, mono2, label, mm,
+from pages_front2 import (GROUND, PAPER, INK, INK2, GREEN, RULE, NAME, SERIF, KAIF, MONOF, FONTS, css, mixed, mono2, label, mm,
                           hn_meta, gh_meta, had_meta, ctrl, masthead, issue_head, footer, sheet, foot_link)
 
 PAPER_DIM = 'rgba(232, 227, 218, 0.72)'
@@ -64,7 +64,7 @@ def tabs(active, kickers=None, compact=False):
         on = key == active
         join = ' margin-left: -1px;' if i else ''
         if compact:
-            st = ('flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 6px; border: 1px solid ' + INK + '; font-family: ' + SERIF + '; font-size: 14px; font-weight: 500; white-space: nowrap;'
+            st = ('flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 6px; border: 1px solid ' + INK + '; font-family: ' + SERIF + '; font-size: 15px; font-weight: 600; white-space: nowrap;'
                   + (' background: ' + INK + '; color: ' + PAPER + ';' if on else ' color: ' + INK + ';') + join)
             items.append('<a href="#" style="' + st + '">' + name + '</a>')
             continue
@@ -76,7 +76,7 @@ def tabs(active, kickers=None, compact=False):
         state = kickers.get(key)
         line = ('<span style="white-space: nowrap;">' + mixed(state, fg2, 12) + '</span>') if state else ''
         items.append('<a href="#" style="' + st + '">' + isvg(inner, 40, fg)
-                     + '<div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-family: ' + NAME + '; font-size: 24px; font-weight: 700; line-height: 1; color: ' + fg + ';">' + name + '</span>' + line + '</div></a>')
+                     + '<div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-family: ' + SERIF + '; font-size: 22px; font-weight: 600; line-height: 1; color: ' + fg + ';">' + name + '</span>' + line + '</div></a>')
     return '<div style="display: flex; padding: ' + ('16px 0 0 0' if compact else '24px 0 0 0') + ';">' + ''.join(items) + '</div>'
 
 def chip(text):
@@ -84,9 +84,9 @@ def chip(text):
 
 def item(rank, title, meta_html, tag, reason, secondary=None, compact=False):
     """十条一致的条目：序号、标题、说明、元数据、兴趣标签、推荐理由（绿色细竖线）。"""
-    reason_html = ('<div style="border-left: 2px solid ' + GREEN + '; padding: 1px 0 1px 12px; margin-top: 4px; max-width: 820px; font-size: ' + ('14.5px' if compact else '15px') + '; line-height: 1.55; color: ' + INK2 + ';">' + reason + '</div>')
-    sec = ('<span style="font-size: ' + ('14.5px' if compact else '15px') + '; line-height: 1.5; color: ' + INK2 + ';">' + secondary + '</span>') if secondary else ''
-    title_html = '<a href="#" class="t" style="font-size: ' + ('18px' if compact else '20px') + '; line-height: 1.35; font-weight: 500;">' + title + '</a>'
+    reason_html = ('<div style="border-left: 2px solid ' + GREEN + '; padding: 1px 0 1px 12px; margin-top: 4px; max-width: 820px; font-family: ' + KAIF + '; font-size: 15px; line-height: 1.7; color: ' + INK2 + ';">' + reason + '</div>')
+    sec = ('<span style="font-size: 15px; line-height: 1.5; color: ' + INK2 + ';">' + secondary + '</span>') if secondary else ''
+    title_html = '<a href="#" class="t" style="font-size: 20px; line-height: ' + ('1.3' if compact else '1.35') + '; font-weight: 500;">' + title + '</a>'
     if compact:
         meta_line = '<span style="display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;">' + meta_html + chip(tag) + '</span>'
         return ('<div style="display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; padding: 16px 0; border-bottom: 1px solid ' + RULE + ';">'
@@ -105,8 +105,8 @@ def rows(active, compact=False):
     return ''.join(item(r, t, had_meta(m), tag, why, s, compact) for (r, t, m, s), (tag, why) in zip(HAD12[:10], REASON_HAD))
 
 def failure_box(compact=False):
-    text = ('<div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: ' + SERIF + '; font-size: 20px; font-weight: 500;">今日抓取失败，已通知管理员</span>'
-            + mm([('上次成功', 's'), ('9月7日 06:11', 'm'), ('·', 'm'), ('修复后本栏自动补齐', 's')]) + '</div>')
+    text = ('<div style="display: flex; flex-direction: column; gap: 8px;"><span style="font-family: ' + KAIF + '; font-size: 20px;">今日抓取失败，已通知管理员</span>'
+            + mixed('上次成功 9月7日 06:11 · 修复后本栏自动补齐', INK2, 13) + '</div>')
     art = ('<svg viewBox="0 0 260 138" width="130" height="69" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display: block; opacity: 0.55;">' + ill_sunrise() + '</svg>')
     if compact:
         return '<div style="display: flex; flex-direction: column; gap: 16px; padding: 24px 0 20px 0; border-bottom: 1px solid ' + RULE + ';">' + art + text + '</div>'
@@ -123,17 +123,17 @@ def page(active, compact=False, status=None, kickers=None, failed=False):
             + issue_head(status=status, compact=compact) + controls + tabs(active, kickers, compact) + body(active, compact, failed) + footer(compact) + '</div>')
 
 def front3():
-    return doc(sheet(page('hn')), FONTS, GROUND, INK, SERIF, css(), 2000)
+    return doc(sheet(page('hn')), FONTS, GROUND, INK, SERIF, css(), 2100)
 
 def front3_gh():
-    return doc(sheet(page('gh')), FONTS, GROUND, INK, SERIF, css(), 2300)
+    return doc(sheet(page('gh')), FONTS, GROUND, INK, SERIF, css(), 2400)
 
 def front3_had():
-    return doc(sheet(page('had')), FONTS, GROUND, INK, SERIF, css(), 2300)
+    return doc(sheet(page('had')), FONTS, GROUND, INK, SERIF, css(), 2400)
 
 def front3_states():
     k = {'hn': '抓取失败 · 上次成功 9月7日 06:11', 'gh': '今日无新内容'}
     return doc(sheet(page('hn', status='延迟生成于 07:05', kickers=k, failed=True)), FONTS, GROUND, INK, SERIF, css(), 900)
 
 def front3_mobile():
-    return doc(sheet(page('hn', compact=True), width=390, margin='0'), FONTS, PAPER, INK, SERIF, css(), 2350)
+    return doc(sheet(page('hn', compact=True), width=390, margin='0'), FONTS, PAPER, INK, SERIF, css(), 2500)

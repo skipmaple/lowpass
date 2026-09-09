@@ -45,11 +45,11 @@ HP, H, HB = 2300, 2000, 1450
 canvas = {
     'pages': [{'id': P1, 'name': '日刊 · 当前稿（第九轮）'}, {'id': P7, 'name': '纸报初稿（第五轮）'}, {'id': P2, 'name': '版面结构（第四轮，已否）'}, {'id': P3, 'name': '明亮配色（第三轮，已否）'}, {'id': P4, 'name': '暖色（第二轮，已否）'}, {'id': P5, 'name': '斯堪的纳维亚（已否）'}, {'id': P6, 'name': '早期方向（存档）'}],
     'artboards': [
-        {'file': 'Main.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': 2000, 'title': '日刊 · Hacker News 标签（Main）', 'page': P1},
-        {'file': 'FrontGitHub.dc.html', 'x': 1560, 'y': 0, 'w': 1440, 'h': 2300, 'title': '日刊 · GitHub Trending 标签', 'page': P1},
-        {'file': 'FrontHackaday.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 2300, 'title': '日刊 · Hackaday 标签', 'page': P1},
+        {'file': 'Main.dc.html', 'x': 0, 'y': 0, 'w': 1440, 'h': 2100, 'title': '日刊 · Hacker News 标签（Main）', 'page': P1},
+        {'file': 'FrontGitHub.dc.html', 'x': 1560, 'y': 0, 'w': 1440, 'h': 2400, 'title': '日刊 · GitHub Trending 标签', 'page': P1},
+        {'file': 'FrontHackaday.dc.html', 'x': 3120, 'y': 0, 'w': 1440, 'h': 2400, 'title': '日刊 · Hackaday 标签', 'page': P1},
         {'file': 'FrontStates.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 900, 'title': '日刊 · 状态：延迟、抓取失败、无新内容', 'page': P1},
-        {'file': 'FrontMobile.dc.html', 'x': 6240, 'y': 0, 'w': 390, 'h': 2350, 'title': '日刊 · 手机', 'page': P1},
+        {'file': 'FrontMobile.dc.html', 'x': 6240, 'y': 0, 'w': 390, 'h': 2500, 'title': '日刊 · 手机', 'page': P1},
         {'file': 'TypeSpec.dc.html', 'x': 0, 'y': 2250, 'w': 1440, 'h': 1500, 'title': '字体审核样张：现状 / 方案 A / 方案 B', 'page': P1},
         {'file': 'FrontLead.dc.html', 'x': 6240, 'y': 0, 'w': 1440, 'h': 2700, 'title': '头条放大分两栏（已否）', 'page': P7},
         {'file': 'FrontColumns.dc.html', 'x': 4680, 'y': 0, 'w': 1440, 'h': 2500, 'title': '三栏并列（已否）', 'page': P7},

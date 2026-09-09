@@ -7,11 +7,12 @@ from pages_press import HN30, GH25, HAD12, ill_bubbles, ill_branches, ill_solder
 GROUND, PAPER, INK, INK2, GREEN = '#26241F', '#E8E3DA', '#1D1D1B', '#55504B', '#96B59F'
 RULE = 'rgba(29, 29, 27, 0.35)'
 UL = 'rgba(29, 29, 27, 0.30)'
-NAME = "'Bodoni Moda', 'Noto Serif SC', 'Songti SC', serif"
-SERIF = "'Newsreader', 'Noto Serif SC', 'Songti SC', serif"
-MONOF = "'Maple Mono NL', 'Noto Serif SC', ui-monospace, Menlo, monospace"
-FONTS = ('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700'
-         '&family=Noto+Serif+SC:wght@400;600;900&display=swap')
+# 字体方案 A（2026-09-09 定稿）：一个角色一个家族。品牌 Bodoni 只用于报头与邮戳；拉丁内容 Newsreader；所有中文霞鹜文楷；数据 Maple Mono。
+NAME = "'Bodoni Moda', 'LXGW WenKai Screen', serif"
+SERIF = "'Newsreader', 'LXGW WenKai Screen', 'Songti SC', serif"
+KAIF = "'LXGW WenKai Screen', 'Songti SC', 'STSong', serif"
+MONOF = "'Maple Mono NL', ui-monospace, Menlo, monospace"
+FONTS = 'https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap'
 
 def css():
     return ('    a { color: ' + INK + '; text-decoration: none; }\n'
@@ -27,7 +28,7 @@ def mixed(text, color=INK2, size=13, latin_extra=''):
         if not run:
             continue
         if CJK.fullmatch(run):
-            out.append('<span style="font-family: ' + SERIF + '; font-size: ' + str(size) + 'px; color: ' + color + ';">' + run + '</span>')
+            out.append('<span style="font-family: ' + KAIF + '; font-size: ' + str(size) + 'px; color: ' + color + ';">' + run + '</span>')
         else:
             out.append('<span style="font-family: ' + MONOF + '; font-size: ' + str(size) + 'px; color: ' + color + ';' + latin_extra + '">' + run + '</span>')
     return ''.join(out)
@@ -44,13 +45,17 @@ def mm(parts, color=INK2, size=13):
     """元数据：数字与符号用等宽，中文词用正文衬线，同一行同一色。"""
     out = []
     for text, kind in parts:
-        fam = MONOF if kind == 'm' else SERIF
+        fam = MONOF if kind == 'm' else KAIF
         out.append('<span style="font-family: ' + fam + '; font-size: ' + str(size) + 'px; color: ' + color + ';">' + text + '</span>')
     return '<span style="display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">' + ''.join(out) + '</span>'
 
 def hn_meta(m):
+    """HN 元数据只用数字与记号：▲ 分数 · 对话框图标 评论数 · 相对时间。"""
     score, comments, age = [x.strip() for x in m.split('·')]
-    return mm([(score, 'm'), ('·', 'm'), (comments.split(' ')[0], 'm'), ('评论', 's'), ('·', 'm'), (age, 'm')])
+    n = comments.split(' ')[0]
+    dot = mono2('·')
+    return ('<span style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">' + mono2(score) + dot
+            + '<span style="display: inline-flex; align-items: center; gap: 4px;">' + icon('message-square', 12, INK2) + mono2(n) + '</span>' + dot + mono2(age) + '</span>')
 
 def badge(text):
     return '<span style="font-family: ' + MONOF + '; font-size: 12px; background: ' + GREEN + '; color: ' + INK + '; padding: 2px 7px; border-radius: 2px; white-space: nowrap;">' + text + '</span>'
@@ -60,14 +65,14 @@ def icon_svg(inner, size=44):
 
 def ctrl(l, il=None, ir=None, off=False, h=40):
     col = INK2 if off else INK
-    return ('<span style="display: inline-flex; align-items: center; gap: 6px; height: ' + str(h) + 'px; padding: 0 14px; border: 1px solid ' + (RULE if off else INK) + '; font-family: ' + SERIF + '; font-size: 15px; color: ' + col + '; white-space: nowrap;">'
+    return ('<span style="display: inline-flex; align-items: center; gap: 6px; height: ' + str(h) + 'px; padding: 0 14px; border: 1px solid ' + (RULE if off else INK) + '; font-family: ' + KAIF + '; font-size: 15px; color: ' + col + '; white-space: nowrap;">'
             + (icon(il, 14, col) if il else '') + '<span>' + l + '</span>' + (icon(ir, 14, col) if ir else '') + '</span>')
 
 def masthead(active='日刊', compact=False):
     h = 56 if compact else 80
     size = 26 if compact else 40
     def nav(l):
-        st = 'font-family: ' + SERIF + '; font-size: 15px; color: ' + PAPER + ';'
+        st = 'font-family: ' + KAIF + '; font-size: 15px; color: ' + PAPER + ';'
         if l == active:
             st += ' border-bottom: 1px solid ' + PAPER + '; padding-bottom: 2px;'
         else:
@@ -81,7 +86,7 @@ def masthead(active='日刊', compact=False):
             + right + '</div>')
 
 def issue_head(status=None, compact=False):
-    date_size, wk_size = (40, 18) if compact else (56, 22)
+    date_size, wk_size = (40, 15) if compact else (56, 20)
     controls = ('' if compact else '<div style="display: flex; gap: 8px; align-items: center;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + ctrl('9月9日', ir='chevron-right', off=True) + '</div>')
     tag = ('<span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid ' + INK + '; padding: 3px 8px;">' + icon('clock', 13, INK) + mono2(status, INK, 12) + '</span>' if status else '')
     return ('<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: ' + ('24px 0 16px 0' if compact else '32px 0 20px 0') + '; border-bottom: 2px solid ' + INK + ';">'
@@ -116,7 +121,16 @@ def row(rank, title, meta_html, secondary=None):
             + meta_html + '</div></div>')
 
 def foot_link(text):
-    return ('<a href="#" style="display: inline-flex; align-items: center; gap: 6px; padding-top: 14px;">' + label(text, INK) + icon('arrow-up-right', 13, INK) + '</a>')
+    """栏尾外链：拉丁来源名用 Newsreader 500，中文用文楷，箭头图标。"""
+    parts = []
+    for run in CJK.split(text):
+        if not run:
+            continue
+        if CJK.fullmatch(run):
+            parts.append('<span style="font-family: ' + KAIF + '; font-size: 15px; color: ' + INK + ';">' + run + '</span>')
+        else:
+            parts.append('<span style="font-family: ' + SERIF + '; font-size: 15px; font-weight: 500; color: ' + INK + ';">' + run + '</span>')
+    return '<a href="#" style="display: inline-flex; align-items: center; gap: 6px; padding-top: 14px;">' + ''.join(parts) + icon('arrow-up-right', 13, INK) + '</a>'
 
 def gh_meta(m, rank):
     lang, stars, delta = [x.strip() for x in m.split('·')]
@@ -154,7 +168,7 @@ def footer(compact=False):
     stamp = ('<svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="' + INK + '" stroke-width="1.6" style="display: block;"><circle cx="32" cy="32" r="29"></circle><circle cx="32" cy="32" r="23" stroke-dasharray="3 3" stroke-width="1"></circle>'
              '<text x="32" y="37" text-anchor="middle" font-family="Bodoni Moda, serif" font-size="15" font-weight="700" fill="' + INK + '" stroke="none">LP</text></svg>')
     return ('<div style="border-top: 2px solid ' + INK + '; margin-top: 36px; padding: 18px 0 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">'
-            '<div style="display: flex; align-items: center; gap: 16px;">' + stamp + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono2('明早 06:00 · 下一期') + '<a href="#" class="t" style="font-size: 16px; font-weight: 500;">最新周刊 · 第 36 周 · 阮一峰周刊第 366 期</a></div></div>'
+            '<div style="display: flex; align-items: center; gap: 16px;">' + stamp + '<div style="display: flex; flex-direction: column; gap: 4px;">' + mono2('明早 06:00 · 下一期') + '<a href="#" class="t" style="font-family: ' + KAIF + '; font-size: 15px;">最新周刊 · 第 36 周 · 阮一峰周刊第 366 期</a></div></div>'
             + ('' if compact else '<div style="display: flex; gap: 8px;">' + ctrl('9月7日', il='chevron-left') + ctrl('归档') + ctrl('9月9日', ir='chevron-right', off=True) + '</div>') + '</div>')
 
 def sheet(inner, width=1240, pad=40, h=2400, margin='32px auto 48px auto'):

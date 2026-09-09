@@ -28,7 +28,16 @@ class Adapters::HackerNewsTest < ActiveSupport::TestCase
   end
 
   test "跳过 job 类型" do
+    # Move job id to the front so the adapter must evaluate type filter to skip it
+    ids = JSON.parse(file_fixture("hacker_news/topstories.json").read)
+    reordered_ids = [ 49625110 ] + ids.reject { |id| id == 49625110 }
+    stub_request(:get, "https://hacker-news.firebaseio.com/v0/topstories.json").to_return(body: reordered_ids.to_json)
+
     entries = Adapters::HackerNews.new(sources(:hn)).fetch
-    assert_not entries.map { |e| e.meta[:comments_url] }.include?("https://news.ycombinator.com/item?id=49625110")
+    assert_equal 10, entries.size
+    comments_urls = entries.map { |e| e.meta[:comments_url] }
+    assert_not comments_urls.include?("https://news.ycombinator.com/item?id=49625110")
+    # Prove the filter was reached: the entry at rank 1 is NOT the job item
+    assert_not entries.first.meta[:comments_url].end_with?("id=49625110")
   end
 end

@@ -51,6 +51,10 @@ bin/rails test   # 快速循环，不连网络
 bin/ci           # 合并门禁，见 config/ci.rb：setup、rubocop、bundler-audit、brakeman、测试、seeds 回放
 ```
 
+`bin/rails test` 超过 50 个测试后会按 CPU 核数 fork 出并行 worker。`config/database.yml` 里的 `gssencmode: disable`
+是为了绕开 macOS 上预编译 pg gem 在 fork 后段错误的问题（表现为 worker 全部崩溃、命令挂起），别删；
+想单进程跑就 `PARALLEL_WORKERS=1 bin/rails test`。
+
 ## 提交前检查
 
 `bin/setup` 把 `core.hooksPath` 设为 `.githooks`；`.githooks/pre-commit` 对本次提交改动的 `.rb`

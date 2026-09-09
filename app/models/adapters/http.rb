@@ -1,5 +1,6 @@
 require "net/http"
 require "openssl"
+require "zlib"
 
 module Adapters
   class Http
@@ -31,6 +32,8 @@ module Adapters
       http.open_timeout = 10
       http.read_timeout = @timeout
       http.max_retries = 0
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      http.verify_hostname = true
       http.ipaddr = ip
 
       http.start do |conn|
@@ -43,7 +46,7 @@ module Adapters
           return Response.new(res.code.to_i, body, res["Content-Type"])
         end
       end
-    rescue Timeout::Error, IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError => e
+    rescue Timeout::Error, IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError, URI::Error, Zlib::Error => e
       raise Error, e.message
     end
 

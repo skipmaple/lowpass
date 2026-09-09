@@ -28,6 +28,8 @@ class Adapters::HttpTest < ActiveSupport::TestCase
   end
 
   test "跟随重定向并对每一跳重新解析" do
+    Surfguard.unstub(:resolve_public_ips)
+    Surfguard.expects(:resolve_public_ips).twice.returns([ "93.184.216.34" ])
     stub_request(:get, "https://example.com/old").to_return(status: 302, headers: { "Location" => "https://example.com/new" })
     stub_request(:get, "https://example.com/new").to_return(body: "ok", status: 200)
     response = Adapters::Http.get("https://example.com/old")
@@ -44,5 +46,9 @@ class Adapters::HttpTest < ActiveSupport::TestCase
   test "连接超时映射为 Error" do
     stub_request(:get, "https://example.com/slow").to_timeout
     assert_raises(Adapters::Http::Error) { Adapters::Http.get("https://example.com/slow") }
+  end
+
+  test "地址格式非法映射为 Error" do
+    assert_raises(Adapters::Http::Error) { Adapters::Http.get("http://exa mple.com/feed") }
   end
 end

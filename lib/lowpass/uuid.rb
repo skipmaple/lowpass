@@ -28,7 +28,7 @@ module Lowpass
         bytes = 6.times.map { |i| (ts >> (40 - 8 * i)) & 0xff }
         sub = ((ms - ts) * 4096).to_i & 0xfff
         bytes << (((sub >> 8) & 0x0f) | 0x70) << (sub & 0xff)
-        rand_b = Digest::MD5.hexdigest(seed)[3...19].to_i(16) & ((2**62) - 1)
+        rand_b = Digest::MD5.hexdigest(seed.to_s)[3...19].to_i(16) & ((2**62) - 1)
         bytes << (((rand_b >> 56) & 0x3f) | 0x80)
         7.times { |i| bytes << ((rand_b >> (48 - 8 * i)) & 0xff) }
         hex_to_base36(bytes.pack("C*").unpack1("H*"))

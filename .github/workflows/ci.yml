@@ -81,6 +81,17 @@ jobs:
         with:
           bundler-cache: true
 
+      # The Inertia pages are built by Vite: config/vite.json sets autoBuild in
+      # the test environment, so the test run needs Node and the npm packages.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install npm packages
+        run: npm ci
+
       - name: Run tests
         env:
           RAILS_ENV: test
@@ -119,6 +130,15 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install npm packages
+        run: npm ci
 
       - name: Run System Tests
         env:

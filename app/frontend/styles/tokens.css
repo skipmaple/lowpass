@@ -1,0 +1,62 @@
+/* 设计令牌。值来自 .claude/skills/lowpass-design-taste/reference/lowpass-tokens.md，
+   新页面只从这里取颜色、字体与字号，不另造值。 */
+
+:root {
+  --ground: #26241F;
+  --paper: #E8E3DA;
+  --ink: #1D1D1B;
+  --ink2: #55504B;
+  --green: #96B59F;
+  --rule: rgba(29, 29, 27, 0.35);
+  --underline: rgba(29, 29, 27, 0.30);
+
+  /* 家族名按自托管包的声明写：@fontsource-variable 的可变字体带 Variable 后缀 */
+  --font-brand: "Bodoni Moda Variable", "Bodoni Moda", serif;
+  --font-latin: "Newsreader Variable", "Newsreader", "LXGW WenKai Screen", serif;
+  --font-cjk: "LXGW WenKai Screen", "Songti SC", serif;
+  --font-data: "Maple Mono NL", ui-monospace, monospace;
+
+  /* 字号八档 + 来源名一档 */
+  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-40: 40px; --fs-56: 56px;
+
+  /* 没有圆角：shadcn 组件里的 calc(var(--radius) …) 也要能算，所以带单位 */
+  --radius: 0px;
+}
+
+html { background: var(--ground); color-scheme: light; }
+body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: var(--fs-15); }
+/* 纸纹：3px 横纹 3% 墨 + 4px 竖纹 14% 白。颜色与图层必须分开写——
+   background 简写里颜色只能出现在最后一层，写在第一层整条声明会被丢弃。 */
+.paper {
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.03) 0 1px, transparent 1px 3px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 1px, transparent 1px 4px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+}
+.cjk { font-family: var(--font-cjk); }
+.data { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
+a { color: inherit; text-decoration: none; }
+a.t { text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+a.t:hover { text-decoration-color: var(--ink); }
+
+/* 纸张：桌面 1240px 居中；报头黑带整宽，其余内容留边 */
+.sheet { width: 1240px; max-width: 100%; margin: 32px auto; box-sizing: border-box; }
+.sheet-body { padding: 0 40px 28px 40px; }
+
+/* 报头黑带。尺寸写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
+.masthead { height: 80px; padding: 0 40px; background: var(--ink); display: flex; align-items: center; justify-content: space-between; }
+.masthead-left { display: flex; align-items: center; gap: 40px; }
+.masthead-brand { font-family: var(--font-brand); font-size: var(--fs-40); font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper); line-height: 1; }
+.masthead-nav { display: flex; gap: 26px; }
+.masthead-actions { display: flex; align-items: center; gap: 22px; }
+
+/* 手机：整宽贴边，内容 24px 边距；报头收到 56px，品牌字 26（令牌表：品牌 40 桌面 / 26 手机） */
+@media (max-width: 390px) {
+  .sheet { margin: 0; }
+  .sheet-body { padding: 0 24px 32px 24px; }
+  .masthead { height: 56px; padding: 0 24px; }
+  .masthead-brand { font-size: var(--fs-26); }
+  .masthead-left { gap: 20px; }
+  .masthead-nav { gap: 16px; }
+  .masthead-actions { gap: 16px; }
+}

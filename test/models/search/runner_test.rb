@@ -1,0 +1,151 @@
+require "test_helper"
+
+# 打分、排序、分页（设计 5.2 到 5.4）。阈值用真实 pg_trgm 核过：kuber↔Kubernetes 0.83、
+# operatr↔operator 0.75、kubernets↔Kubernetes 0.80、rustlang↔Rust 0.44。
+class Search::RunnerTest < ActiveSupport::TestCase
+  test "AC-4.1 kuber rust 命中 Kubernetes operator in Rust" do
+    index_item("Kubernetes operator in Rust")
+    index_item("A soldering iron teardown")
+
+    assert_equal [ "Kubernetes operator in Rust" ], found_titles(search("kuber rust"))
+  end
+
+  test "AC-4.2 终端工具 与 终端 日志 都命中 一个终端下的日志工具" do
+    index_item("一个终端下的日志工具")
+
+    assert_equal [ "一个终端下的日志工具" ], found_titles(search("终端工具"))
+    assert_equal [ "一个终端下的日志工具" ], found_titles(search("终端 日志"))
+  end
+
+  test "拼写容错：5 到 8 字符允许约 1 个错，9 字符起约 2 个错" do
+    index_item("Kubernetes operator in Rust")
+
+    assert_equal 1, search("operatr").total
+    assert_equal 1, search("kubernets").total
+    assert_equal 0, search("rustlang").total
+  end
+
+  test "2 到 4 字符的拉丁词只按词首前缀命中" do
+    index_item("Kubernetes operator in Rust")
+
+    assert_equal 1, search("ru").total
+    assert_equal 0, search("ube").total
+  end
+
+  test "中文子串不区分位置；通配符在解析时就当标点去掉，剩下的字照常命中" do
+    index_item("一个终端下的日志工具")
+
+    assert_equal 1, search("日志").total
+    assert_equal 1, search("日%").total
+    assert_equal 0, search("志日").total
+  end
+
+  test "R-4.3 权重：全命中排在部分命中之前，标题命中排在摘要命中之前" do
+    index_item("About logs", summary: "the terminal")
+    index_item("Terminal")
+    index_item("Terminal viewer")
+
+    assert_equal [ "Terminal viewer", "Terminal", "About logs" ], found_titles(search("terminal viewer"))
+  end
+
+  test "同分按发布日期倒序；sort=date 先按日期" do
+    index_item("Rust")
+    index_item("Notes", issue: issues(:weekly_w36), source: sources(:ruanyf), summary: "rust", published_at: Time.utc(2026, 9, 10, 4))
+
+    assert_equal [ "Rust", "Notes" ], found_titles(search("rust"))
+    assert_equal [ "Notes", "Rust" ], found_titles(search("rust", sort: "date"))
+  end
+
+  test "AC-4.3 筛选：刊物、日期范围含首尾、来源之间 OR、维度之间 AND" do
+    daily = index_item("Rust in the daily")
+    # UTC 9月3日 04:00 是上海 9月3日 12:00
+    weekly = index_item("Rust in the weekly", issue: issues(:weekly_w36), source: sources(:ruanyf), published_at: Time.utc(2026, 9, 3, 4))
+
+    assert_equal [ weekly.title ], found_titles(search("rust", type: "weekly"))
+    assert_equal [ daily.title, weekly.title ], found_titles(search("rust", from: "2026-09-03", to: "2026-09-08"))
+    assert_equal [ weekly.title ], found_titles(search("rust", from: "2026-09-03", to: "2026-09-03"))
+    assert_equal [ daily.title ], found_titles(search("rust", from: "2026-09-04"))
+    assert_equal [ daily.title ], found_titles(search("rust", source: sources(:hn).id))
+    assert_equal [ daily.title, weekly.title ], found_titles(search("rust", source: "#{sources(:hn).id},#{sources(:ruanyf).id}"))
+    assert_equal [], found_titles(search("rust", type: "daily", source: sources(:ruanyf).id))
+  end
+
+  test "只搜已发布的期" do
+    generating = Issue.create!(kind: "daily", period_key: "2026-09-11", state: "generating", generation_started_at: Time.current)
+    index_item("Rust while generating", issue: generating)
+
+    assert_equal 0, search("rust").total
+
+    generating.update!(state: "published", published_at: Time.current)
+    assert_equal 1, search("rust").total
+  end
+
+  test "停用源的历史条目仍可搜，hidden 的条目不可搜" do
+    sources(:hn).update!(enabled: false)
+    index_item("Rust from a disabled source")
+    index_item("Rust hidden", hidden: true)
+
+    assert_equal [ "Rust from a disabled source" ], found_titles(search("rust"))
+  end
+
+  test "R-4.7 每页 20 条，名次连续，页数封顶 50" do
+    25.times { |i| index_item("Rust item #{i}") }
+
+    first = search("rust")
+    assert_equal 20, first.entries.size
+    assert_equal 25, first.total
+    assert_equal 2, first.pages
+    assert_equal (1..20).to_a, first.entries.map(&:rank)
+
+    second = search("rust", page: "2")
+    assert_equal 5, second.entries.size
+    assert_equal (21..25).to_a, second.entries.map(&:rank)
+
+    assert_equal 50, Search::Result.new(entries: [], total: 1001, page: 1, latency_ms: 0, status: "ok").pages
+    assert_equal 0, Search::Result.new(entries: [], total: 0, page: 1, latency_ms: 0, status: "ok").pages
+  end
+
+  test "结果条目预加载了条目与源，带分数" do
+    index_item("Kubernetes operator in Rust", summary: "Rust SDK")
+    entry = search("rust").entries.sole
+
+    assert_equal "Hacker News", entry.record.item.source.name
+    assert_equal 5, entry.score
+  end
+
+  test "两条语句在事务里、带 500 ms 的 statement_timeout 与 0.45 的 word_similarity 下限" do
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |event| statements << event.payload[:sql] }
+    search("kubernetes")
+
+    assert_includes statements, "SET LOCAL statement_timeout = 500"
+    assert_includes statements, "SET LOCAL pg_trgm.word_similarity_threshold = 0.45"
+    assert(statements.any? { |sql| sql.include?("word_similarity('kubernetes'") })
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+  end
+
+  test "超时归 timeout：上报错误，不抛出，结果为空" do
+    Search::Runner.any_instance.stubs(:run).raises(ActiveRecord::QueryCanceled, "canceling statement due to statement timeout")
+    Rails.error.expects(:report).once
+
+    result = search("rust")
+
+    assert_equal "timeout", result.status
+    assert_not result.ok?
+    assert_equal 0, result.total
+    assert_equal [], result.entries
+  end
+
+  test "连接失败归 error" do
+    Search::Runner.any_instance.stubs(:run).raises(PG::ConnectionBad, "server closed the connection unexpectedly")
+
+    assert_equal "error", search("rust").status
+  end
+
+  test "其他异常照常抛出" do
+    Search::Runner.any_instance.stubs(:run).raises(ActiveRecord::StatementInvalid, "syntax error")
+
+    assert_raises(ActiveRecord::StatementInvalid) { search("rust") }
+  end
+end

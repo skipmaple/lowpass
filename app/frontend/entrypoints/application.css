@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@import "../styles/fonts.css";
+@import "../styles/tokens.css";
+
+/* shadcn 的组件只作可及性与键盘行为的底座，外观全部由令牌覆盖：
+   圆角与阴影归零，语义色映射到墨与纸。 */
+@theme inline {
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--paper);
+  --color-secondary: var(--paper);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--paper);
+  --color-muted-foreground: var(--ink2);
+  --color-accent: var(--paper);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--ink);
+  --color-border: var(--rule);
+  --color-input: var(--rule);
+  --color-ring: var(--ink);
+}

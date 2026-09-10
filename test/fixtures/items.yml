@@ -1,0 +1,10 @@
+hn_one:
+  id: <%= ActiveRecord::FixtureSet.identify(:hn_one, :uuid) %>
+  source: hn
+  issue: daily_0908
+  title: "Show HN: A terminal log viewer written in Rust"
+  url: "https://example.com/termlog"
+  url_hash: <%= Digest::SHA256.hexdigest("https://example.com/termlog") %>
+  rank: 1
+  meta: { "score": 312, "comments": 145, "comments_url": "https://news.ycombinator.com/item?id=41000001" }
+  fetched_at: <%= Time.utc(2026, 9, 7, 22, 12).to_fs(:db) %>

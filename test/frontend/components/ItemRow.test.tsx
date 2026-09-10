@@ -128,6 +128,16 @@ describe('ItemRow 元数据（按适配器）', () => {
     expect(screen.getByText('▲ 312')).toBeInTheDocument()
     expect(screen.queryByTitle('09-09 01:12')).toBeNull()
   })
+
+  it('无法解析的发布时间不显示，也不留下尾部的点', () => {
+    const { container } = render(<ItemRow item={item({ published_at: 'not a date', meta: { score: 312 } })} adapter="hacker_news" rank={1} />)
+
+    expect(screen.queryByText('NaNd')).toBeNull()
+    expect(screen.getByText('▲ 312')).toBeInTheDocument()
+    // 元数据行应该只有分数，没有尾部点
+    const meta = container.querySelector('span[style*="inline-flex"]')
+    expect(meta?.textContent).toBe('▲ 312')
+  })
 })
 
 describe('ItemRow 推荐理由与兴趣标签', () => {

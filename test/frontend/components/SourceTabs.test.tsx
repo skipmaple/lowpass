@@ -91,7 +91,11 @@ describe('SourceTabs', () => {
       </SourceTabs>,
     )
 
-    expect(screen.getByRole('tab')).toHaveTextContent('Hacker News')
+    const tab = screen.getByRole('tab')
+    expect(tab).toHaveTextContent('Hacker News')
+    expect(screen.queryByText('抓取失败')).toBeNull()
+    expect(screen.queryByText('今日无新内容')).toBeNull()
+    expect(tab.querySelector('.source-tab-state')).toBeNull()
   })
 
   it('只渲染当前源的面板', () => {

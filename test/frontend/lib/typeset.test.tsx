@@ -142,9 +142,8 @@ describe('relativeAge', () => {
     expect(relativeAge('2026-09-09T06:00:00Z', now)).toBe('0m')
   })
 
-  // 现状：解析不出来的时间会渲染成字面量 NaNd。这里钉住它，改成别的写法时这条要一起改。
-  it('解析不出的时间落成 NaNd', () => {
-    expect(relativeAge('not-a-timestamp', now)).toBe('NaNd')
+  it('解析不出的时间不显示', () => {
+    expect(relativeAge('not-a-timestamp', now)).toBe('')
   })
 })
 
@@ -171,8 +170,9 @@ describe('compactCount', () => {
     expect(compactCount(12345)).toBe('12.3k')
   })
 
-  // 现状：只有 k 一档，百万也写成 1000.0k。GitHub 榜单的 star 数还到不了这里，先钉住。
-  it('没有 M 这一档', () => {
-    expect(compactCount(1_000_000)).toBe('1000.0k')
+  it('百万收成一位小数的 M', () => {
+    expect(compactCount(1_000_000)).toBe('1M')
+    expect(compactCount(1_234_567)).toBe('1.2M')
+    expect(compactCount(12_345_678)).toBe('12.3M')
   })
 })

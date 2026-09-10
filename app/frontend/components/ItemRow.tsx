@@ -15,9 +15,11 @@ const DOT = <span style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--fs-1
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
 
 function Age({ published }: { published: string }) {
+  const age = relativeAge(published)
+  if (age === '') return null
   return (
     <span style={data} title={absoluteStamp(published)}>
-      {relativeAge(published)}
+      {age}
     </span>
   )
 }
@@ -74,7 +76,7 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
     parts.push(<span style={data}>{item.author}</span>)
   }
 
-  if (item.published_at) parts.push(<Age published={item.published_at} />)
+  if (item.published_at && relativeAge(item.published_at) !== '') parts.push(<Age published={item.published_at} />)
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

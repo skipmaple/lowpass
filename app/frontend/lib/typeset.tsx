@@ -70,7 +70,9 @@ export function Mixed({ text, font = 'data', size = 'var(--fs-13)', color = 'var
 
 // R-1.12 条目时间用相对时间；元数据行只有数字与记号，所以是 5h 不是「5 小时前」。
 export function relativeAge(published: string, now: number = Date.now()): string {
-  const minutes = Math.max(0, Math.floor((now - new Date(published).getTime()) / 60_000))
+  const time = new Date(published).getTime()
+  if (isNaN(time)) return ''
+  const minutes = Math.max(0, Math.floor((now - time) / 60_000))
   if (minutes < 60) return `${minutes}m`
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours}h`
@@ -93,7 +95,14 @@ export function absoluteStamp(published: string): string {
   return `${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`
 }
 
-// GitHub 的 star 数按榜单的写法收成 12.3k
+// GitHub 的 star 数按榜单的写法收成 12.3k；百万收成 1.2M
 export function compactCount(value: number): string {
-  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value)
+  if (value >= 1_000_000) {
+    const formatted = (value / 1_000_000).toFixed(1)
+    return formatted.endsWith('.0') ? formatted.slice(0, -2) + 'M' : formatted + 'M'
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}k`
+  }
+  return String(value)
 }

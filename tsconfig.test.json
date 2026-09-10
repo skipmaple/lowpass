@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "composite": false,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo"
+  },
+  // 只列测试文件：它们 import 的 app/frontend 会自己进同一个 program，一起被检查。
+  "include": ["test/frontend"]
+}

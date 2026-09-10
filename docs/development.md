@@ -126,13 +126,25 @@ docker rm lowpass-postgres      # 删除，数据一并丢失
 
 ```
 bin/rails test          # 快速循环，不连网络
+npm test                # 前端单元测试（Vitest，jsdom），npm run test:watch 是监视模式
 bin/rails test:system   # 无头 Chrome 里读一期日刊（test/system/reading_test.rb）
 bin/ci                  # 合并门禁，见 config/ci.rb
 ```
 
+前端单元测试在 `test/frontend/`（跟 Ruby 的 `test/` 同级，不放进 `app/frontend`）：`lib/` 是排字与
+时间那几个纯函数，`components/`、`pages/` 用 Testing Library 在 jsdom 里渲染真组件，断言的是读者
+看得到的东西（文本、`role`、`href`、行内样式里的字体令牌），不存快照。配置在 `vitest.config.mts`，
+跟 `vite.config.mts` 分开——那边的 vite-plugin-ruby、Inertia、Tailwind 三个插件是为 Rails 里的构建
+产物准备的，jsdom 下一个都用不上。`test/frontend/setup.ts` 把 `@inertiajs/react` 整个换成
+`test/frontend/support/inertia.tsx` 里的替身（`Link` 就是 `<a href>`，`usePage` 读一份可写的 props），
+因为真的 Inertia 要先有 `createInertiaApp` 挂出来的应用实例才有 page 上下文。props 的样例工厂在
+`test/frontend/support/props.ts`，字段跟 `Issue::Presenting` 给出的那套对齐。类型检查覆盖测试文件：
+`npm run check` 第三条就是 `tsc -p tsconfig.test.json`。
+
 `bin/ci` 依次跑：Setup（`bin/setup --skip-server`）、Style: Ruby（`bin/rubocop`）、Frontend: typecheck
-（`npm run check`）、Frontend: audit（`npm audit --audit-level=high`）、Frontend: build（`npm run build`）、
-Security: Gem audit（`bin/bundler-audit`）、Security: Brakeman code analysis、Security: Secrets
+（`npm run check`）、Frontend: unit tests（`npm test`）、Frontend: audit（`npm audit --audit-level=high`）、
+Frontend: build（`npm run build`）、Security: Gem audit（`bin/bundler-audit`）、
+Security: Brakeman code analysis、Security: Secrets
 （`gitleaks detect --source . --no-banner --redact`，规则继承自 gitleaks 内置集，豁免的误报与理由见
 仓库根目录的 `.gitleaks.toml`）、Frontend: build for tests（`env RAILS_ENV=test bin/vite build --mode
 test`）、Tests: Rails（`bin/rails test`）、Tests: System（`bin/rails test:system`，要本机有 Chrome）、

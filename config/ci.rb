@@ -5,8 +5,10 @@ CI.run do
 
   step "Style: Ruby", "bin/rubocop"
 
-  # package.json 的 check 脚本就是这个项目的类型检查（tsc -p tsconfig.app.json && tsc -p tsconfig.node.json）。
+  # package.json 的 check 脚本就是这个项目的类型检查（tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.test.json）。
   step "Frontend: typecheck", "npm run check"
+  # Vitest + Testing Library 在 jsdom 里跑，不连网络也不需要数据库（vitest.config.mts）。
+  step "Frontend: unit tests", "npm test"
   step "Frontend: audit", "npm audit --audit-level=high"
   step "Frontend: build", "npm run build"
 

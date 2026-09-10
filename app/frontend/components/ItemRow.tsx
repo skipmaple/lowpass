@@ -1,7 +1,8 @@
+import Chip from '@/components/Chip'
 import Icon from '@/components/Icon'
 import type * as React from 'react'
 
-import { Mixed, absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
+import { absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
@@ -86,25 +87,6 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
           {part}
         </span>
       ))}
-    </span>
-  )
-}
-
-// 兴趣标签：墨色反白小块，22px 高，纸色文字（PRD 6.3、D16）。
-// 文字走 Mixed：中文用文楷，拉丁标签（AI / LLM）落到 Maple——画布 chip() 就是 mixed(text, PAPER, 12)。
-function Chip({ text }: { text: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 22,
-        padding: '0 8px',
-        background: 'var(--ink)',
-        letterSpacing: '0.06em',
-      }}
-    >
-      <Mixed text={text} size="var(--fs-12)" color="var(--paper)" nowrap />
     </span>
   )
 }

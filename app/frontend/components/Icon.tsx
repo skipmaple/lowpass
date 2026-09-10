@@ -31,6 +31,12 @@ const PATHS = {
     </>
   ),
   'message-square': <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
   x: (
     <>
       <path d="M18 6 6 18" />

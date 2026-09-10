@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import Masthead from '@/components/Masthead'
 
-// 报头黑带。P0 没有搜索（F-13）与账户（F-1）那两条路由：不传 href 时右侧两个位置
-// 渲染成同样外观的非交互占位，不给读者一个点开就 404 的图标。
+// 报头黑带。搜索入口指向 /search（D21）；账户（F-1）是 P2 的路由，之前是占位。
 
 describe('Masthead 导航', () => {
   it('刊名与两条导航指向日刊最新一期与周刊归档', () => {
@@ -35,35 +34,38 @@ describe('Masthead 导航', () => {
 })
 
 describe('Masthead 搜索与账户', () => {
-  it('P0 没有那两条路由：占位不是链接，也不进 tab 序', () => {
+  // D21：搜索入口是链接与图标，搜索框只在搜索页
+  it('搜索图标默认指向 /search', () => {
+    render(<Masthead />)
+
+    expect(screen.getByRole('link', { name: '搜索' })).toHaveAttribute('href', '/search')
+  })
+
+  it('P2 之前没有账户路由：占位不是链接，也不进 tab 序', () => {
     const { container } = render(<Masthead />)
 
     const placeholders = container.querySelectorAll('.masthead-actions [aria-disabled="true"]')
-    expect(placeholders).toHaveLength(2)
-    for (const placeholder of placeholders) {
-      expect(placeholder.tagName.toLowerCase()).toBe('span')
-      expect(placeholder).not.toHaveAttribute('href')
-      expect(placeholder).not.toHaveAttribute('tabindex')
-    }
-    expect(screen.queryByRole('link', { name: '搜索' })).toBeNull()
+    expect(placeholders).toHaveLength(1)
+    expect(placeholders[0].tagName.toLowerCase()).toBe('span')
+    expect(placeholders[0]).not.toHaveAttribute('href')
+    expect(placeholders[0]).not.toHaveAttribute('tabindex')
     expect(screen.queryByRole('link', { name: '账户' })).toBeNull()
   })
 
-  it('P1/P2 把 href 传进来就还是链接', () => {
-    const { container } = render(<Masthead searchHref="/search" accountHref="/account" />)
+  it('P2 把 accountHref 传进来就还是链接', () => {
+    const { container } = render(<Masthead accountHref="/account" />)
 
-    expect(screen.getByRole('link', { name: '搜索' })).toHaveAttribute('href', '/search')
     expect(screen.getByRole('link', { name: '账户' })).toHaveAttribute('href', '/account')
     expect(container.querySelectorAll('.masthead-actions [aria-disabled="true"]')).toHaveLength(0)
   })
 
   it('两个位置外观一样（占位与链接同一份行内样式）', () => {
     const { container: off } = render(<Masthead />)
-    const placeholder = off.querySelectorAll('.masthead-actions [aria-disabled="true"]')[1]
+    const placeholder = off.querySelector('.masthead-actions [aria-disabled="true"]')
 
     const { container: on } = render(<Masthead accountHref="/account" />)
     const link = on.querySelector('.masthead-actions a[aria-label="账户"]')
 
-    expect(link?.getAttribute('style')).toBe(placeholder.getAttribute('style'))
+    expect(link?.getAttribute('style')).toBe(placeholder?.getAttribute('style'))
   })
 })

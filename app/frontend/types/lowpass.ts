@@ -24,3 +24,16 @@ export type ArchiveWeek = { period_key: string; week_label: string; range_label:
 
 // 页脚在每个页面都要的两样（R51）
 export type FooterData = { daily_time: string; latest_weekly_key: string | null };
+
+// ── 搜索（PRD 5.4、设计 6.2）：props 的形状由 SearchesController#render_search 定 ──
+export type Publication = "daily" | "weekly";
+export type SearchState = "initial" | "results" | "empty" | "limited" | "unavailable";
+export type SearchRange = "7d" | "30d" | "all" | "custom";
+export type SearchSort = "relevance" | "date";
+export type SearchFilters = { type: Publication | null; sources: string[]; from: string | null; to: string | null; range: SearchRange; sort: SearchSort };
+export type SearchSourceOption = { id: string; name: string; enabled: boolean };
+export type DatePreset = { from: string; to: string };
+export type DatePresets = Record<"7d" | "30d", DatePreset>;
+// 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
+export type HitRun = { text: string; hit: boolean };
+export type SearchResult = { item_id: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null };

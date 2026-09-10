@@ -101,6 +101,9 @@ class Search::RunnerTest < ActiveSupport::TestCase
     assert_equal 5, second.entries.size
     assert_equal (21..25).to_a, second.entries.map(&:rank)
 
+    # 同分同日的 25 条靠 item_id 定序：两页不重叠、合起来正好是全部
+    assert_equal 25, (found_titles(first) + found_titles(second)).uniq.size
+
     assert_equal 50, Search::Result.new(entries: [], total: 1001, page: 1, latency_ms: 0, status: "ok").pages
     assert_equal 0, Search::Result.new(entries: [], total: 0, page: 1, latency_ms: 0, status: "ok").pages
   end
@@ -111,6 +114,15 @@ class Search::RunnerTest < ActiveSupport::TestCase
 
     assert_equal "Hacker News", entry.record.item.source.name
     assert_equal 5, entry.score
+  end
+
+  test "空查询不下库，直接给空结果" do
+    result = search("，。")
+
+    assert result.ok?
+    assert_equal 0, result.total
+    assert_equal [], result.entries
+    assert_equal 0, result.pages
   end
 
   test "两条语句在事务里、带 500 ms 的 statement_timeout 与 0.45 的 word_similarity 下限" do

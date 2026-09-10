@@ -78,7 +78,9 @@ module Issue::Weekly
   def write_section!(source, entries, issue_no: nil)
     transaction do
       replace_section!(source, entries.select(&:valid?), issue_no: issue_no)
-      update!(state: "published", published_at: published_at || Time.current)
+      # 周刊有节就有内容（R-2.7 一条都没有不建期），降级 stub 也算数：degraded 记在条目的 meta 里
+      update!(state: "published", published_at: published_at || Time.current,
+        source_states: source_states.merge(source.id => "ok"))
     end
   end
 

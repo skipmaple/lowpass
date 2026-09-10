@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_09_143250) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_041500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -27,7 +27,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_143250) do
     t.string "status", limit: 10, null: false
     t.string "trigger", limit: 10, null: false
     t.datetime "updated_at", null: false
+    t.index ["issue_id"], name: "index_fetch_runs_on_issue_id"
     t.index ["source_id", "created_at"], name: "index_fetch_runs_on_source_id_and_created_at"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'timed_out'::character varying]::text[])", name: "fetch_runs_status"
+    t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying, 'manual'::character varying, 'test'::character varying]::text[])", name: "fetch_runs_trigger"
   end
 
   create_table "issues", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -38,9 +41,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_143250) do
     t.string "period_key", limit: 10, null: false
     t.datetime "published_at"
     t.datetime "revised_at"
+    t.jsonb "source_states", default: {}, null: false
     t.string "state", limit: 12, default: "generating", null: false
     t.datetime "updated_at", null: false
     t.index ["kind", "period_key"], name: "index_issues_on_kind_and_period_key", unique: true
+    t.check_constraint "kind::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "issues_kind"
     t.check_constraint "state::text = ANY (ARRAY['generating'::character varying, 'published'::character varying, 'empty'::character varying]::text[])", name: "issues_state"
   end
 
@@ -109,6 +114,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_143250) do
     t.integer "sort_order", default: 100, null: false
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_sources_on_name", unique: true
+    t.check_constraint "adapter::text = ANY (ARRAY['hacker_news'::character varying, 'github_trending'::character varying, 'rss'::character varying, 'ruanyf_weekly'::character varying]::text[])", name: "sources_adapter"
     t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "sources_publication"
   end
 

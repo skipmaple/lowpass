@@ -35,9 +35,10 @@ module Issue::Presenting
       }
     end
 
-    # R-1.8 栏目顺序由源的排序值决定，期生成器与页面都不认识具体的源
+    # R-1.8 栏目顺序由源的排序值决定，期生成器与页面都不认识具体的源。
+    # 列哪些栏由 daily_columns 按期决定（R58：定稿的期认它自己记下的源）。
     def daily_source_summaries(issue)
-      Source.enabled.daily.ordered.map do |source|
+      daily_columns(issue, Source.ordered.to_a).map do |source|
         {
           id: source.id,
           name: source.name,
@@ -125,7 +126,8 @@ module Issue::Presenting
         return [] if first > last
 
         issues = daily.where(period_key: first.iso8601..last.iso8601).includes(:fetch_runs).index_by(&:period_key)
-        sources = Source.enabled.daily.ordered.to_a
+        # 停用的源也要查出来：定稿的期记下的源可能后来被停用了，那几栏的内容还在库里
+        sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
 
         (first..last).to_a.reverse.map { |date| archive_day(date, issues[date.iso8601], sources, counts) }
@@ -138,7 +140,7 @@ module Issue::Presenting
           weekday: WEEKDAYS[date.wday],
           state: issue&.state || "missing",
           published_label: archive_label(issue),
-          source_marks: issue && sources.map { |source| "#{abbr(source)} #{mark(issue, source, counts)}" }.join(" · ")
+          source_marks: issue && daily_columns(issue, sources).map { |source| "#{abbr(source)} #{mark(issue, source, counts)}" }.join(" · ")
         }
       end
 

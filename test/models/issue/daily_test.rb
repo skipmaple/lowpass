@@ -150,4 +150,61 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert_equal [ items(:hn_one).id ], issue.items.where(source: sources(:hn)).pluck(:id)
     assert_nil issue.reload.revised_at
   end
+
+  # R58 抓取记录只保留 30 天（F-26）：栏目状态在定稿时固化，不再从 fetch_runs 推导
+  test "定稿把各源结果写进 source_states" do
+    stub_all(Adapters::HackerNews => [ Adapters::Entry.new(title: "h", url: "https://h/1") ], Adapters::GithubTrending => [])
+    Adapters::Rss.any_instance.stubs(:fetch).raises(Adapters::Http::Blocked, "403")
+    issue = Issue.generate_daily!("2026-09-10")
+
+    perform_enqueued_jobs
+
+    assert_equal({ sources(:hn).id => "ok", sources(:github).id => "empty", sources(:hackaday).id => "failed" },
+      issue.reload.source_states)
+  end
+
+  test "抓取记录清掉后栏目状态不变" do
+    issue = issues(:daily_0908)
+    issue.fetch_runs.delete_all
+
+    assert_equal "ok", issue.reload.source_state(sources(:hn))
+    assert_equal "failed", issue.source_state(sources(:github))
+    assert_equal [ items(:hn_one).id ], issue.items.where(source: sources(:hn)).pluck(:id)
+  end
+
+  test "重抓成功改写这一栏固化下来的结果" do
+    issue = issues(:daily_0908)
+    Adapters::GithubTrending.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "g/g", url: "https://g/1") ])
+
+    Issue.regenerate_source!(issue, sources(:github))
+
+    assert_equal "ok", issue.reload.source_state(sources(:github))
+    assert_equal "ok", issue.source_state(sources(:hn)), "别的栏不受影响"
+  end
+
+  test "重抓拿到 0 条则这一栏是今日无新内容" do
+    issue = issues(:daily_0908)
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([])
+
+    Issue.regenerate_source!(issue, sources(:hn))
+
+    assert_equal "empty", issue.reload.source_state(sources(:hn))
+  end
+
+  test "定稿的期只列它自己记下的源" do
+    added = Source.create!(name: "新源", adapter: "rss", publication: "daily", sort_order: 4, config: { feed_url: "https://n.example/feed" })
+    sources(:hackaday).update!(enabled: false)
+
+    columns = Issue.daily_columns(issues(:daily_0908), Source.ordered.to_a)
+
+    assert_includes columns, sources(:hackaday), "停用的源在它有内容的旧期里照样成栏"
+    assert_not_includes columns, added, "后来新增的源不改写历史"
+  end
+
+  test "生成中的期按当前启用的日刊源列栏" do
+    issue = Issue.generate_daily!("2026-09-10")
+    sources(:hackaday).update!(enabled: false)
+
+    assert_equal [ sources(:hn), sources(:github) ], Issue.daily_columns(issue, Source.ordered.to_a)
+  end
 end

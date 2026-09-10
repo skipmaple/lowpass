@@ -100,6 +100,34 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 312, rows.first.dig("meta", "score")
   end
 
+  # F-26 抓取日志只保留 30 天：记录清掉之后，已发布那一期的条目照样是「ok」而不是抓取失败（R58）
+  test "抓取记录过期后仍然渲染条目" do
+    issues(:daily_0908).fetch_runs.delete_all
+
+    get daily_issue_path("2026-09-08")
+
+    assert_response :success
+    assert_includes response.body, "Show HN: A terminal log viewer written in Rust"
+    assert_equal %w[ ok failed failed ], page_props["sources"].map { |s| s["state"] }
+  end
+
+  test "停用的源仍然出现在它有内容的旧期里" do
+    sources(:hn).update!(enabled: false)
+
+    get daily_issue_path("2026-09-08")
+
+    assert_includes page_props["sources"].map { |s| s["id"] }, sources(:hn).id
+    assert_equal 1, page_props["items_by_source"].fetch(sources(:hn).id).size
+  end
+
+  test "后来新增的源不出现在旧期里" do
+    Source.create!(name: "新源", adapter: "rss", publication: "daily", sort_order: 4, config: { feed_url: "https://n.example/feed" })
+
+    get daily_issue_path("2026-09-08")
+
+    assert_equal 3, page_props["sources"].size
+  end
+
   # 页脚的「最新周刊」在每个页面都指向最新一期周刊（R51）
   test "props 带最新一期周刊的周期键" do
     get daily_issue_path("2026-09-08")

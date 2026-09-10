@@ -96,6 +96,38 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert issue.reload.generating?, "其余源还没有结果，不该结束这一期"
   end
 
+  test "三次都失败后不再排队，期按其余源发布" do
+    stub_all(Adapters::GithubTrending => [ Adapters::Entry.new(title: "g/g", url: "https://g/1") ],
+             Adapters::Rss => [ Adapters::Entry.new(title: "r", url: "https://r/1") ])
+    Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
+    issue = Issue.generate_daily!("2026-09-13")
+
+    perform_enqueued_jobs
+    assert issue.reload.generating?
+
+    perform_enqueued_jobs
+    assert issue.reload.generating?
+
+    assert_raises(Adapters::Http::Error) { perform_enqueued_jobs }
+
+    assert issue.reload.published?
+    assert_equal "failed", issue.source_state(sources(:hn))
+    assert_not FetchRun.exists?(source: sources(:hn), issue: issue, attempt: 4)
+    assert sources(:hn).fetch_runs.where(issue: issue, status: "queued").none?
+  end
+
+  test "生成中的期重抓不提前发布" do
+    issue = Issue.generate_daily!("2026-09-12")
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "h", url: "https://h/1") ])
+
+    Issue.regenerate_source!(issue, sources(:hn))
+
+    assert issue.reload.generating?
+    assert_nil issue.revised_at
+    assert_nil issue.published_at
+    assert_equal 1, issue.items.where(source: sources(:hn)).count
+  end
+
   test "重抓成功整栏替换并写修订时间" do
     issue = issues(:daily_0908)
     kept = Item.create!(source: sources(:github), issue: issue, title: "g", url: "https://g/1",

@@ -26,7 +26,7 @@ class Source::FetchingTest < ActiveSupport::TestCase
 
   test "失败时记录失败与错误摘要" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "boom")
-    error = assert_raises(Adapters::Http::Error) { sources(:hn).fetch_now(issues(:daily_0908), trigger: "scheduled") }
+    error = assert_raises(Adapters::Http::Error) { sources(:hn).fetch_now(issues(:daily_0908), trigger: "manual") }
     assert_equal "boom", error.message
     run = sources(:hn).fetch_runs.ordered.first
     assert_equal "failed", run.status
@@ -47,6 +47,16 @@ class Source::FetchingTest < ActiveSupport::TestCase
 
     Adapters::RuanyfWeekly.any_instance.expects(:fetch).with(period_key: "2026-W36").returns([])
     sources(:ruanyf).fetch_now(issues(:weekly_w36), trigger: "manual")
+  end
+
+  test "期定稿后调度抓取不再写入" do
+    Adapters::HackerNews.any_instance.expects(:fetch).never
+
+    run = sources(:hn).fetch_now(issues(:daily_0908), trigger: "scheduled")
+
+    assert_equal "failed", run.status
+    assert_equal "期已定稿，放弃写入", run.error_summary
+    assert Item.exists?(items(:hn_one).id)
   end
 
   test "进行中的抓取不算失败" do

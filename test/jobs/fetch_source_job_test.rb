@@ -3,15 +3,16 @@ require "test_helper"
 class FetchSourceJobTest < ActiveJob::TestCase
   test "失败后重试，最多 3 次" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
+    issue = Issue.generate_daily!("2026-09-14")
     assert_enqueued_with(job: FetchSourceJob) do
-      FetchSourceJob.perform_now(sources(:hn), issues(:daily_0908), "scheduled")
+      FetchSourceJob.perform_now(sources(:hn), issue, "scheduled")
     end
-    assert_equal 1, FetchRun.where(source: sources(:hn), attempt: 1, status: "failed").count
+    assert_equal 1, FetchRun.where(source: sources(:hn), issue: issue, attempt: 1, status: "failed").count
   end
 
   test "可重试失败后写入排队记录，重试复用它而不是新增一条" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
-    issue = issues(:daily_0908)
+    issue = Issue.generate_daily!("2026-09-15")
 
     FetchSourceJob.perform_now(sources(:hn), issue, "scheduled")
     assert_equal 1, FetchRun.where(source: sources(:hn), issue: issue, attempt: 2, status: "queued").count
@@ -28,10 +29,11 @@ class FetchSourceJobTest < ActiveJob::TestCase
 
   test "429 直接放弃不重试" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Blocked.new("429"))
+    issue = Issue.generate_daily!("2026-09-16")
     assert_no_enqueued_jobs do
-      FetchSourceJob.perform_now(sources(:hn), issues(:daily_0908), "scheduled")
+      FetchSourceJob.perform_now(sources(:hn), issue, "scheduled")
     end
-    assert_equal 1, FetchRun.where(source: sources(:hn), attempt: 1, status: "failed").count
+    assert_equal 1, FetchRun.where(source: sources(:hn), issue: issue, attempt: 1, status: "failed").count
   end
 
   test "同一期同一源同时只允许一个抓取任务" do

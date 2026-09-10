@@ -14,7 +14,7 @@ class FetchSourceJob < ApplicationJob
     raise                                # discard_on 丢弃，这个源到此为止
   rescue Adapters::Http::Error, Timeout::Error
     # 还要重试的话先占位，让期知道这个源没结束；ensure 早于 retry_on 执行，排队记录这时已经在了
-    source.fetch_runs.create!(issue: issue, trigger: trigger, attempt: executions + 1, status: "queued") if executions < MAX_ATTEMPTS
+    source.queue_retry(issue, trigger: trigger, attempt: executions + 1) if executions < MAX_ATTEMPTS
     raise
   ensure
     issue&.finalize_if_done!

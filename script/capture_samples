@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+require "net/http"
+require "json"
+require "fileutils"
+
+ROOT = File.expand_path("../test/fixtures/files", __dir__)
+def save(path, body) = (FileUtils.mkdir_p(File.dirname(f = File.join(ROOT, path))); File.write(f, body); puts f)
+def get(url) = Net::HTTP.get(URI(url))
+
+case ARGV[0]
+when "hn"
+  ids = JSON.parse(get("https://hacker-news.firebaseio.com/v0/topstories.json")).first(15)
+  save("hacker_news/topstories.json", JSON.pretty_generate(ids))
+  ids.each { |id| save("hacker_news/item_#{id}.json", get("https://hacker-news.firebaseio.com/v0/item/#{id}.json")) }
+when "github"
+  save("github_trending/daily.html", get("https://github.com/trending?since=daily"))
+when "hackaday"
+  save("rss/hackaday.xml", get("https://hackaday.com/feed/"))
+when "ruanyf"
+  from, to = ARGV[1].to_i, ARGV[2].to_i
+  (from..to).each { |n| save("ruanyf/issue-#{n}.md", get("https://raw.githubusercontent.com/ruanyf/weekly/master/docs/issue-#{n}.md")) }
+  save("ruanyf/README.md", get("https://raw.githubusercontent.com/ruanyf/weekly/master/README.md"))
+else
+  abort "usage: script/capture_samples hn|github|hackaday|ruanyf [from to]"
+end

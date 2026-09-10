@@ -1,0 +1,11 @@
+hn_ok:
+  id: <%= ActiveRecord::FixtureSet.identify(:hn_ok, :uuid) %>
+  source: hn
+  issue: daily_0908
+  trigger: scheduled
+  attempt: 1
+  status: succeeded
+  started_at: <%= Time.utc(2026, 9, 7, 22, 0).to_fs(:db) %>
+  duration_ms: 1200
+  item_count: 10
+  dropped_count: 0

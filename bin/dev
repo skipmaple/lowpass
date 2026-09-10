@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+cd "$(dirname "$0")/.."
+command -v foreman >/dev/null || gem install foreman
+exec foreman start -f Procfile.dev "$@"

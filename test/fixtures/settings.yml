@@ -1,0 +1,4 @@
+daily_time:
+  id: <%= ActiveRecord::FixtureSet.identify(:daily_time, :uuid) %>
+  key: daily_time
+  value: "06:00"

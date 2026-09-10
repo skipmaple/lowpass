@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -eo pipefail
+cd "$(dirname "$0")/.."
+
+step() { echo "▸ $1"; shift; "$@"; echo; }
+
+# 第一次建容器要初始化数据目录：固定 sleep 有时不够（db:prepare 连不上就整条 setup 失败），
+# 多数时候又白等。改成轮询容器自己的 pg_isready，最多等 30 秒。
+wait_for_postgres() {
+  for _ in $(seq 1 60); do
+    if docker exec lowpass-postgres pg_isready -U postgres >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.5
+  done
+
+  echo "PostgreSQL 30 秒内没有就绪，看看 docker logs lowpass-postgres" >&2
+  return 1
+}
+
+step "Installing Ruby and Node via mise" mise install --yes
+eval "$(mise hook-env -s bash)"
+
+step "Installing Git pre-commit hook" git config core.hooksPath .githooks
+
+step "Installing RubyGems" bundle install
+step "Installing npm packages" npm install
+
+# --skip-server：调用方自己管着数据库（config/ci.rb 的 Setup 步骤、CI 里的 postgres service），
+# 这里不碰 Docker。
+if [[ "$*" == *--skip-server* ]]; then
+  step "Skipping PostgreSQL container (--skip-server)" true
+elif ! nc -z 127.0.0.1 5432 2>/dev/null; then
+  if docker ps -aq -f name=lowpass-postgres | grep -q .; then
+    step "Starting PostgreSQL" docker start lowpass-postgres
+  else
+    # 只绑回环地址：容器里的 postgres 用的是默认口令，不该跟着局域网走
+    step "Creating PostgreSQL container" docker run -d --name lowpass-postgres \
+      -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5432:5432 postgres:16
+  fi
+  step "Waiting for PostgreSQL" wait_for_postgres
+fi
+
+if [[ "$*" == *--reset* ]]; then
+  step "Resetting the database" bin/rails db:reset
+else
+  step "Preparing the database" bin/rails db:prepare
+fi
+
+step "Cleaning logs and tempfiles" bin/rails log:clear tmp:clear
+echo "✓ Done"

@@ -1,0 +1,17 @@
+/* 自托管字体（PRD 6.3）。四个家族各管一个角色，全部按 unicode-range 分包，用到才下载。
+   Bodoni Moda / Newsreader：@fontsource-variable，family 名带 Variable 后缀。
+   霞鹜文楷 Screen：只引 lxgwwenkaiscreen.css 这一个家族；包里的 gb / r 变体不引，
+   否则同名 family 会被声明两次。
+   Maple Mono NL Regular：subframe7536/maple-font v7.9 官方 woff2（SIL OFL 1.1），
+   见 app/frontend/fonts/MapleMonoNL-Regular.woff2。 */
+
+@import "@fontsource-variable/bodoni-moda";
+@import "@fontsource-variable/newsreader";
+@import "lxgw-wenkai-screen-webfont/lxgwwenkaiscreen.css";
+
+@font-face {
+  font-family: "Maple Mono NL";
+  src: url("../fonts/MapleMonoNL-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}

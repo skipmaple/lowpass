@@ -1,0 +1,240 @@
+/* 设计令牌。值来自 .claude/skills/lowpass-design-taste/reference/lowpass-tokens.md，
+   新页面只从这里取颜色、字体与字号，不另造值。 */
+
+:root {
+  --ground: #26241F;
+  --paper: #E8E3DA;
+  --ink: #1D1D1B;
+  --ink2: #55504B;
+  --green: #96B59F;
+  --rule: rgba(29, 29, 27, 0.35);
+  --underline: rgba(29, 29, 27, 0.30);
+
+  /* 家族名按自托管包的声明写：@fontsource-variable 的可变字体带 Variable 后缀 */
+  --font-brand: "Bodoni Moda Variable", "Bodoni Moda", serif;
+  --font-latin: "Newsreader Variable", "Newsreader", "LXGW WenKai Screen", serif;
+  --font-cjk: "LXGW WenKai Screen", "Songti SC", serif;
+  --font-data: "Maple Mono NL", ui-monospace, monospace;
+
+  /* 字号八档 + 来源名一档 */
+  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-40: 40px; --fs-56: 56px;
+
+  /* 没有圆角：shadcn 组件里的 calc(var(--radius) …) 也要能算，所以带单位 */
+  --radius: 0px;
+}
+
+html { background: var(--ground); color-scheme: light; }
+body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: var(--fs-15); }
+/* 纸纹：3px 横纹 3% 墨 + 4px 竖纹 14% 白。颜色与图层必须分开写——
+   background 简写里颜色只能出现在最后一层，写在第一层整条声明会被丢弃。 */
+.paper {
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.03) 0 1px, transparent 1px 3px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 1px, transparent 1px 4px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+}
+.cjk { font-family: var(--font-cjk); }
+.data { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
+a { color: inherit; text-decoration: none; }
+a.t { text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+a.t:hover { text-decoration-color: var(--ink); }
+
+/* Inertia 页面跳转进度条（NProgress）。application.tsx 里 includeCSS: false，
+   自己写这份最小样式：墨色细线，没有光晕、没有圆角、没有小圆点/转圈图标。 */
+#nprogress { pointer-events: none; }
+#nprogress .bar { background: var(--ink); position: fixed; z-index: 1031; top: 0; left: 0; width: 100%; height: 2px; }
+#nprogress .peg, #nprogress .spinner { display: none; }
+
+/* 纸张：桌面 1240px 居中；报头黑带整宽，其余内容留边 */
+.sheet { width: 1240px; max-width: 100%; margin: 32px auto; box-sizing: border-box; }
+.sheet-body { padding: 0 40px 28px 40px; }
+
+/* 报头黑带。尺寸写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
+.masthead { height: 80px; padding: 0 40px; background: var(--ink); display: flex; align-items: center; justify-content: space-between; }
+.masthead-left { display: flex; align-items: center; gap: 40px; }
+.masthead-brand { font-family: var(--font-brand); font-size: var(--fs-40); font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper); line-height: 1; }
+.masthead-nav { display: flex; gap: 26px; }
+.masthead-actions { display: flex; align-items: center; gap: 22px; }
+
+/* 桌面报头在窄桌面/大手机（480–767px）容不下 40px 两侧边距：品牌 LOWPASS ≈221px +
+   40 间距 + 导航 86px（左组 347px）+ 22 间距 + 搜索 20px + 账户 32px（右组 74px）
+   = 421px 最小内容宽度；481px 视口减两侧 40px 边距只剩 401px，装不下（实测 masthead-left
+   右边缘与 masthead-actions 左边缘重合于 x=386.9，右侧 40px 边距被压缩到 20px）。
+   收窄边距到 24px 后可用宽度变 481-48=433px ≥ 421px，够装（实测确认无溢出）。 */
+@media (max-width: 767px) {
+  .masthead { padding: 0 24px; }
+}
+
+/* 手机：整宽贴边，内容 24px 边距；报头收到 56px，品牌字 26（令牌表：品牌 40 桌面 / 26 手机） */
+@media (max-width: 480px) {
+  .sheet { margin: 0; }
+  .sheet-body { padding: 0 24px 32px 24px; }
+  .masthead { height: 56px; padding: 0 24px; }
+  .masthead-brand { font-size: var(--fs-26); }
+  .masthead-left { gap: 20px; }
+  .masthead-nav { gap: 16px; }
+  .masthead-actions { gap: 16px; }
+}
+
+/* ─── 日刊页（Task 17）──────────────────────────────────────────────────
+   桌面值搬自 docs/design/src/pages_front2.py 的 issue_head()、pages_front3.py 的
+   tabs() / item() / failure_box()；手机值搬自 pages_front3.py 的 head_m() / tabs_m() /
+   item_m()。写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
+
+/* 期头（画布 page_head）：56px 文楷大字，右侧叠放 Maple 小字与文楷 20，底线 2px。
+   日刊详情、周刊详情、两个归档页共用；控件靠 .ctrl，尺寸在这里才盖得住手机断点。 */
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
+.issue-head-main { display: flex; align-items: flex-end; gap: 16px; }
+.issue-head-title { display: flex; align-items: flex-end; gap: 16px; }
+.issue-head-date { margin: 0; font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-56); line-height: 1; }
+.issue-head-stack { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
+.issue-head-time { font-size: var(--fs-13); }
+.issue-head-weekday { font-family: var(--font-cjk); font-size: var(--fs-20); line-height: 1; color: var(--ink2); }
+.issue-head-year { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); line-height: 1.6; }
+.issue-head-tag { padding-bottom: 4px; }
+.issue-nav { display: flex; align-items: center; gap: 8px; }
+.issue-nav-mobile { display: none; gap: 8px; flex: none; padding-top: 14px; }
+.page-nav { display: flex; align-items: center; gap: 8px; }
+
+/* 40px 描边控件（画布 ctrl）：期导航、翻月、翻年；没有目标时退成 35% 墨线 */
+.ctrl { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px;
+        border: 1px solid var(--ink); font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
+.ctrl-off { border-color: var(--rule); color: var(--ink2); }
+.ctrl-square { width: 44px; height: 44px; padding: 0; }
+
+/* 来源索引条：并排等宽，当前项反白成墨块，其余 1px 描边；相邻两条共用一条边。
+   --tab-hole 是插图里「挖空」处的填充：纸上留纸色，反白后填墨色。 */
+.source-tabs { display: flex; padding: 24px 0 0 0; }
+.source-tab { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 18px 24px 18px 18px;
+              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+              --tab-hole: var(--paper); }
+.source-tab + .source-tab { margin-left: -1px; }
+.source-tab[data-state="active"] { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); }
+.source-tab:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.source-tab[data-state="active"]:focus-visible { outline-color: var(--paper); outline-offset: -6px; }
+.source-tab-icon { width: 68px; height: 44px; flex: none; display: block; }
+.source-tab-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.source-tab-name { font-family: var(--font-latin); font-size: var(--fs-32); font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
+.source-tab-state { font-family: var(--font-cjk); font-size: var(--fs-12); line-height: 1.6; color: var(--ink2); white-space: nowrap; }
+.source-tab[data-state="active"] .source-tab-state { color: var(--paper); opacity: 0.72; }
+
+/* 列表区：顶上一条 1px 墨线，条目之间 1px 分隔线 */
+.issue-body { border-top: 1px solid var(--ink); }
+.source-foot { display: inline-flex; align-items: center; gap: 6px; padding-top: 14px; }
+
+/* 条目：桌面「序号 正文 标签」三列，手机「序号 标签」眉行加整宽正文 */
+.item-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "rank body tag"; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+.item-rank { grid-area: rank; padding-top: 5px; font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
+.item-body { grid-area: body; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.item-tag { grid-area: tag; padding-top: 3px; }
+/* PRD 6.3：标题最多两行、摘要最多两行，超出省略。截断落在块级元素上（标题是 h2，
+   里面那个 a 照常带下划线），-webkit-box 是各家浏览器都认的那一套，没有标准替代。 */
+.item-title { margin: 0; font-family: var(--font-latin); font-size: var(--fs-20); font-weight: 500; line-height: 1.35;
+              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.item-summary { font-family: var(--font-latin); font-size: var(--fs-15); font-weight: 400; line-height: 1.5; color: var(--ink2);
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.item-reason { margin-top: 4px; max-width: 820px; border-left: 2px solid var(--green); padding: 1px 0 1px 12px; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.7; color: var(--ink2); }
+
+/* 栏级与期级状态：一句文楷 20 的事实（+ 失败时一幅日出小图与上次成功时间） */
+.state-line { font-family: var(--font-cjk); font-size: var(--fs-20); }
+.source-state { padding: 28px 0 24px 0; border-bottom: 1px solid var(--rule); }
+.source-state-failed { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 24px; align-items: center; }
+.source-state-art { width: 130px; height: 69px; display: block; opacity: 0.8; }
+.source-state-pending { height: 48px; }
+
+@media (max-width: 480px) {
+  .page-head { align-items: flex-start; gap: 16px; padding: 32px 0 16px 0; }
+  .issue-head-main { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .issue-head-title { gap: 12px; }
+  .issue-head-date { font-size: var(--fs-40); }
+  .issue-head-stack { gap: 4px; padding-bottom: 3px; }
+  .issue-head-time { font-size: var(--fs-12); }
+  .issue-head-weekday { font-size: var(--fs-15); }
+  .issue-head-tag { padding-bottom: 0; }
+  .issue-nav { display: none; }
+  .issue-nav-mobile { display: flex; }
+  /* 翻月、翻年的按钮带的是月份与年份，收不成图标：整行留在期头下面，44px 触控目标 */
+  .page-nav { width: 100%; }
+  .page-nav .ctrl { height: 44px; flex: 1 1 0; }
+
+  /* 期头底线下面已经有一行按钮，索引条不用再空 24px */
+  .source-tabs { padding-top: 16px; }
+  .source-tab { flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px 8px; }
+  .source-tab-icon { width: 37px; height: 24px; }
+  .source-tab-body { align-items: center; gap: 4px; }
+  .source-tab-name { font-size: var(--fs-13); line-height: 1.2; text-align: center; }
+  .source-tab-state { white-space: normal; text-align: center; }
+
+  .issue-body { margin-top: 24px; }
+  .source-foot { padding-top: 22px; }
+
+  /* 呼吸感：条目上下各 24px，标题整宽（设计 skill「手机」） */
+  .item-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "rank tag" "body body"; gap: 10px 12px; padding: 24px 0; }
+  .item-rank { padding-top: 0; }
+  .item-tag { padding-top: 0; justify-self: end; }
+  .item-body { gap: 8px; }
+  .item-title { line-height: 1.3; }
+  .item-reason { margin-top: 6px; }
+
+  .source-state { padding: 24px 0 20px 0; }
+  .source-state-failed { grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+}
+
+/* ─── 周刊页与归档（Task 18）────────────────────────────────────────────
+   值搬自 docs/design/src/pages_site.py 的 source_band() / anchors() / weekly_sections() /
+   archive_daily() / archive_weekly()。条目、状态、列表线沿用上面日刊页那一套，不另造装置。 */
+
+/* 源节反白横带：80px 墨底，书本图标 + 源名 32，右端期号与原文外链 */
+.source-band { margin-top: 24px; min-height: 80px; background: var(--ink); display: flex; align-items: center;
+               justify-content: space-between; gap: 16px; padding: 0 24px; }
+.source-band-name { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.source-band-title { margin: 0; font-weight: 400; font-size: var(--fs-32); line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.source-band-meta { display: flex; align-items: center; gap: 16px; flex: none; }
+.source-band-issue { opacity: 0.72; }
+.source-band-link { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--paper); }
+.source-band-link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+/* 板块锚点目录：1px 描边小块横排一行，窄屏横向滚动；底下一条 1px 墨线 */
+.anchors { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--ink); overflow-x: auto; scrollbar-width: none; }
+.anchors::-webkit-scrollbar { display: none; }
+.anchor-chip { display: inline-flex; align-items: center; flex: none; height: 40px; padding: 0 14px; border: 1px solid var(--rule);
+               font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
+.anchor-chip:hover, .anchor-chip:focus-visible { border-color: var(--ink); }
+
+/* 板块小标：文楷 22 加一条 1px 墨线 */
+.weekly-section-head { margin: 0; padding: 32px 0 8px 0; border-bottom: 1px solid var(--ink);
+                       font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-22); line-height: 1.3; }
+
+/* 周刊条目摘要：画布 pages_site.item() 用文楷 15/1.7；日刊摘要（.item-summary 本体）是
+   PRD 6.3 的 Newsreader 15/1.5，两套行高分属不同角色，不能共用一个数。两行截断沿用 .item-summary。 */
+.item-summary--weekly { line-height: 1.7; }
+
+/* 归档：期头底线下面直接是行，行间 35% 墨线；整行可点，日期与周次带 1px 下划线 */
+.archive-list { padding-top: 24px; }
+.archive-row { display: grid; gap: 0 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--rule);
+               grid-template-areas: "mark key sub label meta"; }
+.archive-daily .archive-row { grid-template-columns: 24px 150px 110px minmax(0, 1fr) auto; }
+.archive-weekly .archive-row { grid-template-columns: 24px 130px 190px minmax(0, 1fr) auto; }
+.archive-mark { grid-area: mark; display: flex; align-items: center; }
+.archive-key { grid-area: key; font-family: var(--font-cjk); font-size: var(--fs-20);
+               text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.archive-row:hover .archive-key { text-decoration-color: var(--ink); }
+.archive-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.archive-sub { grid-area: sub; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
+.archive-label { grid-area: label; min-width: 0; }
+.archive-meta { grid-area: meta; }
+
+@media (max-width: 480px) {
+  /* 手机：横带竖过来，源名与期号各占一行，原文外链留着（R-2.5 源节头要有原文链接） */
+  .source-band { flex-direction: column; align-items: flex-start; gap: 10px; min-height: 0; padding: 14px 16px; }
+  .source-band-title { font-size: var(--fs-20); white-space: normal; overflow: visible; }
+  .source-band-meta { flex-wrap: wrap; gap: 12px; }
+  .anchor-chip { height: 44px; }
+  .weekly-section-head { padding-top: 28px; }
+
+  /* 呼吸感：一行拆成三层——记号与日期、状态、各源结果 */
+  .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); grid-template-areas: "mark key sub" ". label label" ". meta meta";
+                 row-gap: 8px; padding: 20px 0; }
+  .archive-daily .archive-row, .archive-weekly .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); }
+  .archive-sub { padding-left: 4px; }
+}

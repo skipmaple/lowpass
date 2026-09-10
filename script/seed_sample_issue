@@ -1,0 +1,79 @@
+#!/usr/bin/env ruby
+# 开发用：把 test/fixtures/files/ 里那批源站样本当成三个日刊源的响应，装订出一期结构真实的日刊，
+# 用来在浏览器里看页面，不连网络、不动生产逻辑。抓取、装订、定稿走的都是正式代码路径。
+#
+#   mise exec -- ruby script/seed_sample_issue [YYYY-MM-DD]
+#
+# 不传周期键就写昨天那一期（今天留给调度器）。重复执行会先删掉同一期，可以反复跑。
+
+require_relative "../config/environment"
+abort "只在 development 下跑" unless Rails.env.development?
+
+require "webmock"
+
+class SampleIssueSeeder
+  include WebMock::API
+
+  SAMPLES = Rails.root.join("test/fixtures/files")
+  HN_API = "https://hacker-news.firebaseio.com/v0"
+
+  def initialize(period_key)
+    @period_key = period_key
+  end
+
+  def seed
+    prepare_http
+    replace_issue
+    daily_sources.each { |source| fetch(source) }
+    @issue.finalize!(reason: "seed")
+    report
+  end
+
+  private
+    # 三个源的出站请求全部落到样本文件上；Surfguard 的 DNS 解析也不出网
+    def prepare_http
+      WebMock.enable!
+      WebMock.disable_net_connect!
+      Surfguard.define_singleton_method(:resolve_public_ips) { |*| [ "1.1.1.1" ] }
+
+      ids = JSON.parse(sample("hacker_news/topstories.json"))
+      stub_request(:get, "#{HN_API}/topstories.json").to_return(body: ids.to_json)
+      ids.each { |id| stub_request(:get, "#{HN_API}/item/#{id}.json").to_return(body: sample("hacker_news/item_#{id}.json")) }
+      stub_request(:get, "https://github.com/trending?since=daily").to_return(body: sample("github_trending/daily.html"))
+      stub_request(:get, "https://hackaday.com/feed/").to_return(body: sample("rss/hackaday.xml"))
+    end
+
+    def sample(path)
+      SAMPLES.join(path).read
+    end
+
+    # 幂等：同一周期键先整期删掉（条目随 dependent: :delete_all 走，抓取记录只会被置空，得自己删）
+    def replace_issue
+      Issue.daily.where(period_key: @period_key).find_each do |old|
+        FetchRun.where(issue: old).delete_all
+        old.destroy!
+      end
+      @issue = Issue.daily.create!(period_key: @period_key, state: "generating", generation_started_at: Time.current)
+    end
+
+    def daily_sources
+      Source.enabled.daily.ordered
+    end
+
+    # 样本是抓下来那天的，早就超出 RSS 源的 24 小时窗口：只在内存里把窗口放宽，不写库
+    def fetch(source)
+      source.config = source.config.merge("window_hours" => 24 * 365 * 10) if source.adapter == "rss"
+      source.fetch_now(@issue, trigger: "manual")
+    rescue StandardError => e
+      warn "  #{source.name}：抓取失败 #{e.class}: #{e.message}"
+    end
+
+    def report
+      @issue.reload
+      puts "#{@issue.period_key} #{@issue.state}"
+      daily_sources.each { |source| puts "  #{source.name} #{@issue.items.where(source: source).count} 条 · #{@issue.source_state(source)}" }
+    end
+end
+
+abort "没有启用的日刊源，先跑 bin/rails db:seed" if Source.enabled.daily.none?
+SampleIssueSeeder.new(ARGV[0] || PeriodKey.daily(Time.current - 1.day)).seed

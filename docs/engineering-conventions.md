@@ -124,7 +124,8 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 - Dockerfile：`ruby:*-slim` + jemalloc + bootsnap 预编译 + `SECRET_KEY_BASE_DUMMY=1 assets:precompile` + 非 root 用户 + thruster；
   `bin/docker-entrypoint` 在 `web` 启动时跑 `db:prepare`。〔采用〕
 - Kamal 别名 `console` / `shell` / `logs` / `dbc`；密钥只经 `.kamal/secrets` 从环境读取，仓库里没有任何密钥。〔采用〕
-- 开发环境可用 `SOLID_QUEUE_IN_PUMA=true` 把队列跑在 Puma 里；生产按 ADR T4 走独立 `job` 角色。
+- 开发环境把队列跑成 `Procfile.dev` 里独立的 `jobs: bin/jobs` 进程，与生产 ADR T4 的独立 `job` 角色同形；
+  不再用 `SOLID_QUEUE_IN_PUMA` 把 supervisor 塞进 Puma，两处都开会多出一份 supervisor 与一份周期调度器。
 - 队列面板用 `mission_control-jobs`（ADR T12），挂在 `/admin/jobs`，只对 admin 开放，与 5.6 的后台同一套鉴权。〔采用自 fizzy〕
 
 ## 代理说明文件本身

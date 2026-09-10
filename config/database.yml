@@ -1,0 +1,36 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  # macOS 上预编译的 pg gem 自带 libpq，在 fork 出的子进程里协商 GSS 加密会段错误
+  # （并行测试的 worker 全部崩溃、bin/rails test 挂起）。本项目不用 GSS，直接关掉。
+  gssencmode: disable
+  host: <%= ENV.fetch("PGHOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("PGPORT", "5432") %>
+  username: <%= ENV.fetch("PGUSER", "postgres") %>
+  password: <%= ENV.fetch("PGPASSWORD", "postgres") %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+
+development:
+  primary:
+    <<: *default
+    database: lowpass_development
+  queue:
+    <<: *default
+    database: lowpass_development_queue
+    migrations_paths: db/queue_migrate
+
+test:
+  <<: *default
+  database: lowpass_test
+
+production:
+  primary:
+    <<: *default
+    database: lowpass_production
+    url: <%= ENV["DATABASE_URL"] %>
+  # 队列库不能继承 primary 的 url：url 里带着库名，两个连接会指向同一个库，
+  # Solid Queue 的表就建到业务库里去了。只继承 default 的主机与凭证。
+  queue:
+    <<: *default
+    database: lowpass_production_queue
+    migrations_paths: db/queue_migrate

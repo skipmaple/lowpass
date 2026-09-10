@@ -81,17 +81,26 @@ a.t:hover { text-decoration-color: var(--ink); }
    tabs() / item() / failure_box()；手机值搬自 pages_front3.py 的 head_m() / tabs_m() /
    item_m()。写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
 
-/* 期头：56px 文楷日期，右侧叠放 Maple 发布时间与文楷星期，底线 2px */
-.issue-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
+/* 期头（画布 page_head）：56px 文楷大字，右侧叠放 Maple 小字与文楷 20，底线 2px。
+   日刊详情、周刊详情、两个归档页共用；控件靠 .ctrl，尺寸在这里才盖得住手机断点。 */
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
 .issue-head-main { display: flex; align-items: flex-end; gap: 16px; }
 .issue-head-title { display: flex; align-items: flex-end; gap: 16px; }
 .issue-head-date { margin: 0; font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-56); line-height: 1; }
 .issue-head-stack { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
 .issue-head-time { font-size: var(--fs-13); }
 .issue-head-weekday { font-family: var(--font-cjk); font-size: var(--fs-20); line-height: 1; color: var(--ink2); }
+.issue-head-year { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); line-height: 1.6; }
 .issue-head-tag { padding-bottom: 4px; }
 .issue-nav { display: flex; align-items: center; gap: 8px; }
 .issue-nav-mobile { display: none; gap: 8px; flex: none; padding-top: 14px; }
+.page-nav { display: flex; align-items: center; gap: 8px; }
+
+/* 40px 描边控件（画布 ctrl）：期导航、翻月、翻年；没有目标时退成 35% 墨线 */
+.ctrl { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px;
+        border: 1px solid var(--ink); font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
+.ctrl-off { border-color: var(--rule); color: var(--ink2); }
+.ctrl-square { width: 44px; height: 44px; padding: 0; }
 
 /* 来源索引条：并排等宽，当前项反白成墨块，其余 1px 描边；相邻两条共用一条边。
    --tab-hole 是插图里「挖空」处的填充：纸上留纸色，反白后填墨色。 */
@@ -134,7 +143,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 .source-state-pending { height: 48px; }
 
 @media (max-width: 480px) {
-  .issue-head { align-items: flex-start; gap: 16px; padding: 32px 0 16px 0; }
+  .page-head { align-items: flex-start; gap: 16px; padding: 32px 0 16px 0; }
   .issue-head-main { flex-direction: column; align-items: flex-start; gap: 12px; }
   .issue-head-title { gap: 12px; }
   .issue-head-date { font-size: var(--fs-40); }
@@ -144,6 +153,9 @@ a.t:hover { text-decoration-color: var(--ink); }
   .issue-head-tag { padding-bottom: 0; }
   .issue-nav { display: none; }
   .issue-nav-mobile { display: flex; }
+  /* 翻月、翻年的按钮带的是月份与年份，收不成图标：整行留在期头下面，44px 触控目标 */
+  .page-nav { width: 100%; }
+  .page-nav .ctrl { height: 44px; flex: 1 1 0; }
 
   /* 期头底线下面已经有一行按钮，索引条不用再空 24px */
   .source-tabs { padding-top: 16px; }
@@ -166,4 +178,59 @@ a.t:hover { text-decoration-color: var(--ink); }
 
   .source-state { padding: 24px 0 20px 0; }
   .source-state-failed { grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+}
+
+/* ─── 周刊页与归档（Task 18）────────────────────────────────────────────
+   值搬自 docs/design/src/pages_site.py 的 source_band() / anchors() / weekly_sections() /
+   archive_daily() / archive_weekly()。条目、状态、列表线沿用上面日刊页那一套，不另造装置。 */
+
+/* 源节反白横带：80px 墨底，书本图标 + 源名 32，右端期号与原文外链 */
+.source-band { margin-top: 24px; min-height: 80px; background: var(--ink); display: flex; align-items: center;
+               justify-content: space-between; gap: 16px; padding: 0 24px; }
+.source-band-name { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.source-band-title { margin: 0; font-weight: 400; font-size: var(--fs-32); line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.source-band-meta { display: flex; align-items: center; gap: 16px; flex: none; }
+.source-band-issue { opacity: 0.72; }
+.source-band-link { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--paper); }
+.source-band-link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+/* 板块锚点目录：1px 描边小块横排一行，窄屏横向滚动；底下一条 1px 墨线 */
+.anchors { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--ink); overflow-x: auto; scrollbar-width: none; }
+.anchors::-webkit-scrollbar { display: none; }
+.anchor-chip { display: inline-flex; align-items: center; flex: none; height: 40px; padding: 0 14px; border: 1px solid var(--rule);
+               font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
+.anchor-chip:hover, .anchor-chip:focus-visible { border-color: var(--ink); }
+
+/* 板块小标：文楷 22 加一条 1px 墨线 */
+.weekly-section-head { margin: 0; padding: 32px 0 8px 0; border-bottom: 1px solid var(--ink);
+                       font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-22); line-height: 1.3; }
+
+/* 归档：期头底线下面直接是行，行间 35% 墨线；整行可点，日期与周次带 1px 下划线 */
+.archive-list { padding-top: 24px; }
+.archive-row { display: grid; gap: 0 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--rule);
+               grid-template-areas: "mark key sub label meta"; }
+.archive-daily .archive-row { grid-template-columns: 24px 150px 110px minmax(0, 1fr) auto; }
+.archive-weekly .archive-row { grid-template-columns: 24px 130px 190px minmax(0, 1fr) auto; }
+.archive-mark { grid-area: mark; display: flex; align-items: center; }
+.archive-key { grid-area: key; font-family: var(--font-cjk); font-size: var(--fs-20);
+               text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.archive-row:hover .archive-key { text-decoration-color: var(--ink); }
+.archive-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.archive-sub { grid-area: sub; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
+.archive-label { grid-area: label; min-width: 0; }
+.archive-meta { grid-area: meta; }
+
+@media (max-width: 480px) {
+  /* 手机：横带竖过来，源名与期号各占一行，原文外链留着（R-2.5 源节头要有原文链接） */
+  .source-band { flex-direction: column; align-items: flex-start; gap: 10px; min-height: 0; padding: 14px 16px; }
+  .source-band-title { font-size: var(--fs-20); white-space: normal; overflow: visible; }
+  .source-band-meta { flex-wrap: wrap; gap: 12px; }
+  .anchor-chip { height: 44px; }
+  .weekly-section-head { padding-top: 28px; }
+
+  /* 呼吸感：一行拆成三层——记号与日期、状态、各源结果 */
+  .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); grid-template-areas: "mark key sub" ". label label" ". meta meta";
+                 row-gap: 8px; padding: 20px 0; }
+  .archive-daily .archive-row, .archive-weekly .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); }
+  .archive-sub { padding-left: 4px; }
 }

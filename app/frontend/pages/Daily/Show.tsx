@@ -4,10 +4,12 @@ import type * as React from 'react'
 
 import Icon from '@/components/Icon'
 import IssueHead from '@/components/IssueHead'
+import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import SourceState from '@/components/SourceState'
 import SourceTabs from '@/components/SourceTabs'
+import { DAILY_ARCHIVE, dailyHref, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SourceSummary } from '@/types/lowpass'
 
@@ -20,10 +22,8 @@ export type DailyShowProps = {
   sources: SourceSummary[]
   items_by_source: Record<string, Item[]>
   active_source_id: string | null
+  latest_weekly_key: string | null
 }
-
-const dailyHref = (periodKey: string) => `/daily/${periodKey}`
-const ARCHIVE_HREF = '/daily'
 
 // 期级状态：状态词挂在期头的小签上，事实句放列表区顶部（第十轮笔记、画布 pages_front3.py 的 message()）。
 // 缺期、生成中、空刊这三种状态下期头那句就是要说的事实句（附录 B 同一句话两处用），
@@ -40,17 +40,6 @@ function rememberSource(sourceId: string) {
   const url = new URL(window.location.href)
   url.searchParams.set('source', sourceId)
   window.history.replaceState(window.history.state, '', url.toString())
-}
-
-// 列表区顶部那一句：1px 顶线 + 文楷 20，与栏级状态同一个盒子
-function IssueNotice({ text }: { text: string }) {
-  return (
-    <div className="issue-body">
-      <div className="source-state">
-        <span className="state-line">{text}</span>
-      </div>
-    </div>
-  )
 }
 
 function SourceBody({ source, items }: { source: SourceSummary; items: Item[] }) {
@@ -109,7 +98,7 @@ export default function Show({ issue, missing, sources, items_by_source, active_
 
   return (
     <>
-      <IssueHead issue={issue} archiveHref={ARCHIVE_HREF} hrefFor={dailyHref} />
+      <IssueHead issue={issue} archiveHref={DAILY_ARCHIVE} hrefFor={dailyHref} />
 
       {/* R-1.6 缺期没有来源索引条，列表区只有「本期未生成」那一句 */}
       {missing ? (
@@ -130,14 +119,14 @@ export default function Show({ issue, missing, sources, items_by_source, active_
 // Layout 是 application.tsx 里的持久布局，页脚要的下一期时间与前后期地址从 props 来，
 // 所以套一层用 usePage 取 props 的小组件，再按 Home.tsx 那种写法交给 Inertia。
 function DailyLayout({ children }: React.PropsWithChildren) {
-  const { issue } = usePage<DailyShowProps>().props
+  const { issue, latest_weekly_key } = usePage<DailyShowProps>().props
 
   return (
     <Layout
       masthead={{ active: 'daily' }}
       footer={{
         nextAt: issue.daily_time,
-        latestWeeklyHref: '/weekly',
+        latestWeeklyHref: latestWeeklyHref(latest_weekly_key),
         prevHref: issue.prev_key && dailyHref(issue.prev_key),
         nextHref: issue.next_key && dailyHref(issue.next_key),
       }}

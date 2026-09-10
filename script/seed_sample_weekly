@@ -1,0 +1,74 @@
+#!/usr/bin/env ruby
+# 开发用：把 test/fixtures/files/ruanyf/ 里的样本当成阮一峰周刊的响应，装订出一期结构真实的周刊，
+# 用来在浏览器里看周刊页与周刊归档，不连网络、不动生产逻辑。
+# 新期检测、解析、分节、发布走的都是正式代码路径（Issue.check_weekly_sources!）。
+#
+#   mise exec -- ruby script/seed_sample_weekly
+#
+# 重复执行会先删掉上次装订的那一期（整期只有阮一峰第 411 期的条目），可以反复跑。
+
+require_relative "../config/environment"
+abort "只在 development 下跑" unless Rails.env.development?
+
+require "webmock"
+
+class SampleWeeklySeeder
+  include WebMock::API
+
+  SAMPLES = Rails.root.join("test/fixtures/files/ruanyf")
+  RAW = Adapters::RuanyfWeekly::RAW
+  ISSUE_NO = 411
+
+  def seed
+    prepare_http
+    drop_previous
+    Issue.check_weekly_sources!
+    report
+  end
+
+  private
+    # 出站请求全部落到样本文件上；Surfguard 的 DNS 解析也不出网
+    def prepare_http
+      WebMock.enable!
+      WebMock.disable_net_connect!
+      Surfguard.define_singleton_method(:resolve_public_ips) { |*| [ "1.1.1.1" ] }
+
+      stub_request(:get, "#{RAW}/README.md").to_return(body: sample("README.md"))
+      stub_request(:get, "#{RAW}/docs/issue-#{ISSUE_NO}.md").to_return(body: sample("issue-#{ISSUE_NO}.md"))
+    end
+
+    def sample(path)
+      SAMPLES.join(path).read
+    end
+
+    # 幂等：上次装订的那一期整期只有这一期样本的条目，删掉它就回到脚本没跑过的状态。
+    # 条目随 dependent: :delete_all 走，抓取记录只会被置空，得自己删。
+    def drop_previous
+      Issue.weekly.includes(:items).select { |issue| seeded?(issue) }.each do |issue|
+        FetchRun.where(issue: issue).delete_all
+        issue.destroy!
+      end
+      FetchRun.where(source: source, issue: nil).delete_all
+    end
+
+    def seeded?(issue)
+      issue.items.any? && issue.items.all? { |item| item.source_id == source.id && item.meta["issue_no"].to_i == ISSUE_NO }
+    end
+
+    def source
+      @source ||= Source.enabled.weekly.find_by(adapter: "ruanyf_weekly") or abort "没有启用的阮一峰周刊源，先跑 bin/rails db:seed"
+    end
+
+    def report
+      run = FetchRun.where(source: source).ordered.first
+      issue = run&.issue or return puts("没有装订出周刊期：#{run&.status} #{run&.error_summary}")
+
+      puts "#{issue.period_key} #{issue.state}"
+      issue.weekly_sections.each do |section|
+        puts "  #{section[:source].name} 第 #{section[:issue_no]} 期 · #{section[:issue_title]}" \
+             " · #{section[:sections].size} 个板块 · #{section[:sections].sum { |(_, list)| list.size }} 条"
+      end
+    end
+end
+
+SampleWeeklySeeder.new.seed

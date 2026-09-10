@@ -1,6 +1,8 @@
 import { Link } from '@inertiajs/react'
 import type * as React from 'react'
 
+import { Ctrl } from '@/components/Ctrl'
+
 // 页脚：2px 墨线顶线、LP 邮戳、「明早 06:00 · 下一期」、最新周刊链接、前后期 40px 描边按钮。
 // 中文走文楷，时间走 Maple；按钮没有圆角、没有阴影。
 export type FooterProps = {
@@ -12,62 +14,6 @@ export type FooterProps = {
 
 const cjk: React.CSSProperties = { fontFamily: 'var(--font-cjk)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' }
 const data: React.CSSProperties = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' }
-
-function Chevron({ direction }: { direction: 'left' | 'right' }) {
-  return (
-    <svg
-      width={14}
-      height={14}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      style={{ flex: 'none', display: 'block' }}
-    >
-      <path d={direction === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} />
-    </svg>
-  )
-}
-
-function Ctrl({ href, label, direction }: { href: string | null | undefined; label: string; direction: 'left' | 'right' }) {
-  const off = !href
-  const style: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    height: 40,
-    padding: '0 14px',
-    border: `1px solid ${off ? 'var(--rule)' : 'var(--ink)'}`,
-    fontFamily: 'var(--font-cjk)',
-    fontSize: 'var(--fs-15)',
-    color: off ? 'var(--ink2)' : 'var(--ink)',
-    whiteSpace: 'nowrap',
-  }
-  const inner = (
-    <>
-      {direction === 'left' ? <Chevron direction="left" /> : null}
-      <span>{label}</span>
-      {direction === 'right' ? <Chevron direction="right" /> : null}
-    </>
-  )
-
-  if (off) {
-    return (
-      <span style={style} aria-disabled="true">
-        {inner}
-      </span>
-    )
-  }
-  return (
-    <Link href={href} style={style}>
-      {inner}
-    </Link>
-  )
-}
 
 function Stamp() {
   return (
@@ -132,10 +78,13 @@ export default function Footer({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Ctrl href={prevHref} label="前一期" direction="left" />
-        <Ctrl href={nextHref} label="后一期" direction="right" />
-      </div>
+      {/* 归档页没有前后期可去，两个按钮就不占位（页面上只放对应数据字段的东西） */}
+      {prevHref || nextHref ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Ctrl href={prevHref ?? null} label="前一期" icon="chevron-left" side="left" />
+          <Ctrl href={nextHref ?? null} label="后一期" icon="chevron-right" side="right" />
+        </div>
+      ) : null}
     </footer>
   )
 }

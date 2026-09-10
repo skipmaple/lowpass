@@ -28,7 +28,7 @@ module Issue::Daily
 
   # AC-1.7 成功返回 0 条也算成功，栏内显示「今日无新内容」
   def source_state(source)
-    last = fetch_runs.where(source: source).ordered.first
+    last = latest_run(source)
 
     if last.nil? || last.status.in?(%w[ queued running ])
       generating? ? "pending" : "failed"
@@ -42,4 +42,15 @@ module Issue::Daily
   def timed_out?
     generating? && generation_started_at < ISSUE_TIMEOUT.ago
   end
+
+  private
+    # 归档页一次列一个月：期带着 fetch_runs 预加载进来时就在内存里挑，不然一行三次查询。
+    # 抓取路径上没人预加载这个关联（写记录走的是 source.fetch_runs），所以拿不到过期的内存副本。
+    def latest_run(source)
+      if fetch_runs.loaded?
+        fetch_runs.select { |run| run.source_id == source.id }.max_by(&:created_at)
+      else
+        fetch_runs.where(source: source).ordered.first
+      end
+    end
 end

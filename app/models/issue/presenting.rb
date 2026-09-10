@@ -2,6 +2,8 @@ module Issue::Presenting
   extend ActiveSupport::Concern
 
   WEEKDAYS = %w[ 星期日 星期一 星期二 星期三 星期四 星期五 星期六 ].freeze
+  # 归档一行里放不下来源名：榜单类源有通用缩写，其余源取名字前三个字符
+  SOURCE_ABBRS = { "hacker_news" => "HN", "github_trending" => "GH" }.freeze
 
   class_methods do
     # 期头要的一切。缺期时 issue 是 nil，日期、星期与前后期仍然从周期键与库里算得出来。
@@ -44,7 +46,146 @@ module Issue::Presenting
       end
     end
 
+    # R-2.5 周刊页：期头（第几周、年份、日期范围）加按源分节。那一周没有期也照常给期头，
+    # 正文只有附录 B 的「本周无内容」（R-2.7）。周期键非法时 PeriodKey.week_range 抛错，控制器据此 404。
+    def weekly_props_for(period_key, issue: :lookup)
+      issue = weekly.find_by(period_key: period_key) if issue == :lookup
+      range = PeriodKey.week_range(period_key)
+      sections = issue&.weekly_section_props || []
+
+      {
+        issue: {
+          period_key: period_key,
+          year: period_key[0, 4].to_i,
+          week_label: week_label(period_key),
+          range_label: range_label(range),
+          state: issue&.state,
+          # 一节都没有就是没内容：期不存在是常态，期在库里但条目都被藏起来也算（页面按 sections 空不空决定）
+          status: ("本周无内容" if sections.empty?),
+          published_at: hhmm(issue&.published_at),
+          prev_key: weekly.where("period_key < ?", period_key).maximum(:period_key),
+          next_key: weekly.where("period_key > ?", period_key).minimum(:period_key)
+        },
+        sections: sections
+      }
+    end
+
+    # 页脚的「最新周刊」在每个页面都指向最新一期；一期都没有时页面落到归档
+    def latest_weekly_key = weekly.maximum(:period_key)
+
+    # PRD 6.2 日刊归档：一页一个月，每天一行（含缺期）。上线前的日期不显示，所以行从最早一期那天起算，
+    # 到今天为止；整段落在这两头之外的月份一行都没有，翻月的按钮也就到此为止。
+    def daily_archive_props(month: nil, now: Time.current)
+      today = PeriodKey.date_of(PeriodKey.daily(now))
+      month = (month || today).beginning_of_month
+      earliest = daily.minimum(:period_key)&.then { |key| PeriodKey.date_of(key) } || today
+
+      {
+        month: month.strftime("%Y-%m"),
+        month_label: "#{month.year} 年 #{month.month} 月",
+        prev_month: month_nav(month.prev_month, month, earliest, today),
+        next_month: month_nav(month.next_month, month, earliest, today),
+        days: archive_days([ month, earliest ].max, [ month.end_of_month, today ].min)
+      }
+    end
+
+    # PRD 6.2 周刊归档：一页一年，每周一行，没有期的周标「本周无内容」（R-2.7）。
+    # 年份越出「最早一期所在年 到 本年」就没有这一页，返回 nil 让控制器 404。
+    def weekly_archive_props(year: nil, now: Time.current)
+      current = PeriodKey.weekly(now)
+      earliest = weekly.minimum(:period_key) || current
+      years = earliest[0, 4].to_i..current[0, 4].to_i
+      year = (year.presence || years.last).to_i
+      return unless years.cover?(year)
+
+      keys = week_keys(year).select { |key| key.between?(earliest, current) }.reverse
+      issues = weekly.where(period_key: keys).index_by(&:period_key)
+
+      {
+        year: year,
+        year_label: "#{year} 年",
+        prev_year: year_nav(year - 1, years),
+        next_year: year_nav(year + 1, years),
+        weeks: keys.map { |key| archive_week(key, issues[key]) }
+      }
+    end
+
     private
+      def week_label(period_key) = "第 #{period_key[-2, 2].to_i} 周"
+
+      def range_label(range)
+        "#{range.first.month}月#{range.first.day}日 至 #{range.last.month}月#{range.last.day}日"
+      end
+
+      def archive_days(first, last)
+        return [] if first > last
+
+        issues = daily.where(period_key: first.iso8601..last.iso8601).includes(:fetch_runs).index_by(&:period_key)
+        sources = Source.enabled.daily.ordered.to_a
+        counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
+
+        (first..last).to_a.reverse.map { |date| archive_day(date, issues[date.iso8601], sources, counts) }
+      end
+
+      def archive_day(date, issue, sources, counts)
+        {
+          period_key: date.iso8601,
+          date_label: "#{date.month}月#{date.day}日",
+          weekday: WEEKDAYS[date.wday],
+          state: issue&.state || "missing",
+          published_label: archive_label(issue),
+          source_marks: issue && sources.map { |source| "#{abbr(source)} #{mark(issue, source, counts)}" }.join(" · ")
+        }
+      end
+
+      # 归档一行只放得下一句：空刊那句「今日为空刊，管理员已收到通知」太长，交给状态记号说
+      def archive_label(issue)
+        case issue&.state
+        when nil then "缺期"
+        when "generating" then "生成中，约 1 分钟后刷新"
+        when "empty" then nil
+        else
+          stamp = issue.generated_late ? "延迟生成于 #{hhmm(issue.published_at)}" : "#{hhmm(issue.published_at)} 发布"
+          issue.revised_at ? "#{stamp} · 已于 #{hhmm(issue.revised_at)} 修订" : stamp
+        end
+      end
+
+      def abbr(source) = SOURCE_ABBRS[source.adapter] || source.name[0, 3].upcase
+
+      def mark(issue, source, counts)
+        case issue.source_state(source)
+        when "ok" then counts.fetch([ issue.id, source.id ], 0).to_s
+        when "empty" then "0"
+        when "pending" then "生成中"
+        else "失败"
+        end
+      end
+
+      def archive_week(key, issue)
+        {
+          period_key: key,
+          week_label: week_label(key),
+          range_label: range_label(PeriodKey.week_range(key)),
+          state: issue&.state || "missing"
+        }.merge(issue&.weekly_archive_row || { summary: "本周无内容", count: nil })
+      end
+
+      # 12月28日 总在这一年的最后一个 ISO 周里（D10 的周期键就是 ISO 周）
+      def week_keys(year)
+        (1..Date.new(year, 12, 28).cweek).map { |week| format("%d-W%02d", year, week) }
+      end
+
+      def month_nav(target, month, earliest, today)
+        return unless target.between?(earliest.beginning_of_month, today.beginning_of_month)
+
+        label = target.year == month.year ? "#{target.month} 月" : "#{target.year} 年 #{target.month} 月"
+        { key: target.strftime("%Y-%m"), label: label }
+      end
+
+      def year_nav(target, years)
+        { key: target.to_s, label: "#{target} 年" } if years.cover?(target)
+      end
+
       # 一个期头只挂一个标签：期级状态先于期的来历，来历里修订又先于延迟（附录 B 的六句）
       def head_status(issue, is_yesterday, daily_time)
         if issue.nil?
@@ -95,7 +236,54 @@ module Issue::Presenting
     items.visible.ranked.group_by(&:source_id).transform_values { |list| list.map { |item| item_props(item) } }
   end
 
+  # R-2.5 一节 = 一个源的一期：源、该源自己的期号与标题、原文链接、按板块分组的条目。
+  # 板块锚点目录点的是 anchor，所以同一页里每个板块得有一个唯一的落点。
+  # D19：周刊条目不生成推荐理由，条目字段与日刊同一套（reason 与 interest_tag 一直是空的）。
+  def weekly_section_props
+    anchor = 0
+
+    weekly_sections.map do |section|
+      source = section[:source]
+      {
+        source: { id: source.id, name: source.name, adapter: source.adapter, home_url: source.home_url },
+        issue_no: section[:issue_no],
+        issue_title: section[:issue_title],
+        issue_label: section_issue_label(section),
+        degraded: section[:degraded],
+        original_url: section_original_url(section),
+        groups: section[:sections].map do |(name, list)|
+          anchor += 1
+          { name: name, anchor: "#{source.id}-#{anchor}", items: list.map { |item| item_props(item) } }
+        end
+      }
+    end
+  end
+
+  # 归档一行的后半截：各源的期号与主题压成一句，加上本周条目数
+  def weekly_archive_row
+    sections = weekly_sections
+
+    {
+      summary: sections.map { |section| [ section[:source].name, section_issue_label(section) ].compact.join(" ") }.join(" / "),
+      count: sections.sum { |section| section[:sections].sum { |(_, list)| list.size } }
+    }
+  end
+
   private
+    def section_issue_label(section)
+      [ "第 #{section[:issue_no]} 期", section[:issue_title].presence ].compact.join(" · ") if section[:issue_no].present?
+    end
+
+    # 阮一峰的原文是该期的 Markdown；其余源回到源站（feed 地址不是 http 时没有落点，页面把链接整条收掉）
+    def section_original_url(section)
+      source = section[:source]
+      if source.adapter == "ruanyf_weekly" && section[:issue_no].present?
+        "#{Adapters::RuanyfWeekly::ORIGINAL}/issue-#{section[:issue_no]}.md"
+      else
+        source.home_url
+      end
+    end
+
     # R-1.10 列表显示摘要前 200 字；reason 与 interest_tag 在 P0 是空的，前端不渲染
     def item_props(item)
       {

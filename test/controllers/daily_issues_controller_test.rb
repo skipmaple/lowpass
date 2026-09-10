@@ -100,11 +100,59 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 312, rows.first.dig("meta", "score")
   end
 
-  private
-    # inertia_rails 的 use_script_element_for_initial_page 把整个 payload 渲染成
-    # <script data-page="app" type="application/json"> 的文本内容（page.to_json.html_safe，没有 HTML 转义），
-    # 没有开 SSR，所以页面上能读到的每个字符串都必须先出现在 props 里。
-    def page_props
-      JSON.parse(response.body[%r{<script data-page="app"[^>]*>(.*?)</script>}m, 1]).fetch("props")
+  # 页脚的「最新周刊」在每个页面都指向最新一期周刊（R51）
+  test "props 带最新一期周刊的周期键" do
+    get daily_issue_path("2026-09-08")
+
+    assert_equal "2026-W36", page_props["latest_weekly_key"]
+  end
+end
+
+# 日刊归档：按月一页，每天一行（PRD 6.2）。上海 2026-09-10 12:00，fixture 最早一期是 2026-09-08。
+class DailyArchiveTest < ActionDispatch::IntegrationTest
+  NOW = Time.utc(2026, 9, 10, 4)
+
+  test "日刊归档按月列出并标缺期" do
+    travel_to NOW do
+      get daily_issues_path
+
+      assert_response :success
+      assert_includes response.body, "缺期"
+      assert_equal "2026 年 9 月", page_props["month_label"]
+      assert_equal %w[ 2026-09-10 2026-09-09 2026-09-08 ], page_props["days"].map { |day| day["period_key"] }
     end
+  end
+
+  test "已发布那天带发布时间与各源结果" do
+    travel_to NOW do
+      get daily_issues_path
+
+      row = page_props["days"].last
+      assert_equal "published", row["state"]
+      assert_equal "9月8日", row["date_label"]
+      assert_equal "星期二", row["weekday"]
+      assert_equal "06:12 发布", row["published_label"]
+      assert_equal "HN 1 · GH 失败 · HAC 失败", row["source_marks"]
+    end
+  end
+
+  # PRD 6.2：上线前的日期不显示，所以最早一期之前的月份一行都没有
+  test "上线前的月份不列日期，也没有再往前的月份" do
+    travel_to NOW do
+      get daily_issues_path(month: "2026-08")
+
+      assert_response :success
+      assert_empty page_props["days"]
+      assert_nil page_props["prev_month"]
+      assert_equal "2026-09", page_props.dig("next_month", "key")
+    end
+  end
+
+  test "非法月份 404" do
+    get daily_issues_path(month: "nope")
+    assert_response :not_found
+
+    get daily_issues_path(month: "2026-13")
+    assert_response :not_found
+  end
 end

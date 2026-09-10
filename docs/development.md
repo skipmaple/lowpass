@@ -34,17 +34,22 @@ Vite dev server，以及 `bin/jobs`（Solid Queue worker，带 `config/recurring
 ## 开发数据
 
 ```
-mise exec -- ruby script/seed_sample_issue            # 昨天那一期
+mise exec -- ruby script/seed_sample_issue            # 昨天那一期日刊
 mise exec -- ruby script/seed_sample_issue 2026-09-08 # 指定周期键
+mise exec -- ruby script/seed_sample_weekly           # 阮一峰第 411 期那一周的周刊
 ```
 
-把 `test/fixtures/files/` 里那批源站样本（HN topstories 与条目、GitHub Trending 的 daily.html、
+`seed_sample_issue` 把 `test/fixtures/files/` 里那批源站样本（HN topstories 与条目、GitHub Trending 的 daily.html、
 Hackaday 的 feed）当成三个日刊源的响应，用正式的抓取 → 装订 → 定稿路径写出一期结构真实的日刊，
 不连网络。想在浏览器里看日刊页时用它，比等 `bin/dev` 的调度器到点快。只在 development 下能跑；
 重复执行会先删掉同一周期键的旧期，可以反复跑。样本抓下来那天早就过了 RSS 源的 24 小时窗口，
 脚本只在内存里把 `window_hours` 放宽，不改库里的源配置。
 
-源列表来自 `bin/rails db:seed`（`bin/setup` 已经跑过）；一个日刊源都没有时脚本会直接退出并提示。
+`seed_sample_weekly` 同理，把 `test/fixtures/files/ruanyf/` 里的仓库 README 与第 411 期原文当成阮一峰周刊的响应，
+走 `Issue.check_weekly_sources!` 装订出一期真实的周刊（9 个板块、33 条），用来看周刊页与周刊归档。
+期落在原文发布日所在的 ISO 周（R-2.2）。重复执行会先删掉上次装订的那一期（整期只有第 411 期的条目），可以反复跑。
+
+源列表来自 `bin/rails db:seed`（`bin/setup` 已经跑过）；对应的源没有启用时脚本会直接退出并提示。
 
 ## 数据库
 

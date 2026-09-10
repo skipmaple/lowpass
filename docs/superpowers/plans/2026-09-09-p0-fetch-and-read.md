@@ -2676,3 +2676,29 @@ git push
 - **规格覆盖**：F-01（Task 13、14）、F-02（17）、F-03（17、18）、F-04（17）、F-06（11、15、18）、F-07（18）、F-08（10、15、18）、F-26 抓取日志 30 天（4、14）、F-27（17）；P0 退出清单四条（19）。F-09 到 F-12、F-14 到 F-21、F-25、F-28 属 P1 / P2 阶段，不在本计划。推荐理由（D16）等 T8 定后另写小计划。
 - **占位扫描**：无 TBD；每个代码步骤都有完整代码；Task 16 与 17、18 的 React 组件以画布与令牌文件为像素依据，组件文件名与 props 类型已定义。
 - **类型一致**：`Adapters::Entry` 字段、`Item` 列、`types/lowpass.ts` 的 `Item` 三者一致；`source_state` 的四个取值在 `SourceSummary.state` 中一致；`PeriodKey::DAILY`、`WEEKLY` 正则在控制器复用；`FetchSourceJob::MAX_ATTEMPTS` 与 `WAITS` 长度对应 3 次尝试。
+
+---
+
+## 验收记录
+
+Task 19 Step 5（连续 5 天验收）尚未开始：本次提交只完成了 Step 1 到 4（退出清单测试、CI 加前端检查、
+补文档、`bin/ci` 全绿并提交）。Step 5 需要在开发机或内网机器上让 `bin/dev`（或单独跑队列的
+`bin/jobs`）连续挂 5 天，每天 06:00 之后按下面的清单核对一次，再把结果填回本节的表格。
+
+每日核对清单：
+
+1. 打开 `/`，确认当日那期日刊已存在且状态是「已发布」（`Issue#state == "published"`；重抓过、带
+   `revised_at` 的也算，不算未完成）。
+2. 三个来源（Hacker News、GitHub Trending、Hackaday）都能切换查看；每栏要么有条目，要么显示
+   「今日无新内容」，不是空白或报错（AC-1.1、AC-1.7）。
+3. 打开日刊归档，当天有一行。
+4. 记录当天每个源的 `FetchRun` 状态，例如：
+   `mise exec -- bin/rails runner 'FetchRun.where(created_at: Date.current.all_day).order(:created_at).each { |r| puts [r.source.name, r.trigger, r.status, r.item_count, r.error_summary].join(" · ") }'`
+
+| 日期 | `/` 已发布 | 三源可切换 | 归档有当天行 | 各源 FetchRun 状态 | 备注 |
+| --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |

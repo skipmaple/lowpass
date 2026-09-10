@@ -18,7 +18,9 @@ end
 ActiveSupport.on_load(:active_record_fixture_set) { prepend FixtureUuids }
 
 class ActiveSupport::TestCase
-  parallelize(workers: :number_of_processors)
+  # 核数很高的机器上一次性开满 worker 会把 PostgreSQL 连接池压出间歇性失败，封顶 8 个；
+  # ENV["PARALLEL_WORKERS"] 仍然优先生效（parallelize 内部先看这个环境变量）。
+  parallelize(workers: [ Concurrent.processor_count, 8 ].min)
   fixtures :all
   include ActiveJob::TestHelper
 end

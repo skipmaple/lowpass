@@ -14,9 +14,16 @@ class ItemTest < ActiveSupport::TestCase
     end
   end
 
-  test "url 必须是 http 或 https" do
+  test "url 必须是 http 或 https，且不能带空白" do
     item = items(:hn_one)
-    item.url = "ftp://example.com/a"
+
+    item.url = "ftp://a.b"
     assert_not item.valid?
+
+    item.url = "https://a.b/x y"
+    assert_not item.valid?
+
+    item.url = "https://a.b/x"
+    assert item.valid?
   end
 end

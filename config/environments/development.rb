@@ -59,6 +59,10 @@ Rails.application.configure do
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }
 
+  # mission_control-jobs 默认开着 HTTP Basic Auth 且没配凭证就直接拒绝；/jobs 只在开发环境挂载
+  # （config/routes.rb），不提交凭证到仓库，这里直接关掉这道认证。生产环境的挂载与认证是 P2。
+  config.mission_control.jobs.http_basic_auth_enabled = false
+
   # Highlight code that triggered redirect in logs.
   config.action_dispatch.verbose_redirect_logs = true
 

@@ -17,6 +17,10 @@ import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/type
 // D19：周刊条目不加推荐理由，也就没有兴趣标签。
 // 画布：docs/design/src/pages_site.py 的 weekly()、source_band()、anchors()、rss_section()、degraded_section()。
 
+// 板块的 DOM id 是锚点的百分号编码形式：location.hash 里的中文一律是编码过的，Inertia 与 lib/anchors.ts 都拿
+// hash 原样找元素，id 也得是编码过的（源 id 与拉丁 slug 编码后不变；服务端 weekly_issue_path(anchor:) 编码规则相同）
+const anchorId = (anchor: string) => encodeURIComponent(anchor)
+
 export type WeeklyShowProps = FooterData & {
   issue: WeeklyIssue
   sections: WeeklySection[]
@@ -56,7 +60,7 @@ function Anchors({ groups }: { groups: WeeklyGroup[] }) {
   return (
     <nav className="anchors" aria-label="板块">
       {groups.map((group) => (
-        <a className="anchor-chip" key={group.anchor} href={`#${group.anchor}`}>
+        <a className="anchor-chip" key={group.anchor} href={`#${anchorId(group.anchor)}`}>
           {group.name}
         </a>
       ))}
@@ -92,7 +96,7 @@ function Group({ group, section }: { group: WeeklyGroup; section: WeeklySection 
   }
 
   return (
-    <section id={group.anchor}>
+    <section id={anchorId(group.anchor)}>
       <h3 className="weekly-section-head">{group.name}</h3>
       <Items group={group} section={section} heading="h4" />
     </section>

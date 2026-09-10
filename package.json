@@ -21,7 +21,6 @@
     "@inertiajs/vite": "^3.7.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
-    "class-variance-authority": "^0.7.1",
     "cn": "^0.2.6",
     "lxgw-wenkai-screen-webfont": "^1.7.0",
     "radix-ui": "^1.6.7",

@@ -41,10 +41,14 @@ module Issue::Daily
     generating? ? pending_state(source) : source_states[source.id] || "failed"
   end
 
-  # R-1.5 重抓成功：整栏已经换过了，这里记修订时间，并改写这一栏固化下来的结果
+  # R-1.5 重抓成功：整栏已经换过了，这里记修订时间，并改写这一栏固化下来的结果。
+  # with_lock 拿最新的 source_states 再 merge：不同栏各自重抓可能前后脚落地，不加锁的话
+  # 后写的会拿着自己读进来的旧值覆盖掉别的栏刚提交的结果（跟 Issue::Finalization#finalize! 一样）。
   def revise!(source, run)
-    update!(revised_at: Time.current, state: "published", published_at: published_at || Time.current,
-      source_states: source_states.merge(source.id => run.item_count.to_i.zero? ? "empty" : "ok"))
+    with_lock do
+      update!(revised_at: Time.current, state: "published", published_at: published_at || Time.current,
+        source_states: source_states.merge(source.id => run.item_count.to_i.zero? ? "empty" : "ok"))
+    end
   end
 
   def timed_out?

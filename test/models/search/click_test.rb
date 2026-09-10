@@ -15,6 +15,13 @@ class Search::ClickTest < ActiveSupport::TestCase
     assert_equal 0, Search::Click.count
   end
 
+  test "exists? 之后条目被删也不报错" do
+    Item.stubs(:exists?).returns(true)
+
+    assert_nil Search::Click.record(item_id: "gone", rank: 1, query: "x")
+    assert_equal 0, Search::Click.count
+  end
+
   test "条目删了点击随外键级联消失" do
     Search::Click.record(item_id: items(:hn_one).id, rank: 1, query: "x")
     items(:hn_one).delete

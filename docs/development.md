@@ -132,6 +132,8 @@ PostgreSQL 内建（ADR T7、设计文档 `docs/superpowers/specs/2026-09-11-p1-
 bin/rails search:rebuild
 ```
 
+第一次把这批迁移部署到线上之后，在服务器上也跑一次（`kamal app exec --reuse "bin/rails search:rebuild"`）；之后索引由回调与装订自己维护，改了索引副本的规则（比如 `Search::Record::SCRIPT_GAP`）再重建一次。
+
 验收：把 50 条真实查询一行一条写进文件，跑
 
 ```

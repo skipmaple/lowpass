@@ -16,6 +16,10 @@ class Search::HighlighterTest < ActiveSupport::TestCase
     assert_equal [ [ "Kubernetes", false ] ], pairs(highlighter("kubernets").runs("Kubernetes"))
   end
 
+  test "贴着中文的拉丁词也标出" do
+    assert_equal [ [ "用", false ], [ "Rust", true ], [ "写的终端工具", false ] ], pairs(highlighter("rust").runs("用Rust写的终端工具"))
+  end
+
   test "中文按子串标出，重叠的二元组合并成一段" do
     assert_equal [ [ "一个", false ], [ "终端", true ], [ "下的日志", false ], [ "工具", true ] ],
                  pairs(highlighter("终端 工具").runs("一个终端下的日志工具"))

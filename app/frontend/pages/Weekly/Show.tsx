@@ -27,9 +27,9 @@ export type WeeklyShowProps = FooterData & {
 }
 
 // 反白横带：书本图标 + 源名 32（拉丁走 Newsreader 600，中文走文楷），右端期号与原文外链
-function SourceBand({ section }: { section: WeeklySection }) {
+function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
-    <div className="source-band">
+    <div className="source-band" id={id}>
       <div className="source-band-name">
         <Icon name="book-open" size={28} color="var(--paper)" />
         <h2 className="source-band-title">
@@ -121,10 +121,13 @@ function Degraded({ section }: { section: WeeklySection }) {
 
 function Section({ section }: { section: WeeklySection }) {
   const named = section.groups.filter((group) => group.name)
+  // 没有板块的节（RSS 周刊源、降级 stub）的落点是这一节的头：Item#anchor 给这些条目的锚点是 source-<源 id>，
+  // 搜索结果的所在期链接指向它（设计 6.3）
+  const head = section.groups.find((group) => !group.name)
 
   return (
     <>
-      <SourceBand section={section} />
+      <SourceBand section={section} id={head ? anchorId(head.anchor) : undefined} />
       {section.degraded ? (
         <Degraded section={section} />
       ) : (

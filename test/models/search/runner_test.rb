@@ -50,10 +50,22 @@ class Search::RunnerTest < ActiveSupport::TestCase
 
   test "同分按发布日期倒序；sort=date 先按日期" do
     index_item("Rust")
-    index_item("Notes", issue: issues(:weekly_w36), source: sources(:ruanyf), summary: "rust", published_at: Time.utc(2026, 9, 10, 4))
+    index_item("Rust weekly", issue: issues(:weekly_w36), source: sources(:ruanyf), published_at: Time.utc(2026, 9, 10, 4))
+    index_item("Notes", issue: issues(:weekly_w36), source: sources(:ruanyf), summary: "rust", published_at: Time.utc(2026, 9, 11, 4))
 
-    assert_equal [ "Rust", "Notes" ], found_titles(search("rust"))
-    assert_equal [ "Notes", "Rust" ], found_titles(search("rust", sort: "date"))
+    # 两条标题命中同分（4），发布日期新的在前；摘要命中（1）垫底
+    assert_equal [ "Rust weekly", "Rust", "Notes" ], found_titles(search("rust"))
+    assert_equal [ "Notes", "Rust weekly", "Rust" ], found_titles(search("rust", sort: "date"))
+  end
+
+  # 数据库按 ctype 把汉字当词字符：靠索引副本在中外文交界处补的空格，贴着中文的拉丁词才有词首可认
+  test "贴着中文的拉丁词也按词首与拼写容错命中" do
+    index_item("用Rust写的终端工具")
+    index_item("使用Kubernetes做编排")
+
+    assert_equal [ "用Rust写的终端工具" ], found_titles(search("rust"))
+    assert_equal [ "使用Kubernetes做编排" ], found_titles(search("kuber"))
+    assert_equal [ "用Rust写的终端工具" ], found_titles(search("终端工具"))
   end
 
   test "AC-4.3 筛选：刊物、日期范围含首尾、来源之间 OR、维度之间 AND" do
@@ -135,6 +147,17 @@ class Search::RunnerTest < ActiveSupport::TestCase
     assert(statements.any? { |sql| sql.include?("word_similarity('kubernetes'") })
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber)
+  end
+
+  # 真的超时：SET LOCAL 排在事务外只是一句警告不是错误，这一条钉住它确实在事务里生效。
+  # pg_sleep 每行睡 1 秒，1 行就够 50 ms 的 statement_timeout 打断
+  test "statement_timeout 在事务里生效，超时归 timeout" do
+    index_item("Rust")
+    Search::Runner.any_instance.stubs(:matching).returns(Search::Record.published.where("pg_sleep(1) IS NOT NULL"))
+
+    result = Search::Runner.call(Search::Query.parse(q: "rust"), timeout_ms: 50)
+
+    assert_equal "timeout", result.status
   end
 
   test "超时归 timeout：上报错误，不抛出，结果为空" do

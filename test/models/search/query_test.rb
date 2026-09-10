@@ -43,6 +43,11 @@ class Search::QueryTest < ActiveSupport::TestCase
     assert_equal "Ｋｕｂｅｒ", Search::Query.parse(q: " Ｋｕｂｅｒ ").q
   end
 
+  # NUL 在首尾会被 String#strip 顺带削掉，词中间的才是真的漏网：PostgreSQL 不接受写有 NUL 的文本行
+  test "NUL 字符被删掉，不进日志" do
+    assert_equal "kuber", Search::Query.parse(q: "kub\0er").q
+  end
+
   test "词去重，最多保留 8 个" do
     assert_equal [ [ "go", :latin ], [ "rust", :latin ] ], terms("go go rust rust")
     assert_equal 8, Search::Query.parse(q: (1..9).map { |i| "w#{i}" }.join(" ")).terms.size

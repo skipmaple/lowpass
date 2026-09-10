@@ -7,6 +7,7 @@ class Search::Highlighter
   BODY = 158   # 片段正文上限：两端各加一个「…」正好 160（R-4.6「片段不超过 160 字」）
   SLACK = 20   # 为了不切在词中间最多挪这么多字：再长的连续字符串（地址、仓库名）就照切，预算不能让给它
   LATIN = /[\p{L}\p{N}]/
+  CJK_CHAR = "[\\p{Han}\\p{Hiragana}\\p{Katakana}\\p{Hangul}]"
 
   def initialize(terms)
     @patterns = terms.map { |term| pattern(term) }
@@ -38,7 +39,8 @@ class Search::Highlighter
       if term.cjk?
         /#{Regexp.escape(term.text)}/
       else
-        /(?<![\p{L}\p{N}\p{M}])#{Regexp.escape(term.text)}/i
+        # 词首：前面不是字母数字，或者前面是汉字（「用Rust写的」的 Rust 也算词首，与索引副本补空格的规则一致）
+        /(?:(?<![\p{L}\p{N}\p{M}])|(?<=#{CJK_CHAR}))#{Regexp.escape(term.text)}/i
       end
     end
 

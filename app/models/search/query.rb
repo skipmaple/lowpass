@@ -27,7 +27,8 @@ class Search::Query
   def self.parse(params) = new(params)
 
   def initialize(params)
-    raw = str(params, :q).strip
+    # NUL 会让 PostgreSQL 拒绝写日志行（%00 也是能敲进地址栏的），先删掉
+    raw = str(params, :q).delete("\0").strip
     @truncated = raw.length > MAX_LENGTH
     @q = raw[0, MAX_LENGTH]
     @terms = tokenize(@q.unicode_normalize(:nfkc))

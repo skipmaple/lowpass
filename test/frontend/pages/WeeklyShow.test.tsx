@@ -242,6 +242,39 @@ describe('板块与锚点', () => {
     expect(within(container.querySelector('.anchors') as HTMLElement).getByRole('link', { name: '文章' })).toHaveAttribute('href', `#${encoded}`)
     expect(document.getElementById(encoded)).toContainElement(screen.getByRole('heading', { level: 3, name: '文章' }))
   })
+
+  // RSS 源没有板块：搜索结果的所在期落到这一节的头上（Item#anchor 给的是 source-<源 id>）
+  it('没有板块的节把锚点挂在源节头上', () => {
+    show({
+      sections: [
+        weeklySection({
+          source: { id: 'src-feed', name: '命令行周报', adapter: 'rss', home_url: 'https://w.example/' },
+          issue_no: null,
+          issue_title: null,
+          issue_label: null,
+          groups: [weeklyGroup({ name: null, anchor: 'source-src-feed', items: [item({ id: 'c', title: '一条 RSS 周刊' })] })],
+        }),
+      ],
+    })
+
+    const band = document.getElementById('source-src-feed')
+    expect(band).toHaveClass('source-band')
+    expect(band).toHaveTextContent('命令行周报')
+  })
+
+  it('降级的节也把锚点挂在源节头上', () => {
+    show({
+      sections: [weeklySection({ degraded: true, groups: [weeklyGroup({ name: null, anchor: 'source-src-ruanyf', items: [item({ id: 'stub', title: '第 366 期' })] })] })],
+    })
+
+    expect(document.getElementById('source-src-ruanyf')).toHaveClass('source-band')
+  })
+
+  it('有板块的节的源节头没有锚点', () => {
+    show()
+
+    expect(document.querySelector('.source-band')).not.toHaveAttribute('id')
+  })
 })
 
 describe('按 hash 定位', () => {
@@ -256,7 +289,7 @@ describe('按 hash 定位', () => {
   })
 
   // 周刊锚点带中文，地址里是百分号编码；id 也是编码过的，原样就找得到。滚动排在 setTimeout 里（见 lib/anchors.ts）
-  it('挂载后把板块滚进视口，锚点先解码', () => {
+  it('挂载后把板块滚进视口，id 与 hash 原样相等', () => {
     window.history.replaceState({}, '', '/weekly/2026-W36#' + encodeURIComponent('issue-366-文章'))
     const scroll = vi.mocked(Element.prototype.scrollIntoView)
 

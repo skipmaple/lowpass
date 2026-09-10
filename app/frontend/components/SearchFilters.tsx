@@ -68,17 +68,17 @@ function DateRange({ q, filters, datePresets }: Omit<SearchFiltersProps, 'source
   }
 
   return (
-    <span className="filter-row">
+    <div className="filter-row">
       <Seg label="日期" options={options} />
       {filters.range === 'custom' ? (
-        <span className="filter-row">
+        <div className="filter-row">
           {/* 用 key 拿住日期框：Inertia 前进后退时页面组件不重挂，props 变了 defaultValue 不会跟着变（与 SearchHead 的 key={q} 同一个道理） */}
           <input key={`from-${filters.from ?? ''}`} type="date" className="date-field" aria-label="起始日期" defaultValue={filters.from ?? ''} onChange={(e) => change({ from: e.target.value || null })} />
           <span className="date-sep">至</span>
           <input key={`to-${filters.to ?? ''}`} type="date" className="date-field" aria-label="结束日期" defaultValue={filters.to ?? ''} onChange={(e) => change({ to: e.target.value || null })} />
-        </span>
+        </div>
       ) : null}
-    </span>
+    </div>
   )
 }
 

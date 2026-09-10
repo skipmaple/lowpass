@@ -30,6 +30,15 @@ class Search::RecordTest < ActiveSupport::TestCase
     assert_equal "ＫＵＢＥＲＮＥＴＥＳ ｏｐｅｒａｔｏｒ", item.reload.title
   end
 
+  test "索引副本在中外文交界处补空格，拉丁词才能按词首匹配" do
+    item = items(:hn_one)
+    item.update_column(:title, "用Rust写的终端工具")
+    Search::Record.index_items!([ item.id ])
+
+    assert_equal "用 Rust 写的终端工具", Search::Record.find_by!(item_id: item.id).title
+    assert_equal "用Rust写的终端工具", item.reload.title
+  end
+
   test "再次索引是 upsert：一条一行，行 id 不变，内容更新" do
     item = items(:hn_one)
     Search::Record.index_items!([ item.id ])
@@ -80,6 +89,13 @@ class Search::RecordTest < ActiveSupport::TestCase
 
     assert_equal 1, Search::Record.rebuild!
     assert_equal [ items(:hn_one).id ], Search::Record.pluck(:item_id)
+  end
+
+  test "超长的锚点截到 120 字，不让整栏装订失败" do
+    item = create_item(issues(:weekly_w36), sources(:ruanyf), "长板块", "https://r.example/9", rank: 9, meta: { "issue_no" => 366, "anchor" => "板" * 130 })
+    Search::Record.index_items!([ item.id ])
+
+    assert_equal 120, Search::Record.find_by!(item_id: item.id).anchor.length
   end
 
   test "所在期标签：日刊是日期，周刊是周次加板块，板块可空" do

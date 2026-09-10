@@ -7,6 +7,12 @@ class Search::Record < ApplicationRecord
   belongs_to :source
 
   LIMITS = { title: 300, section: 100, source_name: 100, summary: 500 }.freeze
+  ANCHOR_LIMIT = 120
+
+  # 拉丁词贴着中文时（「用Rust写的」），数据库按 ctype 把汉字也当词字符：`\m` 词首与 word_similarity 的分词
+  # 都认不出 Rust 是一个词。索引副本在中外文交界处补一个空格（查询侧拆词本来就按脚本切开，中文二元组
+  # 不跨脚本，不受影响），展示仍用 items 原文。
+  SCRIPT_GAP = /(?<=[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}])(?=[^\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\s])|(?<=[^\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\s])(?=[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}])/
   # upsert 冲突时更新的列：id 不动，行 id 在第一次索引后就稳定
   COLUMNS = %i[ issue_id source_id publication period_key published_on title section source_name summary anchor ].freeze
 
@@ -48,7 +54,8 @@ class Search::Record < ApplicationRecord
           section: normalize(item.section, :section),
           source_name: normalize(item.source.name, :source_name),
           summary: normalize(item.summary, :summary),
-          anchor: (item.anchor if item.issue.kind == "weekly")
+          # 超长板块名的锚点截到列宽：落不到页面上的锚点好过整栏装订失败
+          anchor: (item.anchor.slice(0, ANCHOR_LIMIT) if item.issue.kind == "weekly")
         }
       end
 
@@ -61,9 +68,9 @@ class Search::Record < ApplicationRecord
         end
       end
 
-      # NFKC 可能拉长字符串（ﬁ → fi），截回列宽
+      # NFKC 可能拉长字符串（ﬁ → fi），补空格也会，截回列宽
       def normalize(text, column)
-        text&.unicode_normalize(:nfkc)&.slice(0, LIMITS.fetch(column))
+        text&.unicode_normalize(:nfkc)&.gsub(SCRIPT_GAP, " ")&.slice(0, LIMITS.fetch(column))
       end
   end
 

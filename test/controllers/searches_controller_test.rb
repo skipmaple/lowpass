@@ -62,6 +62,18 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_nil entry["snippet_runs"]
   end
 
+  test "RSS 周刊条目的所在期落到源节头" do
+    feed = Source.create!(name: "命令行周报", adapter: "rss", publication: "weekly", sort_order: 2, config: { feed_url: "https://w.example/feed" })
+    weekly = index_item("Rust in a feed weekly", issue: issues(:weekly_w36), source: feed, published_at: Time.utc(2026, 9, 3, 4))
+
+    get search_path(q: "rust", type: "weekly")
+
+    entry = page_props["results"].sole
+    assert_equal weekly.id, entry["item_id"]
+    assert_equal "第 36 周", entry["where"]["label"]
+    assert_equal weekly_issue_path("2026-W36", anchor: "source-#{feed.id}"), entry["where"]["href"]
+  end
+
   test "AC-4.7 地址参数往返：关键词与全部筛选恢复" do
     get search_path(q: "kuber", type: "daily", source: sources(:hn).id, from: "2026-09-01", to: "2026-09-30", range: "custom", sort: "date", page: 1)
 

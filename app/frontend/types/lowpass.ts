@@ -1,6 +1,8 @@
 export type Adapter = "hacker_news" | "github_trending" | "rss" | "ruanyf_weekly";
 export type SourceSummary = { id: string; name: string; adapter: Adapter; state: "ok" | "empty" | "failed" | "pending"; home_url: string | null; last_ok_label: string | null };
-export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean };
+// 适配器往 meta 里放的全部键：HN 的分数与评论、GitHub 的语言与 star、阮一峰的期号与板块锚点、
+// RSS 的首图与「时间是抓取时间不是发布时间」标记（Adapters::Rss、Adapters::RuanyfWeekly）。
+export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; time_from_fetch?: boolean };
 export type Item = { id: string; title: string; url: string; summary: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";
 // status 与 time_label 是服务端定稿的期头文案（附录 B）：没有开 SSR，页面上读得到的字符串都得先进 props。

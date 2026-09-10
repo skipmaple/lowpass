@@ -9,7 +9,7 @@ class DailyIssuesController < ApplicationController
     if props = requested_archive
       render inertia: "Daily/Index", props: props.merge(footer_props)
     else
-      head :not_found
+      render_not_found
     end
   end
 
@@ -28,7 +28,7 @@ class DailyIssuesController < ApplicationController
         latest_weekly_key: Issue.latest_weekly_key
       }
     else
-      head :not_found
+      render_not_found
     end
   end
 

@@ -33,7 +33,10 @@ class ActionDispatch::IntegrationTest
   # inertia_rails 的 use_script_element_for_initial_page 把整个 payload 渲染成
   # <script data-page="app" type="application/json"> 的文本内容（page.to_json.html_safe，没有 HTML 转义），
   # 没有开 SSR，所以页面上能读到的每个字符串都必须先出现在 props 里。
-  def page_props
-    JSON.parse(response.body[%r{<script data-page="app"[^>]*>(.*?)</script>}m, 1]).fetch("props")
+  def page
+    JSON.parse(response.body[%r{<script data-page="app"[^>]*>(.*?)</script>}m, 1])
   end
+
+  def page_props = page.fetch("props")
+  def page_component = page.fetch("component")
 end

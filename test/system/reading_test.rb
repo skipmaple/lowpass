@@ -24,4 +24,15 @@ class ReadingTest < ApplicationSystemTestCase
     assert_current_path daily_issue_path("2026-09-08")
     assert_text "9月8日"
   end
+
+  # 附录 B：「这一页不存在。回到首页」。文案写在页面组件里（没有开 SSR），只有真的渲染出来才看得见
+  test "不存在的地址给附录 B 的 404" do
+    visit "/daily/nope"
+
+    assert_text "这一页不存在。"
+
+    click_on "回到首页"
+
+    assert_current_path daily_issue_path("2026-09-08")
+  end
 end

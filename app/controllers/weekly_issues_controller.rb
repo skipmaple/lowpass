@@ -6,7 +6,7 @@ class WeeklyIssuesController < ApplicationController
     if props = requested_archive
       render inertia: "Weekly/Index", props: props.merge(footer_props)
     else
-      head :not_found
+      render_not_found
     end
   end
 
@@ -15,7 +15,7 @@ class WeeklyIssuesController < ApplicationController
     if period_key = valid_period_key
       render inertia: "Weekly/Show", props: Issue.weekly_props_for(period_key).merge(footer_props)
     else
-      head :not_found
+      render_not_found
     end
   end
 

@@ -12,4 +12,8 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
+
+  # 兜底：站内没有的地址也给附录 B 的 404 页（带报头与页脚），不是 public/404.html 那张静态页。
+  # 必须排在最后，前面每条路由都先匹配。静态资源由 ActionDispatch::Static 在路由之前接走。
+  match "*path", to: "errors#not_found", via: :all
 end

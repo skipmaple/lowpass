@@ -34,6 +34,31 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  # 附录 B 的 404：站内的一页（有报头与页脚），不是 public/404.html 那张静态页
+  test "404 渲染附录 B 的那一页" do
+    get daily_issue_path("nope")
+
+    assert_equal "Errors/NotFound", page_component
+
+    get "/no-such-page"
+
+    assert_response :not_found
+    assert_equal "Errors/NotFound", page_component
+  end
+
+  # inertia_rails 把整个 payload 原样写进 <script data-page="app">：条目标题里的 </script>
+  # 必须以转义形式落地，不然它会提前关掉这个脚本块，后面的字符变成可执行的 HTML
+  test "条目标题里的脚本标记被转义" do
+    items(:hn_one).update!(title: "</script><img src=x onerror=alert(1)>")
+
+    get daily_issue_path("2026-09-08")
+
+    assert_response :success
+    assert_not_includes response.body, "</script><img"
+    assert_not_includes response.body, "onerror=alert(1)>"
+    assert_equal "</script><img src=x onerror=alert(1)>", page_props["items_by_source"].fetch(sources(:hn).id).first["title"]
+  end
+
   # 形状对得上 PeriodKey::DAILY，但 2026 年没有 13 月 45 日：Date.iso8601 抛 Date::Error
   test "不存在的日期 404" do
     get daily_issue_path("2026-13-45")

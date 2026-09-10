@@ -149,6 +149,42 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal 3, row[:count]
   end
 
+  # weekly_archive_props 原本每期都经 Issue#weekly_sections 单独查一遍（≈2 条查询/有内容的周），
+  # 一年最多 53 周就是 N+1。批量改法要做到查询数不随「有内容的周数」增长，摘要字符串跟改之前
+  # （上面那条测试、Issue#section_issue_label 的文案）逐字一样。
+  test "归档批量算 summary 与 count，查询数固定不随有内容的周数增长" do
+    issue_w34 = Issue.create!(kind: "weekly", period_key: "2026-W34", state: "published",
+      published_at: Time.utc(2026, 8, 21, 1), generation_started_at: Time.utc(2026, 8, 21, 1))
+    issue_w34.replace_section!(sources(:ruanyf), [
+      entry("上一期的话题", section: "本周话题", issue_no: 365, issue_title: "上一期的主题")
+    ], issue_no: 365)
+
+    issue_w35 = Issue.create!(kind: "weekly", period_key: "2026-W35", state: "published",
+      published_at: Time.utc(2026, 8, 28, 1), generation_started_at: Time.utc(2026, 8, 28, 1))
+    source_w35 = Source.create!(name: "独立开发周刊", adapter: "rss", publication: "weekly", sort_order: 2, config: { feed_url: "https://w35.example/feed" })
+    issue_w35.replace_section!(source_w35, [ entry("独立开发者周记", rank: 1), entry("命令行技巧", rank: 2) ])
+
+    issue_w36 = issues(:weekly_w36)
+    issue_w36.replace_section!(sources(:ruanyf), [ entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由") ], issue_no: 366)
+    source_w36 = Source.create!(name: "命令行周报", adapter: "rss", publication: "weekly", sort_order: 2, config: { feed_url: "https://w36.example/feed" })
+    issue_w36.replace_section!(source_w36, [ entry("fzf 0.60 加了多列预览", rank: 2), entry("shell 启动速度", rank: 3) ])
+
+    props = nil
+    # earliest 期键、按年选中的期、Item 的 counts 与 pluck、Source 各一条查询：5 条，跟一年
+    # 53 周里几周真有内容无关（PeriodKey.weeks_in/week_range 都是纯 Ruby 日期计算，不查库）
+    assert_queries_count(5) { props = Issue.weekly_archive_props(year: 2026, now: NOW) }
+
+    weeks = props[:weeks].index_by { |week| week[:period_key] }
+    assert_equal "阮一峰科技爱好者周刊 第 365 期 · 上一期的主题", weeks["2026-W34"][:summary]
+    assert_equal 1, weeks["2026-W34"][:count]
+    assert_equal "独立开发周刊", weeks["2026-W35"][:summary]
+    assert_equal 2, weeks["2026-W35"][:count]
+    assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由 / 命令行周报", weeks["2026-W36"][:summary]
+    assert_equal 3, weeks["2026-W36"][:count]
+    assert_equal "本周无内容", weeks["2026-W37"][:summary]
+    assert_nil weeks["2026-W37"][:count]
+  end
+
   test "一期周刊都没有时只列本周" do
     Issue.weekly.destroy_all
 

@@ -176,6 +176,59 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     end
   end
 
+  # 周刊路径要跟日刊路径（Source::Fetching#fetch_now）对齐：同源重复地址在写入时被去掉，也要
+  # 计进 FetchRun 的 dropped_count，不然 item_count 报的是抓到几条，不是这一节真的写进去几条。
+  # 两条 entry 共用同一个 url_hash：write_rows 按 url_hash 去重，一条落地、一条算 dropped
+  # （item_count 1、dropped_count 1）。同一天原样重抓一次：append_section! 发现两条的地址都
+  # 已经入库（第一次落地那条 + 第二次这条重复的也指向同一地址），一条都不会新写，全算 dropped
+  # （item_count 0、dropped_count 2）。
+  test "RSS 周刊节内重复地址与重复检查都计入去重丢弃数" do
+    travel_to Time.utc(2026, 9, 10, 4, 0) do
+      source = rss_weekly_source
+      dup_entries = [
+        Adapters::Entry.new(title: "t1", url: "https://x/1", rank: 1, meta: {}),
+        Adapters::Entry.new(title: "t1 重复", url: "https://x/1", rank: 2, meta: {})
+      ]
+      Adapters::Rss.any_instance.stubs(:fetch).returns(dup_entries)
+      Adapters::RuanyfWeekly.any_instance.stubs(:latest_issue_number).returns(366)
+      issues(:weekly_w36).items.create!(source: sources(:ruanyf), title: "x", url: "https://x/1", url_hash: "0" * 64, fetched_at: Time.current, meta: { issue_no: 366 })
+
+      Issue.check_weekly_sources!
+
+      # travel_to 冻结了时间，两次检查的 FetchRun#created_at 完全相同，order(:created_at) 分不出
+      # 先后：用「除了第一条 run 之外那条」定位第二次检查留下的记录，不靠 created_at 排前后。
+      first_run = FetchRun.where(source: source).sole
+      assert_equal 1, first_run.item_count
+      assert_equal 1, first_run.dropped_count
+      assert_equal 1, Issue.weekly.find_by!(period_key: "2026-W37").items.where(source: source).count
+
+      Issue.check_weekly_sources!
+
+      second_run = FetchRun.where(source: source).where.not(id: first_run.id).sole
+      assert_equal 0, second_run.item_count
+      assert_equal 2, second_run.dropped_count
+      assert_equal 1, Issue.weekly.find_by!(period_key: "2026-W37").items.where(source: source).count
+    end
+  end
+
+  # source_states 是 merge 出来的：write_section! 不加锁的话，两个各自 Issue.find 出来的实例
+  # （对应两个不同源各自的抓取进程）先后 merge 时，后写的会拿着自己读进来的旧值覆盖掉先写的那份，
+  # 先写的那个源的状态就丢了。with_lock 在 merge 前重新读一次锁住的行，两次写都能留下来。
+  test "两个源先后 write_section! 各自的 source_states 都保留" do
+    # fixture 已经带 ruanyf => "ok"，两个新源都不在这份 source_states 里，才能验证锁：
+    # 任何一次 merge 用了过期的读，另一次的写就会被盖掉
+    issue = issues(:weekly_w36)
+    source_a = Source.create!(name: "周刊源 A", adapter: "rss", publication: "weekly", sort_order: 2, config: { feed_url: "https://a.example/feed" })
+    source_b = Source.create!(name: "周刊源 B", adapter: "rss", publication: "weekly", sort_order: 3, config: { feed_url: "https://b.example/feed" })
+    first = Issue.find(issue.id)
+    second = Issue.find(issue.id)
+
+    first.write_section!(source_a, [ Adapters::Entry.new(title: "t1", url: "https://x/1", rank: 1, meta: {}) ])
+    second.write_section!(source_b, [ Adapters::Entry.new(title: "t2", url: "https://x/2", rank: 1, meta: {}) ])
+
+    assert_equal({ sources(:ruanyf).id => "ok", source_a.id => "ok", source_b.id => "ok" }, issue.reload.source_states)
+  end
+
   test "weekly_sections 按源排序、按板块分组" do
     source = rss_weekly_source
     issue = issues(:weekly_w36)

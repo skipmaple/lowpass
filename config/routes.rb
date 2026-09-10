@@ -15,5 +15,8 @@ Rails.application.routes.draw do
 
   # 兜底：站内没有的地址也给附录 B 的 404 页（带报头与页脚），不是 public/404.html 那张静态页。
   # 必须排在最后，前面每条路由都先匹配。静态资源由 ActionDispatch::Static 在路由之前接走。
-  match "*path", to: "errors#not_found", via: :all
+  # 只接 GET（HEAD 由 Rack::Head 折算成 GET）：非 GET 方法（POST 等）没有路由可落，交给
+  # ActionController::RoutingError，走 show_exceptions 的常规 404，不然会先撞见 CSRF 校验，
+  # 未带令牌的非 GET 请求就变成 422 而不是 404。
+  match "*path", to: "errors#not_found", via: :get
 end

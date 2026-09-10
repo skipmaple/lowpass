@@ -3,6 +3,13 @@ class Source < ApplicationRecord
 
   ADAPTERS = %w[ hacker_news github_trending rss ruanyf_weekly ].freeze
 
+  # 栏尾「去源站看完整榜单」的落点（PRD 6.2）。榜单类源有固定地址，RSS 源回到 feed 的站点根。
+  HOME_URLS = {
+    "hacker_news" => "https://news.ycombinator.com/",
+    "github_trending" => "https://github.com/trending",
+    "ruanyf_weekly" => "https://github.com/ruanyf/weekly"
+  }.freeze
+
   has_many :items, dependent: :restrict_with_exception
   has_many :fetch_runs, dependent: :delete_all
 
@@ -18,4 +25,17 @@ class Source < ApplicationRecord
   def adapter_class
     "Adapters::#{adapter.camelize}".constantize
   end
+
+  def home_url
+    HOME_URLS[adapter] || feed_home_url
+  end
+
+  private
+    def feed_home_url
+      feed = config["feed_url"].to_s
+      uri = URI.parse(feed)
+      uri.host.present? ? "#{uri.scheme}://#{uri.host}/" : feed
+    rescue URI::InvalidURIError
+      feed
+    end
 end

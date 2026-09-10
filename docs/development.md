@@ -31,6 +31,21 @@ bin/dev
 Vite dev server，以及 `bin/jobs`（Solid Queue worker，带 `config/recurring.yml` 里每分钟一次的 `SchedulerTickJob`）。
 日刊到点生成、错过补跑、超时收尾都靠这个 tick，本地想看效果就得让 jobs 进程跑着，`log/development.log` 里每分钟一条。
 
+## 开发数据
+
+```
+mise exec -- ruby script/seed_sample_issue            # 昨天那一期
+mise exec -- ruby script/seed_sample_issue 2026-09-08 # 指定周期键
+```
+
+把 `test/fixtures/files/` 里那批源站样本（HN topstories 与条目、GitHub Trending 的 daily.html、
+Hackaday 的 feed）当成三个日刊源的响应，用正式的抓取 → 装订 → 定稿路径写出一期结构真实的日刊，
+不连网络。想在浏览器里看日刊页时用它，比等 `bin/dev` 的调度器到点快。只在 development 下能跑；
+重复执行会先删掉同一周期键的旧期，可以反复跑。样本抓下来那天早就过了 RSS 源的 24 小时窗口，
+脚本只在内存里把 `window_hours` 放宽，不改库里的源配置。
+
+源列表来自 `bin/rails db:seed`（`bin/setup` 已经跑过）；一个日刊源都没有时脚本会直接退出并提示。
+
 ## 数据库
 
 连接参数从环境变量读取，见 `config/database.yml`：`PGHOST`、`PGPORT`、`PGUSER`、`PGPASSWORD`，

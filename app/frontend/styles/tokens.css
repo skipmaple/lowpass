@@ -75,3 +75,88 @@ a.t:hover { text-decoration-color: var(--ink); }
   .masthead-nav { gap: 16px; }
   .masthead-actions { gap: 16px; }
 }
+
+/* ─── 日刊页（Task 17）──────────────────────────────────────────────────
+   桌面值搬自 docs/design/src/pages_front2.py 的 issue_head()、pages_front3.py 的
+   tabs() / item() / failure_box()；手机值搬自 pages_front3.py 的 head_m() / tabs_m() /
+   item_m()。写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
+
+/* 期头：56px 文楷日期，右侧叠放 Maple 发布时间与文楷星期，底线 2px */
+.issue-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
+.issue-head-main { display: flex; align-items: flex-end; gap: 16px; }
+.issue-head-title { display: flex; align-items: flex-end; gap: 16px; }
+.issue-head-date { margin: 0; font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-56); line-height: 1; }
+.issue-head-stack { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
+.issue-head-weekday { font-family: var(--font-cjk); font-size: var(--fs-20); line-height: 1; color: var(--ink2); }
+.issue-head-tag { padding-bottom: 4px; }
+.issue-nav { display: flex; align-items: center; gap: 8px; }
+.issue-nav-mobile { display: none; gap: 8px; flex: none; padding-top: 14px; }
+
+/* 来源索引条：并排等宽，当前项反白成墨块，其余 1px 描边；相邻两条共用一条边。
+   --tab-hole 是插图里「挖空」处的填充：纸上留纸色，反白后填墨色。 */
+.source-tabs { display: flex; padding: 24px 0 0 0; }
+.source-tab { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 18px 24px 18px 18px;
+              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+              --tab-hole: var(--paper); }
+.source-tab + .source-tab { margin-left: -1px; }
+.source-tab[data-state="active"] { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); }
+.source-tab:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.source-tab[data-state="active"]:focus-visible { outline-color: var(--paper); outline-offset: -6px; }
+.source-tab-icon { width: 68px; height: 44px; flex: none; display: block; }
+.source-tab-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.source-tab-name { font-family: var(--font-latin); font-size: var(--fs-32); font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
+.source-tab-state { font-family: var(--font-cjk); font-size: var(--fs-12); line-height: 1.6; color: var(--ink2); white-space: nowrap; }
+.source-tab[data-state="active"] .source-tab-state { color: var(--paper); opacity: 0.72; }
+
+/* 列表区：顶上一条 1px 墨线，条目之间 1px 分隔线 */
+.issue-body { border-top: 1px solid var(--ink); }
+.source-foot { display: inline-flex; align-items: center; gap: 6px; padding-top: 14px; }
+
+/* 条目：桌面「序号 正文 标签」三列，手机「序号 标签」眉行加整宽正文 */
+.item-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "rank body tag"; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+.item-rank { grid-area: rank; padding-top: 5px; font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
+.item-body { grid-area: body; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.item-tag { grid-area: tag; padding-top: 3px; }
+.item-title { font-family: var(--font-latin); font-size: var(--fs-20); font-weight: 500; line-height: 1.35; }
+.item-summary { font-family: var(--font-latin); font-size: var(--fs-15); font-weight: 400; line-height: 1.5; color: var(--ink2); }
+.item-reason { margin-top: 4px; max-width: 820px; border-left: 2px solid var(--green); padding: 1px 0 1px 12px; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.7; color: var(--ink2); }
+
+/* 栏级状态：失败留一幅日出小图 + 一句事实 + 上次成功时间 */
+.source-state { padding: 28px 0 24px 0; border-bottom: 1px solid var(--rule); }
+.source-state-failed { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 24px; align-items: center; }
+.source-state-art { width: 130px; height: 69px; display: block; opacity: 0.8; }
+.source-state-pending { height: 48px; }
+
+@media (max-width: 480px) {
+  .issue-head { align-items: flex-start; gap: 16px; padding: 32px 0 16px 0; }
+  .issue-head-main { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .issue-head-title { gap: 12px; }
+  .issue-head-date { font-size: var(--fs-40); }
+  .issue-head-stack { gap: 4px; padding-bottom: 3px; }
+  .issue-head-weekday { font-size: var(--fs-15); }
+  .issue-head-tag { padding-bottom: 0; }
+  .issue-nav { display: none; }
+  .issue-nav-mobile { display: flex; }
+
+  /* 期头底线下面已经有一行按钮，索引条不用再空 24px */
+  .source-tabs { padding-top: 16px; }
+  .source-tab { flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px 8px; }
+  .source-tab-icon { width: 37px; height: 24px; }
+  .source-tab-body { align-items: center; gap: 4px; }
+  .source-tab-name { font-size: var(--fs-13); line-height: 1.2; text-align: center; }
+  .source-tab-state { white-space: normal; text-align: center; }
+
+  .issue-body { margin-top: 24px; }
+  .source-foot { padding-top: 22px; }
+
+  /* 呼吸感：条目上下各 24px，标题整宽（设计 skill「手机」） */
+  .item-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "rank tag" "body body"; gap: 10px 12px; padding: 24px 0; }
+  .item-rank { padding-top: 0; }
+  .item-tag { padding-top: 0; justify-self: end; }
+  .item-body { gap: 8px; }
+  .item-title { line-height: 1.3; }
+  .item-reason { margin-top: 6px; }
+
+  .source-state { padding: 24px 0 20px 0; }
+  .source-state-failed { grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+}

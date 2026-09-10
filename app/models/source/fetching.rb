@@ -33,6 +33,11 @@ module Source::Fetching
     fetch_runs.create!(issue: issue, trigger: trigger, attempt: attempt, status: "queued")
   end
 
+  # 栏级失败态里的「上次成功 9月7日 06:11」：不限本期，最近一次成功抓取的时间
+  def last_ok_at
+    fetch_runs.where(status: "succeeded").ordered.first&.started_at
+  end
+
   def health
     return "disabled" unless enabled?
     recent = fetch_runs.where(trigger: %w[ scheduled manual ]).where.not(status: %w[ running queued ]).ordered.limit(3).pluck(:status)

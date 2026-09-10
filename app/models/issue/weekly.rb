@@ -4,7 +4,8 @@ module Issue::Weekly
   class_methods do
     # R-2.1 每天检查一次每个启用的周刊源：阮一峰按期号认新内容，其余源按本周的 ISO 周键
     def check_weekly_sources!
-      Source.enabled.weekly.ordered.find_each do |source|
+      # 周刊源列表很小：find_each 按主键分批、忽略 .ordered 的排序，这里改用 each 让 sort_order 真正生效
+      Source.enabled.weekly.ordered.each do |source|
         run = source.fetch_runs.create!(trigger: "scheduled", attempt: 1, status: "running", started_at: Time.current)
         ingest(source, run)
       end
@@ -26,20 +27,22 @@ module Issue::Weekly
         run.update!(status: "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200])
       end
 
-      # 期号是阮一峰的新内容标识：已经入库的期号只记一次检查，不重抓也不改写它所在的期
+      # 期号是阮一峰的新内容标识：已经入库的期号只记一次检查，不重抓也不改写它所在的期；
+      # 降级 stub 不算数（R42）：结构修好之后的检查照样重抓，把 stub 换成真内容
       def ingest_ruanyf(source, run)
         adapter = source.adapter_class.new(source)
         number = adapter.latest_issue_number
+        item = stored_items(source, number).first
 
-        if stored?(source, number)
-          run.update!(status: "succeeded", item_count: 0, dropped_count: 0)
+        if item
+          run.update!(issue: item.issue, status: "succeeded", item_count: 0, dropped_count: 0)
         else
           entries = adapter.fetch_issue(number)
-          bind!(source, run, PeriodKey.weekly(entries.first.published_at || Time.current), entries)
+          bind!(source, run, PeriodKey.weekly(entries.first.published_at || Time.current), entries, issue_no: number)
         end
       rescue Adapters::RuanyfWeekly::Degraded => e
         # R-2.3 原文结构变了：整期降级成一条指向原文的条目。P0 只记录，告警是 P2
-        bind!(source, run, PeriodKey.this_week, [ degraded_entry(e) ], error_summary: "降级：#{e.message}"[0, 200])
+        bind!(source, run, PeriodKey.this_week, [ degraded_entry(e) ], issue_no: e.issue_no, error_summary: "降级：#{e.message}"[0, 200])
       end
 
       # R-2.4 通用 RSS 周刊源：本周内每条 entry 就是一条条目
@@ -48,8 +51,11 @@ module Issue::Weekly
         bind!(source, run, key, source.adapter_class.new(source).fetch(period_key: key))
       end
 
-      def stored?(source, number)
-        Item.where(source: source).where("meta->>'issue_no' = ?", number.to_s).exists?
+      # 排除降级 stub：它站着这个期号的位置，但不是「已经入库的内容」
+      def stored_items(source, number)
+        Item.where(source: source)
+          .where("meta->>'issue_no' = ?", number.to_s)
+          .where("coalesce((meta->>'degraded')::boolean, false) = false")
       end
 
       def degraded_entry(error)
@@ -58,29 +64,33 @@ module Issue::Weekly
       end
 
       # R-2.7 一条都没有就不建这一周的期；建期与写节在同一个事务里，写砸了不留下没有条目的空期
-      def bind!(source, run, period_key, entries, error_summary: nil)
+      def bind!(source, run, period_key, entries, issue_no: nil, error_summary: nil)
         kept, dropped = entries.partition(&:valid?)
         issue = if kept.any?
-          transaction { weekly_for!(period_key).tap { |target| target.write_section!(source, kept) } }
+          transaction { weekly_for!(period_key).tap { |target| target.write_section!(source, kept, issue_no: issue_no) } }
         end
         run.update!(issue: issue, status: "succeeded", item_count: kept.size, dropped_count: dropped.size, error_summary: error_summary)
       end
   end
 
-  # 一节写完这一期就可见：同周其他源晚点到，各自替换自己那一节，不动别人的
-  def write_section!(source, entries)
+  # 一节写完这一期就可见：同周其他源晚点到，各自替换自己那一节，不动别人的；
+  # 阮一峰传 issue_no，同一周两期各占一节，互不覆盖（PRD 异常与边界，R41）
+  def write_section!(source, entries, issue_no: nil)
     transaction do
-      replace_section!(source, entries.select(&:valid?))
+      replace_section!(source, entries.select(&:valid?), issue_no: issue_no)
       update!(state: "published", published_at: published_at || Time.current)
     end
   end
 
-  # R-2.5 周刊页按源分节；R-2.6 源按排序值，板块与板块内条目按原文顺序（rank）
+  # R-2.5 周刊页按源分节，阮一峰同一周的多期各自成节；R-2.6 源按排序值，同源内按期号顺序，板块与板块内条目按原文顺序（rank）
   def weekly_sections
-    items.visible.ranked.includes(:source).group_by(&:source).sort_by { |source, _| [ source.sort_order, source.name ] }.map do |source, list|
-      head = list.first
-      { source: source, issue_no: head.meta["issue_no"], issue_title: head.meta["issue_title"],
-        degraded: head.meta["degraded"] == true, sections: list.group_by(&:section).to_a }
-    end
+    items.visible.ranked.includes(:source)
+      .group_by { |item| [ item.source, item.meta["issue_no"] ] }
+      .sort_by { |(source, issue_no), _| [ source.sort_order, source.name, issue_no.to_i ] }
+      .map do |(source, issue_no), list|
+        head = list.first
+        { source: source, issue_no: issue_no, issue_title: head.meta["issue_title"],
+          degraded: head.meta["degraded"] == true, sections: list.group_by(&:section).to_a }
+      end
   end
 end

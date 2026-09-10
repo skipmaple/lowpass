@@ -15,9 +15,10 @@ class ErrorsControllerTest < ActionDispatch::IntegrationTest
   # 在默认的 rescue_responses 里映射到 404，所以还是渲染 404（走 config.exceptions_app，
   # 不是 errors#not_found 那个 Inertia 页）。这样非 GET 请求不会先撞见 CSRF 校验，把 404
   # 变成 422（未带合法 authenticity token 时 InvalidAuthenticityToken 才是 422）。
-  test "非 GET 方法访问站内没有的地址是 404 不是 422" do
-    post "/nope"
+  test "兜底路由只接 GET，非 GET 方法没有路由可落" do
+    routes = Rails.application.routes
 
-    assert_response :not_found
+    assert_equal "errors", routes.recognize_path("/nope", method: :get)[:controller]
+    assert_raises(ActionController::RoutingError) { routes.recognize_path("/nope", method: :post) }
   end
 end

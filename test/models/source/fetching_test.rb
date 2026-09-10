@@ -48,4 +48,14 @@ class Source::FetchingTest < ActiveSupport::TestCase
     Adapters::RuanyfWeekly.any_instance.expects(:fetch).with(period_key: "2026-W36").returns([])
     sources(:ruanyf).fetch_now(issues(:weekly_w36), trigger: "manual")
   end
+
+  test "进行中的抓取不算失败" do
+    source = sources(:hn)
+    # hn_ok fixture exists as succeeded run
+    source.fetch_runs.create!(trigger: "scheduled", status: "running", attempt: 1, started_at: Time.current)
+    assert_equal "ok", source.health
+
+    source.fetch_runs.create!(trigger: "scheduled", status: "failed", attempt: 1)
+    assert_equal "recent_failure", source.health
+  end
 end

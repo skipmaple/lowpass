@@ -22,7 +22,7 @@ module Source::Fetching
 
   def health
     return "disabled" unless enabled?
-    recent = fetch_runs.where(trigger: %w[ scheduled manual ]).ordered.limit(3).pluck(:status)
+    recent = fetch_runs.where(trigger: %w[ scheduled manual ]).where.not(status: %w[ running queued ]).ordered.limit(3).pluck(:status)
     return "ok" if recent.empty? || recent.first == "succeeded"
     failures = recent.take_while { |s| s != "succeeded" }.size
     failures >= 3 ? "consecutive_failures" : "recent_failure"

@@ -1,5 +1,6 @@
 class FetchSourceJob < ApplicationJob
   queue_as :default
+  limits_concurrency to: 1, key: ->(source, issue, _trigger) { [ source.id, issue&.id ] }, duration: 20.minutes
   WAITS = [ 30.seconds, 120.seconds ].freeze
 
   retry_on Adapters::Http::Error, Timeout::Error, wait: ->(executions) { WAITS[executions - 1] || WAITS.last }, attempts: 3

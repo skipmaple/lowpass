@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import Show, { type WeeklyShowProps } from '@/pages/Weekly/Show'
 import { item, weeklyGroup, weeklyIssue, weeklySection } from '../support/props'
@@ -180,5 +180,24 @@ describe('降级（R-2.3）', () => {
     const { container } = show({ sections: [degraded] })
 
     expect(container.querySelector('.source-band')).toHaveTextContent('阮一峰科技爱好者周刊')
+  })
+})
+
+describe('按 hash 定位', () => {
+  // 周刊锚点带中文，地址里是百分号编码；解码后才找得到 id
+  it('挂载后把板块滚进视口，锚点先解码', () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    window.history.replaceState({}, '', '/weekly/2026-W36#' + encodeURIComponent('issue-366-文章'))
+
+    const { container } = show({
+      sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id: 'b', title: '一篇文章' })] })] })],
+    })
+
+    expect(scroll.mock.contexts[0]).toBe(container.querySelector('#issue-366-文章'))
+  })
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/weekly/2026-W36')
   })
 })

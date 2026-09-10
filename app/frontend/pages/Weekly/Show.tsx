@@ -6,6 +6,7 @@ import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
+import { useScrollToHash } from '@/lib/anchors'
 import { WEEKLY_ARCHIVE, latestWeeklyHref, weeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/types/lowpass'
@@ -135,6 +136,7 @@ function Section({ section }: { section: WeeklySection }) {
 }
 
 export default function Show({ issue, sections }: WeeklyShowProps) {
+  useScrollToHash(issue.period_key)
   return (
     <>
       <PageHead

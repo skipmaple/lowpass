@@ -205,3 +205,26 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
     expect(Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)).toEqual(['1', '2'])
   })
 })
+
+describe('按 hash 定位（搜索结果的所在期）', () => {
+  it('挂载后把 #item-<id> 那一行滚进视口', () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    window.history.replaceState({ page: 'daily' }, '', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
+
+    const { container } = show()
+
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scroll.mock.contexts[0]).toBe(container.querySelector('#item-itm-hn-1'))
+  })
+
+  it('没有 hash 或找不到元素时什么都不做', () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    window.history.replaceState({ page: 'daily' }, '', '/daily/2026-09-08#item-nope')
+
+    show()
+
+    expect(scroll).not.toHaveBeenCalled()
+  })
+})

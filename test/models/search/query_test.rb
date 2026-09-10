@@ -82,6 +82,8 @@ class Search::QueryTest < ActiveSupport::TestCase
     assert_equal 1, Search::Query.parse(q: "x", page: "51").page
     assert_equal 1, Search::Query.parse(q: "x", page: "two").page
     assert_equal 1, Search::Query.parse(q: "x").page
+    assert_equal 10, Search::Query.parse(q: "x", page: "010").page
+    assert_equal 1, Search::Query.parse(q: "x", page: "0x10").page
   end
 
   test "sort 只认 relevance / date，默认 relevance" do

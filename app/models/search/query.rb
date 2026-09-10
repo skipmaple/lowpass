@@ -94,7 +94,7 @@ class Search::Query
     end
 
     def page_number(raw)
-      number = Integer(raw, exception: false)
+      number = Integer(raw, 10, exception: false)
       number && number.between?(1, PAGES) ? number : 1
     end
 end

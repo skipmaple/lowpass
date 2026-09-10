@@ -1,5 +1,5 @@
 class Setting < ApplicationRecord
-  DEFAULTS = { "daily_time" => "06:00", "weekly_time" => "09:00" }.freeze
+  DEFAULTS = { "daily_time" => "06:00", "weekly_time" => "09:00", "weekly_checked_on" => "" }.freeze
 
   validates :key, presence: true, uniqueness: true
 

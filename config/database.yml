@@ -11,8 +11,13 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
 
 development:
-  <<: *default
-  database: lowpass_development
+  primary:
+    <<: *default
+    database: lowpass_development
+  queue:
+    <<: *default
+    database: lowpass_development_queue
+    migrations_paths: db/queue_migrate
 
 test:
   <<: *default

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 cd "$(dirname "$0")/.."
-export SOLID_QUEUE_IN_PUMA=true
 command -v foreman >/dev/null || gem install foreman
 exec foreman start -f Procfile.dev "$@"

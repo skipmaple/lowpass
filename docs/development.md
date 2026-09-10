@@ -27,14 +27,17 @@ bin/setup
 bin/dev
 ```
 
-用 [Foreman](https://github.com/ddollar/foreman) 按 `Procfile.dev` 同时起 Rails server（3000 端口）与 Vite dev server。
+用 [Foreman](https://github.com/ddollar/foreman) 按 `Procfile.dev` 同时起三个进程：Rails server（3000 端口）、
+Vite dev server，以及 `bin/jobs`（Solid Queue worker，带 `config/recurring.yml` 里每分钟一次的 `SchedulerTickJob`）。
+日刊到点生成、错过补跑、超时收尾都靠这个 tick，本地想看效果就得让 jobs 进程跑着，`log/development.log` 里每分钟一条。
 
 ## 数据库
 
 连接参数从环境变量读取，见 `config/database.yml`：`PGHOST`、`PGPORT`、`PGUSER`、`PGPASSWORD`，
-默认值都指向 `bin/setup` 起的 `lowpass-postgres` 容器。生产环境额外拆出 `queue` 库给 Solid Queue
-（见 `config/environments/production.rb` 的 `config.solid_queue.connects_to`）；Solid Cache 与
-Solid Cable 的表与业务表同库。
+默认值都指向 `bin/setup` 起的 `lowpass-postgres` 容器。开发与生产都是两个库：业务库（`lowpass_development`）
+和给 Solid Queue 的 `queue` 库（`lowpass_development_queue`，表结构在 `db/queue_schema.rb`，
+见各自环境文件里的 `config.solid_queue.connects_to`），`bin/rails db:prepare` 会一并建好；测试环境只有一个库。
+Solid Cache 与 Solid Cable 的表与业务表同库。
 
 手动操作容器：
 

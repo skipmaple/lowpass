@@ -1,0 +1,21 @@
+# gitleaks 配置：继承内置规则集（不新增规则，也不关闭任何规则），只在其上按路径豁免下面两个
+# 已核实的误报。跑法见 config/ci.rb 的 "Security: Secrets" 步（bin/ci 的一部分）。
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "已核实的误报，按路径豁免，理由见各条注释"
+paths = [
+  # 源站样本 HTML/JSON/XML，用 script/capture_samples 原样抓取保存，供适配器测试与
+  # seed_sample_issue / seed_sample_weekly 使用（AGENTS.md「测试」：源站样本放
+  # test/fixtures/files/**）。触发规则的是 github_trending/daily.html 里 GitHub 页面自带的
+  # auth_hydro_click_hmac 点击埋点 HMAC，是 GitHub 自己的前端追踪值，不是 lowpass 持有的密钥。
+  '''test/fixtures/files/.*''',
+
+  # FetchSourceJob#concurrency_key 由 source_id + issue_id 拼接而成（两者都是 UUIDv7 base36
+  # 25 字符字符串，ADR T9），用于 Solid Queue 的同期同源并发限制；
+  # test/jobs/fetch_source_job_test.rb 里把它存进局部变量 key2 做相等性断言，纯粹因为熵值高
+  # 被 generic-api-key 规则误判，不是密钥。
+  '''test/jobs/fetch_source_job_test\.rb''',
+]

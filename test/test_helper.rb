@@ -19,8 +19,12 @@ ActiveSupport.on_load(:active_record_fixture_set) { prepend FixtureUuids }
 
 class ActiveSupport::TestCase
   # 核数很高的机器上一次性开满 worker 会把 PostgreSQL 连接池压出间歇性失败，封顶 8 个；
-  # ENV["PARALLEL_WORKERS"] 仍然优先生效（parallelize 内部先看这个环境变量）。
-  parallelize(workers: [ Concurrent.processor_count, 8 ].min)
+  # ENV["PARALLEL_WORKERS"] 仍然优先生效（parallelize 内部先看这个环境变量）。用
+  # Concurrent.available_processor_count（cgroup 配额感知，容器里跑测试时不会数到宿主机的全部核数）
+  # 兜底到 Concurrent.processor_count，和 Rails 自己 workers: :number_of_processors 的默认实现一致
+  # （activesupport 的 ActiveSupport::TestCase.parallelize 内部正是这一行）；配额可能是分数（比如
+  # 2.5 个核），先 floor 成整数再取 min，避免把非整数传给 workers。
+  parallelize(workers: [ (Concurrent.available_processor_count || Concurrent.processor_count).floor, 8 ].min)
   fixtures :all
   include ActiveJob::TestHelper
 end

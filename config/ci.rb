@@ -13,6 +13,13 @@ CI.run do
   step "Security: Gem audit", "bin/bundler-audit"
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
 
+  # gitleaks 8.30.1 的顶层 --help 只列出 git/dir 两个扫描子命令，但 `detect` 没有被移除
+  # （`gitleaks detect --help` 能看到完整参数），默认仍按 git 仓库扫描全部历史，等价于
+  # `gitleaks git`。仓库根目录的 .gitleaks.toml 用 `[extend] useDefault = true` 继承内置规则集
+  # （不新增、不关闭任何规则），只按路径豁免两个已核实的误报（源站样本 HTML、由 UUID
+  # 拼出的并发键），理由写在该文件的注释里。
+  step "Security: Secrets", "gitleaks detect --source . --no-banner --redact"
+
   # config/vite.json 的 test 环境开着 autoBuild，并行测试 worker 第一次请求时都会触发构建，
   # 撞在一起偶尔会炸成 "Vite test manifest missing entrypoints/application.css"。这里先单独
   # 构建一次测试包挡住这个竞态；autoBuild 本身留着，单独跑 bin/rails test 不受影响。

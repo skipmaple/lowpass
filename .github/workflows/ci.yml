@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # gitleaks-action 扫描全部提交历史找泄露的密钥，默认的浅克隆（depth 1）看不到历史。
+          fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -20,10 +23,15 @@ jobs:
 
       - name: Scan for common Rails security vulnerabilities using static analysis
         run: bin/brakeman --no-pager
-      
+
       - name: Scan for known security vulnerabilities in gems used
         run: bin/bundler-audit
-      
+
+      - name: Scan for hardcoded secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   lint:
     runs-on: ubuntu-latest
     env:
@@ -95,6 +103,9 @@ jobs:
       - name: Typecheck frontend
         run: npm run check
 
+      - name: Audit npm packages
+        run: npm audit --audit-level=high
+
       - name: Build frontend
         run: npm run build
 
@@ -153,6 +164,14 @@ jobs:
 
       - name: Install npm packages
         run: npm ci
+
+      # autoBuild 在测试 worker 并行请求时会撞车（见 config/ci.rb 同一个步骤的注释，以及上面
+      # test job 的「Build frontend test bundle」）。system:test 还没有系统测试用例，这一步先
+      # 落好，等系统测试出现后这个 job 不会立刻撞上同样的竞态。RAILS_ENV 必须显式传，理由同上。
+      - name: Build frontend test bundle
+        env:
+          RAILS_ENV: test
+        run: bin/vite build --mode test
 
       - name: Run System Tests
         env:

@@ -2702,3 +2702,7 @@ Task 19 Step 5（连续 5 天验收）尚未开始：本次提交只完成了 St
 |  |  |  |  |  |  |
 |  |  |  |  |  |  |
 |  |  |  |  |  |  |
+
+**已知缺口**：`docs/engineering-conventions.md`「测试」一节提到的 `bin/ci` 校验步骤——agent 说明文件
+校验（AGENTS.md 里复述的字面值与 PRD/配置的一致性检查，借鉴 fizzy 的 `script/check_agents_docs`
+思路）——P0 未实现，也没有另外发明一个校验器顶上；是否补、什么时候补留给 P1/P2 阶段的负责人决定。

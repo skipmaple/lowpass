@@ -127,14 +127,19 @@ bin/ci           # 合并门禁，见 config/ci.rb
 
 `bin/ci` 依次跑：Setup（`bin/setup --skip-server`）、Style: Ruby（`bin/rubocop`）、Frontend: typecheck
 （`npm run check`）、Frontend: audit（`npm audit --audit-level=high`）、Frontend: build（`npm run build`）、
-Security: Gem audit（`bin/bundler-audit`）、Security: Brakeman code analysis、Frontend: build for tests
-（`env RAILS_ENV=test bin/vite build --mode test`）、Tests: Rails（`bin/rails test`）、Tests: Seeds
-（`RAILS_ENV=test bin/rails db:seed:replant`）。「Frontend: build for tests」先出一份 test 模式的 Vite
-构建产物，避开下一步并行测试 worker 抢着触发 `autoBuild`（`config/vite.json` 里 test 环境开着）的竞态——
-不这么做偶尔会在并行跑测试时炸出 `Vite test manifest missing entrypoints/application.css`；`autoBuild`
-本身留着，单独跑 `bin/rails test` 不受影响。这一步必须显式带 `RAILS_ENV=test`：vite_rails 的 CLI 会先
-把 Rails 应用整个启动起来才处理 `--mode`，没有 `RAILS_ENV` 时 `Rails.env` 默认是 development，产物会
-悄悄写进 `public/vite-dev` 而不是 `public/vite-test`，起不到防竞态的作用。
+Security: Gem audit（`bin/bundler-audit`）、Security: Brakeman code analysis、Security: Secrets
+（`gitleaks detect --source . --no-banner --redact`，规则继承自 gitleaks 内置集，豁免的误报与理由见
+仓库根目录的 `.gitleaks.toml`）、Frontend: build for tests（`env RAILS_ENV=test bin/vite build --mode
+test`）、Tests: Rails（`bin/rails test`）、Tests: Seeds（`RAILS_ENV=test bin/rails db:seed:replant`）。
+「Frontend: build for tests」先出一份 test 模式的 Vite 构建产物，避开下一步并行测试 worker 抢着触发
+`autoBuild`（`config/vite.json` 里 test 环境开着）的竞态——不这么做偶尔会在并行跑测试时炸出 `Vite
+test manifest missing entrypoints/application.css`；`autoBuild` 本身留着，单独跑 `bin/rails test` 不受
+影响，但这个结论的前提是 `public/vite-test` 下已经有一份构建产物。刚 clone 的仓库第一次跑、`public/
+vite-test` 还是空的时候，直接并行 `bin/rails test` 同样可能撞上这个竞态；`bin/setup` 之后先完整跑一次
+`bin/ci`（或单独跑一次 `env RAILS_ENV=test bin/vite build --mode test`）能避开。这一步必须显式带
+`RAILS_ENV=test`：vite_rails 的 CLI 会先把 Rails 应用整个启动起来才处理 `--mode`，没有 `RAILS_ENV` 时
+`Rails.env` 默认是 development，产物会悄悄写进 `public/vite-dev` 而不是 `public/vite-test`，起不到防
+竞态的作用。
 
 `bin/rails test` 超过 50 个测试后会按 CPU 核数 fork 出并行 worker，封顶 8 个（核数很高的机器上开满会把
 PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gssencmode: disable` 是为了绕开 macOS 上

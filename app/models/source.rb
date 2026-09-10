@@ -1,4 +1,6 @@
 class Source < ApplicationRecord
+  include Source::Fetching
+
   ADAPTERS = %w[ hacker_news github_trending rss ruanyf_weekly ].freeze
 
   has_many :items, dependent: :restrict_with_exception

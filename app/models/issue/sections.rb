@@ -33,7 +33,13 @@ module Issue::Sections
     end
 
     def write_rows(rows, entries)
-      Item.insert_all!(rows.map { |row| row.merge(id: Lowpass::Uuid.generate, created_at: Time.current, updated_at: Time.current) }) if rows.any?
+      if rows.any?
+        rows = rows.map { |row| row.merge(id: Lowpass::Uuid.generate, created_at: Time.current, updated_at: Time.current) }
+        Item.insert_all!(rows)
+        # insert_all! 不触发 Item 的 Searchable 回调：整栏在这里一次性进索引（R-4.8「发布或修订后 1 分钟内可搜」）；
+        # 被替换掉的旧条目的索引行随 items 的删除级联消失
+        Search::Record.index_items!(rows.map { |row| row[:id] })
+      end
       entries.size - rows.size
     end
 end

@@ -61,7 +61,7 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
 
   def entry(title, section: nil, rank: 1, issue_no: nil, issue_title: nil, url: nil)
     Adapters::Entry.new(title: title, url: url || "https://r.example/#{rank}#{issue_no}", section: section, rank: rank,
-                        meta: { issue_no: issue_no, issue_title: issue_title }.compact)
+                        meta: { issue_no: issue_no, issue_title: issue_title, anchor: section }.compact)
   end
 
   def rss_weekly_source
@@ -215,7 +215,9 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "https://github.com/ruanyf/weekly/blob/master/docs/issue-366.md", ruanyf[:original_url]
     assert_equal "第 366 期 · 慢下来的理由", ruanyf[:issue_label]
     assert_equal [ "本周话题", "工具" ], ruanyf[:groups].map { |group| group[:name] }
-    assert_equal 2, ruanyf[:groups].map { |group| group[:anchor] }.uniq.size
+    # 设计 6.3：锚点是稳定 slug，搜索结果的所在期链接指向同一个值（Item#anchor）
+    assert_equal [ "issue-366-本周话题", "issue-366-工具" ], ruanyf[:groups].map { |group| group[:anchor] }
+    assert_equal "source-#{rss[:source][:id]}", rss[:groups].sole[:anchor]
     assert_equal "https://w.example/", rss[:original_url]
     assert_nil rss[:issue_label]
     assert_nil rss[:groups].sole[:name]

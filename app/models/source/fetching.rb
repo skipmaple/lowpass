@@ -15,7 +15,7 @@ module Source::Fetching
     else
       entries = adapter_class.new(self).fetch(period_key: (issue.period_key if issue&.kind == "weekly"))
       kept, dropped = entries.partition(&:valid?)
-      replace_items(issue, kept) if issue
+      issue.replace_section!(self, kept) if issue
       run.update!(status: "succeeded", item_count: kept.size, dropped_count: dropped.size, duration_ms: elapsed(run))
     end
 
@@ -42,15 +42,6 @@ module Source::Fetching
   end
 
   private
-    def replace_items(issue, entries)
-      transaction do
-        issue.items.where(source: self).delete_all
-        rows = entries.map { |e| e.to_item_attributes(source: self, issue: issue) }
-        rows.uniq! { |r| r[:url_hash] }   # 同源重复地址保留首次出现
-        Item.insert_all!(rows.map { |r| r.merge(id: Lowpass::Uuid.generate, created_at: Time.current, updated_at: Time.current) }) if rows.any?
-      end
-    end
-
     def elapsed(run)
       ((Time.current - run.started_at) * 1000).to_i
     end

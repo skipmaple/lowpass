@@ -1,6 +1,6 @@
-# Task 15 实现：检查上游周刊是否更新并生成本周周刊
+# R-2.1 每天一次的上游周刊检查：job 只负责入队，检查与装订都在模型里
 class WeeklyCheckJob < ApplicationJob
   queue_as :default
 
-  def perform; end
+  def perform = Issue.check_weekly_sources!
 end

@@ -134,7 +134,7 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_equal source.id, runs.map(&:source_id).first
   end
 
-  # AGENTS 不变量：job 幂等。一天里跑两次检查，阮一峰不重抓，RSS 节整节替换后条目数不变
+  # AGENTS 不变量：job 幂等。一天里跑两次检查，阮一峰不重抓，RSS 节一条都不多写、id 也不换
   test "同一天重复检查不重复写入" do
     travel_to Time.utc(2026, 9, 10, 4, 0) do
       source = rss_weekly_source
@@ -144,12 +144,35 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
       Issue.check_weekly_sources!
       issue = Issue.weekly.find_by!(period_key: "2026-W37")
       ruanyf_ids = issue.items.where(source: sources(:ruanyf)).order(:rank).pluck(:id)
+      rss_rows = issue.items.where(source: source).order(:rank).pluck(:id, :rank)
 
       Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).never
       assert_no_difference("Item.count") { Issue.check_weekly_sources! }
 
       assert_equal ruanyf_ids, issue.items.where(source: sources(:ruanyf)).order(:rank).pluck(:id)
-      assert_equal 2, issue.items.where(source: source).count
+      assert_equal rss_rows, issue.items.where(source: source).order(:rank).pluck(:id, :rank)
+    end
+  end
+
+  # R-2.8 已发布的节不重写：RSS 周刊源每天检查一次，新 entry 接在后面，周初那两条留在原位
+  test "RSS 周刊节只追加新条目" do
+    travel_to Time.utc(2026, 9, 10, 4, 0) do
+      source = rss_weekly_source
+      Adapters::RuanyfWeekly.any_instance.stubs(:latest_issue_number).returns(366)
+      issues(:weekly_w36).items.create!(source: sources(:ruanyf), title: "x", url: "https://x/1", url_hash: "0" * 64, fetched_at: Time.current, meta: { issue_no: 366 })
+      Adapters::Rss.any_instance.stubs(:fetch).returns(entries(2, section: nil, published: Time.current, meta: {}))
+      Issue.check_weekly_sources!
+
+      issue = Issue.weekly.find_by!(period_key: "2026-W37")
+      first_two = issue.items.where(source: source).order(:rank).pluck(:id, :rank)
+      assert_equal [ 1, 2 ], first_two.map(&:last)
+
+      Adapters::Rss.any_instance.stubs(:fetch).returns(entries(3, section: nil, published: Time.current, meta: {}))
+      assert_difference("Item.count", 1) { Issue.check_weekly_sources! }
+
+      rows = issue.items.where(source: source).order(:rank).pluck(:id, :rank, :title)
+      assert_equal first_two, rows.first(2).map { |id, rank, _| [ id, rank ] }
+      assert_equal [ 3, "t3" ], rows.last.last(2)
     end
   end
 

@@ -45,10 +45,11 @@ module Issue::Weekly
         bind!(source, run, PeriodKey.this_week, [ degraded_entry(e) ], issue_no: e.issue_no, error_summary: "降级：#{e.message}"[0, 200])
       end
 
-      # R-2.4 通用 RSS 周刊源：本周内每条 entry 就是一条条目
+      # R-2.4 通用 RSS 周刊源：本周内每条 entry 就是一条条目。这一节从周一起就在页面上了，
+      # 每天的检查只补新地址（append），不整节重写：重写会把周初的条目挤出 count 封顶（R-2.8、R-1.4）
       def ingest_rss_weekly(source, run)
         key = PeriodKey.this_week
-        bind!(source, run, key, source.adapter_class.new(source).fetch(period_key: key))
+        bind!(source, run, key, source.adapter_class.new(source).fetch(period_key: key), append: true)
       end
 
       # 排除降级 stub：它站着这个期号的位置，但不是「已经入库的内容」
@@ -64,20 +65,27 @@ module Issue::Weekly
       end
 
       # R-2.7 一条都没有就不建这一周的期；建期与写节在同一个事务里，写砸了不留下没有条目的空期
-      def bind!(source, run, period_key, entries, issue_no: nil, error_summary: nil)
+      def bind!(source, run, period_key, entries, issue_no: nil, append: false, error_summary: nil)
         kept, dropped = entries.partition(&:valid?)
         issue = if kept.any?
-          transaction { weekly_for!(period_key).tap { |target| target.write_section!(source, kept, issue_no: issue_no) } }
+          transaction { weekly_for!(period_key).tap { |target| target.write_section!(source, kept, issue_no: issue_no, append: append) } }
         end
         run.update!(issue: issue, status: "succeeded", item_count: kept.size, dropped_count: dropped.size, error_summary: error_summary)
       end
   end
 
-  # 一节写完这一期就可见：同周其他源晚点到，各自替换自己那一节，不动别人的；
-  # 阮一峰传 issue_no，同一周两期各占一节，互不覆盖（PRD 异常与边界，R41）
-  def write_section!(source, entries, issue_no: nil)
+  # 一节写完这一期就可见：同周其他源晚点到，各自写自己那一节，不动别人的；
+  # 阮一峰传 issue_no，同一周两期各占一节，互不覆盖（PRD 异常与边界，R41）；
+  # RSS 周刊源传 append，一周里每天补进来的 entry 接在这一节后面，不重写已发布的条目（R-2.8）
+  def write_section!(source, entries, issue_no: nil, append: false)
     transaction do
-      replace_section!(source, entries.select(&:valid?), issue_no: issue_no)
+      kept = entries.select(&:valid?)
+      if append
+        append_section!(source, kept)
+      else
+        replace_section!(source, kept, issue_no: issue_no)
+      end
+
       # 周刊有节就有内容（R-2.7 一条都没有不建期），降级 stub 也算数：degraded 记在条目的 meta 里
       update!(state: "published", published_at: published_at || Time.current,
         source_states: source_states.merge(source.id => "ok"))

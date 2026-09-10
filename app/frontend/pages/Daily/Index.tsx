@@ -15,7 +15,6 @@ import type { ArchiveDay, ArchiveNav, FooterData } from '@/types/lowpass'
 // 画布：docs/design/src/pages_site.py 的 archive_daily()、mark()。
 
 export type DailyIndexProps = FooterData & {
-  month: string
   month_label: string
   prev_month: ArchiveNav
   next_month: ArchiveNav

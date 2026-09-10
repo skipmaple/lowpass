@@ -100,6 +100,8 @@ class WeeklyArchiveTest < ActionDispatch::IntegrationTest
       assert_includes response.body, "本周无内容"
       assert_equal "2026 年", page_props["year_label"]
       assert_equal %w[ 2026-W37 2026-W36 ], page_props["weeks"].map { |week| week["period_key"] }
+      # 本周（2026-W37）没有期：描边记号（empty），不是缺期的叉（R56）
+      assert_equal "empty", page_props["weeks"].first["state"]
     end
   end
 
@@ -113,6 +115,13 @@ class WeeklyArchiveTest < ActionDispatch::IntegrationTest
 
   test "非法年份 404" do
     get weekly_issues_path(year: "nope")
+
+    assert_response :not_found
+  end
+
+  # ?year[]=2026 让 params[:year] 变成 Array，presence 后 match? 找不到方法，之前 500（R56）
+  test "年份是数组时 404 而不是 500" do
+    get weekly_issues_path(year: [ "2026" ])
 
     assert_response :not_found
   end

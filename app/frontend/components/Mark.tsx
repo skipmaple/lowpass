@@ -10,16 +10,18 @@ const NAMES: Record<ArchiveMark, string> = {
   missing: '缺期',
 }
 
-export default function Mark({ state }: { state: ArchiveMark }) {
-  const label = NAMES[state]
+// label 覆盖默认名字：周刊归档没有期的那一周视觉上跟空刊一样（描边方块），但读屏该念「无内容」
+// 而不是「空刊」——两个页面共用同一份状态记号，文案按页面语境走。
+export default function Mark({ state, label }: { state: ArchiveMark; label?: string }) {
+  const name = label ?? NAMES[state]
 
-  if (state === 'missing') return <Icon name="x" size={12} color="var(--ink2)" title={label} />
-  if (state === 'generating') return <Icon name="clock" size={12} color="var(--ink2)" title={label} />
+  if (state === 'missing') return <Icon name="x" size={12} color="var(--ink2)" title={name} />
+  if (state === 'generating') return <Icon name="clock" size={12} color="var(--ink2)" title={name} />
 
   return (
     <span
       role="img"
-      aria-label={label}
+      aria-label={name}
       style={{
         display: 'inline-block',
         width: 10,

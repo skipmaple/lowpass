@@ -129,7 +129,8 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
             {item.title}
           </a>
         </Heading>
-        {item.summary ? <span className="item-summary">{item.summary}</span> : null}
+        {/* 周刊摘要行高 1.7（画布 pages_site.item() 的文楷 15/1.7），日刊摘要是 PRD 6.3 的 Newsreader 15/1.5 */}
+        {item.summary ? <span className={weekly ? 'item-summary item-summary--weekly' : 'item-summary'}>{item.summary}</span> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
       </div>

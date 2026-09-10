@@ -91,7 +91,7 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
   test "各源结果按排序值给出条数或失败" do
     row = Issue.daily_archive_props(now: NOW)[:days].last
 
-    assert_equal "HN 1 · GH 失败 · HAC 失败", row[:source_marks]
+    assert_equal "HN 1 · GH 失败 · HAD 失败", row[:source_marks]
     assert_equal "06:12 发布", row[:published_label]
   end
 
@@ -132,7 +132,8 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "2026 年", props[:year_label]
     assert_equal %w[ 2026-W37 2026-W36 ], props[:weeks].map { |week| week[:period_key] }
     assert_equal "本周无内容", props[:weeks].first[:summary]
-    assert_equal "missing", props[:weeks].first[:state]
+    # 无内容的周与空刊视觉一致（描边方块），不再借用缺期的叉（R56）
+    assert_equal "empty", props[:weeks].first[:state]
     assert_equal "第 36 周", props[:weeks].last[:week_label]
     assert_equal "8月31日 至 9月6日", props[:weeks].last[:range_label]
   end

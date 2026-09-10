@@ -1,6 +1,8 @@
 import { Link } from '@inertiajs/react'
 import type * as React from 'react'
 
+import { DAILY_LATEST, WEEKLY_ARCHIVE } from '@/lib/paths'
+
 // 报头黑带：80px 墨底，LOWPASS 用品牌字 40px 纸色，导航文楷 15，右侧搜索图标与头像位。
 // 尺寸（高度、边距、品牌字号、间距）在 tokens.css 的 .masthead* 里，手机版由那里的 @media 收窄。
 // 图标是墨线内联 SVG（在黑带上用纸色描边），不引图标库、不用 emoji。
@@ -54,8 +56,8 @@ function StrokeIcon({ size, children }: React.PropsWithChildren<{ size: number }
 
 export default function Masthead({
   active,
-  dailyHref = '/',
-  weeklyHref = '/weekly',
+  dailyHref = DAILY_LATEST,
+  weeklyHref = WEEKLY_ARCHIVE,
   searchHref = '/search',
   accountHref = '/account',
 }: MastheadProps) {

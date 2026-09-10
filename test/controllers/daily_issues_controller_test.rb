@@ -132,7 +132,7 @@ class DailyArchiveTest < ActionDispatch::IntegrationTest
       assert_equal "9月8日", row["date_label"]
       assert_equal "星期二", row["weekday"]
       assert_equal "06:12 发布", row["published_label"]
-      assert_equal "HN 1 · GH 失败 · HAC 失败", row["source_marks"]
+      assert_equal "HN 1 · GH 失败 · HAD 失败", row["source_marks"]
     end
   end
 
@@ -154,5 +154,18 @@ class DailyArchiveTest < ActionDispatch::IntegrationTest
 
     get daily_issues_path(month: "2026-13")
     assert_response :not_found
+  end
+
+  # ?month[]=2026-09 让 params[:month] 变成 Array，presence 后 match? 找不到方法，之前 500（R56）
+  test "月份是数组时 404 而不是 500" do
+    get daily_issues_path(month: [ "2026-09" ])
+    assert_response :not_found
+  end
+
+  test "晚于当月的月份 404" do
+    travel_to NOW do
+      get daily_issues_path(month: "2027-01")
+      assert_response :not_found
+    end
   end
 end

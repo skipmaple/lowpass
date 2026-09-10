@@ -14,7 +14,6 @@ import type { ArchiveNav, ArchiveWeek, FooterData } from '@/types/lowpass'
 // 画布：docs/design/src/pages_site.py 的 archive_weekly()、mark()。
 
 export type WeeklyIndexProps = FooterData & {
-  year: number
   year_label: string
   prev_year: ArchiveNav
   next_year: ArchiveNav
@@ -27,7 +26,8 @@ function Row({ week }: { week: ArchiveWeek }) {
   return (
     <Link className="archive-row" href={weeklyHref(week.period_key)}>
       <span className="archive-mark">
-        <Mark state={week.state} />
+        {/* 归档里的「没有」是本周无内容，不是空刊（日刊归档才用空刊那个词，见 Mark 的默认名） */}
+        <Mark state={week.state} label={week.state === 'empty' ? '无内容' : undefined} />
       </span>
       <span className="archive-key">{week.week_label}</span>
       <span className="archive-sub">{week.range_label}</span>

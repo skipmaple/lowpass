@@ -20,8 +20,13 @@ class WeeklyIssuesController < ApplicationController
   end
 
   private
+    # ?year[]=… 让 params[:year] 变成 Array/Hash，presence 后 match? 没这个方法：先挡在这里，
+    # 不是 String 就当非法值处理（跟 daily_issues_controller#requested_month 同一个道理）。
     def requested_archive
-      year = params[:year].presence
+      raw = params[:year]
+      return nil unless raw.nil? || raw.is_a?(String)
+
+      year = raw.presence
       Issue.weekly_archive_props(year: year) if year.nil? || year.match?(YEAR)
     end
 

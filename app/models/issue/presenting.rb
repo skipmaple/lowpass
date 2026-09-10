@@ -2,8 +2,11 @@ module Issue::Presenting
   extend ActiveSupport::Concern
 
   WEEKDAYS = %w[ 星期日 星期一 星期二 星期三 星期四 星期五 星期六 ].freeze
-  # 归档一行里放不下来源名：榜单类源有通用缩写，其余源取名字前三个字符
-  SOURCE_ABBRS = { "hacker_news" => "HN", "github_trending" => "GH" }.freeze
+  # 归档一行里放不下来源名：榜单类源与周刊源有通用缩写；个别源名字的前三个字符不达意
+  # （Hackaday → HAC），按画布（docs/design/src/pages_site.py 的 DAYS）用名字表纠正成 HAD；
+  # 其余源取名字前三个字符。
+  SOURCE_ABBRS = { "hacker_news" => "HN", "github_trending" => "GH", "ruanyf_weekly" => "阮" }.freeze
+  SOURCE_NAME_ABBRS = { "Hackaday" => "HAD" }.freeze
 
   class_methods do
     # 期头要的一切。缺期时 issue 是 nil，日期、星期与前后期仍然从周期键与库里算得出来。
@@ -74,14 +77,16 @@ module Issue::Presenting
     def latest_weekly_key = weekly.maximum(:period_key)
 
     # PRD 6.2 日刊归档：一页一个月，每天一行（含缺期）。上线前的日期不显示，所以行从最早一期那天起算，
-    # 到今天为止；整段落在这两头之外的月份一行都没有，翻月的按钮也就到此为止。
+    # 到今天为止；整段落在这两头之外的月份一行都没有，翻月的按钮也就到此为止。请求的月份晚于当月时
+    # 没有这一页（跟 weekly_archive_props 的年份越界一致），返回 nil 让控制器 404。
     def daily_archive_props(month: nil, now: Time.current)
       today = PeriodKey.date_of(PeriodKey.daily(now))
       month = (month || today).beginning_of_month
+      return if month > today.beginning_of_month
+
       earliest = daily.minimum(:period_key)&.then { |key| PeriodKey.date_of(key) } || today
 
       {
-        month: month.strftime("%Y-%m"),
         month_label: "#{month.year} 年 #{month.month} 月",
         prev_month: month_nav(month.prev_month, month, earliest, today),
         next_month: month_nav(month.next_month, month, earliest, today),
@@ -102,7 +107,6 @@ module Issue::Presenting
       issues = weekly.where(period_key: keys).index_by(&:period_key)
 
       {
-        year: year,
         year_label: "#{year} 年",
         prev_year: year_nav(year - 1, years),
         next_year: year_nav(year + 1, years),
@@ -150,7 +154,7 @@ module Issue::Presenting
         end
       end
 
-      def abbr(source) = SOURCE_ABBRS[source.adapter] || source.name[0, 3].upcase
+      def abbr(source) = SOURCE_ABBRS[source.adapter] || SOURCE_NAME_ABBRS[source.name] || source.name[0, 3].upcase
 
       def mark(issue, source, counts)
         case issue.source_state(source)
@@ -166,7 +170,9 @@ module Issue::Presenting
           period_key: key,
           week_label: week_label(key),
           range_label: range_label(PeriodKey.week_range(key)),
-          state: issue&.state || "missing"
+          # 周维度的「没有」只有一种文案与记号（本周无内容 · 描边方块）：不分「没有这一期」与
+          # 「这一期是空刊」，缺期的叉留给日刊（archive_day）
+          state: issue&.state || "empty"
         }.merge(issue&.weekly_archive_row || { summary: "本周无内容", count: nil })
       end
 

@@ -1,4 +1,6 @@
-// 站内地址只在这里拼一次（config/routes.rb 的 daily_issues / weekly_issues 两条资源路由）。
+// 站内地址只在这里拼一次（config/routes.rb 的 daily_issues / weekly_issues 两条资源路由，
+// 加根路由 D20：`/` 就是最新一期日刊）。
+export const DAILY_LATEST = '/'
 export const DAILY_ARCHIVE = '/daily'
 export const WEEKLY_ARCHIVE = '/weekly'
 

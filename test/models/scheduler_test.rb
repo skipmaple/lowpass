@@ -43,14 +43,18 @@ class SchedulerTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: WeeklyCheckJob) { Scheduler.tick(now: sh("2026-09-10 08:59:00")) }
   end
 
-  test "过了 04:00 清理一次抓取记录" do
+  test "过了 04:00 清理一次抓取记录、搜索日志与点击" do
     FetchRun.expects(:cleanup).once
+    Search::Log.expects(:cleanup).once
+    Search::Click.expects(:cleanup).once
     Scheduler.tick(now: sh("2026-09-10 04:02:10"))
     assert_equal "2026-09-10", Setting.get("cleaned_on")
   end
 
   test "未到 04:00 不清理" do
     FetchRun.expects(:cleanup).never
+    Search::Log.expects(:cleanup).never
+    Search::Click.expects(:cleanup).never
     Scheduler.tick(now: sh("2026-09-10 03:59:00"))
   end
 
@@ -58,6 +62,8 @@ class SchedulerTest < ActiveSupport::TestCase
     Scheduler.tick(now: sh("2026-09-10 04:02:10"))
 
     FetchRun.expects(:cleanup).never
+    Search::Log.expects(:cleanup).never
+    Search::Click.expects(:cleanup).never
     Scheduler.tick(now: sh("2026-09-10 09:30:00"))
   end
 

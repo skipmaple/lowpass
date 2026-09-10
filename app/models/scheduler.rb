@@ -46,13 +46,16 @@ class Scheduler
       Setting.set("weekly_checked_on", today)
     end
 
-    # F-26 抓取记录保留 30 天。跟周刊检查一样按上海时区的自然日记账：只认「今天清过没有」，
-    # 不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
+    # F-26 抓取记录保留 30 天，搜索日志 30 天（D12）、结果点击 90 天（9.1）。跟周刊检查一样按上海时区的
+    # 自然日记账：只认「今天清过没有」，不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、
+    # 机器睡过）就整天不清了
     def cleanup_if_due
       today = PeriodKey.daily(@now)
       return if @now < today_at(CLEANUP_TIME) || Setting.get("cleaned_on") == today
 
       FetchRun.cleanup
+      Search::Log.cleanup
+      Search::Click.cleanup
       Setting.set("cleaned_on", today)
     end
 

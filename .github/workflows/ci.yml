@@ -92,7 +92,7 @@ jobs:
       # The Inertia pages are built by Vite: config/vite.json sets autoBuild in
       # the test environment, so the test run needs Node and the npm packages.
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -157,7 +157,7 @@ jobs:
           bundler-cache: true
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm

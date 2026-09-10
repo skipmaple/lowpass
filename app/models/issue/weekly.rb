@@ -67,28 +67,42 @@ module Issue::Weekly
       # R-2.7 一条都没有就不建这一周的期；建期与写节在同一个事务里，写砸了不留下没有条目的空期
       def bind!(source, run, period_key, entries, issue_no: nil, append: false, error_summary: nil)
         kept, dropped = entries.partition(&:valid?)
-        issue = if kept.any?
-          transaction { weekly_for!(period_key).tap { |target| target.write_section!(source, kept, issue_no: issue_no, append: append) } }
+        issue, deduped = if kept.any?
+          transaction { weekly_for!(period_key).then { |target| [ target, target.write_section!(source, kept, issue_no: issue_no, append: append) ] } }
+        else
+          [ nil, 0 ]
         end
-        run.update!(issue: issue, status: "succeeded", item_count: kept.size, dropped_count: dropped.size, error_summary: error_summary)
+
+        # 跟日刊路径一样（Source::Fetching#fetch_now）：同源重复地址在写入时被去掉，也要计进
+        # dropped_count，不然 item_count 报的是抓到几条，不是这一节真的写进去几条
+        run.update!(issue: issue, status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, error_summary: error_summary)
       end
   end
 
   # 一节写完这一期就可见：同周其他源晚点到，各自写自己那一节，不动别人的；
   # 阮一峰传 issue_no，同一周两期各占一节，互不覆盖（PRD 异常与边界，R41）；
-  # RSS 周刊源传 append，一周里每天补进来的 entry 接在这一节后面，不重写已发布的条目（R-2.8）
+  # RSS 周刊源传 append，一周里每天补进来的 entry 接在这一节后面，不重写已发布的条目（R-2.8）。
+  # 返回同源重复地址被去掉的条数（replace_section!/append_section! 的返回值），调用方
+  # （class 方法 bind!）计进 FetchRun 的 dropped_count，跟日刊路径一致。
   def write_section!(source, entries, issue_no: nil, append: false)
     transaction do
       kept = entries.select(&:valid?)
-      if append
+      deduped = if append
         append_section!(source, kept)
       else
         replace_section!(source, kept, issue_no: issue_no)
       end
 
-      # 周刊有节就有内容（R-2.7 一条都没有不建期），降级 stub 也算数：degraded 记在条目的 meta 里
-      update!(state: "published", published_at: published_at || Time.current,
-        source_states: source_states.merge(source.id => "ok"))
+      # 周刊有节就有内容（R-2.7 一条都没有不建期），降级 stub 也算数：degraded 记在条目的 meta 里。
+      # 不同源各自的 write_section! 可能前后脚落地：merge 前 with_lock 一下，读到的才是
+      # 别的源刚提交的最新 source_states，不然后写的会拿着自己读进来的旧值把它覆盖掉
+      # （跟 Issue::Finalization#finalize! 的 with_lock 是同一个道理）。
+      with_lock do
+        update!(state: "published", published_at: published_at || Time.current,
+          source_states: source_states.merge(source.id => "ok"))
+      end
+
+      deduped
     end
   end
 

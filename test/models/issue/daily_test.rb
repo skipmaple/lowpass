@@ -188,6 +188,25 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert_equal "ok", issue.source_state(sources(:hn)), "别的栏不受影响"
   end
 
+  # revise! 不加锁的话，两个各自 Issue.find 出来的实例（对应两个栏各自的重抓请求）先后写
+  # source_states 时，后写的会拿着自己读进来的旧值 merge，把先写的那栏刚提交的结果盖掉。
+  # 两个源都是这份 source_states 里本来没有的新键（不能借用 hn/github/hackaday：它们在
+  # fixture 里已经有值，若后写那次刚好把同一个键 merge 回同一个值，ActiveRecord 会认为这一
+  # 列没有脏改动而整列不发 UPDATE，测试就算不加锁也侥幸通过，测不出这里要防的并发覆盖）。
+  test "两栏先后重抓，source_states 都保留（合并读的是最新值）" do
+    issue = issues(:daily_0908)
+    source_a = Source.create!(name: "日刊源 A", adapter: "rss", publication: "daily", sort_order: 10, config: { feed_url: "https://a.example/feed" })
+    source_b = Source.create!(name: "日刊源 B", adapter: "rss", publication: "daily", sort_order: 11, config: { feed_url: "https://b.example/feed" })
+    Adapters::Rss.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "t", url: "https://x/1") ])
+    first = Issue.find(issue.id)
+    second = Issue.find(issue.id)
+
+    Issue.regenerate_source!(first, source_a)
+    Issue.regenerate_source!(second, source_b)
+
+    assert_equal(issue.source_states.merge(source_a.id => "ok", source_b.id => "ok"), issue.reload.source_states)
+  end
+
   test "重抓拿到 0 条则这一栏是今日无新内容" do
     issue = issues(:daily_0908)
     Adapters::HackerNews.any_instance.stubs(:fetch).returns([])

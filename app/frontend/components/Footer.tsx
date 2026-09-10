@@ -76,11 +76,10 @@ function Stamp() {
       width={48}
       height={48}
       fill="none"
-      stroke="var(--ink)"
       strokeWidth={1.6}
       aria-hidden="true"
       focusable="false"
-      style={{ display: 'block', flex: 'none' }}
+      style={{ display: 'block', flex: 'none', stroke: 'var(--ink)' }}
     >
       <circle cx="32" cy="32" r="29" />
       <circle cx="32" cy="32" r="23" strokeDasharray="3 3" strokeWidth="1" />
@@ -88,11 +87,10 @@ function Stamp() {
         x="32"
         y="37"
         textAnchor="middle"
-        fontFamily="var(--font-brand)"
         fontSize="15"
         fontWeight="900"
-        fill="var(--ink)"
         stroke="none"
+        style={{ fontFamily: 'var(--font-brand)', fill: 'var(--ink)' }}
       >
         LP
       </text>

@@ -1,10 +1,9 @@
+@import "tailwindcss";
+
 @import "../styles/fonts.css";
 @import "../styles/tokens.css";
 
-@import 'tailwindcss';
-
 @plugin '@tailwindcss/typography';
-@plugin '@tailwindcss/forms';
 
 /* shadcn 的组件只作可及性与键盘行为的底座，外观全部由令牌覆盖：
    圆角与阴影归零，语义色映射到墨与纸。 */

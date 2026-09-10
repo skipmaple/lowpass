@@ -39,6 +39,12 @@ a { color: inherit; text-decoration: none; }
 a.t { text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 a.t:hover { text-decoration-color: var(--ink); }
 
+/* Inertia 页面跳转进度条（NProgress）。application.tsx 里 includeCSS: false，
+   自己写这份最小样式：墨色细线，没有光晕、没有圆角、没有小圆点/转圈图标。 */
+#nprogress { pointer-events: none; }
+#nprogress .bar { background: var(--ink); position: fixed; z-index: 1031; top: 0; left: 0; width: 100%; height: 2px; }
+#nprogress .peg, #nprogress .spinner { display: none; }
+
 /* 纸张：桌面 1240px 居中；报头黑带整宽，其余内容留边 */
 .sheet { width: 1240px; max-width: 100%; margin: 32px auto; box-sizing: border-box; }
 .sheet-body { padding: 0 40px 28px 40px; }
@@ -50,8 +56,17 @@ a.t:hover { text-decoration-color: var(--ink); }
 .masthead-nav { display: flex; gap: 26px; }
 .masthead-actions { display: flex; align-items: center; gap: 22px; }
 
+/* 桌面报头在窄桌面/大手机（480–767px）容不下 40px 两侧边距：品牌 LOWPASS ≈221px +
+   40 间距 + 导航 86px（左组 347px）+ 22 间距 + 搜索 20px + 账户 32px（右组 74px）
+   = 421px 最小内容宽度；481px 视口减两侧 40px 边距只剩 401px，装不下（实测 masthead-left
+   右边缘与 masthead-actions 左边缘重合于 x=386.9，右侧 40px 边距被压缩到 20px）。
+   收窄边距到 24px 后可用宽度变 481-48=433px ≥ 421px，够装（实测确认无溢出）。 */
+@media (max-width: 767px) {
+  .masthead { padding: 0 24px; }
+}
+
 /* 手机：整宽贴边，内容 24px 边距；报头收到 56px，品牌字 26（令牌表：品牌 40 桌面 / 26 手机） */
-@media (max-width: 390px) {
+@media (max-width: 480px) {
   .sheet { margin: 0; }
   .sheet-body { padding: 0 24px 32px 24px; }
   .masthead { height: 56px; padding: 0 24px; }

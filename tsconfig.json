@@ -10,8 +10,7 @@
   ],
   "compilerOptions": {
     "paths": {
-      "@/*": ["./app/frontend/*"],
-      "~/*": ["./app/frontend/*"]
+      "@/*": ["./app/frontend/*"]
     }
   }
 }

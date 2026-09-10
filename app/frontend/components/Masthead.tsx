@@ -40,13 +40,12 @@ function StrokeIcon({ size, children }: React.PropsWithChildren<{ size: number }
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke="var(--paper)"
       strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
-      style={{ flex: 'none', display: 'block' }}
+      style={{ flex: 'none', display: 'block', stroke: 'var(--paper)' }}
     >
       {children}
     </svg>

@@ -4,6 +4,8 @@
 
 - [mise](https://mise.jdx.dev/)：钉住 Ruby 与 Node 版本，见 `.mise.toml`。
 - Docker：本地 PostgreSQL 以容器运行，见下文；不需要本机装 PostgreSQL 或 `psql`。
+- Google Chrome：系统测试（`bin/rails test:system`，`bin/ci` 的一步）用无头 Chrome 跑真浏览器。
+  chromedriver 不用手装，selenium-webdriver 自己下（Selenium Manager）。
 
 ## 首次搭建
 
@@ -17,7 +19,9 @@ bin/setup
 2. 把 Git 的 `core.hooksPath` 指到 `.githooks`（见下文「提交前检查」）。
 3. `bundle install`、`npm install`。
 4. 若本机 5432 端口没有服务在监听，启动（不存在则新建）名为 `lowpass-postgres` 的
-   `postgres:16` 容器，用户名与密码均为 `postgres`，映射到 `127.0.0.1:5432`。
+   `postgres:16` 容器，用户名与密码均为 `postgres`，只发布到 `127.0.0.1:5432`（默认口令不该
+   跟着局域网走），然后轮询容器里的 `pg_isready`，最多等 30 秒。加 `--skip-server` 参数就整段
+   跳过（`config/ci.rb` 的 Setup 步骤与 CI 里的 postgres service 自己管数据库）。
 5. `bin/rails db:prepare`（加 `--reset` 参数则改为 `bin/rails db:reset`）。
 6. 清理 `log/`、`tmp/`。
 
@@ -121,8 +125,9 @@ docker rm lowpass-postgres      # 删除，数据一并丢失
 ## 测试与 CI
 
 ```
-bin/rails test   # 快速循环，不连网络
-bin/ci           # 合并门禁，见 config/ci.rb
+bin/rails test          # 快速循环，不连网络
+bin/rails test:system   # 无头 Chrome 里读一期日刊（test/system/reading_test.rb）
+bin/ci                  # 合并门禁，见 config/ci.rb
 ```
 
 `bin/ci` 依次跑：Setup（`bin/setup --skip-server`）、Style: Ruby（`bin/rubocop`）、Frontend: typecheck
@@ -130,7 +135,9 @@ bin/ci           # 合并门禁，见 config/ci.rb
 Security: Gem audit（`bin/bundler-audit`）、Security: Brakeman code analysis、Security: Secrets
 （`gitleaks detect --source . --no-banner --redact`，规则继承自 gitleaks 内置集，豁免的误报与理由见
 仓库根目录的 `.gitleaks.toml`）、Frontend: build for tests（`env RAILS_ENV=test bin/vite build --mode
-test`）、Tests: Rails（`bin/rails test`）、Tests: Seeds（`RAILS_ENV=test bin/rails db:seed:replant`）。
+test`）、Tests: Rails（`bin/rails test`）、Tests: System（`bin/rails test:system`，要本机有 Chrome）、
+Tests: Seeds（`RAILS_ENV=test bin/rails db:seed:replant`，验的是 `db/seeds.rb` 预置的 4 个源在
+任何环境都建得出来）。
 「Frontend: build for tests」先出一份 test 模式的 Vite 构建产物，避开下一步并行测试 worker 抢着触发
 `autoBuild`（`config/vite.json` 里 test 环境开着）的竞态——不这么做偶尔会在并行跑测试时炸出 `Vite
 test manifest missing entrypoints/application.css`；`autoBuild` 本身留着，单独跑 `bin/rails test` 不受

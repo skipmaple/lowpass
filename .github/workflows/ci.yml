@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
 
       - name: Checkout code
         uses: actions/checkout@v6
@@ -146,7 +146,7 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
 
       - name: Checkout code
         uses: actions/checkout@v6
@@ -166,8 +166,9 @@ jobs:
         run: npm ci
 
       # autoBuild 在测试 worker 并行请求时会撞车（见 config/ci.rb 同一个步骤的注释，以及上面
-      # test job 的「Build frontend test bundle」）。system:test 还没有系统测试用例，这一步先
-      # 落好，等系统测试出现后这个 job 不会立刻撞上同样的竞态。RAILS_ENV 必须显式传，理由同上。
+      # test job 的「Build frontend test bundle」）。系统测试真的会在浏览器里加载这份产物，
+      # 这一步不能省。RAILS_ENV 必须显式传，理由同上。
+      # 浏览器：ubuntu-latest 自带 Chrome，chromedriver 由 selenium-webdriver 自己下（Selenium Manager）。
       - name: Build frontend test bundle
         env:
           RAILS_ENV: test

@@ -28,10 +28,10 @@ CI.run do
   # 之后再来的 --mode test 已经晚了，产物会悄悄写进 public/vite-dev 而不是 public/vite-test。
   step "Frontend: build for tests", "env RAILS_ENV=test bin/vite build --mode test"
   step "Tests: Rails", "bin/rails test"
+  # 系统测试要一个真的浏览器：本机装了 Chrome 才跑得起来（见 docs/development.md）。
+  # chromedriver 由 selenium-webdriver 自己下（Selenium Manager），不用另外装。
+  step "Tests: System", "bin/rails test:system"
   step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"
-
-  # Optional: Run system tests
-  # step "Tests: System", "bin/rails test:system"
 
   # Optional: set a green GitHub commit status to unblock PR merge.
   # Requires the `gh` CLI and `gh extension install basecamp/gh-signoff`.

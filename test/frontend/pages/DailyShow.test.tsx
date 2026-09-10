@@ -207,23 +207,47 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
 })
 
 describe('按 hash 定位（搜索结果的所在期）', () => {
-  it('挂载后把 #item-<id> 那一行滚进视口', () => {
-    const scroll = vi.fn()
-    Element.prototype.scrollIntoView = scroll
+  // Inertia 自己的 scrollToAnchor 排在一个 setTimeout 里，中文锚点它找不到就滚回顶部（lib/anchors.ts 的注释）；
+  // 我们的滚动也排进 setTimeout 才压得过它，所以这里用假时钟：挂载后不滚，时钟走完才滚一次
+  beforeEach(() => {
+    vi.useFakeTimers()
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('挂载后在下一个宏任务里把 #item-<id> 那一行滚进视口', () => {
     window.history.replaceState({ page: 'daily' }, '', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
 
     const { container } = show()
+    expect(scroll).not.toHaveBeenCalled()
+
+    vi.runAllTimers()
 
     expect(scroll).toHaveBeenCalledTimes(1)
     expect(scroll.mock.contexts[0]).toBe(container.querySelector('#item-itm-hn-1'))
   })
 
   it('没有 hash 或找不到元素时什么都不做', () => {
-    const scroll = vi.fn()
-    Element.prototype.scrollIntoView = scroll
     window.history.replaceState({ page: 'daily' }, '', '/daily/2026-09-08#item-nope')
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
 
     show()
+    vi.runAllTimers()
+
+    expect(scroll).not.toHaveBeenCalled()
+  })
+
+  it('卸载后不再滚动', () => {
+    window.history.replaceState({ page: 'daily' }, '', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+
+    const { unmount } = show()
+    unmount()
+    vi.runAllTimers()
 
     expect(scroll).not.toHaveBeenCalled()
   })

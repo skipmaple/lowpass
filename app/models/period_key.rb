@@ -32,6 +32,9 @@ class PeriodKey
       weekly_key[-2, 2].to_i
     end
 
+    # 期头、归档与搜索结果里的中文日期短语（PRD 6.3：「9月8日」按中文处理，整体用文楷）
+    def date_label(date) = "#{date.month}月#{date.day}日"
+
     # 归档一页一年（PRD 6.2）：这一年全部的 ISO 周键。12月28日 总落在这一年的最后一个 ISO 周里，
     # 所以 2026 有 53 周而 2025 只有 52 周——2025-W53 不存在，week_range 会抛错，控制器据此 404。
     def weeks_in(year)

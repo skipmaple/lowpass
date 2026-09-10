@@ -18,7 +18,7 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
       <div className="source-state source-state-failed">
         <Sunrise className="source-state-art" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontFamily: 'var(--font-cjk)', fontSize: 'var(--fs-20)' }}>今日抓取失败，已通知管理员</span>
+          <span className="state-line">今日抓取失败，已通知管理员</span>
           {lastOkLabel ? <Mixed text={`上次成功 ${lastOkLabel}`} /> : null}
         </div>
       </div>
@@ -28,7 +28,7 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
   if (state === 'empty') {
     return (
       <div className="source-state">
-        <span style={{ fontFamily: 'var(--font-cjk)', fontSize: 'var(--fs-20)' }}>今日无新内容</span>
+        <span className="state-line">今日无新内容</span>
       </div>
     )
   }

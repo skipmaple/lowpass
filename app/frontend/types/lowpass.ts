@@ -1,5 +1,5 @@
 export type Adapter = "hacker_news" | "github_trending" | "rss" | "ruanyf_weekly";
-export type SourceSummary = { id: string; name: string; adapter: Adapter; state: "ok" | "empty" | "failed" | "pending"; home_url: string; last_ok_label: string | null };
+export type SourceSummary = { id: string; name: string; adapter: Adapter; state: "ok" | "empty" | "failed" | "pending"; home_url: string | null; last_ok_label: string | null };
 export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean };
 export type Item = { id: string; title: string; url: string; summary: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";

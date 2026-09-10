@@ -6,8 +6,9 @@ module Issue::Presenting
   class_methods do
     # 期头要的一切。缺期时 issue 是 nil，日期、星期与前后期仍然从周期键与库里算得出来。
     # 状态文案在这里定稿而不是留给前端：没有开 SSR，页面上读得到的每个字符串都得先进 props。
-    def daily_props_for(period_key, now: Time.current)
-      issue = daily.find_by(period_key: period_key)
+    # 调用方已经查过这一期就用 issue: 传进来（缺期传 nil），省掉一次查询；不传才自己查。
+    def daily_props_for(period_key, issue: :lookup, now: Time.current)
+      issue = daily.find_by(period_key: period_key) if issue == :lookup
       date = PeriodKey.date_of(period_key)
       daily_time = Setting.get("daily_time")
       is_yesterday = yesterdays_issue?(period_key, now, daily_time)

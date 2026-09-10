@@ -92,7 +92,8 @@ export default function IssueHead({ issue, archiveHref, hrefFor }: IssueHeadProp
           <div className="issue-head-title">
             <h1 className="issue-head-date">{issue.date_label}</h1>
             <div className="issue-head-stack">
-              {issue.time_label ? <Mixed text={issue.time_label} nowrap /> : null}
+              {/* 字号走 .issue-head-time（桌面 13、手机 12，画布 head_m 是 12）：行内样式盖不住 @media */}
+              {issue.time_label ? <Mixed text={issue.time_label} className="issue-head-time" size="inherit" nowrap /> : null}
               <span className="issue-head-weekday">{issue.weekday}</span>
             </div>
           </div>

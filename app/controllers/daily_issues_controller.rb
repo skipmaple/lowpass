@@ -15,7 +15,7 @@ class DailyIssuesController < ApplicationController
       sources = Issue.daily_source_summaries(issue)
 
       render inertia: "Daily/Show", props: {
-        issue: Issue.daily_props_for(period_key),
+        issue: Issue.daily_props_for(period_key, issue: issue),
         missing: issue.nil?,
         sources: sources,
         items_by_source: issue&.items_by_source || {},

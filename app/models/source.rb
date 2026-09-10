@@ -31,11 +31,12 @@ class Source < ApplicationRecord
   end
 
   private
+    # feed 地址不是 http(s)（配错了、写成裸域名、写成 file:）就没有栏尾外链可去：
+    # 返回 nil，页面把整条外链收掉，而不是渲染一个点不开的链接。
     def feed_home_url
-      feed = config["feed_url"].to_s
-      uri = URI.parse(feed)
-      uri.host.present? ? "#{uri.scheme}://#{uri.host}/" : feed
+      uri = URI.parse(config["feed_url"].to_s)
+      "#{uri.scheme}://#{uri.host}/" if uri.is_a?(URI::HTTP) && uri.host.present?
     rescue URI::InvalidURIError
-      feed
+      nil
     end
 end

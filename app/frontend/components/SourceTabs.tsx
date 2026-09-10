@@ -11,18 +11,20 @@ import type { SourceSummary } from '@/types/lowpass'
 // 画布：docs/design/src/pages_front3.py 的 tabs() 与 tabs_m()。
 
 // 栏级状态直接标在索引条的名字下面（PRD 6.2）；ok 与 pending 不占这一行。
+// 用画布 tabs(kickers=…) 的短形：这一行是索引条上的小字，长句留给列表区。
 const STATE_LINES: Record<SourceSummary['state'], string | null> = {
   ok: null,
   pending: null,
-  failed: '今日抓取失败',
+  failed: '抓取失败',
   empty: '今日无新内容',
 }
 
-export type SourceTabsProps = React.PropsWithChildren<{
+export type SourceTabsProps = {
   sources: SourceSummary[]
   activeId: string
   onSelect: (id: string) => void
-}>
+  children: (source: SourceSummary) => React.ReactNode
+}
 
 export default function SourceTabs({ sources, activeId, onSelect, children }: SourceTabsProps) {
   return (
@@ -39,7 +41,13 @@ export default function SourceTabs({ sources, activeId, onSelect, children }: So
         ))}
       </Tabs.List>
 
-      <Tabs.Content value={activeId}>{children}</Tabs.Content>
+      {/* 每个源都摆一个面板，好让每条 trigger 的 aria-controls 指得到自己的 tabpanel；
+          非当前的面板 Radix 自己会卸载，所以列多少个源都不多渲染一条条目。 */}
+      {sources.map((source) => (
+        <Tabs.Content key={source.id} value={source.id}>
+          {children(source)}
+        </Tabs.Content>
+      ))}
     </Tabs.Root>
   )
 }

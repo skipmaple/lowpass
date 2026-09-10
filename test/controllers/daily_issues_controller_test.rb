@@ -23,6 +23,9 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "本期未生成"
     assert page_props["missing"]
+    # 期头小签与列表区那句事实句读的是同一个 status（附录 B 一句话两处用）
+    assert_equal "本期未生成", page_props.dig("issue", "status")
+    assert_nil page_props.dig("issue", "state")
   end
 
   test "非法周期键 404" do
@@ -75,6 +78,14 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "06:12 发布", issue["time_label"]
     assert_equal "已于 06:42 修订", issue["status"]
     assert_equal "06:00", issue["daily_time"]
+  end
+
+  # PRD 5.1：HN 的评论数要链到讨论页，地址得先进 props（没有开 SSR）
+  test "HN 条目的元数据带评论区地址" do
+    get daily_issue_path("2026-09-08")
+
+    row = page_props["items_by_source"].fetch(sources(:hn).id).first
+    assert_equal "https://news.ycombinator.com/item?id=41000001", row.dig("meta", "comments_url")
   end
 
   test "条目按 rank 分到各自的来源，摘要截到 200 字" do

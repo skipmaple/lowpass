@@ -122,12 +122,33 @@ docker stop lowpass-postgres    # 停止
 docker rm lowpass-postgres      # 删除，数据一并丢失
 ```
 
+## 搜索
+
+PostgreSQL 内建（ADR T7、设计文档 `docs/superpowers/specs/2026-09-11-p1-search-design.md`）：`pg_trgm` 由迁移启用
+（开发容器与生产 accessory 都是超级用户连接，`db:prepare` 就够）。索引表 `search_records` 由 `Item` 的
+`Searchable` 回调与装订（`Issue::Sections`）维护，不需要手动刷新；第一次跑完这批迁移、或怀疑索引不对时重建：
+
+```
+bin/rails search:rebuild
+```
+
+验收：把 50 条真实查询一行一条写进文件，跑
+
+```
+mise exec -- ruby script/search_eval queries.txt
+```
+
+打印每条的结果数与耗时、p50 / p95 与有结果率（目标 ≥ 85%，p95 < 500 ms）。调参的位置都在
+`app/models/search/runner.rb`：四列权重 `WEIGHTS`、拼写容错阈值 `similarity_threshold`（5 到 8 字符 0.55、
+9 字符起 0.45）与索引粗筛的下限 `SIMILARITY_FLOOR`；拆词规则在 `app/models/search/query.rb`。搜索日志
+（`search_logs`，30 天）与结果点击（`search_clicks`，90 天）由每天 04:00 的清理一并删。
+
 ## 测试与 CI
 
 ```
 bin/rails test          # 快速循环，不连网络
 npm test                # 前端单元测试（Vitest，jsdom），npm run test:watch 是监视模式
-bin/rails test:system   # 无头 Chrome 里读一期日刊（test/system/reading_test.rb）
+bin/rails test:system   # 无头 Chrome 里读一期日刊、搜一条并回到所在期（test/system/reading_test.rb、searching_test.rb）
 bin/ci                  # 合并门禁，见 config/ci.rb
 ```
 

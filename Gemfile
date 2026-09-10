@@ -4,7 +4,7 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.3", ">= 8.1.3.1"
 # json 3.0 改了 JSON.parse 的参数签名，ActiveSupport::JSON.decode（jsonb 列读写都走它）传两个位置参数会报
 # ArgumentError；锁在 2.x 直到 Rails 跟上 json 3.0。
-gem "json", "< 3"
+gem "json", "< 4"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record

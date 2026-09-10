@@ -5,6 +5,7 @@
 class Search::Highlighter
   LEAD = 40    # 首个命中前留的字数
   BODY = 158   # 片段正文上限：两端各加一个「…」正好 160（R-4.6「片段不超过 160 字」）
+  SLACK = 20   # 为了不切在词中间最多挪这么多字：再长的连续字符串（地址、仓库名）就照切，预算不能让给它
   LATIN = /[\p{L}\p{N}]/
 
   def initialize(terms)
@@ -45,20 +46,20 @@ class Search::Highlighter
       @patterns.filter_map { |pattern| text.index(pattern) }.min
     end
 
-    # 起点落在拉丁词中间就往后挪到下一个空格之后（不越过命中）
+    # 起点落在拉丁词中间就往后挪到下一个空格之后（不越过命中，最多挪 SLACK 字）
     def word_start(text, start, first)
       return start if start.zero? || !latin_boundary?(text, start)
 
       gap = text.index(/\s/, start)
-      gap && first && gap < first ? gap + 1 : start
+      gap && first && gap < first && gap - start <= SLACK ? gap + 1 : start
     end
 
-    # 终点落在拉丁词中间就往前退到上一个空格（不退进命中里）
+    # 终点落在拉丁词中间就往前退到上一个空格（不退进命中里，最多退 SLACK 字）
     def word_end(text, start, finish, first)
       return finish if finish >= text.length || !latin_boundary?(text, finish)
 
       gap = text.rindex(/\s/, finish)
-      gap && gap > (first || start) + 1 ? gap : finish
+      gap && gap > (first || start) + 1 && finish - gap <= SLACK ? gap : finish
     end
 
     # 位置两侧都是拉丁字母数字：切在这里就是切在词中间

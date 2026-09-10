@@ -64,4 +64,37 @@ class Search::HighlighterTest < ActiveSupport::TestCase
     assert_equal 41, body.index("终端")
     assert body.start_with?("…")
   end
+
+  # 连续不断的长字符串（地址、仓库名）不能把预算吃掉：最多为了词边界挪 20 字，再长就照切
+  test "命中后面跟着超长字符串时片段仍用满预算" do
+    body = joined(highlighter("rust").snippet("Rust " + "z" * 300))
+
+    assert body.start_with?("Rust ")
+    assert body.end_with?("…")
+    assert_operator body.length, :>=, 150
+    assert_operator body.length, :<=, 160
+  end
+
+  test "命中前面是超长字符串时仍留约 40 字的前文" do
+    body = joined(highlighter("terminal").snippet("y" * 200 + " terminal " + "k" * 5))
+
+    assert body.start_with?("…")
+    assert_equal 41, body.index("terminal")
+    assert body.end_with?("terminal kkkkk")
+  end
+
+  test "没有命中且开头是超长字符串时仍取前 158 字" do
+    body = joined(highlighter("rust").snippet("ab " + "q" * 300))
+
+    assert_equal 159, body.length
+    assert body.end_with?("…")
+  end
+
+  test "边界内的短词仍然不被切开" do
+    text = (1..30).map { |i| "w#{i}" }.join(" ") + " terminal log " + ("z " * 120)
+    body = joined(highlighter("terminal").snippet(text))
+
+    assert_match(/\A…w\d+ /, body)
+    assert_match(/ z…\z|z…\z/, body)
+  end
 end

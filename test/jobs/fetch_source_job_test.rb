@@ -9,6 +9,23 @@ class FetchSourceJobTest < ActiveJob::TestCase
     assert_equal 1, FetchRun.where(source: sources(:hn), attempt: 1, status: "failed").count
   end
 
+  test "可重试失败后写入排队记录，重试复用它而不是新增一条" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
+    issue = issues(:daily_0908)
+
+    FetchSourceJob.perform_now(sources(:hn), issue, "scheduled")
+    assert_equal 1, FetchRun.where(source: sources(:hn), issue: issue, attempt: 2, status: "queued").count
+
+    retry_job = FetchSourceJob.new(sources(:hn), issue, "scheduled")
+    retry_job.executions = 1   # 第二次执行，attempt 2
+    retry_job.perform_now
+
+    second = FetchRun.where(source: sources(:hn), issue: issue, attempt: 2)
+    assert_equal 1, second.count
+    assert_equal "failed", second.first.status
+    assert_equal 1, FetchRun.where(source: sources(:hn), issue: issue, attempt: 3, status: "queued").count
+  end
+
   test "429 直接放弃不重试" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Blocked.new("429"))
     assert_no_enqueued_jobs do

@@ -1,4 +1,6 @@
 class Issue < ApplicationRecord
+  include Issue::Daily, Issue::Finalization
+
   has_many :items, dependent: :delete_all
   has_many :fetch_runs, dependent: :nullify
 

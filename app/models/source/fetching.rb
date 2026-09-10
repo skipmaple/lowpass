@@ -6,7 +6,8 @@ module Source::Fetching
   end
 
   def fetch_now(issue, trigger:, attempt: 1)
-    run = fetch_runs.create!(issue: issue, trigger: trigger, attempt: attempt, status: "running", started_at: Time.current)
+    run = fetch_runs.find_by(issue: issue, attempt: attempt, status: "queued") || fetch_runs.new(issue: issue, trigger: trigger, attempt: attempt)
+    run.update!(status: "running", started_at: Time.current)
     entries = adapter_class.new(self).fetch(period_key: (issue.period_key if issue&.kind == "weekly"))
     kept, dropped = entries.partition(&:valid?)
     replace_items(issue, kept) if issue

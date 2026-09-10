@@ -24,6 +24,19 @@ class Source::FetchingTest < ActiveSupport::TestCase
     assert_equal 1, run.dropped_count
   end
 
+  # 归一化之后同一个地址只写一条：item_count 报的是这一栏真的有几条，不是抓到几条
+  test "同源重复地址去重后计进 dropped_count" do
+    entries = [ Adapters::Entry.new(title: "A", url: "https://a.b/1", rank: 1),
+                Adapters::Entry.new(title: "A 又来一次", url: "https://a.b/1?utm_source=x", rank: 2) ]
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns(entries)
+
+    run = sources(:hn).fetch_now(issues(:daily_0908), trigger: "manual")
+
+    assert_equal 1, run.item_count
+    assert_equal 1, run.dropped_count
+    assert_equal [ "A" ], issues(:daily_0908).items.where(source: sources(:hn)).pluck(:title)
+  end
+
   test "失败时记录失败与错误摘要" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "boom")
     error = assert_raises(Adapters::Http::Error) { sources(:hn).fetch_now(issues(:daily_0908), trigger: "manual") }

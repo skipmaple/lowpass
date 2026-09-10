@@ -24,11 +24,13 @@ test:
   database: lowpass_test
 
 production:
-  primary: &primary_production
+  primary:
     <<: *default
     database: lowpass_production
     url: <%= ENV["DATABASE_URL"] %>
+  # 队列库不能继承 primary 的 url：url 里带着库名，两个连接会指向同一个库，
+  # Solid Queue 的表就建到业务库里去了。只继承 default 的主机与凭证。
   queue:
-    <<: *primary_production
+    <<: *default
     database: lowpass_production_queue
     migrations_paths: db/queue_migrate

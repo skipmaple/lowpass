@@ -15,8 +15,10 @@ module Source::Fetching
     else
       entries = adapter_class.new(self).fetch(period_key: (issue.period_key if issue&.kind == "weekly"))
       kept, dropped = entries.partition(&:valid?)
-      issue.replace_section!(self, kept) if issue
-      run.update!(status: "succeeded", item_count: kept.size, dropped_count: dropped.size, duration_ms: elapsed(run))
+      # 同源重复地址在写入时被去掉，也要计进 dropped_count：不然 item_count 报的是抓到几条，
+      # 不是这一栏真的有几条，栏级「今日无新内容」也就判错了
+      deduped = issue ? issue.replace_section!(self, kept) : 0
+      run.update!(status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, duration_ms: elapsed(run))
     end
 
     run

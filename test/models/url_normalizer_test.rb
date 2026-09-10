@@ -9,6 +9,6 @@ class UrlNormalizerTest < ActiveSupport::TestCase
   test "根路径保留斜杠，http 与 https 同哈希" do
     assert_equal "http://example.com/", UrlNormalizer.normalize("http://example.com/")
     assert_equal "https://example.com/x", UrlNormalizer.normalize("https://example.com/x")
-    assert_equal UrlNormalizer.hash("http://example.com/x"), UrlNormalizer.hash("https://example.com/x")
+    assert_equal UrlNormalizer.url_hash("http://example.com/x"), UrlNormalizer.url_hash("https://example.com/x")
   end
 end

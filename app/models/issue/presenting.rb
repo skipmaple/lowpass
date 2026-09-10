@@ -104,7 +104,7 @@ module Issue::Presenting
       year = (year.presence || years.last).to_i
       return unless years.cover?(year)
 
-      keys = week_keys(year).select { |key| key.between?(earliest, current) }.reverse
+      keys = PeriodKey.weeks_in(year).select { |key| key.between?(earliest, current) }.reverse
       issues = weekly.where(period_key: keys).index_by(&:period_key)
 
       {
@@ -116,7 +116,7 @@ module Issue::Presenting
     end
 
     private
-      def week_label(period_key) = "第 #{period_key[-2, 2].to_i} 周"
+      def week_label(period_key) = "第 #{PeriodKey.week_number(period_key)} 周"
 
       def range_label(range)
         "#{range.first.month}月#{range.first.day}日 至 #{range.last.month}月#{range.last.day}日"
@@ -176,11 +176,6 @@ module Issue::Presenting
           # 「这一期是空刊」，缺期的叉留给日刊（archive_day）
           state: issue&.state || "empty"
         }.merge(issue&.weekly_archive_row || { summary: "本周无内容", count: nil })
-      end
-
-      # 12月28日 总在这一年的最后一个 ISO 周里（D10 的周期键就是 ISO 周）
-      def week_keys(year)
-        (1..Date.new(year, 12, 28).cweek).map { |week| format("%d-W%02d", year, week) }
       end
 
       def month_nav(target, month, earliest, today)

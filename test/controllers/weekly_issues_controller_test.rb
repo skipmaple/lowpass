@@ -77,6 +77,15 @@ class WeeklyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  # 2026 有 53 个 ISO 周，2025 只有 52 个：2025-W53 形状合法但不是一周
+  test "52 周那一年的第 53 周 404" do
+    get weekly_issue_path("2026-W53")
+    assert_response :success
+
+    get weekly_issue_path("2025-W53")
+    assert_response :not_found
+  end
+
   test "前后期取相邻的周刊期" do
     Issue.create!(kind: "weekly", period_key: "2026-W35", state: "published",
                   generation_started_at: Time.utc(2026, 8, 28, 1), published_at: Time.utc(2026, 8, 28, 1))

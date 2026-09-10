@@ -16,7 +16,8 @@ class UrlNormalizer
       uri.to_s
     end
 
-    def hash(url)
+    # 不叫 hash：Object#hash 是每个对象都有的方法，同名的类方法读起来像在覆盖它
+    def url_hash(url)
       canonical = normalize(url).sub(/\Ahttp:/, "https:")
       Digest::SHA256.hexdigest(canonical)
     end

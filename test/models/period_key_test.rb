@@ -20,5 +20,19 @@ class PeriodKeyTest < ActiveSupport::TestCase
   test "周范围与日期反解" do
     assert_equal Date.new(2026, 8, 31)..Date.new(2026, 9, 6), PeriodKey.week_range("2026-W36")
     assert_equal Date.new(2026, 9, 8), PeriodKey.date_of("2026-09-08")
+    assert_equal 36, PeriodKey.week_number("2026-W36")
+  end
+
+  # 12月28日 总落在这一年的最后一个 ISO 周里：2026 有 53 周，2025 只有 52 周
+  test "一年的周键数按 ISO 周算" do
+    assert_equal 53, PeriodKey.weeks_in(2026).size
+    assert_equal "2026-W01", PeriodKey.weeks_in(2026).first
+    assert_equal "2026-W53", PeriodKey.weeks_in(2026).last
+    assert_equal 52, PeriodKey.weeks_in(2025).size
+  end
+
+  test "不存在的第 53 周抛错" do
+    assert_equal Date.new(2026, 12, 28)..Date.new(2027, 1, 3), PeriodKey.week_range("2026-W53")
+    assert_raises(ArgumentError) { PeriodKey.week_range("2025-W53") }
   end
 end

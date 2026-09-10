@@ -37,12 +37,18 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert issue.reload.empty?
   end
 
+  # AC-1.7 适配器返回 0 条是成功，不是失败：记录记 succeeded / 0，栏内说「今日无新内容」
   test "源成功但 0 条视为成功，状态是无新内容" do
     stub_all(Adapters::HackerNews => [ Adapters::Entry.new(title: "h", url: "https://h/1") ], Adapters::GithubTrending => [], Adapters::Rss => [])
     issue = Issue.generate_daily!("2026-09-10")
     perform_enqueued_jobs
     assert issue.reload.published?
     assert_equal "empty", issue.source_state(sources(:github))
+
+    run = issue.fetch_runs.where(source: sources(:github)).ordered.first
+    assert_equal "succeeded", run.status
+    assert_equal 0, run.item_count
+    assert_equal 0, run.dropped_count
   end
 
   test "期级超时按已完成结果发布" do
@@ -131,7 +137,7 @@ class Issue::DailyTest < ActiveSupport::TestCase
   test "重抓成功整栏替换并写修订时间" do
     issue = issues(:daily_0908)
     kept = Item.create!(source: sources(:github), issue: issue, title: "g", url: "https://g/1",
-                        url_hash: UrlNormalizer.hash("https://g/1"), fetched_at: Time.current)
+                        url_hash: UrlNormalizer.url_hash("https://g/1"), fetched_at: Time.current)
     Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "新", url: "https://h/new") ])
 
     Issue.regenerate_source!(issue, sources(:hn))

@@ -12,7 +12,7 @@ class Adapters::EntryTest < ActiveSupport::TestCase
     attrs = entry.to_item_attributes(source: sources(:hn), issue: issues(:daily_0908))
     assert_equal "标题", attrs[:title]
     assert_equal "hi", attrs[:summary]
-    assert_equal UrlNormalizer.hash("https://A.b/x/"), attrs[:url_hash]
+    assert_equal UrlNormalizer.url_hash("https://A.b/x/"), attrs[:url_hash]
     assert_equal sources(:hn).id, attrs[:source_id]
   end
 

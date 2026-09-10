@@ -27,6 +27,17 @@ class PeriodKey
       monday..(monday + 6)
     end
 
+    def week_number(weekly_key)
+      raise ArgumentError, weekly_key unless weekly_key.match?(WEEKLY)
+      weekly_key[-2, 2].to_i
+    end
+
+    # 归档一页一年（PRD 6.2）：这一年全部的 ISO 周键。12月28日 总落在这一年的最后一个 ISO 周里，
+    # 所以 2026 有 53 周而 2025 只有 52 周——2025-W53 不存在，week_range 会抛错，控制器据此 404。
+    def weeks_in(year)
+      (1..Date.new(year, 12, 28).cweek).map { |week| format("%d-W%02d", year, week) }
+    end
+
     private
       def local(time)
         time.in_time_zone(ZONE)

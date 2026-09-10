@@ -43,14 +43,37 @@ class SchedulerTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: WeeklyCheckJob) { Scheduler.tick(now: sh("2026-09-10 08:59:00")) }
   end
 
-  test "04:02 清理抓取记录" do
+  test "过了 04:00 清理一次抓取记录" do
     FetchRun.expects(:cleanup).once
     Scheduler.tick(now: sh("2026-09-10 04:02:10"))
+    assert_equal "2026-09-10", Setting.get("cleaned_on")
   end
 
-  test "其余时间不清理抓取记录" do
+  test "未到 04:00 不清理" do
     FetchRun.expects(:cleanup).never
-    Scheduler.tick(now: sh("2026-09-10 04:03:00"))
+    Scheduler.tick(now: sh("2026-09-10 03:59:00"))
+  end
+
+  test "当天已经清过就不再清" do
+    Scheduler.tick(now: sh("2026-09-10 04:02:10"))
+
+    FetchRun.expects(:cleanup).never
+    Scheduler.tick(now: sh("2026-09-10 09:30:00"))
+  end
+
+  # 04:02 那一分钟的 tick 错过了（服务停过、机器睡过）也要补上，不能整天不清
+  test "错过清理那一分钟后照样补跑" do
+    FetchRun.expects(:cleanup).once
+    Scheduler.tick(now: sh("2026-09-10 07:05:00"))
+    assert_equal "2026-09-10", Setting.get("cleaned_on")
+  end
+
+  test "清理标记跨天重置" do
+    Scheduler.tick(now: sh("2026-09-10 04:02:10"))
+
+    FetchRun.expects(:cleanup).once
+    Scheduler.tick(now: sh("2026-09-11 04:02:10"))
+    assert_equal "2026-09-11", Setting.get("cleaned_on")
   end
 
   test "一步出错不影响其他步" do

@@ -48,7 +48,7 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert_equal (1..entries.size).to_a, entries.map(&:rank)
     assert entries.all? { |e| e.section.present? && e.meta[:issue_no].is_a?(Integer) }
     # 归一化会丢掉 fragment，回退地址只能靠 ?item= 区分，否则同期条目在 url_hash 唯一索引上撞车
-    assert_equal entries.size, entries.map { |e| UrlNormalizer.hash(e.url) }.uniq.size
+    assert_equal entries.size, entries.map { |e| UrlNormalizer.url_hash(e.url) }.uniq.size
   end
 
   test "条目少于 5 条降级" do
@@ -255,7 +255,7 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
 
     assert_equal 2, quotes.size
     assert quotes.all? { |e| e.url.include?("?item=") }, quotes.map(&:url).inspect
-    assert_equal 2, quotes.map { |e| UrlNormalizer.hash(e.url) }.uniq.size
+    assert_equal 2, quotes.map { |e| UrlNormalizer.url_hash(e.url) }.uniq.size
     assert entries.all?(&:valid?)
   end
 

@@ -18,6 +18,7 @@ module Issue::Finalization
       states = daily_sources.index_by(&:id).transform_values { |source| finalized_state(source) }
       published = states.value?("ok") || states.value?("empty")
       update!(state: published ? "published" : "empty", published_at: Time.current, source_states: states)
+      Rails.logger.info { "Issue #{period_key} finalized as #{state} (#{reason}): #{states.values.tally.to_a.map { |s, n| "#{s} #{n}" }.join(", ")}" }
     end
   end
 

@@ -10,7 +10,7 @@ module Adapters
         issue_id: issue.id,
         title: title.to_s.strip[0, 300],
         url: url.to_s.strip[0, 2048],
-        url_hash: UrlNormalizer.hash(url),
+        url_hash: UrlNormalizer.url_hash(url),
         summary: SummaryCleaner.clean(summary),
         section: section&.strip&.slice(0, 100),
         author: author&.strip&.slice(0, 100),

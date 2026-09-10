@@ -1,3 +1,7 @@
+require "digest"
+require "securerandom"
+require "zlib"
+
 module Lowpass
   module Uuid
     BASE36_LENGTH = 25 # 36^25 > 2^128

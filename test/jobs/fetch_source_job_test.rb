@@ -27,6 +27,26 @@ class FetchSourceJobTest < ActiveJob::TestCase
     assert_equal 1, FetchRun.where(source: sources(:hn), issue: issue, attempt: 3, status: "queued").count
   end
 
+  # 退避是 30 秒、120 秒（WAITS）：重试挤在一起对上游没意义，也赶不上 20 分钟的期级超时
+  test "两次重试分别等 30 秒与 120 秒" do
+    freeze_time do
+      Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
+      issue = Issue.generate_daily!("2026-09-17")
+
+      clear_enqueued_jobs
+
+      assert_enqueued_with(job: FetchSourceJob, at: 30.seconds.from_now) do
+        FetchSourceJob.perform_now(sources(:hn), issue, "scheduled")
+      end
+
+      # 退避读的是这个 job 自己的重试记账：接着上一步排出来的那个 job 往下跑，才轮得到 120 秒
+      second = ActiveJob::Base.deserialize(enqueued_jobs.last)
+      clear_enqueued_jobs
+
+      assert_enqueued_with(job: FetchSourceJob, at: 120.seconds.from_now) { second.perform_now }
+    end
+  end
+
   test "429 直接放弃不重试" do
     Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Blocked.new("429"))
     issue = Issue.generate_daily!("2026-09-16")

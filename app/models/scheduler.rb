@@ -1,6 +1,7 @@
 # R-1.1 调度是每分钟一次的 tick，读数据库里的生成时间；错过的（服务停过、机器睡过）由同一次 tick 补跑
 class Scheduler
   LATE_AFTER = 1.minute
+  CLEANUP_TIME = "04:00".freeze
 
   def self.tick(now: Time.current)
     new(now).tick
@@ -45,8 +46,14 @@ class Scheduler
       Setting.set("weekly_checked_on", today)
     end
 
+    # F-26 抓取记录保留 30 天。跟周刊检查一样按上海时区的自然日记账：只认「今天清过没有」，
+    # 不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
     def cleanup_if_due
-      FetchRun.cleanup if @now.hour == 4 && @now.min == 2
+      today = PeriodKey.daily(@now)
+      return if @now < today_at(CLEANUP_TIME) || Setting.get("cleaned_on") == today
+
+      FetchRun.cleanup
+      Setting.set("cleaned_on", today)
     end
 
     def today_at(hhmm)

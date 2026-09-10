@@ -2,6 +2,17 @@ class SummaryCleaner
   STORE_LIMIT = 500
   PREVIEW_LIMIT = 200
 
+  # 强调标记只在成对、且两头都落在词边界上时才算排版：snake_case、some_repo_name 里的下划线
+  # 是内容不是标记（GitHub Trending 一栏的仓库名与 HN 标题里到处都是），星号同理。
+  # 行内代码没有这个问题，一对反引号就是一对。
+  EMPHASIS = [
+    /(?<![[:word:]*])\*\*(?![[:space:]])(.+?)(?<![[:space:]])\*\*(?![[:word:]*])/m,
+    /(?<![[:word:]_])__(?![[:space:]])(.+?)(?<![[:space:]])__(?![[:word:]_])/m,
+    /(?<![[:word:]*])\*(?![[:space:]])(.+?)(?<![[:space:]])\*(?![[:word:]*])/m,
+    /(?<![[:word:]_])_(?![[:space:]])(.+?)(?<![[:space:]])_(?![[:word:]_])/m,
+    /`([^`]*)`/
+  ].freeze
+
   class << self
     def clean(text)
       return nil if text.nil?
@@ -20,11 +31,12 @@ class SummaryCleaner
       end
 
       def strip_markdown(text)
-        text.gsub(/!\[[^\]]*\]\([^)]*\)/, "")            # 图片
+        stripped = text.gsub(/!\[[^\]]*\]\([^)]*\)/, "")  # 图片
             .gsub(/\[([^\]]+)\]\([^)]*\)/, '\1')          # 链接保留文字
             .gsub(/^\s{0,3}\#{1,6}\s+/, "")               # 标题
-            .gsub(/(\*\*|__|\*|_|`)/, "")                 # 强调与代码
             .gsub(/^\s*[-*+]\s+/, "")                     # 列表符
+
+        EMPHASIS.reduce(stripped) { |s, marker| s.gsub(marker, '\1') }  # 强调与代码
       end
 
       def truncate(s, limit)

@@ -11,10 +11,10 @@ class Scheduler
   end
 
   def tick
-    generate_daily_if_due
-    finalize_stale_issues
-    check_weekly_if_due
-    cleanup_if_due
+    step(:generate_daily_if_due)
+    step(:finalize_stale_issues)
+    step(:check_weekly_if_due)
+    step(:cleanup_if_due)
   end
 
   private
@@ -52,5 +52,12 @@ class Scheduler
     def today_at(hhmm)
       hour, min = hhmm.split(":").map(&:to_i)
       @now.change(hour: hour, min: min, sec: 0)
+    end
+
+    # 一步出错不拖累其他步：记到错误报告里，下一分钟的 tick 会再来
+    def step(name)
+      send(name)
+    rescue StandardError => e
+      Rails.error.report(e, handled: true, context: { step: name })
     end
 end

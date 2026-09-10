@@ -81,6 +81,20 @@ describe('日期', () => {
 
     expect(router.get).toHaveBeenCalledWith('/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom')
   })
+
+  // Inertia 前进后退不重挂页面：日期框必须跟着 props 走，不能停在读者上一次输入的值
+  it('日期框随 props 更新', () => {
+    const { rerender } = render(
+      <SearchFilters q="kuber" filters={searchFilters({ range: 'custom', from: '2026-08-01', to: null })} sourceOptions={sourceOptions} datePresets={datePresets} />,
+    )
+    expect(screen.getByLabelText('起始日期')).toHaveValue('2026-08-01')
+
+    rerender(
+      <SearchFilters q="kuber" filters={searchFilters({ range: 'custom', from: '2026-09-01', to: null })} sourceOptions={sourceOptions} datePresets={datePresets} />,
+    )
+
+    expect(screen.getByLabelText('起始日期')).toHaveValue('2026-09-01')
+  })
 })
 
 describe('hrefWith', () => {

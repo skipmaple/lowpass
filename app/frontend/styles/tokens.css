@@ -275,7 +275,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 .chips { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 40px; }
 .chip-outline { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid var(--rule); background: transparent;
                 letter-spacing: 0.04em; white-space: nowrap; cursor: pointer; }
-.chip-outline:hover, .chip-outline:focus-visible { border-color: var(--ink); }
+.chip-outline:hover { border-color: var(--ink); }
+.chip-outline:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .chip-on { border-color: var(--ink); background: var(--ink); }
 
 /* 自定义日期：两个 40px 描边框，中间「至」，Maple 13 */
@@ -308,6 +309,8 @@ a.t:hover { text-decoration-color: var(--ink); }
   .btn-primary { height: 44px; }
   .filters { gap: 20px; }
   .seg-item { height: 44px; }
+  /* 来源小签是这一页主要的多选控件：手机上也要 44px 触控目标（PRD 6.4，与 .anchor-chip 同一处理） */
+  .chip-outline { height: 44px; }
   .date-field { height: 44px; }
   .search-row { padding: 24px 0; }
   .search-count { flex-wrap: wrap; }

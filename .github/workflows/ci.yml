@@ -103,6 +103,11 @@ jobs:
       - name: Typecheck frontend
         run: npm run check
 
+      # 前端单元测试（Vitest + Testing Library，jsdom）：不用数据库也不用浏览器，
+      # 但 Node 与 npm 包在这个 job 里已经装好了，就跟着这里跑。
+      - name: Run frontend unit tests
+        run: npm test
+
       - name: Audit npm packages
         run: npm audit --audit-level=high
 

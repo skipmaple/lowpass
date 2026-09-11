@@ -3,7 +3,8 @@ source "https://rubygems.org"
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.1.3", ">= 8.1.3.1"
 # json 3.0 改了 JSON.parse 的参数签名，ActiveSupport::JSON.decode（jsonb 列读写都走它）传两个位置参数会报
-# ArgumentError；锁在 2.x 直到 Rails 跟上 json 3.0。
+# ArgumentError；锁在 2.x 直到 Rails 跟上 json 3.0。.github/dependabot.yml 里同步挡住了 json 的大版本
+# 升级，解锁时两处一起改。
 gem "json", "< 3"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"

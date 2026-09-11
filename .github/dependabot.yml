@@ -5,6 +5,12 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  ignore:
+    # json 3.0 改了 JSON.parse 的参数签名，ActiveSupport::JSON.decode（jsonb 列读写都走它）会报
+    # ArgumentError，Gemfile 因此把 json 锁在 2.x。Dependabot 不认这把锁：它会把 "< 3" 改成 "< 4"
+    # 再开一个 CI 必红的 PR（#3），所以在这里挡住大版本；等 Rails 跟上 json 3.0，连同 Gemfile 的锁一起去掉。
+    - dependency-name: json
+      update-types: ["version-update:semver-major"]
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

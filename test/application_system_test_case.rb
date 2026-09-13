@@ -15,5 +15,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     mock_omniauth(strategy, identity_auth(identity))
     visit login_path
     click_on AuthenticationTestHelpers::LABELS.fetch(strategy)
+    # click_on 提交的是原生表单，落地前要走一串重定向；不等它落地就把控制权交还调用方，
+    # 调用方紧接着的 visit 有时会跟这串重定向赛跑抢先跳走，看起来像是没登录成功
+    assert_no_current_path login_path
   end
 end

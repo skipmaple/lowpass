@@ -74,29 +74,30 @@
 | `GET /login` | `sessions#new`，Inertia `Login/Show`；已登录访问跳 `/` | 放行 |
 | `POST /auth/:provider` | OmniAuth 请求阶段（中间件），跳去 provider；表单带 `authenticity_token` 与可选 `origin` | 不经路由 |
 | `GET /auth/:provider/callback` | OmniAuth 回调阶段（中间件）→ `sessions#create` | 不经路由（中间件之后路由到 create；create 自己放行） |
-| `GET|POST /auth/failure` | `sessions#failure`（由 `OmniAuth.config.on_failure` 直接调用动作，不经过重定向） | 放行 |
+| `GET /auth/failure` | `sessions#failure`（由 `OmniAuth.config.on_failure` 直接调用动作，不经过重定向） | 放行 |
 | `DELETE /session` | `sessions#destroy`，登出 | 需登录 |
 | `GET /settings` | `settings#show`，Inertia `Settings/Show` | 需登录 |
 | `GET /admin/jobs` 及其下 | `MissionControl::Jobs::Engine`，`base_controller_class = "Admin::BaseController"` | 需 admin |
 | `GET /up` | 健康检查 | 放行 |
 
-`config/routes.rb` 里的 `resource :session, only: [:new, :create, :destroy]` 不合适（`new` 的路径是 `/session/new`），改成显式三条：`get "login" => "sessions#new"`、`match "auth/:provider/callback" => "sessions#create", via: [:get, :post]`、`match "auth/failure" => "sessions#failure", via: [:get, :post]`、`delete "session" => "sessions#destroy"`。
+`config/routes.rb` 里的 `resource :session, only: [:new, :create, :destroy]` 不合适（`new` 的路径是 `/session/new`），改成显式五条：`get "login" => "sessions#new", as: :login`、`get "auth/:provider/callback" => "sessions#create", as: :auth_callback`、`get "auth/failure" => "sessions#failure"`、`delete "session" => "sessions#destroy", as: :session`、`get "settings" => "settings#show", as: :settings`；回调只认 `GET`（POST 由 OmniAuth 中间件的请求阶段接住，不落到这条路由），没有 `match … via: [:get, :post]`。
 
 ### 4.2 OmniAuth 配置（`config/initializers/omniauth.rb`）
 
 - `OmniAuth.config.allowed_request_methods = [:post]`（omniauth-rails_csrf_protection 已默认如此），`silence_get_warning = true`。
 - `OmniAuth.config.on_failure = ->(env) { SessionsController.action(:failure).call(env) }`，三个环境一样；不设 `failure_raise_out_environments`。
 - `Rails.application.config.middleware.use OmniAuth::Builder do ... end`：
-  - `provider :google_oauth2, ENV["GOOGLE_CLIENT_ID"], ENV["GOOGLE_CLIENT_SECRET"], scope: "openid email profile", prompt: "select_account"`，仅当两个变量都非空。
-  - `provider :github, ENV["GITHUB_CLIENT_ID"], ENV["GITHUB_CLIENT_SECRET"], scope: "user:email"`，仅当两个变量都非空。
+  - `provider :google_oauth2, ENV["GOOGLE_CLIENT_ID"], ENV["GOOGLE_CLIENT_SECRET"], scope: "openid email profile", prompt: "select_account"`，两个变量都非空，或 `Rails.env.test?`（test 两家都挂，用占位凭证 `"test"`，让 mock 登录流程走得通）。
+  - `provider :github, ENV["GITHUB_CLIENT_ID"], ENV["GITHUB_CLIENT_SECRET"], scope: "user:email"`，条件同上。
   - `provider :developer, fields: [:name, :email], uid_field: :email`，仅 `Rails.env.development?`。
-- 已配置的策略名列表由 `Identity::Providers.enabled`（读同一份判定）给登录页当 props，避免页面与中间件各判一次。
-- 中间件顺序：`config.middleware.insert_before OmniAuth::Builder, Auth::CallbackRateLimit`（`config/application.rb` 里 `use` 完再 insert；两者都在会话中间件之后，中间件里能读 `rack.session`）。
+- 已配置的策略名列表存进 `Rails.configuration.x.auth_providers`（本初始化器里设置），登录页 props 与中间件判定共用这一份，不是 `Identity::Providers.enabled`。
+- 中间件顺序：同一个初始化器里 `use OmniAuth::Builder` 之后再 `config.middleware.insert_before OmniAuth::Builder, Auth::CallbackRateLimit`；两者都在会话中间件之后，中间件里能读 `rack.session`。
 
-### 4.3 回调限流中间件 `Auth::CallbackRateLimit`（`app/middleware/auth/callback_rate_limit.rb`，autoload）
+### 4.3 回调限流中间件 `Auth::CallbackRateLimit`（`lib/middleware/auth/callback_rate_limit.rb`）
 
-- 只匹配路径 `%r{\A/auth/[^/]+/callback\z}`，其他请求直接透传。
-- `Rails.cache.increment("auth:callback:#{remote_ip}", 1, expires_in: 1.minute)`，与 Rails 8 `rate_limit` 同一做法；超过 10 次：`request.flash[:alert] = "操作过于频繁，请稍后再试。"`（附录 B 搜索限流那句复用）、`request.commit_flash`，回 `[302, { "Location" => "/login" }, []]`，不进 OmniAuth。
+- 落在 `lib/middleware/`，不在自动加载路径里（`autoload_lib` 忽略了 `lib/middleware`）：初始化器里 `require "middleware/auth/callback_rate_limit"`。
+- 只匹配路径 `%r{\A/auth/[^/]+/callback/?\z}i`（OmniAuth 认回调路径时会先去掉结尾的一个 `/`、再不分大小写比较，这里要认同样宽的一组，少认一种就等于给限流开了后门），其他请求直接透传。
+- `Rails.cache.increment("rate-limit:auth-callback:#{remote_ip}", 1, expires_in: 1.minute)`，与 Rails 8 `rate_limit` 同一做法；超过 10 次：`request.flash[:alert] = "操作过于频繁，请稍后再试。"`（附录 B 搜索限流那句复用）、`request.commit_flash`，回 `[302, { "Location" => "/login" }, []]`，不进 OmniAuth。
 - `remote_ip` 用 `ActionDispatch::Request#remote_ip`（信任 `config.action_dispatch.trusted_proxies` 的设定，kamal-proxy 在同机）。
 
 ### 4.4 `SessionsController`
@@ -107,23 +108,26 @@ rate_limit 不在这里（见 4.3）
 
 new      → 已登录 redirect_to root；否则 render Login/Show，props: { providers:, next: safe_next(params[:next]) }
 create   → auth = request.env["omniauth.auth"]
+           auth.nil? → 这个环境没挂这条策略（比如生产的 /auth/developer/callback），记日志、
+                       redirect_to login_path, alert: "登录失败，请重试。"
            result = Identity::Resolution.call(auth)          # user + outcome
            start_session_for(result.user)
            case result.outcome
            when :unmergeable then redirect_to settings_path, alert: 附录 B「这个邮箱无法自动合并…」
-           else redirect_to safe_next(request.env["omniauth.origin"]) || root_path
+           else redirect_to safe_next(request.env["omniauth.origin"].presence || params[:origin]) || root_path,
+                            allow_other_host: false
 failure  → type = request.env["omniauth.error.type"]
            notice = type == :access_denied ? "已取消登录。" : "登录失败，请重试。"
-           Rails.logger.info 记 type 与 error 类名（不记 token）
+           Rails.logger.info 记 type 与 params[:provider].inspect 这类安全值（不记 token）
            redirect_to login_path, alert: notice
 destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_to login_path
 ```
 
-`create` 的 `next`：OmniAuth 请求阶段把表单里的 `origin` 存进 `rack.session["omniauth.origin"]`，回调时交回 `env["omniauth.origin"]`；没有 `origin` 时它会退回 Referer（绝对地址），校验函数会拒绝绝对地址，于是落到首页——正是 AC-5.7 要的。
+`create` 的 `next`：真实 provider 的请求阶段把表单里的 `origin` 存进 `rack.session`，回调时经 `env["omniauth.origin"]` 交回；开发登录没有请求阶段、直接 GET 回调，`origin` 从 `params[:origin]` 来——两边都接：`request.env["omniauth.origin"].presence || params[:origin]`。都没有、或是站外地址时 `safe_next` 返回 nil，落到 `root_path`；`redirect_to` 再带 `allow_other_host: false` 兜底——正是 AC-5.7 要的。
 
 ### 4.5 `Identity::Resolution`（`app/models/identity/resolution.rb`）
 
-输入 `OmniAuth::AuthHash`，输出 `Result = Struct.new(:user, :outcome)`，`outcome ∈ {signed_in, created, linked, unmergeable}`。全部在一个事务里。
+输入 `OmniAuth::AuthHash`，输出 `Result = Data.define(:user, :outcome)`，`outcome ∈ {signed_in, created, linked, unmergeable}`。全部在一个事务里。
 
 资料提取（`Identity::Profile.from(auth)`，`app/models/identity/profile.rb`）：
 
@@ -134,6 +138,8 @@ destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_t
 | display_name | `info.name`，空则 `info.email` 的 @ 前段，再空则「读者」 | `info.name`，空则 `info.nickname` | `info.name` |
 | avatar_url | `info.image` | `info.image` | nil |
 | email / verified | `info.email`，`extra.raw_info.email_verified == true` | 只看 `extra.all_emails` 里 `primary && verified` 的那条；没有 → email nil、verified false。`info.email` 与 `raw_info.email` 一概不用（R-5.4） | `info.email`，视为已验证 |
+
+三家的邮箱都经 `Profile.normalize`（`strip.downcase`）处理，再参与比较与入库。
 
 规则（顺序即优先级）：
 

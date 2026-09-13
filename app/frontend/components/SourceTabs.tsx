@@ -17,6 +17,7 @@ const STATE_LINES: Record<SourceSummary['state'], string | null> = {
   pending: null,
   failed: '抓取失败',
   empty: '今日无新内容',
+  no_backfill: '无法回填',
 }
 
 export type SourceTabsProps = {

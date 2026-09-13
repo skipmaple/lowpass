@@ -57,4 +57,23 @@ class Adapters::HackerNewsTest < ActiveSupport::TestCase
     comments_urls = entries.map { |e| e.meta[:comments_url] }
     assert_not comments_urls.any? { |url| url.end_with?("item?id=#{null_id}") }, "No entry should have the null item id"
   end
+
+  # 7.7 回填：Algolia 按该上海日的 UTC 秒区间查 front_page，按分数降序取 count 条，跳过低于最低分数的
+  test "backfill 用 Algolia 按日期查，分数降序、过滤最低分数、无外链指向讨论页" do
+    from = Date.new(2026, 9, 3).in_time_zone(PeriodKey::ZONE).beginning_of_day.to_i
+    stub_request(:get, "https://hn.algolia.com/api/v1/search")
+      .with(query: { "tags" => "front_page", "numericFilters" => "created_at_i>=#{from},created_at_i<#{from + 86_400}", "hitsPerPage" => "30" })
+      .to_return(body: file_fixture("hacker_news/algolia_front_page.json").read)
+    source = Source.new(name: "HN", adapter: "hacker_news", publication: "daily", config: { "list" => "top", "count" => 10, "min_score" => 10 })
+
+    entries = Adapters::HackerNews.new(source).backfill(Date.new(2026, 9, 3))
+
+    assert_equal [ "A tiny Rust operator for Kubernetes", "ESP32 weather station survives its first typhoon", "Ask HN: How do you archive personal notes?" ], entries.map(&:title)
+    assert_equal [ 1, 2, 3 ], entries.map(&:rank)
+    assert_equal "https://news.ycombinator.com/item?id=45601002", entries.last.url
+    assert_equal 312, entries.first.meta[:score]
+    assert_equal 145, entries.first.meta[:comments]
+    assert entries.all?(&:valid?)
+    assert Adapters::HackerNews.backfill?
+  end
 end

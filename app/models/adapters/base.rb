@@ -1,9 +1,17 @@
 module Adapters
+  # 7.7：这个源不能回填历史日期。缺期补生成时该栏固化成 no_backfill，读者页写「该来源无法回填」
+  NoBackfill = Class.new(StandardError)
+
   class Base
     FETCH_TIMEOUT = 60
     TEST_TIMEOUT = 30
 
     attr_reader :source
+
+    # 子类能回填历史日期的才改成 true（Issue.backfill_daily! 据此决定入队还是直接标无法回填）
+    def self.backfill?
+      false
+    end
 
     def initialize(source)
       @source = source
@@ -18,10 +26,19 @@ module Adapters
       Timeout.timeout(TEST_TIMEOUT) { entries(period_key: nil) }
     end
 
+    # R-1.6 补生成：抓某个过去的上海日（Date）
+    def backfill(date)
+      Timeout.timeout(FETCH_TIMEOUT) { backfill_entries(date) }
+    end
+
     private
       # 子类实现，返回 Array<Entry>
       def entries(period_key:)
         raise NotImplementedError
+      end
+
+      def backfill_entries(_date)
+        raise NoBackfill, "该来源无法回填"
       end
 
       def config

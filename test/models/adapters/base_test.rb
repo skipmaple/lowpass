@@ -21,4 +21,9 @@ class Adapters::BaseTest < ActiveSupport::TestCase
   test "基类不实现 entries" do
     assert_raises(NotImplementedError) { Adapters::Base.new(sources(:hn)).fetch }
   end
+
+  test "基类不支持回填" do
+    assert_not Adapters::Base.backfill?
+    assert_raises(Adapters::NoBackfill) { Fake.new(sources(:hn)).backfill(Date.new(2026, 9, 3)) }
+  end
 end

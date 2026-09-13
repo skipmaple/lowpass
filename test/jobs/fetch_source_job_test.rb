@@ -68,4 +68,27 @@ class FetchSourceJobTest < ActiveJob::TestCase
     key2 = job2.concurrency_key
     refute_equal key, key2
   end
+
+  test "backfill 参数走适配器的 backfill，而不是 fetch" do
+    Adapters::HackerNews.any_instance.expects(:fetch).never
+    Adapters::HackerNews.any_instance.expects(:backfill).with(Date.new(2026, 9, 3)).returns([ Adapters::Entry.new(title: "h", url: "https://h/1") ])
+    issue = Issue.daily.create!(period_key: "2026-09-03", state: "generating", generation_started_at: Time.current, generated_late: true)
+
+    FetchSourceJob.perform_now(sources(:hn), issue, "manual", true)
+
+    assert_equal "succeeded", FetchRun.find_by(source: sources(:hn), issue: issue).status
+  end
+
+  # 7.7 无法回填是设计上的「不能」：记一条固定文案的失败就到此为止，不重试
+  test "不支持回填的源直接丢弃，不排重试" do
+    issue = Issue.daily.create!(period_key: "2026-09-03", state: "generating", generation_started_at: Time.current, generated_late: true)
+
+    assert_no_enqueued_jobs do
+      FetchSourceJob.perform_now(sources(:github), issue, "manual", true)
+    end
+
+    run = FetchRun.find_by(source: sources(:github), issue: issue)
+    assert_equal "failed", run.status
+    assert_equal "该来源无法回填", run.error_summary
+  end
 end

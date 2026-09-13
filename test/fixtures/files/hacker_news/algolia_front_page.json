@@ -1,0 +1,9 @@
+{
+  "hits": [
+    { "objectID": "45601001", "title": "A tiny Rust operator for Kubernetes", "url": "https://example.com/rust-operator", "author": "alice", "points": 312, "num_comments": 145, "created_at_i": 1788660000 },
+    { "objectID": "45601002", "title": "Ask HN: How do you archive personal notes?", "url": null, "author": "bob", "points": 98, "num_comments": 60, "created_at_i": 1788670000 },
+    { "objectID": "45601003", "title": "Low score story", "url": "https://example.com/low", "author": "carol", "points": 3, "num_comments": 0, "created_at_i": 1788680000 },
+    { "objectID": "45601004", "title": "ESP32 weather station survives its first typhoon", "url": "https://example.com/esp32", "author": "dan", "points": 210, "num_comments": 40, "created_at_i": 1788690000 }
+  ],
+  "nbHits": 4
+}

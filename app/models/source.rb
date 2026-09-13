@@ -43,6 +43,13 @@ class Source < ApplicationRecord
     HOME_URLS[adapter] || feed_home_url
   end
 
+  # `:"config.<field>"` 是挂 config 字段错误用的记号，不是真方法：符号类型的错误（比如 feed_url_unique
+  # 的 :duplicate）生成文案时会经 ActiveModel 取一次这个「属性」当前的值，得翻到 config 哈希里，
+  # 不能真的按这个名字调方法（会是 NoMethodError）。
+  def read_attribute_for_validation(key)
+    key.to_s.start_with?("config.") ? config.to_h[key.to_s.delete_prefix("config.")] : super
+  end
+
   private
     def normalize_config
       self.config = {} if config.nil?
@@ -64,7 +71,8 @@ class Source < ApplicationRecord
 
       url = config["feed_url"]
       if url.present? && Source.where(adapter: "rss", publication: publication).where("config->>'feed_url' = ?", url).where.not(id: id).exists?
-        errors.add(:"config.feed_url", "这个 feed 地址已经在同一刊物里")
+        # :duplicate 这个类型给 Source::TestFetch 用来识别「这是重复，不是格式错」，不看这句中文文案
+        errors.add(:"config.feed_url", :duplicate, message: "这个 feed 地址已经在同一刊物里")
       end
     end
 

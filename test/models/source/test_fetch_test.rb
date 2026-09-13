@@ -34,6 +34,19 @@ class Source::TestFetchTest < ActiveSupport::TestCase
     end
   end
 
+  # feed_url_unique（Source）给这个地址挂 :duplicate：那是保存时的事，表单在保存时报；
+  # 试抓只答「这个地址能不能抓到东西」，不因为撞了别的源就不让点（下面用同一个 fixture 的地址来撞）
+  test "新源的 feed 地址与现有源重复：试抓照样进行，重复留给保存时报" do
+    newest = RSS::Parser.parse(file_fixture("rss/hackaday.xml").read, false).items.map(&:pubDate).max
+    travel_to newest + 1.hour do
+      result = Source::TestFetch.call(rss_attrs)
+
+      assert result.ok
+      assert_nil result.error
+      assert_equal "Hackaday", result.feed_title
+    end
+  end
+
   test "已保存的源记一条 trigger=test 的抓取记录" do
     travel_to Time.utc(2030, 1, 1) do
       result = Source::TestFetch.call(rss_attrs(id: sources(:hackaday).id))
@@ -73,7 +86,10 @@ class Source::TestFetchTest < ActiveSupport::TestCase
     result = Source::TestFetch.call(rss_attrs(id: sources(:hackaday).id))
 
     assert_equal "连接超时（30 秒），请检查地址或稍后重试。", result.error
-    assert_equal "timed_out", sources(:hackaday).fetch_runs.sole.status
+    run = sources(:hackaday).fetch_runs.sole
+    assert_equal "timed_out", run.status
+    assert_kind_of Integer, run.duration_ms
+    assert_operator run.duration_ms, :>=, 0
   end
 
   test "源站拒绝、解析不到公网地址、响应过大、其他错误各有一句" do

@@ -12,9 +12,6 @@ class Source::TestFetch
     Adapters::Http::TooLarge => "响应超过 2 MB。"
   }.freeze
   FAILURES = [ *MESSAGES.keys, Adapters::Http::Error, Adapters::GithubTrending::ParseError, Adapters::RuanyfWeekly::Degraded ].freeze
-  # Source#feed_url_unique 的错误文案：那是「存下去会撞另一个源」，保存时数据库唯一索引兜底；
-  # 试抓只想知道这个地址能不能抓到东西，不因为撞了别的源（甚至撞的是自己没变过的地址）就不让点
-  DUPLICATE_FEED_URL = "这个 feed 地址已经在同一刊物里"
 
   def self.call(attrs)
     new(attrs).call
@@ -24,18 +21,19 @@ class Source::TestFetch
     attrs = attrs.to_h.symbolize_keys
     @id = attrs[:id].presence
     @source = Source.new(attrs.slice(:name, :adapter, :publication, :config))
+    @source.id = @id if @id
   end
 
   def call
     if (problems = config_problems).any?
       failure("配置不完整：#{problems.join("；")}", record: false)
     else
-      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      @started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       entries = adapter.test_fetch
-      success(entries, elapsed(started))
+      success(entries, elapsed(@started))
     end
   rescue *FAILURES => e
-    failure(message_for(e), status: e.is_a?(Timeout::Error) ? "timed_out" : "failed")
+    failure(message_for(e), status: e.is_a?(Timeout::Error) ? "timed_out" : "failed", duration_ms: elapsed(@started))
   end
 
   private
@@ -45,14 +43,14 @@ class Source::TestFetch
       @adapter ||= source.adapter_class.new(source)
     end
 
-    # 只看配置与刊物的错误：名称重复、feed 地址与别的源重复都不妨碍试抓
+    # 只看配置与刊物的错误：名称重复不妨碍试抓；feed 地址跟别的源重复（:duplicate）是保存时的事，表单在保存时报，试抓只答「能不能抓」
     def config_problems
       source.valid?
       source.errors.filter_map do |error|
         name = error.attribute.to_s.delete_prefix("config.")
         if error.attribute == :publication
           error.message
-        elsif error.attribute.to_s.start_with?("config.") && error.message != DUPLICATE_FEED_URL
+        elsif error.attribute.to_s.start_with?("config.") && error.type != :duplicate
           "#{Source::Config::LABELS.fetch(name, name)}#{error.message}"
         end
       end
@@ -69,9 +67,9 @@ class Source::TestFetch
                  dropped: dropped.size, duration_ms: duration_ms, feed_title: adapter.try(:feed_title), error: nil)
     end
 
-    def failure(message, status: "failed", record: true)
-      record(status, error_summary: message) if record
-      Result.new(ok: false, entries: [], warnings: [], parsed: 0, dropped: 0, duration_ms: 0, feed_title: nil, error: message)
+    def failure(message, status: "failed", record: true, duration_ms: 0)
+      record(status, error_summary: message, duration_ms: duration_ms) if record
+      Result.new(ok: false, entries: [], warnings: [], parsed: 0, dropped: 0, duration_ms: duration_ms, feed_title: nil, error: message)
     end
 
     def message_for(error)

@@ -17,24 +17,26 @@ module Issue::Weekly
     end
 
     # R-2.8 手动重抓：阮一峰按这一期里该源已有的期号逐期重抓、整节替换；RSS 周刊源按该周窗口整节替换。
-    # 失败原内容保留、记录记失败并抛出（FetchSourceJob 据此重试或丢弃）
-    def refetch_weekly!(issue, source)
-      run = source.fetch_runs.create!(issue: issue, trigger: "manual", attempt: 1, status: "running", started_at: Time.current)
-      adapter = source.adapter_class.new(source)
-      written = if source.adapter == "ruanyf_weekly"
-        numbers = issue.items.where(source: source).pluck(Arel.sql("meta->>'issue_no'")).compact.map(&:to_i).uniq.sort
-        raise Adapters::Http::Error, "这一期里没有这个源的期号" if numbers.empty?
+    # 失败原内容保留、记录记失败并抛出（FetchSourceJob 据此重试或丢弃）；重试认领 queue_retry 写下的
+    # 排队记录，不另开一条——跟 Source::Fetching#fetch_now 一样，不然那条 queued 会一直挂在 FetchRun.active 里
+    def refetch_weekly!(issue, source, attempt: 1)
+      run = source.fetch_runs.find_by(issue: issue, attempt: attempt, status: "queued", trigger: "manual") || source.fetch_runs.new(issue: issue, trigger: "manual", attempt: attempt)
+      run.update!(status: "running", started_at: Time.current)
+      numbers = stored_issue_numbers(issue, source)
 
-        numbers.sum { |number| replace_weekly_section(issue, source, adapter.fetch_issue(number), issue_no: number) }
+      if numbers.nil? || numbers.any?
+        written, dropped = refetch_sections(issue, source, numbers)
+        run.update!(status: "succeeded", item_count: written, dropped_count: dropped, duration_ms: elapsed_ms(run))
+        issue.update!(revised_at: Time.current)
       else
-        replace_weekly_section(issue, source, adapter.fetch(period_key: issue.period_key))
+        # 这一期里没有这个源的条目，也就没有期号可抓：重试多少次都还是没有，记一条失败就到此为止（不抛，job 不重试）
+        run.update!(status: "failed", error_summary: "这一期里没有这个源的期号", duration_ms: elapsed_ms(run))
       end
-      run.update!(status: "succeeded", item_count: written, dropped_count: 0, duration_ms: ((Time.current - run.started_at) * 1000).to_i)
-      issue.update!(revised_at: Time.current)
+
       run
     rescue StandardError => e
       run.update!(status: e.is_a?(Timeout::Error) ? "timed_out" : "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200],
-                  duration_ms: ((Time.current - run.started_at) * 1000).to_i)
+                  duration_ms: elapsed_ms(run))
       raise
     end
 
@@ -100,11 +102,35 @@ module Issue::Weekly
         run.update!(issue: issue, status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, error_summary: error_summary)
       end
 
-      # 整节替换，返回写进去的条数（去掉同源重复地址之后）
+      # 阮一峰按这一期里该源已有的期号逐期重抓（同一周两期各占一节，R41）；其余周刊源不按期号，返回 nil
+      def stored_issue_numbers(issue, source)
+        issue.items.where(source: source).pluck(Arel.sql("meta->>'issue_no'")).compact.map(&:to_i).uniq.sort if source.adapter == "ruanyf_weekly"
+      end
+
+      # 每个期号各抓一次整节替换（numbers 为 nil 则按该周窗口抓一次），返回合计的 [写进去的条数, 丢弃的条数]
+      def refetch_sections(issue, source, numbers)
+        adapter = source.adapter_class.new(source)
+
+        if numbers
+          numbers.reduce([ 0, 0 ]) do |(written, dropped), number|
+            more_written, more_dropped = replace_weekly_section(issue, source, adapter.fetch_issue(number), issue_no: number)
+            [ written + more_written, dropped + more_dropped ]
+          end
+        else
+          replace_weekly_section(issue, source, adapter.fetch(period_key: issue.period_key))
+        end
+      end
+
+      # 整节替换，返回 [写进去的条数, 丢弃的条数]。丢弃 = 无效条目 + 同源重复地址，跟日刊路径
+      # （Source::Fetching#fetch_now）一个口径：不然 item_count 报的是抓到几条，不是这一节真写进去几条
       def replace_weekly_section(issue, source, entries, issue_no: nil)
         kept = entries.select(&:valid?)
         deduped = issue.write_section!(source, kept, issue_no: issue_no, append: false)
-        kept.size - deduped
+        [ kept.size - deduped, entries.size - kept.size + deduped ]
+      end
+
+      def elapsed_ms(run)
+        ((Time.current - run.started_at) * 1000).to_i
       end
   end
 

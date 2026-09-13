@@ -5,6 +5,9 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   setup { Rails.cache.clear }
 
+  # OmniAuth.config.mock_auth 是进程级的：不清掉，忘了 mock_omniauth 的测试会拿上一条测试的身份登录成功
+  teardown { OmniAuth.config.mock_auth.clear }
+
   # 真的在浏览器里点登录按钮：OmniAuth 的 mock 让 POST /auth/<策略> 直接回到回调
   def sign_in_with_browser(user)
     identity = user.auth_identities.first!

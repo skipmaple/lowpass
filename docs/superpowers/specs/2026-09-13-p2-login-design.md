@@ -160,7 +160,7 @@ destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_t
 
 - `Authentication` concern（`app/controllers/concerns/authentication.rb`）：`included { before_action :require_authentication; helper_method 不需要（Inertia） }`；类方法 `allow_unauthenticated_access(**options)` = `skip_before_action :require_authentication, **options`。
 - `require_authentication`：`resume_session || request_authentication`。`request_authentication`：GET/HEAD → `redirect_to login_path(next: request.fullpath)`；其他方法 → `redirect_to login_path`。Inertia 的 XHR 访问跟随 302，行为一致。
-- `safe_next(value)`：`value.is_a?(String) && value.match?(%r{\A/(?![/\\])[^\r\n]*\z}) ? value : nil`。只在两处用：登录页 props 的 `next`（进隐藏字段 `origin`）与回调（`omniauth.origin`）。
+- `safe_next(value)`：`value.is_a?(String) && value.match?(%r{\A/(?![/\\])[^[:cntrl:]]*\z}) ? value : nil`（合法 = 单个 `/` 开头、第二个字符不是 `/` 或 `\`、不含任何控制字符；制表符之类同样骗得过前两关，却会让 `redirect_to` 抛异常）。只在两处用：登录页 props 的 `next`（进隐藏字段 `origin`）与回调（`omniauth.origin`）。
 - 放行清单：`SessionsController` 的 `new / create / failure`、`Rails::HealthController`（`/up` 不经 ApplicationController，天然放行）。兜底 404 路由在墙内。
 - `Admin::BaseController < ApplicationController`：`before_action :require_admin` → `render_forbidden` = `render inertia: "Errors/Forbidden", props: footer_props, status: :forbidden`（不跳登录页，AC-3.5）。`ErrorsController#forbidden` 复用它（供路由测试与将来 `/admin` 根）。
 - mission_control-jobs：`config.mission_control.jobs.base_controller_class = "Admin::BaseController"`、`http_basic_auth_enabled = false` 移到 `config/application.rb`；路由改 `mount MissionControl::Jobs::Engine, at: "/admin/jobs"`，三个环境都挂；删掉 development 专用的 `/jobs`。引擎自己的控制器继承 `Admin::BaseController`，因此也过登录墙与 admin 检查。

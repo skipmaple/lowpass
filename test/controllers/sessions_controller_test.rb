@@ -36,6 +36,10 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     get login_path(next: "//evil.example")
     assert_nil page_props["next"]
+
+    # 控制字符也不算站内地址：/\t//evil.example 过得了「单个 / 开头」这一关，却会让 redirect_to 抛异常
+    get login_path(next: "/\t//evil.example")
+    assert_nil page_props["next"]
   end
 
   test "已登录访问登录页跳首页" do
@@ -145,6 +149,47 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/login"
     follow_redirect!
     assert_equal({ "alert" => "操作过于频繁，请稍后再试。" }, page_props["flash"])
+  end
+
+  # OmniAuth 比对回调路径前先把结尾的 / 去掉、再 downcase（strategy.rb 的 current_path），
+  # 这两种变形都照样走完换 token 那一步：限流的正则认不出来就等于加一个 / 或换个大小写就绕过去了
+  test "R-5.9 回调带尾斜杠一样计数" do
+    mock_omniauth(:github, :invalid_credentials)
+    10.times do
+      get "/auth/github/callback/"
+      assert_redirected_to login_path
+    end
+
+    get "/auth/github/callback/"
+
+    assert_redirected_to "/login"
+    follow_redirect!
+    assert_equal({ "alert" => "操作过于频繁，请稍后再试。" }, page_props["flash"])
+  end
+
+  test "R-5.9 回调大小写变形一样计数" do
+    mock_omniauth(:github, :invalid_credentials)
+    10.times do
+      get "/auth/github/Callback"
+      assert_redirected_to login_path
+    end
+
+    get "/auth/github/Callback"
+
+    assert_redirected_to "/login"
+    follow_redirect!
+    assert_equal({ "alert" => "操作过于频繁，请稍后再试。" }, page_props["flash"])
+  end
+
+  # D11：cookie 里只有签名过的 token，浏览器读不到、跨站带不出去，最长活到 90 天的硬上限
+  test "会话 cookie 的属性：HttpOnly、SameSite=Lax、到期日是硬上限" do
+    sign_in_as(users(:drew))
+
+    set_cookie = Array(response.headers["set-cookie"]).join("\n")
+    assert_match(/session_token=/, set_cookie)
+    assert_match(/httponly/i, set_cookie)
+    assert_match(/samesite=lax/i, set_cookie)
+    assert_match(/expires=#{Regexp.escape(Session.sole.expires_at.httpdate)}/i, set_cookie)
   end
 
   test "登出：删会话、清 cookie、再访问受保护页跳登录" do

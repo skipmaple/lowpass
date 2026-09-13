@@ -45,9 +45,10 @@ module Authentication
       end
     end
 
-    # next 只接受站内相对路径（R-5.7、AC-5.7）：单个 / 开头，第二个字符不是 / 或 \（协议相对地址），不含换行
+    # next 只接受站内相对路径（R-5.7、AC-5.7）：单个 / 开头，第二个字符不是 / 或 \（协议相对地址），
+    # 不含任何控制字符——制表符之类同样能骗过前两关，却会让 redirect_to 的 URI 解析抛异常
     def safe_next(value)
-      value if value.is_a?(String) && value.match?(%r{\A/(?![/\\])[^\r\n]*\z})
+      value if value.is_a?(String) && value.match?(%r{\A/(?![/\\])[^[:cntrl:]]*\z})
     end
 
     def start_session_for(user)

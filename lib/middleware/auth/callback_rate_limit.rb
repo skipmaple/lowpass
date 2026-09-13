@@ -5,7 +5,9 @@ module Auth
   class CallbackRateLimit
     LIMIT = 10
     WITHIN = 1.minute
-    CALLBACK = %r{\A/auth/[^/]+/callback\z}
+    # OmniAuth 认回调路径时先 downcase、再去掉结尾的一个 /（strategy.rb 的 current_path），
+    # 这里要认同样宽的一组地址：少认一种，加个尾斜杠或换个大小写就绕过了限流
+    CALLBACK = %r{\A/auth/[^/]+/callback/?\z}i
     NOTICE = "操作过于频繁，请稍后再试。".freeze # 附录 B，与搜索限流同一句
 
     def initialize(app)

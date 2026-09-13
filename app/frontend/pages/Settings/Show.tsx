@@ -91,7 +91,10 @@ export default function Show({ user, identities, session }: SettingsShowProps) {
       ) : null}
       <div className="settings-rows">
         <Row label="头像与显示名">
-          <span className="settings-avatar">{user.avatar_url ? <img src={user.avatar_url} alt="" /> : <Icon name="user" size={20} />}</span>
+          {/* 头像是 provider 的外链图，referrerPolicy 拦住 Referer（与报头同理） */}
+          <span className="settings-avatar">
+            {user.avatar_url ? <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" /> : <Icon name="user" size={20} />}
+          </span>
           <Mixed text={user.display_name} font="latin" size="var(--fs-20)" color="var(--ink)" />
         </Row>
         <Row label="邮箱">

@@ -21,9 +21,10 @@ class SettingsController < ApplicationController
       end
     end
 
+    # 局部变量叫 current 不叫 session：控制器自己有个 session 方法（Rack 会话），遮住它迟早出事
     def session_props
-      session = Current.session
-      { logged_in_label: stamp(session.created_at), expires_label: session.expires_at.in_time_zone(PeriodKey::ZONE).strftime("%Y-%m-%d") }
+      current = Current.session
+      { logged_in_label: stamp(current.created_at), expires_label: current.expires_at.in_time_zone(PeriodKey::ZONE).strftime("%Y-%m-%d") }
     end
 
     # 元数据里的时间写成数字（设计口味）：2026-09-08 14:02，按上海时区

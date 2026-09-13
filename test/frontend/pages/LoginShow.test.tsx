@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react'
+import { isValidElement } from 'react'
+import type * as React from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import Show from '@/pages/Login/Show'
@@ -57,7 +59,14 @@ describe('Login/Show', () => {
     expect(screen.getByText('已取消登录。')).toBeInTheDocument()
   })
 
-  it('不套持久布局', () => {
-    expect(Show.layout(<div>x</div>)).toEqual(<div>x</div>)
+  // 布局函数要经得起 Inertia 3.7 的两道关：先用 props 试调一次（返回元素才算布局函数，
+  // 否则套默认 Layout），再用页面元素正式调一次——出来的东西里不能有报头
+  it('不套持久布局：props 试调返回元素，页面外只有登录卡、没有报头', () => {
+    expect(isValidElement(Show.layout({ providers: ['github'], next: null } as unknown as React.ReactNode))).toBe(true)
+
+    const { container } = render(<>{Show.layout(<Show providers={['github']} next={null} />)}</>)
+
+    expect(container.querySelector('.masthead')).toBeNull()
+    expect(container.querySelector('.login-card')).not.toBeNull()
   })
 })

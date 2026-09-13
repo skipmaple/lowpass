@@ -90,7 +90,7 @@
   - `provider :google_oauth2, ENV["GOOGLE_CLIENT_ID"], ENV["GOOGLE_CLIENT_SECRET"], scope: "openid email profile", prompt: "select_account"`，两个变量都非空，或 `Rails.env.test?`（test 两家都挂，用占位凭证 `"test"`，让 mock 登录流程走得通）。
   - `provider :github, ENV["GITHUB_CLIENT_ID"], ENV["GITHUB_CLIENT_SECRET"], scope: "user:email"`，条件同上。
   - `provider :developer, fields: [:name, :email], uid_field: :email`，仅 `Rails.env.development?`。
-- 已配置的策略名列表存进 `Rails.configuration.x.auth_providers`（本初始化器里设置），登录页 props 与中间件判定共用这一份，不是 `Identity::Providers.enabled`。
+- 已配置的策略名列表存进 `Rails.configuration.x.auth_providers`（本初始化器里设置），登录页 props 与中间件判定共用这一份，不是 `Identity::Providers.enabled`。一个都没有且不是 development 时 `Rails.logger.warn` 一句：登录页照样渲染得出来，只是没有按钮，没人登得进去。
 - 中间件顺序：同一个初始化器里 `use OmniAuth::Builder` 之后再 `config.middleware.insert_before OmniAuth::Builder, Auth::CallbackRateLimit`；两者都在会话中间件之后，中间件里能读 `rack.session`。
 
 ### 4.3 回调限流中间件 `Auth::CallbackRateLimit`（`lib/middleware/auth/callback_rate_limit.rb`）
@@ -111,12 +111,15 @@ create   → auth = request.env["omniauth.auth"]
            auth.nil? → 这个环境没挂这条策略（比如生产的 /auth/developer/callback），
                        Rails.logger.info 记 params[:provider].inspect（路由通配段、已解码，inspect 一下防换行伪造日志）、
                        redirect_to login_path, alert: "登录失败，请重试。"
+           origin = request.env["omniauth.origin"].presence || params[:origin]   # 下面要换会话，先取到手上
            result = Identity::Resolution.call(auth)          # user + outcome
+             rescue StandardError → Rails.error.report(e, handled: true) +
+                                    redirect_to login_path, alert: "登录失败，请重试。"（不建会话，R-5.8）
+           reset_session                                     # 登录这一刻换掉会话 id（会话固定，D11）
            start_session_for(result.user)
            case result.outcome
            when :unmergeable then redirect_to settings_path, alert: 附录 B「这个邮箱无法自动合并…」
-           else redirect_to safe_next(request.env["omniauth.origin"].presence || params[:origin]) || root_path,
-                            allow_other_host: false
+           else redirect_to safe_next(origin) || root_path, allow_other_host: false
 failure  → type = request.env["omniauth.error.type"]
            notice = type == :access_denied ? "已取消登录。" : "登录失败，请重试。"
            Rails.logger.info 记 type 与 error 类名（不记 token）
@@ -136,11 +139,11 @@ destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_t
 |---|---|---|---|
 | provider | `google` | `github` | `developer` |
 | uid | `auth.uid` | `auth.uid` | `auth.uid`（= 邮箱） |
-| display_name | `info.name`，空则 `info.email` 的 @ 前段，再空则「读者」 | `info.name`，空则 `info.nickname` | `info.name` |
+| display_name | 三家相同：`info.name` → `info.nickname` → 邮箱 @ 前段 → 「读者」；截到 100 字 | 同左 | 同左 |
 | avatar_url | `info.image` | `info.image` | nil |
 | email / verified | `info.email`（策略只在已验证时才给值），`info.email_verified` | 只看 `extra.all_emails` 里 `primary && verified` 的那条；没有 → email nil、verified false。`info.email` 与 `raw_info.email` 一概不用（R-5.4） | `info.email`，视为已验证 |
 
-三家的邮箱都经 `Profile.normalize`（`strip.downcase`）处理，再参与比较与入库。
+三家的邮箱都经 `Profile.normalize`（`strip.downcase`）处理，再参与比较与入库。长度按 7.2 的列长度在 `Profile` 里就守住：display_name 截到 100；email 超过 254、avatar_url 超过 2048 一律当没有（截断的邮箱不是那个邮箱，合并也用不上，`email_verified` 跟着落空），免得 `Resolution` 的 `update!` 抛异常把登录变成 500。
 
 规则（顺序即优先级）：
 
@@ -179,7 +182,7 @@ destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_t
 
 ### 6.1 `Login/Show`
 
-props：`{ providers: ("google_oauth2" | "github" | "developer")[], next: string | null }`，加共享的 `flash`。不套 `Layout`（`Show.layout = page => page`，深色底 `.ground`）。结构：400px `.login-card`（纸色，1px 墨线）：80px 墨带 + `.masthead-brand` 同款 LOWPASS；1px 框里 `<Sunrise>`（`Illustration.tsx` 已有的低通日出）；口号「滤掉噪音，留下信号。」文楷 20 居中；按钮列（gap 8）：每个 provider 一个 `<form method="post" action="/auth/<name>">`，隐藏 `authenticity_token`（读 `meta[name=csrf-token]`）与 `origin`（`next` 非空时），按钮 44px 描边、文楷 15：「使用 Google 登录」「使用 GitHub 登录」；developer 是同一个表单里多两个 `field`（显示名、邮箱，`name="name"` / `name="email"`）+ 按钮「开发登录」。提示行：`flash.alert` 存在时，警示图标（`Icon name="triangle-alert"`，14px 次墨）+ 文楷 13 次墨、行高 1.6。手机：卡宽 100%，外边距 24px。`<title>` 「登录 · Lowpass」。
+props：`{ providers: ("google_oauth2" | "github" | "developer")[], next: string | null }`，加共享的 `flash`。不套 `Layout`（`Show.layout = page => <>{page}</>`，深色底 `.ground`；包一层 Fragment 是必须的：Inertia 3.7 会先拿 props 探测一次 layout 函数，恒等函数返回的是 props 对象、不是元素，会被当成 props 解析器而套上默认布局）。结构：400px `.login-card`（纸色，1px 墨线）：80px 墨带 + `.masthead-brand` 同款 LOWPASS；1px 框里 `<Sunrise>`（`Illustration.tsx` 已有的低通日出）；口号「滤掉噪音，留下信号。」文楷 20 居中；按钮列（gap 8）：每个 provider 一个 `<form method="post" action="/auth/<name>">`，隐藏 `authenticity_token`（读 `meta[name=csrf-token]`）与 `origin`（`next` 非空时），按钮 44px 描边、文楷 15：「使用 Google 登录」「使用 GitHub 登录」；developer 是同一个表单里多两个 `field`（显示名、邮箱，`name="name"` / `name="email"`）+ 按钮「开发登录」。提示行：`flash.alert` 存在时，警示图标（`Icon name="triangle-alert"`，14px 次墨）+ 文楷 13 次墨、行高 1.6。手机：卡宽 100%，外边距 24px。`<title>` 「登录 · Lowpass」。
 
 ### 6.2 `Settings/Show`
 

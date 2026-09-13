@@ -21,14 +21,26 @@ class SessionsController < ApplicationController
       return redirect_to login_path, alert: FAILED
     end
 
-    result = Identity::Resolution.call(request.env["omniauth.auth"])
+    # 发起时表单里的 origin 由 OmniAuth 存进会话、回调时交回；开发登录直接 GET 回调，origin 在参数里。
+    # 下面要换会话，先把它取到手上
+    origin = request.env["omniauth.origin"].presence || params[:origin]
+
+    begin
+      result = Identity::Resolution.call(request.env["omniauth.auth"])
+    rescue StandardError => e
+      # R-5.8：匹配与合并这一步炸了（唯一键撞车、校验不过）也只说「登录失败，请重试」，原因进错误上报，不建会话
+      Rails.error.report(e, handled: true)
+      return redirect_to login_path, alert: FAILED
+    end
+
+    # 登录这一刻换掉会话 id（D11 的会话固定）：登录前那把可能是别人塞给读者的
+    reset_session
     start_session_for(result.user)
 
     if result.outcome == :unmergeable
       redirect_to settings_path, alert: UNMERGEABLE
     else
-      # 发起时表单里的 origin 由 OmniAuth 存进会话、回调时交回；开发登录直接 GET 回调，origin 在参数里
-      redirect_to safe_next(request.env["omniauth.origin"].presence || params[:origin]) || root_path, allow_other_host: false
+      redirect_to safe_next(origin) || root_path, allow_other_host: false
     end
   end
 

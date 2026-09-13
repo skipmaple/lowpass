@@ -10,6 +10,11 @@ providers << "google_oauth2" if google || Rails.env.test?
 providers << "github" if github || Rails.env.test?
 providers << "developer" if Rails.env.development?
 Rails.application.config.x.auth_providers = providers.freeze
+# 一个都没有就没人登得进来，而登录页照样渲染得出来（只是按钮那块空着）：至少在日志里喊一声。
+# development 有 developer、test 两家都挂，这条只可能在生产响
+if providers.empty?
+  Rails.logger.warn { "没有配置任何登录 provider（GOOGLE_CLIENT_ID/SECRET、GITHUB_CLIENT_ID/SECRET 都缺），登录页将没有按钮" }
+end
 
 OmniAuth.config.logger = Rails.logger
 OmniAuth.config.allowed_request_methods = [ :post ]

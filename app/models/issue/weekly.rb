@@ -25,9 +25,15 @@ module Issue::Weekly
       numbers = stored_issue_numbers(issue, source)
 
       if numbers.nil? || numbers.any?
-        written, dropped = refetch_sections(issue, source, numbers)
-        run.update!(status: "succeeded", item_count: written, dropped_count: dropped, duration_ms: elapsed_ms(run))
-        issue.update!(revised_at: Time.current)
+        # 先把要替换的每一节都抓回来（网络 I/O 不能进事务），抓齐了再一次性写：几节、修订时间与这条记录
+        # 同生共死。某一节抓砸了就一条都不写，不会留下「前一节换了、后一节还是旧的、还没记修订」的半截
+        fetched = fetch_weekly_sections(issue, source, numbers)
+
+        issue.transaction do
+          counts = fetched.map { |number, entries| replace_weekly_section(issue, source, entries, issue_no: number) }
+          issue.update!(revised_at: Time.current)
+          run.update!(status: "succeeded", item_count: counts.sum(&:first), dropped_count: counts.sum(&:last), duration_ms: elapsed_ms(run))
+        end
       else
         # 这一期里没有这个源的条目，也就没有期号可抓：重试多少次都还是没有，记一条失败就到此为止（不抛，job 不重试）
         run.update!(status: "failed", error_summary: "这一期里没有这个源的期号", duration_ms: elapsed_ms(run))
@@ -107,26 +113,24 @@ module Issue::Weekly
         issue.items.where(source: source).pluck(Arel.sql("meta->>'issue_no'")).compact.map(&:to_i).uniq.sort if source.adapter == "ruanyf_weekly"
       end
 
-      # 每个期号各抓一次整节替换（numbers 为 nil 则按该周窗口抓一次），返回合计的 [写进去的条数, 丢弃的条数]
-      def refetch_sections(issue, source, numbers)
+      # 这一次要替换的每一节各抓一次，返回 [期号, 条目] 的列表：阮一峰一个期号一节，
+      # 其余周刊源按该周窗口只有一节（期号为 nil，整源替换）。纯网络 I/O，调用方抓齐了才开事务
+      def fetch_weekly_sections(issue, source, numbers)
         adapter = source.adapter_class.new(source)
 
         if numbers
-          numbers.reduce([ 0, 0 ]) do |(written, dropped), number|
-            more_written, more_dropped = replace_weekly_section(issue, source, adapter.fetch_issue(number), issue_no: number)
-            [ written + more_written, dropped + more_dropped ]
-          end
+          numbers.map { |number| [ number, adapter.fetch_issue(number) ] }
         else
-          replace_weekly_section(issue, source, adapter.fetch(period_key: issue.period_key))
+          [ [ nil, adapter.fetch(period_key: issue.period_key) ] ]
         end
       end
 
       # 整节替换，返回 [写进去的条数, 丢弃的条数]。丢弃 = 无效条目 + 同源重复地址，跟日刊路径
       # （Source::Fetching#fetch_now）一个口径：不然 item_count 报的是抓到几条，不是这一节真写进去几条
       def replace_weekly_section(issue, source, entries, issue_no: nil)
-        kept = entries.select(&:valid?)
-        deduped = issue.write_section!(source, kept, issue_no: issue_no, append: false)
-        [ kept.size - deduped, entries.size - kept.size + deduped ]
+        deduped = issue.write_section!(source, entries, issue_no: issue_no, append: false)
+        written = entries.count(&:valid?) - deduped
+        [ written, entries.size - written ]
       end
 
       def elapsed_ms(run)

@@ -57,6 +57,7 @@ export default function Show({ providers, next }: LoginShowProps) {
           <span className="masthead-brand">lowpass</span>
         </div>
         <div className="login-body">
+          <h1 className="sr-only">登录</h1>
           <div className="login-art">
             <Sunrise />
           </div>

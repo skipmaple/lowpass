@@ -23,7 +23,7 @@ Rails.application.routes.draw do
   # 启停是 enablement 资源（POST 启用 / DELETE 停用）；某期某源重抓、补生成、立即生成今日日刊各是一个资源
   namespace :admin do
     root to: redirect("/admin/sources")
-    resources :sources, except: :destroy do
+    resources :sources, except: [ :destroy, :show ] do
       resource :enablement, only: [ :create, :destroy ], module: :sources
       resources :runs, only: :index, module: :sources
     end

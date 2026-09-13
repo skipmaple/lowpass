@@ -37,6 +37,22 @@ class Admin::TodayIssuesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "正在重抓 3 个来源…", flash[:notice]
     assert_equal "issue.generate_today", AuditLog.sole.action
+    assert_equal({ "refetched" => 3 }, AuditLog.sole.payload)
+  end
+
+  test "今天已有期：全部来源都在跑就没有可重抓的" do
+    issues(:daily_0908).source_states.each_key do |source_id|
+      FetchRun.create!(source_id: source_id, issue: issues(:daily_0908), trigger: "manual", attempt: 1, status: "running", started_at: Time.current)
+    end
+
+    travel_to Time.utc(2026, 9, 7, 22, 30) do
+      assert_no_enqueued_jobs do
+        post admin_today_issue_path, params: { confirm: "1" }
+      end
+    end
+
+    assert_equal "没有可重抓的来源", flash[:alert]
+    assert_equal 0, AuditLog.count
   end
 
   test "成员是 403" do

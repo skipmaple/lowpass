@@ -108,7 +108,8 @@ rate_limit 不在这里（见 4.3）
 
 new      → 已登录 redirect_to root；否则 render Login/Show，props: { providers:, next: safe_next(params[:next]) }
 create   → auth = request.env["omniauth.auth"]
-           auth.nil? → 这个环境没挂这条策略（比如生产的 /auth/developer/callback），记日志、
+           auth.nil? → 这个环境没挂这条策略（比如生产的 /auth/developer/callback），
+                       Rails.logger.info 记 params[:provider].inspect（路由通配段、已解码，inspect 一下防换行伪造日志）、
                        redirect_to login_path, alert: "登录失败，请重试。"
            result = Identity::Resolution.call(auth)          # user + outcome
            start_session_for(result.user)
@@ -118,7 +119,7 @@ create   → auth = request.env["omniauth.auth"]
                             allow_other_host: false
 failure  → type = request.env["omniauth.error.type"]
            notice = type == :access_denied ? "已取消登录。" : "登录失败，请重试。"
-           Rails.logger.info 记 type 与 params[:provider].inspect 这类安全值（不记 token）
+           Rails.logger.info 记 type 与 error 类名（不记 token）
            redirect_to login_path, alert: notice
 destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_to login_path
 ```
@@ -137,7 +138,7 @@ destroy  → Current.session.destroy; cookies.delete(:session_token); redirect_t
 | uid | `auth.uid` | `auth.uid` | `auth.uid`（= 邮箱） |
 | display_name | `info.name`，空则 `info.email` 的 @ 前段，再空则「读者」 | `info.name`，空则 `info.nickname` | `info.name` |
 | avatar_url | `info.image` | `info.image` | nil |
-| email / verified | `info.email`，`extra.raw_info.email_verified == true` | 只看 `extra.all_emails` 里 `primary && verified` 的那条；没有 → email nil、verified false。`info.email` 与 `raw_info.email` 一概不用（R-5.4） | `info.email`，视为已验证 |
+| email / verified | `info.email`（策略只在已验证时才给值），`info.email_verified` | 只看 `extra.all_emails` 里 `primary && verified` 的那条；没有 → email nil、verified false。`info.email` 与 `raw_info.email` 一概不用（R-5.4） | `info.email`，视为已验证 |
 
 三家的邮箱都经 `Profile.normalize`（`strip.downcase`）处理，再参与比较与入库。
 

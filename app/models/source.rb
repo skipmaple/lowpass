@@ -1,5 +1,6 @@
 class Source < ApplicationRecord
   include Source::Fetching
+  include Source::Presenting
 
   ADAPTERS = %w[ hacker_news github_trending rss ruanyf_weekly ].freeze
   ADAPTER_LABELS = { "hacker_news" => "Hacker News", "github_trending" => "GitHub Trending", "rss" => "RSS/Atom", "ruanyf_weekly" => "阮一峰周刊" }.freeze

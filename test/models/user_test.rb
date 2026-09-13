@@ -35,4 +35,17 @@ class UserTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { User.create!(display_name: "x" * 101) }
     assert_raises(ActiveRecord::RecordInvalid) { User.create!(display_name: "a", role: "root") }
   end
+
+  test "admin_rows 按最近登录倒序，列出登录方式" do
+    rows = User.admin_rows
+
+    assert_equal "Drew Lee", rows.first[:display_name]
+    assert_equal "Google", rows.first[:providers_label]
+    assert_equal "admin", rows.first[:role]
+    assert_equal "2026-09-09 08:12", rows.first[:last_login_label]
+    nomail = rows.find { |row| row[:display_name] == "octocat" }
+    assert_nil nomail[:email]
+    assert_equal "GitHub", nomail[:providers_label]
+    assert_nil nomail[:last_login_label]
+  end
 end

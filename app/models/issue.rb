@@ -1,5 +1,5 @@
 class Issue < ApplicationRecord
-  include Issue::Daily, Issue::Weekly, Issue::Sections, Issue::Finalization, Issue::Presenting
+  include Issue::Daily, Issue::Weekly, Issue::Sections, Issue::Finalization, Issue::Presenting, Issue::Administering
 
   has_many :items, dependent: :delete_all
   has_many :fetch_runs, dependent: :nullify

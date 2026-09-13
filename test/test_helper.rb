@@ -42,6 +42,9 @@ class ActionDispatch::IntegrationTest
   # rate_limit 与回调限流的计数都在 memory_store 里；上一条测试的登录次数不能漏进这一条
   setup { Rails.cache.clear }
 
+  # OmniAuth.config.mock_auth 是进程级的：不清掉，忘了 mock_omniauth 的测试会拿上一条测试的身份登录成功
+  teardown { OmniAuth.config.mock_auth.clear }
+
   # inertia_rails 的 use_script_element_for_initial_page 把整个 payload 渲染成
   # <script data-page="app" type="application/json"> 的文本内容（page.to_json.html_safe，没有 HTML 转义），
   # 没有开 SSR，所以页面上能读到的每个字符串都必须先出现在 props 里。

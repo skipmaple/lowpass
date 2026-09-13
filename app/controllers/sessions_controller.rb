@@ -16,7 +16,8 @@ class SessionsController < ApplicationController
     # 这个环境没挂这条策略（比如生产的 /auth/developer/callback）：OmniAuth 不接这条回调，
     # 请求直接落到这里，env["omniauth.auth"] 是空的。当登录失败处理，不建会话
     if request.env["omniauth.auth"].nil?
-      Rails.logger.info { "登录失败：no_auth（#{params[:provider]}）" }
+      # provider 是路由通配段、已经解码过，inspect 一下再记：不然 /auth/a%0Ab/callback 能伪造一行日志
+      Rails.logger.info { "登录失败：no_auth（#{params[:provider].inspect}）" }
       return redirect_to login_path, alert: FAILED
     end
 

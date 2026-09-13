@@ -23,6 +23,8 @@ module Source::Fetching
       # 不是这一栏真的有几条，栏级「今日无新内容」也就判错了
       deduped = issue ? issue.replace_section!(self, kept) : 0
       run.update!(status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, duration_ms: elapsed(run))
+      # R-1.5 管理员手动重抓已定稿的期：整栏已换过，记修订时间与该栏结果。走 job 的路径也要记，不只同步的 regenerate_source!
+      issue.revise!(self, run) if issue && trigger == "manual" && !issue.generating?
     end
 
     run

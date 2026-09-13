@@ -91,4 +91,11 @@ class FetchSourceJobTest < ActiveJob::TestCase
     assert_equal "failed", run.status
     assert_equal "该来源无法回填", run.error_summary
   end
+
+  test "周刊期的手动重抓走 Issue.refetch_weekly!" do
+    Issue.expects(:refetch_weekly!).with(issues(:weekly_w36), sources(:ruanyf)).returns(FetchRun.new(status: "succeeded"))
+    Source.any_instance.expects(:fetch_now).never
+
+    FetchSourceJob.perform_now(sources(:ruanyf), issues(:weekly_w36), "manual")
+  end
 end

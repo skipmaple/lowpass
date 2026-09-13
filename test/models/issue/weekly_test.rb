@@ -11,6 +11,14 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     Source.create!(name: "W", adapter: "rss", publication: "weekly", sort_order: sort_order, config: { feed_url: "https://w.example/feed" })
   end
 
+  def ruanyf_item(title, section:, issue_no: 366, rank: 1)
+    issues(:weekly_w36).items.create!(
+      source: sources(:ruanyf), title: title, section: section, rank: rank, fetched_at: Time.current,
+      url: "https://r.example/#{issue_no}/#{rank}", url_hash: Digest::SHA256.hexdigest("#{issue_no}/#{rank}"),
+      meta: { issue_no: issue_no, issue_title: "慢下来的理由", anchor: section }
+    )
+  end
+
   test "AC-2.1 新期归入发布日所在 ISO 周" do
     Adapters::RuanyfWeekly.any_instance.stubs(:latest_issue_number).returns(367)
     Adapters::RuanyfWeekly.any_instance.stubs(:fetch_issue).with(367).returns(entries(6, published: Time.utc(2026, 9, 11)))
@@ -255,5 +263,43 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_equal [ "科技动态", "工具" ], sections.first[:sections].map(&:first)
     assert_equal %w[ t1 t2 ], sections.first[:sections].first.last.map(&:title)
     assert_nil sections.last[:sections].sole.first
+  end
+
+  # R-2.8 手动重抓：阮一峰按这一期已有的期号重抓，整节替换，记修订
+  test "refetch_weekly! 按期号重抓阮一峰并整节替换" do
+    ruanyf_item("旧条目", section: "工具")
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(366).returns([
+      Adapters::Entry.new(title: "新条目", url: "https://r.example/366/new", section: "工具", rank: 1, meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" })
+    ])
+
+    run = Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf))
+
+    assert_equal "succeeded", run.status
+    assert_equal "manual", run.trigger
+    assert_equal 1, run.item_count
+    assert_equal [ "新条目" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).pluck(:title)
+    assert issues(:weekly_w36).revised_at.present?
+  end
+
+  test "refetch_weekly! 对 RSS 周刊源按该周窗口整节替换" do
+    feed = rss_weekly_source
+    issues(:weekly_w36).write_section!(feed, [ Adapters::Entry.new(title: "旧", url: "https://w.example/old", published_at: Time.utc(2026, 9, 2)) ])
+    Adapters::Rss.any_instance.expects(:fetch).with(period_key: "2026-W36").returns([ Adapters::Entry.new(title: "新", url: "https://w.example/new", published_at: Time.utc(2026, 9, 3)) ])
+
+    Issue.refetch_weekly!(issues(:weekly_w36), feed)
+
+    assert_equal [ "新" ], issues(:weekly_w36).reload.items.where(source: feed).pluck(:title)
+  end
+
+  test "refetch_weekly! 失败保留原内容并记失败" do
+    ruanyf_item("旧条目", section: "工具")
+    Adapters::RuanyfWeekly.any_instance.stubs(:fetch_issue).raises(Adapters::Http::Error, "boom")
+
+    assert_raises(Adapters::Http::Error) { Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf)) }
+
+    run = sources(:ruanyf).fetch_runs.where(trigger: "manual").sole
+    assert_equal "failed", run.status
+    assert_equal "boom", run.error_summary
+    assert_equal [ "旧条目" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).pluck(:title)
   end
 end

@@ -157,6 +157,26 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert_nil issue.reload.revised_at
   end
 
+  # R-1.5 手动重抓成功记 revised_at——走 job 的路径也要记，不只 regenerate_source!
+  test "手动重抓由 fetch_now 自己记修订" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "new", url: "https://h/new") ])
+    issue = issues(:daily_0908)
+
+    run = sources(:hn).fetch_now(issue, trigger: "manual")
+
+    assert_equal "succeeded", run.status
+    assert issue.reload.revised_at.present?
+    assert_equal "ok", issue.source_states[sources(:hn).id]
+    assert_equal [ "new" ], issue.items.where(source: sources(:hn)).pluck(:title)
+  end
+
+  test "调度触发的迟到抓取仍然不改已定稿的期" do
+    run = sources(:hn).fetch_now(issues(:daily_0908), trigger: "scheduled")
+
+    assert_equal "failed", run.status
+    assert_nil issues(:daily_0908).reload.revised_at
+  end
+
   # R58 抓取记录只保留 30 天（F-26）：栏目状态在定稿时固化，不再从 fetch_runs 推导
   test "定稿把各源结果写进 source_states" do
     stub_all(Adapters::HackerNews => [ Adapters::Entry.new(title: "h", url: "https://h/1") ], Adapters::GithubTrending => [])

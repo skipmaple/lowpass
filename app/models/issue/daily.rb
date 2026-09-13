@@ -26,12 +26,9 @@ module Issue::Daily
       issue
     end
 
-    # R-1.5 重抓成功则整栏替换并记修订时间；失败时 fetch_now 抛出，旧内容原样保留
-    # 期还在生成中时不提前发布：这次抓取只贡献它那一栏，是否结束这一期交给 finalize_if_done! 判断
+    # R-1.5 同步版的重抓（测试与 console 用）；后台走 fetch_later，修订由 fetch_now 自己记
     def regenerate_source!(issue, source)
-      run = source.fetch_now(issue, trigger: "manual")
-      issue.revise!(source, run) if !issue.generating? && run.status == "succeeded"
-      run
+      source.fetch_now(issue, trigger: "manual")
     end
 
     # 一期列哪些栏：定稿的期只认它自己记下的源（R58），后来停用的源照样有内容，后来新增的

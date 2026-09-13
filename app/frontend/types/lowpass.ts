@@ -11,7 +11,7 @@ export type DailyIssue = { period_key: string; date_label: string; weekday: stri
 // 周刊（R-2.5）：期头是「第 36 周 · 2026 · 8月31日 至 9月6日」；那一周没有期时 state 为 null，status 是「本周无内容」。
 export type WeeklyIssue = { period_key: string; year: number; week_label: string; range_label: string; state: IssueState | null; status: string | null; published_at: string | null; prev_key: string | null; next_key: string | null };
 export type WeeklySource = Pick<SourceSummary, "id" | "name" | "adapter" | "home_url">;
-// 一个板块（RSS 源没有板块，name 为 null）；anchor 是板块锚点目录的落点。
+// 一个板块（RSS 源没有板块，name 为 null）；anchor 是板块锚点目录的落点（页面渲染 id 与 href 时百分号编码，见 Weekly/Show）。
 export type WeeklyGroup = { name: string | null; anchor: string; items: Item[] };
 // 一节 = 一个源的一期：issue_label 是「第 366 期 · 主题」，degraded 时整节只有一条指向原文的条目（R-2.3）。
 export type WeeklySection = { source: WeeklySource; issue_no: number | null; issue_title: string | null; issue_label: string | null; degraded: boolean; original_url: string | null; groups: WeeklyGroup[] };
@@ -24,3 +24,16 @@ export type ArchiveWeek = { period_key: string; week_label: string; range_label:
 
 // 页脚在每个页面都要的两样（R51）
 export type FooterData = { daily_time: string; latest_weekly_key: string | null };
+
+// ── 搜索（PRD 5.4、设计 6.2）：props 的形状由 SearchesController#render_search 定 ──
+export type Publication = "daily" | "weekly";
+export type SearchState = "initial" | "results" | "empty" | "limited" | "unavailable";
+export type SearchRange = "7d" | "30d" | "all" | "custom";
+export type SearchSort = "relevance" | "date";
+export type SearchFilters = { type: Publication | null; sources: string[]; from: string | null; to: string | null; range: SearchRange; sort: SearchSort };
+export type SearchSourceOption = { id: string; name: string; enabled: boolean };
+export type DatePreset = { from: string; to: string };
+export type DatePresets = Record<"7d" | "30d", DatePreset>;
+// 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
+export type HitRun = { text: string; hit: boolean };
+export type SearchResult = { item_id: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null };

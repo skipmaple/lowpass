@@ -3,6 +3,8 @@ import type {
   ArchiveWeek,
   DailyIssue,
   Item,
+  SearchFilters,
+  SearchResult,
   SourceSummary,
   WeeklyGroup,
   WeeklyIssue,
@@ -122,6 +124,34 @@ export function archiveWeek(overrides: Partial<ArchiveWeek> = {}): ArchiveWeek {
     state: 'published',
     summary: '阮一峰科技爱好者周刊 第 366 期 · 人生的容错率',
     count: 42,
+    ...overrides,
+  }
+}
+
+export function searchFilters(overrides: Partial<SearchFilters> = {}): SearchFilters {
+  return { type: null, sources: [], from: null, to: null, range: 'all', sort: 'relevance', ...overrides }
+}
+
+// 一条日刊结果：标题命中 Kuber 与 Rust，片段命中 Kubernetes
+export function searchResult(overrides: Partial<SearchResult> = {}): SearchResult {
+  return {
+    item_id: 'itm-hn-1',
+    rank: 1,
+    publication: 'daily',
+    source_name: 'Hacker News',
+    where: { label: '9月8日', href: '/daily/2026-09-08?source=src-hn#item-itm-hn-1' },
+    published_label: '9月8日',
+    url: 'https://example.com/k8s-rust',
+    title_runs: [
+      { text: 'Kuber', hit: true },
+      { text: 'netes operator in ', hit: false },
+      { text: 'Rust', hit: true },
+    ],
+    snippet_runs: [
+      { text: 'Build a ', hit: false },
+      { text: 'Kubernetes', hit: true },
+      { text: ' operator with the Rust SDK', hit: false },
+    ],
     ...overrides,
   }
 }

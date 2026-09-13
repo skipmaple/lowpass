@@ -26,4 +26,16 @@ class ItemTest < ActiveSupport::TestCase
     item.url = "https://a.b/x"
     assert item.valid?
   end
+
+  # 周刊页板块锚点与搜索结果的所在期链接共用这一处（设计 6.3）
+  test "锚点：阮一峰按期号加板块 slug，没有板块的源落到源节头" do
+    item = items(:hn_one)
+    assert_equal "source-#{sources(:hn).id}", item.anchor
+
+    item.meta = { "issue_no" => 366, "anchor" => "工具" }
+    assert_equal "issue-366-工具", item.anchor
+
+    item.meta = { "anchor" => "工具" }
+    assert_equal "工具", item.anchor
+  end
 end

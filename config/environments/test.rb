@@ -20,7 +20,9 @@ Rails.application.configure do
 
   # Show full error reports.
   config.consider_all_requests_local = true
-  config.cache_store = :null_store
+  # rate_limit（SearchesController）靠 cache store 计数：NullStore 的 increment 返回 nil，永远限不住。
+  # MemoryStore 每个测试进程一份，用到它的测试在 setup 里 Rails.cache.clear。
+  config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable

@@ -6,6 +6,7 @@ import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
+import { useScrollToHash } from '@/lib/anchors'
 import { WEEKLY_ARCHIVE, latestWeeklyHref, weeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/types/lowpass'
@@ -16,15 +17,19 @@ import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/type
 // D19：周刊条目不加推荐理由，也就没有兴趣标签。
 // 画布：docs/design/src/pages_site.py 的 weekly()、source_band()、anchors()、rss_section()、degraded_section()。
 
+// 板块的 DOM id 是锚点的百分号编码形式：location.hash 里的中文一律是编码过的，Inertia 与 lib/anchors.ts 都拿
+// hash 原样找元素，id 也得是编码过的（源 id 与拉丁 slug 编码后不变；服务端 weekly_issue_path(anchor:) 编码规则相同）
+const anchorId = (anchor: string) => encodeURIComponent(anchor)
+
 export type WeeklyShowProps = FooterData & {
   issue: WeeklyIssue
   sections: WeeklySection[]
 }
 
 // 反白横带：书本图标 + 源名 32（拉丁走 Newsreader 600，中文走文楷），右端期号与原文外链
-function SourceBand({ section }: { section: WeeklySection }) {
+function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
-    <div className="source-band">
+    <div className="source-band" id={id}>
       <div className="source-band-name">
         <Icon name="book-open" size={28} color="var(--paper)" />
         <h2 className="source-band-title">
@@ -55,7 +60,7 @@ function Anchors({ groups }: { groups: WeeklyGroup[] }) {
   return (
     <nav className="anchors" aria-label="板块">
       {groups.map((group) => (
-        <a className="anchor-chip" key={group.anchor} href={`#${group.anchor}`}>
+        <a className="anchor-chip" key={group.anchor} href={`#${anchorId(group.anchor)}`}>
           {group.name}
         </a>
       ))}
@@ -91,7 +96,7 @@ function Group({ group, section }: { group: WeeklyGroup; section: WeeklySection 
   }
 
   return (
-    <section id={group.anchor}>
+    <section id={anchorId(group.anchor)}>
       <h3 className="weekly-section-head">{group.name}</h3>
       <Items group={group} section={section} heading="h4" />
     </section>
@@ -116,10 +121,13 @@ function Degraded({ section }: { section: WeeklySection }) {
 
 function Section({ section }: { section: WeeklySection }) {
   const named = section.groups.filter((group) => group.name)
+  // 没有板块的节（RSS 周刊源、降级 stub）的落点是这一节的头：Item#anchor 给这些条目的锚点是 source-<源 id>，
+  // 搜索结果的所在期链接指向它（设计 6.3）
+  const head = section.groups.find((group) => !group.name)
 
   return (
     <>
-      <SourceBand section={section} />
+      <SourceBand section={section} id={head ? anchorId(head.anchor) : undefined} />
       {section.degraded ? (
         <Degraded section={section} />
       ) : (
@@ -135,6 +143,7 @@ function Section({ section }: { section: WeeklySection }) {
 }
 
 export default function Show({ issue, sections }: WeeklyShowProps) {
+  useScrollToHash(issue.period_key)
   return (
     <>
       <PageHead

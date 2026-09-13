@@ -1,14 +1,14 @@
 import { Link } from '@inertiajs/react'
 import type * as React from 'react'
 
-import { DAILY_LATEST, WEEKLY_ARCHIVE } from '@/lib/paths'
+import { DAILY_LATEST, SEARCH, WEEKLY_ARCHIVE } from '@/lib/paths'
 
 // 报头黑带：80px 墨底，LOWPASS 用品牌字 40px 纸色，导航文楷 15，右侧搜索图标与头像位。
 // 尺寸（高度、边距、品牌字号、间距）在 tokens.css 的 .masthead* 里，手机版由那里的 @media 收窄。
 // 图标是墨线内联 SVG（在黑带上用纸色描边），不引图标库、不用 emoji。
 //
-// 搜索（F-13）与账户（F-1）是 P1/P2 的页面，P0 没有这两条路由：不传 href 时右侧两个位置
-// 渲染成同样外观的非交互占位，不给读者一个点开就 404 的图标；P1/P2 把 href 传进来就还是链接。
+// 搜索入口（D21）指向 /search；账户（F-1）是 P2 的页面，P0/P1 没有这条路由：不传 accountHref 时
+// 右侧的账户位渲染成同样外观的非交互占位，不给读者一个点开就 404 的图标；P2 把 href 传进来就还是链接。
 export type MastheadProps = {
   active?: 'daily' | 'weekly'
   dailyHref?: string
@@ -87,7 +87,7 @@ const ACCOUNT_STYLE: React.CSSProperties = {
   justifyContent: 'center',
 }
 
-export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref = WEEKLY_ARCHIVE, searchHref, accountHref }: MastheadProps) {
+export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref = WEEKLY_ARCHIVE, searchHref = SEARCH, accountHref }: MastheadProps) {
   return (
     <header className="masthead">
       <div className="masthead-left">

@@ -9,6 +9,7 @@ import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import SourceState from '@/components/SourceState'
 import SourceTabs from '@/components/SourceTabs'
+import { useScrollToHash } from '@/lib/anchors'
 import { DAILY_ARCHIVE, dailyHref, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SourceSummary } from '@/types/lowpass'
@@ -94,6 +95,7 @@ function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProp
 }
 
 export default function Show({ issue, missing, sources, items_by_source, active_source_id }: DailyShowProps) {
+  useScrollToHash(issue.period_key)
   const notice = bodyNotice(issue, missing)
 
   return (

@@ -299,6 +299,24 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_equal [ "新 366", "新 367" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).order(:title).pluck(:title)
   end
 
+  # R-2.8 失败原内容保留：几个期号是一个整体，后一节抓砸了，前一节也不能已经换掉——
+  # 否则会留下「366 换了、367 还是旧的、还没记修订」的半截，与「每次替换都记 revised_at」的不变量冲突
+  test "refetch_weekly! 某个期号抓失败则一节都不替换" do
+    ruanyf_item("旧 366", section: "工具", issue_no: 366)
+    ruanyf_item("旧 367", section: "工具", issue_no: 367)
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(366)
+      .returns([ Adapters::Entry.new(title: "新 366", url: "https://r.example/366/new", rank: 1, meta: { issue_no: 366 }) ])
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(367).raises(Adapters::Http::Error, "boom")
+
+    assert_raises(Adapters::Http::Error) { Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf)) }
+
+    assert_equal [ "旧 366", "旧 367" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).order(:title).pluck(:title)
+    assert_nil issues(:weekly_w36).revised_at
+    run = sources(:ruanyf).fetch_runs.where(trigger: "manual").sole
+    assert_equal "failed", run.status
+    assert_equal "boom", run.error_summary
+  end
+
   # FetchSourceJob 可重试失败时先写一条 queued 占位，重试要复用它，不然那条 queued 永远挂着
   # （FetchRun.active 会一直把这个源报成运行中），跟 Source::Fetching#fetch_now 是同一个做法
   test "refetch_weekly! 复用排队中的手动记录" do

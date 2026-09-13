@@ -4,6 +4,7 @@ require "application_system_test_case"
 # 这一条顺带验的是 fetch 带 CSRF 令牌那条路）。
 class SearchingTest < ApplicationSystemTestCase
   setup do
+    sign_in_with_browser(users(:drew))
     Rails.cache.clear
     Search::Record.rebuild!
   end

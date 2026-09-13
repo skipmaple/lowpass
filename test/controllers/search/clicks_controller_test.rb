@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Search::ClicksControllerTest < ActionDispatch::IntegrationTest
-  setup { Rails.cache.clear }
+  setup { sign_in_as(users(:drew)) }
 
   test "记一次点击并返回 204" do
     post search_clicks_path, params: { item_id: items(:hn_one).id, rank: 3, q: "terminal" }, as: :json

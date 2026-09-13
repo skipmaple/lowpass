@@ -131,6 +131,19 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # R-4.10 按用户计数：一个人用光了额度不影响另一个人
+  test "限流按用户算，不按 IP" do
+    60.times { get search_path(q: "kuber") }
+    get search_path(q: "kuber")
+    assert_response :too_many_requests
+
+    delete session_path
+    sign_in_as(users(:guest))
+    get search_path(q: "kuber")
+
+    assert_response :success
+  end
+
   test "每次执行的搜索写一行日志" do
     get search_path(q: "kuber", type: "daily", page: 1)
 

@@ -35,4 +35,12 @@ class ApplicationController < ActionController::Base
     def render_not_found
       render inertia: "Errors/NotFound", props: footer_props, status: :not_found
     end
+
+    # 附录 B 的 403 页（AC-3.5）：登录了但不是 admin，不跳登录页。显式指定 layout：
+    # mission_control-jobs 的控制器把 layout 定死成它自己那张（期待 @application 已经由它自己的
+    # before_action 设好），而 require_admin 先于那些 before_action 拦下请求，不指定就会渲染那张
+    # 布局并因为 @application 是 nil 而炸掉
+    def render_forbidden
+      render inertia: "Errors/Forbidden", props: footer_props, status: :forbidden, layout: "application"
+    end
 end

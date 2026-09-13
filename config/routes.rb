@@ -19,9 +19,11 @@ Rails.application.routes.draw do
     resources :clicks, only: :create
   end
 
-  # 队列面板：P0 只在开发环境挂载，免认证（config/environments/development.rb 关掉了它默认的
-  # HTTP Basic Auth，本来就没提交凭证）。生产环境挂载与管理员认证是 P2，见 AGENTS.md 的 `/admin/jobs`。
-  mount MissionControl::Jobs::Engine, at: "/jobs" if Rails.env.development?
+  # 队列面板（ADR T12）：三个环境都挂在 /admin/jobs，认证由 Admin::BaseController 做（config/application.rb）。
+  # /admin 下其余路径先过 admin 检查再落 404（AC-3.5：非 admin 访问 /admin 下任意路径都是 403）；
+  # 子项目 ② 的后台页面加在这一段前面。
+  mount MissionControl::Jobs::Engine, at: "/admin/jobs"
+  match "admin(/*path)" => "admin/base#not_found", via: :get
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

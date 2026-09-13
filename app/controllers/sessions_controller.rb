@@ -13,6 +13,13 @@ class SessionsController < ApplicationController
   end
 
   def create
+    # 这个环境没挂这条策略（比如生产的 /auth/developer/callback）：OmniAuth 不接这条回调，
+    # 请求直接落到这里，env["omniauth.auth"] 是空的。当登录失败处理，不建会话
+    if request.env["omniauth.auth"].nil?
+      Rails.logger.info { "登录失败：no_auth（#{params[:provider]}）" }
+      return redirect_to login_path, alert: FAILED
+    end
+
     result = Identity::Resolution.call(request.env["omniauth.auth"])
     start_session_for(result.user)
 

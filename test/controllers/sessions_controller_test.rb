@@ -124,6 +124,15 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, Session.count
   end
 
+  test "没挂载的 provider 的回调当登录失败，不建会话" do
+    get "/auth/nope/callback"
+
+    assert_redirected_to login_path
+    assert_equal 0, Session.count
+    follow_redirect!
+    assert_equal({ "alert" => "登录失败，请重试。" }, page_props["flash"])
+  end
+
   test "R-5.9 同一 IP 一分钟内第 11 次回调被挡在 OmniAuth 之前" do
     mock_omniauth(:github, :invalid_credentials)
     10.times do

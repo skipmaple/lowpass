@@ -159,6 +159,8 @@ function Body(props: SearchShowProps) {
 export default function Show(props: SearchShowProps) {
   return (
     <>
+      {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
+      <h1 className="sr-only">搜索</h1>
       <SearchHead key={props.q} q={props.q} filters={props.filters} truncated={props.truncated} />
       <SearchFilters q={props.q} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
       <Body {...props} />

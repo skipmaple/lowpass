@@ -249,6 +249,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 .search-input { flex: 1 1 auto; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--ink);
                 font-family: var(--font-cjk); font-size: var(--fs-32); line-height: 1.2; }
 .search-input::placeholder { color: var(--ink2); font-size: var(--fs-20); }
+/* type=search 在 Chrome / Safari 里自带一个清除用的「×」，不是这张纸上的装置（画布 search_head() 没有它）：藏掉，清空靠键盘 */
+.search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .search-input:focus { outline: none; }
 .search-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 .search-note { flex-basis: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }

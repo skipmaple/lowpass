@@ -4,6 +4,7 @@ require "test_helper"
 # 只有适配器出网那一层是替身，其余（job、装订、定稿、索引、控制器）都是正式代码路径。
 class SearchFreshnessTest < ActionDispatch::IntegrationTest
   setup do
+    sign_in_as(users(:drew))
     Rails.cache.clear
     Surfguard.stubs(:resolve_public_ips).returns([ "1.1.1.1" ])
   end

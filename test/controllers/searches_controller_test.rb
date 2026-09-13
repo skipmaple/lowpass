@@ -3,6 +3,7 @@ require "test_helper"
 # 搜索页的 props 契约（设计 6.2）与 AC-4.5 / 4.6 / 4.7
 class SearchesControllerTest < ActionDispatch::IntegrationTest
   setup do
+    sign_in_as(users(:drew))
     Rails.cache.clear
     @item = index_item("Kubernetes operator in Rust", summary: "Build a Kubernetes operator with the Rust SDK")
   end

@@ -2,6 +2,14 @@ Rails.application.routes.draw do
   # D20：`/` 就是最新一期日刊，不是单独的首页；两条路由渲染同一个 Inertia 页面。
   root "daily_issues#latest"
 
+  # P2-① 登录（PRD 5.5）：POST /auth/:provider 与回调的前半段在 OmniAuth 中间件里（config/initializers/omniauth.rb），
+  # 回调后半段落到 sessions#create；失败由 OmniAuth.config.on_failure 直接调 sessions#failure，这条路由只是兜底
+  get "login" => "sessions#new", as: :login
+  get "auth/:provider/callback" => "sessions#create", as: :auth_callback
+  get "auth/failure" => "sessions#failure"
+  delete "session" => "sessions#destroy", as: :session
+  get "settings" => "settings#show", as: :settings
+
   resources :daily_issues, path: "daily", only: [ :index, :show ], param: :period_key
   resources :weekly_issues, path: "weekly", only: [ :index, :show ], param: :period_key
 

@@ -50,4 +50,18 @@ class Adapters::RssTest < ActiveSupport::TestCase
     atom.fetch
     assert_equal "Example Atom Feed", atom.feed_title
   end
+
+  # 7.7 回填「有限」：feed 里还有那一天的条目就取，没有就是 0 条
+  test "backfill 取发布日等于该日的条目" do
+    dates = RSS::Parser.parse(file_fixture("rss/hackaday.xml").read, false).items.map { |item| item.pubDate.in_time_zone(PeriodKey::ZONE).to_date }
+    day = dates.tally.max_by { |_, n| n }.first
+
+    entries = Adapters::Rss.new(sources(:hackaday)).backfill(day)
+
+    assert_equal dates.count(day).clamp(0, 10), entries.size
+    assert entries.all? { |e| e.published_at.in_time_zone(PeriodKey::ZONE).to_date == day }
+    assert_equal entries.map(&:published_at), entries.map(&:published_at).sort.reverse
+    assert_empty Adapters::Rss.new(sources(:hackaday)).backfill(Date.new(2000, 1, 1))
+    assert Adapters::Rss.backfill?
+  end
 end

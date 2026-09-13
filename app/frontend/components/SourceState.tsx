@@ -33,6 +33,15 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
     )
   }
 
+  // R-1.6 补生成的期里不支持回填的源（7.7）：附录 B「该来源无法回填」
+  if (state === 'no_backfill') {
+    return (
+      <div className="source-state">
+        <span className="state-line">该来源无法回填</span>
+      </div>
+    )
+  }
+
   // 这一栏还在抓（期头写着「生成中，约 1 分钟后刷新」）：留一段空白，不再说第二遍
   return <div className="source-state-pending" />
 }

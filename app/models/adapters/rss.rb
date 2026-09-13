@@ -4,6 +4,8 @@ module Adapters
   class Rss < Base
     ParseError = Class.new(StandardError)
 
+    def self.backfill? = true
+
     # 新建表单「名称默认取 feed 标题」（R-3.2）：抓过一次才有
     def feed_title
       return unless @feed
@@ -23,6 +25,16 @@ module Adapters
           all.select { |e| e.published_at >= config.fetch(:window_hours, 24).to_i.hours.ago }
         end
         window.sort_by(&:published_at).reverse.first(config.fetch(:count, 10).to_i).each_with_index.map { |e, i| e.rank = i + 1; e }
+      end
+
+      # 7.7 回填「有限」：feed 里仍有那一天（上海日）的条目就取，按发布时间倒序取 count 条
+      def backfill_entries(date)
+        @feed = parse_feed(http(config.fetch(:feed_url)).body)
+        fetched_at = Time.current
+        all = feed_items(@feed).map { |it| normalize(it, fetched_at) }.select(&:valid?)
+        all.select { |e| e.published_at.in_time_zone(PeriodKey::ZONE).to_date == date }
+           .sort_by(&:published_at).reverse.first(config.fetch(:count, 10).to_i)
+           .each_with_index.map { |e, i| e.rank = i + 1; e }
       end
 
       def parse_feed(body)

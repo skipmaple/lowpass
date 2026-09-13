@@ -19,6 +19,7 @@ describe('Login/Show', () => {
   it('口号与两个 provider 的表单按钮，带 CSRF 令牌与 origin', () => {
     render(<Show providers={['google_oauth2', 'github']} next="/weekly" />)
 
+    expect(screen.getByRole('heading', { level: 1, name: '登录' })).toBeInTheDocument()
     expect(screen.getByText('滤掉噪音，留下信号。')).toBeInTheDocument()
     const google = screen.getByRole('button', { name: '使用 Google 登录' })
     const form = google.closest('form')

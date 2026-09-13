@@ -125,7 +125,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 .ctrl { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px;
         border: 1px solid var(--ink); background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink);
         white-space: nowrap; cursor: pointer; }
-.ctrl-off { border-color: var(--rule); color: var(--ink2); }
+.ctrl-off { border-color: var(--rule); color: var(--ink2); cursor: default; }
 .ctrl-square { width: 44px; height: 44px; padding: 0; }
 
 /* 来源索引条：并排等宽，当前项反白成墨块，其余 1px 描边；相邻两条共用一条边。
@@ -370,7 +370,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 .settings-avatar { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
 .settings-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .link-button { padding: 0; border: 0; background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); cursor: pointer;
-               text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+               text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px;
+               min-height: 44px; display: inline-flex; align-items: center; }
 .link-button:hover { text-decoration-color: var(--ink); }
 .link-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 480px) {

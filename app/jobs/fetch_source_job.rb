@@ -11,7 +11,7 @@ class FetchSourceJob < ApplicationJob
 
   def perform(source, issue, trigger, backfill = false)
     if issue&.kind == "weekly" && trigger == "manual"
-      Issue.refetch_weekly!(issue, source)
+      Issue.refetch_weekly!(issue, source, attempt: executions)
     else
       source.fetch_now(issue, trigger: trigger, attempt: executions, backfill: backfill)
     end

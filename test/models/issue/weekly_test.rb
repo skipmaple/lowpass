@@ -269,7 +269,8 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
   test "refetch_weekly! 按期号重抓阮一峰并整节替换" do
     ruanyf_item("旧条目", section: "工具")
     Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(366).returns([
-      Adapters::Entry.new(title: "新条目", url: "https://r.example/366/new", section: "工具", rank: 1, meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" })
+      Adapters::Entry.new(title: "新条目", url: "https://r.example/366/new", section: "工具", rank: 1, meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" }),
+      Adapters::Entry.new(title: "没有地址的条目", url: nil, section: "工具", rank: 2, meta: { issue_no: 366 })
     ])
 
     run = Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf))
@@ -277,8 +278,52 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_equal "succeeded", run.status
     assert_equal "manual", run.trigger
     assert_equal 1, run.item_count
+    assert_equal 1, run.dropped_count, "无效条目跟日刊路径一样计进丢弃数，不然 item_count 报的是抓到几条"
     assert_equal [ "新条目" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).pluck(:title)
     assert issues(:weekly_w36).revised_at.present?
+  end
+
+  # 同一周两期各占一节（R41）：每个期号各抓一次、各自整节替换，条数是两节合计
+  test "refetch_weekly! 同一周多个期号各自整节替换并合计条数" do
+    ruanyf_item("旧 366", section: "工具", issue_no: 366)
+    ruanyf_item("旧 367", section: "工具", issue_no: 367)
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(366)
+      .returns([ Adapters::Entry.new(title: "新 366", url: "https://r.example/366/new", rank: 1, meta: { issue_no: 366 }) ])
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(367)
+      .returns([ Adapters::Entry.new(title: "新 367", url: "https://r.example/367/new", rank: 1, meta: { issue_no: 367 }) ])
+
+    run = Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf))
+
+    assert_equal 2, run.item_count
+    assert_equal 0, run.dropped_count
+    assert_equal [ "新 366", "新 367" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).order(:title).pluck(:title)
+  end
+
+  # FetchSourceJob 可重试失败时先写一条 queued 占位，重试要复用它，不然那条 queued 永远挂着
+  # （FetchRun.active 会一直把这个源报成运行中），跟 Source::Fetching#fetch_now 是同一个做法
+  test "refetch_weekly! 复用排队中的手动记录" do
+    ruanyf_item("旧条目", section: "工具")
+    queued = sources(:ruanyf).fetch_runs.create!(issue: issues(:weekly_w36), trigger: "manual", attempt: 2, status: "queued")
+    Adapters::RuanyfWeekly.any_instance.stubs(:fetch_issue).with(366).returns([
+      Adapters::Entry.new(title: "新条目", url: "https://r.example/366/new", section: "工具", rank: 1, meta: { issue_no: 366 })
+    ])
+
+    run = Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf), attempt: 2)
+
+    assert_equal queued.id, run.id
+    assert_equal "succeeded", queued.reload.status
+    assert_equal 1, sources(:ruanyf).fetch_runs.where(trigger: "manual").count, "不该另开一条"
+  end
+
+  # 这一期里没有这个源的条目，就没有期号可抓：重抓多少次都一样，记一条失败到此为止，不抛（job 不重试）
+  test "refetch_weekly! 这一期没有该源的期号时记失败但不抛出" do
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).never
+
+    run = Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf))
+
+    assert_equal "failed", run.status
+    assert_equal "这一期里没有这个源的期号", run.error_summary
+    assert_nil issues(:weekly_w36).reload.revised_at
   end
 
   test "refetch_weekly! 对 RSS 周刊源按该周窗口整节替换" do

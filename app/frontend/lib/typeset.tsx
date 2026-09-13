@@ -7,6 +7,15 @@
 // 画布 docs/design/src/pages_front2.py 的 mixed() 只按字符类切段，会把「9月7日」切成
 // Maple[9] 文楷[月] Maple[7] 文楷[日]——画布落后于定稿，这里以 PRD 6.3 为准。
 
+// 【测试注意】Mixed 把一段文字拆成多个相邻的行内 <span>（搜索页的 HitText 也是：命中 / 非命中 run 各自一个 <span>，
+// D22 的 2px 下划线要挂在 run 上）。jsdom 里 Testing Library 的 getByRole 用 dom-accessibility-api 算可访问名：
+// 每个子元素的名字先 trim，行内兄弟之间不加分隔符，所以恰好落在两个 <span> 边界上的空格会被吃掉——
+// 「近 7 天」拆成「近」/「 7」/「 天」，算出来的名字是「近7天」；HitText 的「Kubernetes operator in 」+「Rust」
+// 算成「Kubernetes operator inRust」。真浏览器的渲染与 textContent / toHaveTextContent 都不受影响，
+// 只有 getByRole(role, { name: '字面串' }) 会找不到：报错里列出的 Name 比 DOM 可见文本少一个空格就是它。
+// 修法是把 name 换成容忍空格的正则（/^近\s*7\s*天$/），不要为此改 Mixed、HitText 或 splitRuns。
+// 说明也在 docs/development.md「测试与 CI」与 docs/engineering-conventions.md「测试」。
+
 const CJK_CHAR = '[\\u2E80-\\u9FFF\\uFF00-\\uFFEF]'
 // 通用相邻规则只认日期与序数字符；「第 36 条」里的「条」由「第」那一支带出来
 const DATE_UNIT = '[年月日周期]'

@@ -13,8 +13,9 @@ module Adapters
       Timeout.timeout(FETCH_TIMEOUT) { entries(period_key: period_key) }
     end
 
+    # R-3.3 测试抓取：30 秒超时，返回全部条目；预览取前 5 条、数总数与丢弃数是 Source::TestFetch 的事
     def test_fetch
-      Timeout.timeout(TEST_TIMEOUT) { entries(period_key: nil).first(5) }
+      Timeout.timeout(TEST_TIMEOUT) { entries(period_key: nil) }
     end
 
     private

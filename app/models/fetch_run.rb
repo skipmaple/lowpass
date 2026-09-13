@@ -19,6 +19,16 @@ class FetchRun < ApplicationRecord
     loop { break if stale.limit(batch_size).delete_all.zero? }
   end
 
+  # 后台轮询与提示（设计 6.3）：进行中的让页面继续轮询并禁用按钮，刚结束的弹一次「已更新 / 重抓失败」
+  def self.manual_run_props(scope)
+    runs = scope.includes(:source, :issue).to_a
+    active, finished = runs.partition { |run| run.status.in?(%w[ queued running ]) }
+    {
+      active: active.map { |run| { id: run.id, source_name: run.source.name, period_key: run.issue&.period_key } },
+      finished: finished.map { |run| { id: run.id, source_name: run.source.name, status: run.status, item_count: run.item_count, error_summary: run.error_summary } }
+    }
+  end
+
   def status_label = STATUS_LABELS.fetch(status)
   def trigger_label = TRIGGER_LABELS.fetch(trigger)
 end

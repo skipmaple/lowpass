@@ -123,7 +123,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 40px 描边控件（画布 ctrl）：期导航、翻月、翻年；没有目标时退成 35% 墨线 */
 .ctrl { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px;
-        border: 1px solid var(--ink); font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
+        border: 1px solid var(--ink); background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink);
+        white-space: nowrap; cursor: pointer; }
 .ctrl-off { border-color: var(--rule); color: var(--ink2); }
 .ctrl-square { width: 44px; height: 44px; padding: 0; }
 
@@ -341,4 +342,37 @@ a.t:hover { text-decoration-color: var(--ink); }
   .date-field { height: 44px; }
   .search-row { padding: 24px 0; }
   .search-count { flex-wrap: wrap; }
+}
+
+/* ─── 登录页（P2-①，画布 pages_site.py login_card()）：深色底上一张 400px 纸卡 ─── */
+.login-ground { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 60px 24px; box-sizing: border-box; }
+.login-card { width: 400px; max-width: 100%; }
+.login-band { height: 80px; background: var(--ink); display: flex; align-items: center; justify-content: center; }
+.login-body { padding: 0 32px 36px 32px; }
+.login-art { border: 1px solid var(--ink); padding: 20px; margin-top: 32px; }
+.login-art svg { display: block; width: 100%; height: auto; }
+.login-tagline { margin: 0; padding: 28px 0 24px 0; text-align: center; font-family: var(--font-cjk); font-size: var(--fs-20); }
+.login-forms { display: flex; flex-direction: column; gap: 8px; }
+.login-form { display: flex; flex-direction: column; gap: 8px; }
+.login-button { display: flex; align-items: center; justify-content: center; height: 44px; border: 1px solid var(--ink); background: none;
+                font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
+.login-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .login-ground { padding: 24px; }
+  .login-body { padding: 0 24px 32px 24px; }
+}
+
+/* ─── 设置页（P2-①，画布 pages_site.py settings()）：键值行，左 160px 文楷 13 次墨，35% 线分隔 ─── */
+.settings-rows { padding-top: 8px; }
+.kv-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0 24px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+.kv-key { font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+.kv-value { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.settings-avatar { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+.settings-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.link-button { padding: 0; border: 0; background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); cursor: pointer;
+               text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.link-button:hover { text-decoration-color: var(--ink); }
+.link-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .kv-row { grid-template-columns: 1fr; gap: 8px; }
 }

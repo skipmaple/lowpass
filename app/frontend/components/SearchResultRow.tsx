@@ -24,8 +24,13 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
         <Mixed text={result.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" nowrap />
         {DOT}
         <Mixed text={result.where.label} size="var(--fs-13)" color="var(--ink2)" nowrap />
-        {DOT}
-        <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" nowrap />
+        {/* 日刊的所在期就是那一天，日期与它相同就不写第二遍；周刊的所在期是「第 36 周 · 工具」，日期另有信息 */}
+        {result.published_label !== result.where.label ? (
+          <>
+            {DOT}
+            <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" nowrap />
+          </>
+        ) : null}
       </div>
 
       <h2 className="search-title">

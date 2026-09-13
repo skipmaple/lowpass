@@ -137,6 +137,25 @@ describe('结果行', () => {
     expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
   })
 
+  // 日刊的所在期就是那一天，日期与它相同：眉行只写一次；周刊的所在期是「第 36 周 · 工具」，日期另有信息，两个都写
+  it('所在期与日期相同时眉行只写一次', () => {
+    const daily = results()
+    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News·9月8日')
+    daily.unmount()
+
+    const weekly = results({
+      results: [
+        searchResult({
+          publication: 'weekly',
+          source_name: '阮一峰科技爱好者周刊',
+          where: { label: '第 36 周 · 工具', href: '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7' },
+          published_label: '9月4日',
+        }),
+      ],
+    })
+    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·第 36 周 · 工具·9月4日')
+  })
+
   it('没有摘要就没有片段行', () => {
     const { container } = results({ results: [searchResult({ snippet_runs: null })] })
 

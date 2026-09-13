@@ -91,6 +91,21 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], page_props["results"]
   end
 
+  # R-4.7：页码合法但超过总页数（分享的地址、结果变少）时不渲染一页空结果，跳到最后一页，其余参数原样带上
+  test "页码超过总页数时跳到最后一页" do
+    25.times { |i| index_item("Rust item #{i}") }
+
+    # script_name 是 url_for 的保留键：原样转发读者的参数就会拼出协议相对地址（开放跳转），所以这里故意带上它
+    get "/search?q=rust&page=5&sort=date&script_name=%2F%2Fevil.example"
+
+    # 地址由解析过的字段重建（range、sort 也带上），不是把读者给的参数原样转发
+    assert_redirected_to search_path(q: "rust", range: "all", sort: "date", page: 2)
+    follow_redirect!
+    assert_equal "results", page_props["state"]
+    assert_equal 2, page_props["page"]
+    assert_equal 2, page_props["pages"]
+  end
+
   test "超过 100 字截断并标记" do
     get search_path(q: "k" * 120)
 

@@ -50,7 +50,7 @@
 
 ## 4. 索引维护（R-4.8）
 
-- `Item` 加 `Searchable` concern：`after_create_commit` / `after_update_commit` → `Search::Record.index!(item)`（upsert；`hidden` 为真则删行）；`after_destroy_commit` 由外键级联兜底，不再显式处理。
+- `Item` 加 `Searchable` concern：`after_save_commit`（建与改；同名的 `after_create_commit` / `after_update_commit` 会被 Rails 去重成一个，实现时改用这一个）→ `Search::Record.index!(item)`（upsert；`hidden` 为真则删行）；删除由外键级联兜底，不再显式处理。
 - 装订与整栏替换走 `insert_all!`，不触发回调：`Issue::Sections#replace_section!` 与 `#append_section!` 在插入后调用 `Search::Record.index_items!(ids)` 批量 upsert（一条 `insert_all` 带 `unique_by: :item_id`）。这是索引能在「期发布或修订后 1 分钟内可搜」的关键路径，测试必须覆盖。
 - 生成中的期：索引行在条目写入时就存在，但查询只联 `issues.state = 'published'`（空刊无条目，无影响）。
 - 停用源的历史条目仍在索引（不按 `sources.enabled` 过滤）。

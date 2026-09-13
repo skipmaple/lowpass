@@ -16,6 +16,28 @@ module Issue::Weekly
       weekly.create_with(state: "generating", generation_started_at: Time.current).find_or_create_by!(period_key: period_key)
     end
 
+    # R-2.8 手动重抓：阮一峰按这一期里该源已有的期号逐期重抓、整节替换；RSS 周刊源按该周窗口整节替换。
+    # 失败原内容保留、记录记失败并抛出（FetchSourceJob 据此重试或丢弃）
+    def refetch_weekly!(issue, source)
+      run = source.fetch_runs.create!(issue: issue, trigger: "manual", attempt: 1, status: "running", started_at: Time.current)
+      adapter = source.adapter_class.new(source)
+      written = if source.adapter == "ruanyf_weekly"
+        numbers = issue.items.where(source: source).pluck(Arel.sql("meta->>'issue_no'")).compact.map(&:to_i).uniq.sort
+        raise Adapters::Http::Error, "这一期里没有这个源的期号" if numbers.empty?
+
+        numbers.sum { |number| replace_weekly_section(issue, source, adapter.fetch_issue(number), issue_no: number) }
+      else
+        replace_weekly_section(issue, source, adapter.fetch(period_key: issue.period_key))
+      end
+      run.update!(status: "succeeded", item_count: written, dropped_count: 0, duration_ms: ((Time.current - run.started_at) * 1000).to_i)
+      issue.update!(revised_at: Time.current)
+      run
+    rescue StandardError => e
+      run.update!(status: e.is_a?(Timeout::Error) ? "timed_out" : "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200],
+                  duration_ms: ((Time.current - run.started_at) * 1000).to_i)
+      raise
+    end
+
     private
       # 某个源出错只记账，不拖累别的源，也不阻塞已经装订好的节
       def ingest(source, run)
@@ -76,6 +98,13 @@ module Issue::Weekly
         # 跟日刊路径一样（Source::Fetching#fetch_now）：同源重复地址在写入时被去掉，也要计进
         # dropped_count，不然 item_count 报的是抓到几条，不是这一节真的写进去几条
         run.update!(issue: issue, status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, error_summary: error_summary)
+      end
+
+      # 整节替换，返回写进去的条数（去掉同源重复地址之后）
+      def replace_weekly_section(issue, source, entries, issue_no: nil)
+        kept = entries.select(&:valid?)
+        deduped = issue.write_section!(source, kept, issue_no: issue_no, append: false)
+        kept.size - deduped
       end
   end
 

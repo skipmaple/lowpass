@@ -7,7 +7,8 @@ class Admin::SettingsController < Admin::BaseController
   end
 
   def update
-    values = params.require(:schedule).permit(*KEYS).to_h
+    schedule = schedule_params
+    values = KEYS.index_with { |key| schedule[key] }
     errors = values.reject { |_, value| Setting.valid_time?(value) }.transform_values { [ "格式是 HH:MM" ] }
     if errors.any?
       redirect_to admin_settings_path, inertia: { errors: errors }
@@ -18,4 +19,11 @@ class Admin::SettingsController < Admin::BaseController
       redirect_to admin_settings_path, notice: "已保存"
     end
   end
+
+  private
+    # 表单两项一起提交：缺哪一项（连 schedule 整个都没有）都按校验错误回设置页，不是 400；
+    # 形状不对（?schedule=x）同样落到校验，permit 直接把它滤掉
+    def schedule_params
+      params.permit(schedule: KEYS).fetch(:schedule, {})
+    end
 end

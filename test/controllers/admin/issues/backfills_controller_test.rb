@@ -37,10 +37,21 @@ class Admin::Issues::BackfillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, AuditLog.count
   end
 
+  test "还没到生成时间的今天不标延迟" do
+    Issue.expects(:generate_daily!).with("2026-09-09", late: false, trigger: "manual").returns(Issue.new(period_key: "2026-09-09"))
+
+    travel_to Time.utc(2026, 9, 8, 20, 30) do   # 上海 9月9日 04:30，还没到 06:00
+      post admin_issue_backfill_path("2026-09-09")
+    end
+
+    assert_equal "已开始生成今日日刊", flash[:notice]
+  end
+
   test "周刊键 404" do
     post admin_issue_backfill_path("2026-W40")
 
     assert_response :not_found
+    assert_equal "Errors/NotFound", page_component
   end
 
   test "成员是 403" do

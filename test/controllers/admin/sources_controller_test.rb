@@ -81,6 +81,13 @@ class Admin::SourcesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_admin_source_path(sources(:hackaday))
   end
 
+  test "没有这个源 404" do
+    get edit_admin_source_path("nope")
+
+    assert_response :not_found
+    assert_equal "Errors/NotFound", page_component
+  end
+
   test "成员是 403" do
     sign_in_as(users(:guest))
     get admin_sources_path

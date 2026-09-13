@@ -39,12 +39,14 @@ class Admin::Issues::RefetchesControllerTest < ActionDispatch::IntegrationTest
     post admin_issue_refetch_path("2026-09-08"), params: { source_id: sources(:ruanyf).id }
 
     assert_response :not_found
+    assert_equal "Errors/NotFound", page_component
   end
 
   test "没有这一期 404" do
     post admin_issue_refetch_path("2026-09-01"), params: { source_id: sources(:hn).id }
 
     assert_response :not_found
+    assert_equal "Errors/NotFound", page_component
   end
 
   test "成员是 403" do

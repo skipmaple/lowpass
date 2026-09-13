@@ -32,6 +32,17 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "06:00", Setting.get("daily_time")
   end
 
+  # 表单少提交一项（或整个 schedule 都没有）是校验错误，不是 400
+  test "缺参数按校验错误处理" do
+    patch admin_settings_path
+
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "格式是 HH:MM" ], page_props.dig("errors", "daily_time")
+    assert_equal [ "格式是 HH:MM" ], page_props.dig("errors", "weekly_time")
+    assert_equal "06:00", Setting.get("daily_time")
+  end
+
   test "成员是 403" do
     sign_in_as(users(:guest))
     get admin_settings_path

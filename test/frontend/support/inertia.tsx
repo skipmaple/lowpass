@@ -19,7 +19,7 @@ export function usePage<T = PageProps>() {
 }
 
 // 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」
-export const router = { visit: vi.fn(), get: vi.fn(), reload: vi.fn() }
+export const router = { visit: vi.fn(), get: vi.fn(), reload: vi.fn(), delete: vi.fn() }
 
 export function Link({ href, children, ...rest }: React.ComponentProps<'a'>) {
   return (

@@ -1,20 +1,23 @@
-import { Link } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 
-import { DAILY_LATEST, SEARCH, WEEKLY_ARCHIVE } from '@/lib/paths'
+import Icon from '@/components/Icon'
+import { ADMIN_JOBS, DAILY_LATEST, SEARCH, SESSION, SETTINGS, WEEKLY_ARCHIVE } from '@/lib/paths'
+import { Mixed } from '@/lib/typeset'
+import type { CurrentUser, SharedProps } from '@/types/lowpass'
 
-// 报头黑带：80px 墨底，LOWPASS 用品牌字 40px 纸色，导航文楷 15，右侧搜索图标与头像位。
+// 报头黑带：80px 墨底，LOWPASS 用品牌字 40px 纸色，导航文楷 15，右侧搜索图标与账户位。
 // 尺寸（高度、边距、品牌字号、间距）在 tokens.css 的 .masthead* 里，手机版由那里的 @media 收窄。
 // 图标是墨线内联 SVG（在黑带上用纸色描边），不引图标库、不用 emoji。
 //
-// 搜索入口（D21）指向 /search；账户（F-1）是 P2 的页面，P0/P1 没有这条路由：不传 accountHref 时
-// 右侧的账户位渲染成同样外观的非交互占位，不给读者一个点开就 404 的图标；P2 把 href 传进来就还是链接。
+// 账户位读 inertia_share 的 current_user（P2-①）：有人就是头像菜单按钮（R-8.2），没有（类型上允许，
+// 实际登录墙后每页都有）就是同样外观的非交互占位。
 export type MastheadProps = {
   active?: 'daily' | 'weekly'
   dailyHref?: string
   weeklyHref?: string
   searchHref?: string
-  accountHref?: string
 }
 
 function Nav({ href, label, current }: { href: string; label: string; current: boolean }) {
@@ -38,40 +41,77 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
   )
 }
 
-function StrokeIcon({ size, children }: React.PropsWithChildren<{ size: number }>) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      style={{ flex: 'none', display: 'block', stroke: 'var(--paper)' }}
-    >
-      {children}
-    </svg>
-  )
-}
+// 头像菜单（R-8.2，画布 pages_front3.py 的 menu_sheet()）：32px 圆是按钮，点开右对齐 220px 纸卡，
+// 顶部等宽邮箱（没邮箱用显示名），「设置」「管理」（仅 admin，指向队列面板——那是 ERB 页，用整页跳转）「登出」。
+// Escape、点卡外、选中任一项都关闭；打开时焦点进第一项。画布那张卡带阴影，这里不取：
+// 设计规则说纸面里不许有阴影，1px 墨线足够分层（设计 L1）。
+function AccountMenu({ user }: { user: CurrentUser }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
 
-// 有 href 就是链接，没有就是占位：占位不进 tab 序、对读屏器不出声（图标本来就 aria-hidden），
-// 因为这里没有任何可以做的事。外观两边一模一样。
-function Action({ href, label, style, children }: React.PropsWithChildren<{ href?: string; label: string; style: React.CSSProperties }>) {
-  if (href) {
-    return (
-      <Link href={href} aria-label={label} style={style}>
-        {children}
-      </Link>
-    )
+  useEffect(() => {
+    if (!open) return
+    rootRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    function onPointer(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onPointer)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onPointer)
+    }
+  }, [open])
+
+  function close() {
+    setOpen(false)
   }
 
   return (
-    <span aria-disabled="true" style={style}>
-      {children}
-    </span>
+    <div className="account" ref={rootRef}>
+      <button
+        type="button"
+        className="account-button"
+        aria-label="账户"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {user.avatar_url ? <img src={user.avatar_url} alt="" className="account-avatar" /> : <Icon name="user" size={15} color="var(--paper)" />}
+      </button>
+      {open ? (
+        <div className="menu-card" role="menu" id={menuId}>
+          <div className="menu-head">
+            <Mixed text={user.email ?? user.display_name} size="var(--fs-12)" color="var(--ink2)" />
+          </div>
+          <Link role="menuitem" className="menu-item" href={SETTINGS} onClick={close}>
+            设置
+          </Link>
+          {user.admin ? (
+            <a role="menuitem" className="menu-item" href={ADMIN_JOBS} onClick={close}>
+              管理
+            </a>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-item"
+            onClick={() => {
+              close()
+              router.delete(SESSION)
+            }}
+          >
+            登出
+          </button>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -87,7 +127,9 @@ const ACCOUNT_STYLE: React.CSSProperties = {
   justifyContent: 'center',
 }
 
-export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref = WEEKLY_ARCHIVE, searchHref = SEARCH, accountHref }: MastheadProps) {
+export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref = WEEKLY_ARCHIVE, searchHref = SEARCH }: MastheadProps) {
+  const user = usePage<Partial<SharedProps>>().props.current_user ?? null
+
   return (
     <header className="masthead">
       <div className="masthead-left">
@@ -101,18 +143,16 @@ export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref 
       </div>
 
       <div className="masthead-actions">
-        <Action href={searchHref} label="搜索" style={SEARCH_STYLE}>
-          <StrokeIcon size={20}>
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </StrokeIcon>
-        </Action>
-        <Action href={accountHref} label="账户" style={ACCOUNT_STYLE}>
-          <StrokeIcon size={15}>
-            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </StrokeIcon>
-        </Action>
+        <Link href={searchHref} aria-label="搜索" style={SEARCH_STYLE}>
+          <Icon name="search" size={20} color="var(--paper)" />
+        </Link>
+        {user ? (
+          <AccountMenu user={user} />
+        ) : (
+          <span aria-disabled="true" style={ACCOUNT_STYLE}>
+            <Icon name="user" size={15} color="var(--paper)" />
+          </span>
+        )}
       </div>
     </header>
   )

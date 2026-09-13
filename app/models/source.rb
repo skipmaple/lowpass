@@ -45,6 +45,7 @@ class Source < ApplicationRecord
 
   private
     def normalize_config
+      self.config = {} if config.nil?
       self.config = schema.normalize(config, publication) if ADAPTERS.include?(adapter) && publication.present?
     end
 
@@ -59,8 +60,10 @@ class Source < ApplicationRecord
     end
 
     def feed_url_unique
+      return unless adapter == "rss" && config.is_a?(Hash)
+
       url = config["feed_url"]
-      if adapter == "rss" && url.present? && Source.where(adapter: "rss", publication: publication).where("config->>'feed_url' = ?", url).where.not(id: id).exists?
+      if url.present? && Source.where(adapter: "rss", publication: publication).where("config->>'feed_url' = ?", url).where.not(id: id).exists?
         errors.add(:"config.feed_url", "这个 feed 地址已经在同一刊物里")
       end
     end

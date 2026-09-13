@@ -141,6 +141,12 @@ bin/ci                  # 合并门禁，见 config/ci.rb
 `test/frontend/support/props.ts`，字段跟 `Issue::Presenting` 给出的那套对齐。类型检查覆盖测试文件：
 `npm run check` 第三条就是 `tsc -p tsconfig.test.json`。
 
+一个只在 jsdom 里出现的坑：`Mixed`（以及搜索页的 `HitText`）把一段文字拆成多个相邻 `<span>`，`getByRole` 算
+可访问名时每个 `<span>` 先 trim、行内兄弟之间不加分隔，落在边界上的空格就没了——`getByRole('link', { name: '近 7 天' })`
+找不到，报错列出的 Name 是「近7天」，比可见文本少一个空格。真浏览器与 `textContent` / `toHaveTextContent` 都不受
+影响；`name` 换成容忍空格的正则（`/^近\s*7\s*天$/`）即可，不要改 `Mixed` / `HitText` / `splitRuns`。
+机制写在 `app/frontend/lib/typeset.tsx` 顶上。
+
 `bin/ci` 依次跑：Setup（`bin/setup --skip-server`）、Style: Ruby（`bin/rubocop`）、Frontend: typecheck
 （`npm run check`）、Frontend: unit tests（`npm test`）、Frontend: audit（`npm audit --audit-level=high`）、
 Frontend: build（`npm run build`）、Security: Gem audit（`bin/bundler-audit`）、

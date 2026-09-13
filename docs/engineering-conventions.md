@@ -108,6 +108,9 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 - `bin/ci` 是完整门禁，用 `ActiveSupport::ContinuousIntegration` 按步骤跑：setup、agent 说明文件校验、rubocop（rubocop-rails-omakase）、
   bundler-audit、brakeman、前端依赖审计、gitleaks、单元与集成测试、系统测试（`PARALLEL_WORKERS=1`）。全绿才能合并与部署。〔采用〕
 - 测试辅助放 `test/test_helpers/`，例如 `sign_in_as`；时间敏感的测试用 `travel_to` 卡在 05:59 / 06:00 / 06:20 边界；不碰网络。
+- 前端单元测试（Vitest + Testing Library，jsdom）里，`getByRole` 的 `name` 落在 `Mixed` / `HitText` 拆出的多段 `<span>` 上时
+  用容忍空格的正则（`/^近\s*7\s*天$/`），不用字面串：jsdom 算可访问名会吃掉段边界上的空格（「近 7 天」算成「近7天」），
+  真浏览器没这回事，不改 `Mixed` / `HitText` / `splitRuns` 迁就它。原因与识别方法见 `app/frontend/lib/typeset.tsx` 顶上的说明。
 
 ## 开发环境与脚本
 

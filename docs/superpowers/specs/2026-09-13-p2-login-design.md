@@ -90,7 +90,7 @@
   - `provider :google_oauth2, ENV["GOOGLE_CLIENT_ID"], ENV["GOOGLE_CLIENT_SECRET"], scope: "openid email profile", prompt: "select_account"`，两个变量都非空，或 `Rails.env.test?`（test 两家都挂，用占位凭证 `"test"`，让 mock 登录流程走得通）。
   - `provider :github, ENV["GITHUB_CLIENT_ID"], ENV["GITHUB_CLIENT_SECRET"], scope: "user:email"`，条件同上。
   - `provider :developer, fields: [:name, :email], uid_field: :email`，仅 `Rails.env.development?`。
-- 已配置的策略名列表存进 `Rails.configuration.x.auth_providers`（本初始化器里设置），登录页 props 与中间件判定共用这一份，不是 `Identity::Providers.enabled`。一个都没有且不是 development 时 `Rails.logger.warn` 一句：登录页照样渲染得出来，只是没有按钮，没人登得进去。
+- 已配置的策略名列表存进 `Rails.configuration.x.auth_providers`（本初始化器里设置），登录页 props 与中间件判定共用这一份，不是 `Identity::Providers.enabled`。一个都没有时 `Rails.logger.warn` 一句（development 始终有 developer，test 两家都挂，所以只会在 production 响）：登录页照样渲染得出来，只是没有按钮，没人登得进去。
 - 中间件顺序：同一个初始化器里 `use OmniAuth::Builder` 之后再 `config.middleware.insert_before OmniAuth::Builder, Auth::CallbackRateLimit`；两者都在会话中间件之后，中间件里能读 `rack.session`。
 
 ### 4.3 回调限流中间件 `Auth::CallbackRateLimit`（`lib/middleware/auth/callback_rate_limit.rb`）

@@ -10,10 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_13_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "auth_identities", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", limit: 254
+    t.boolean "email_verified", default: false, null: false
+    t.datetime "linked_at", null: false
+    t.string "provider", limit: 20, null: false
+    t.string "provider_uid", limit: 255, null: false
+    t.datetime "updated_at", null: false
+    t.string "user_id", limit: 25, null: false
+    t.index ["email"], name: "index_auth_identities_on_email"
+    t.index ["provider", "provider_uid"], name: "index_auth_identities_on_provider_and_provider_uid", unique: true
+    t.index ["user_id"], name: "index_auth_identities_on_user_id"
+    t.check_constraint "length(email::text) <= 254", name: "auth_identities_email_len"
+    t.check_constraint "length(provider_uid::text) <= 255", name: "auth_identities_provider_uid_len"
+    t.check_constraint "provider::text = ANY (ARRAY['google'::character varying, 'github'::character varying, 'developer'::character varying]::text[])", name: "auth_identities_provider"
+  end
 
   create_table "fetch_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.integer "attempt", default: 1, null: false
@@ -124,7 +141,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_090000) do
     t.check_constraint "length(source_name::text) <= 100", name: "search_records_source_name_len"
     t.check_constraint "length(summary::text) <= 500", name: "search_records_summary_len"
     t.check_constraint "length(title::text) <= 300", name: "search_records_title_len"
-    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "search_records_publication"
+    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "search_records_publication"
+  end
+
+  create_table "sessions", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.string "token", limit: 24, null: false
+    t.datetime "updated_at", null: false
+    t.string "user_id", limit: 25, null: false
+    t.index ["token"], name: "index_sessions_on_token", unique: true
+    t.index ["user_id"], name: "index_sessions_on_user_id"
+    t.check_constraint "length(token::text) <= 24", name: "sessions_token_len"
   end
 
   create_table "settings", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -170,6 +199,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_090000) do
     t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "sources_publication"
   end
 
+  create_table "users", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "avatar_url", limit: 2048
+    t.datetime "created_at", null: false
+    t.string "display_name", limit: 100, null: false
+    t.string "email", limit: 254
+    t.datetime "last_login_at"
+    t.string "role", limit: 10, default: "member", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "length(avatar_url::text) <= 2048", name: "users_avatar_url_len"
+    t.check_constraint "length(display_name::text) <= 100", name: "users_display_name_len"
+    t.check_constraint "length(email::text) <= 254", name: "users_email_len"
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'member'::character varying]::text[])", name: "users_role"
+  end
+
+  add_foreign_key "auth_identities", "users", on_delete: :cascade
   add_foreign_key "fetch_runs", "issues"
   add_foreign_key "fetch_runs", "sources"
   add_foreign_key "items", "issues"
@@ -178,4 +222,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_090000) do
   add_foreign_key "search_records", "issues", on_delete: :cascade
   add_foreign_key "search_records", "items", on_delete: :cascade
   add_foreign_key "search_records", "sources"
+  add_foreign_key "sessions", "users", on_delete: :cascade
 end

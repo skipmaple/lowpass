@@ -1,0 +1,23 @@
+drew_google:
+  id: <%= ActiveRecord::FixtureSet.identify(:drew_google, :uuid) %>
+  user_id: <%= ActiveRecord::FixtureSet.identify(:drew, :uuid) %>
+  provider: google
+  provider_uid: google-drew
+  email: drew@example.com
+  email_verified: true
+  linked_at: <%= Time.utc(2026, 9, 8, 6, 2).to_fs(:db) %>
+guest_github:
+  id: <%= ActiveRecord::FixtureSet.identify(:guest_github, :uuid) %>
+  user_id: <%= ActiveRecord::FixtureSet.identify(:guest, :uuid) %>
+  provider: github
+  provider_uid: github-guest
+  email: guest@example.com
+  email_verified: true
+  linked_at: <%= Time.utc(2026, 9, 8, 7, 0).to_fs(:db) %>
+nomail_github:
+  id: <%= ActiveRecord::FixtureSet.identify(:nomail_github, :uuid) %>
+  user_id: <%= ActiveRecord::FixtureSet.identify(:nomail, :uuid) %>
+  provider: github
+  provider_uid: github-nomail
+  email_verified: false
+  linked_at: <%= Time.utc(2026, 9, 8, 8, 0).to_fs(:db) %>

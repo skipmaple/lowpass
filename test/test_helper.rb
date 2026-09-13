@@ -1,4 +1,6 @@
 ENV["RAILS_ENV"] ||= "test"
+# R-5.5 的白名单从环境读；测试不依赖机器上的环境变量，fixture 里 drew 就是这个人
+ENV["ADMIN_EMAILS"] = "drew@example.com"
 require_relative "../config/environment"
 require "rails/test_help"
 

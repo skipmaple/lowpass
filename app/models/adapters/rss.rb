@@ -4,11 +4,18 @@ module Adapters
   class Rss < Base
     ParseError = Class.new(StandardError)
 
+    # 新建表单「名称默认取 feed 标题」（R-3.2）：抓过一次才有
+    def feed_title
+      return unless @feed
+
+      @feed.respond_to?(:channel) ? @feed.channel.title : @feed.title&.content
+    end
+
     private
       def entries(period_key:)
-        feed = parse_feed(http(config.fetch(:feed_url)).body)
+        @feed = parse_feed(http(config.fetch(:feed_url)).body)
         fetched_at = Time.current
-        all = feed_items(feed).map { |it| normalize(it, fetched_at) }.select(&:valid?)
+        all = feed_items(@feed).map { |it| normalize(it, fetched_at) }.select(&:valid?)
         window = if period_key
           range = PeriodKey.week_range(period_key)
           all.select { |e| range.cover?(e.published_at.in_time_zone(PeriodKey::ZONE).to_date) }

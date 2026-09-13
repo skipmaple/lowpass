@@ -14,8 +14,8 @@ class Adapters::BaseTest < ActiveSupport::TestCase
     assert_equal "2026-09-08", entries.first.meta[:period_key]
   end
 
-  test "test_fetch 只取前 5 条" do
-    assert_equal 5, Fake.new(sources(:hn)).test_fetch.size
+  test "test_fetch 在测试超时内返回全部条目，截前 5 条是 Source::TestFetch 的事" do
+    assert_equal 7, Fake.new(sources(:hn)).test_fetch.size
   end
 
   test "基类不实现 entries" do

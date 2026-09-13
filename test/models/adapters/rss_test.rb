@@ -39,4 +39,15 @@ class Adapters::RssTest < ActiveSupport::TestCase
     source = Source.new(name: "x", adapter: "rss", publication: "daily", config: { feed_url: "https://example.com/atom", count: 10, window_hours: 24 * 365 * 10 })
     assert_raises(Adapters::Rss::ParseError) { Adapters::Rss.new(source).fetch }
   end
+
+  test "feed 标题给新建表单默认名称用" do
+    adapter = Adapters::Rss.new(sources(:hackaday))
+    assert_nil adapter.feed_title
+    adapter.fetch
+    assert_equal "Hackaday", adapter.feed_title
+
+    atom = Adapters::Rss.new(Source.new(name: "x", adapter: "rss", publication: "daily", config: { feed_url: "https://example.com/atom", count: 10, window_hours: 24 * 365 * 10 }))
+    atom.fetch
+    assert_equal "Example Atom Feed", atom.feed_title
+  end
 end

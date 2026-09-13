@@ -91,11 +91,17 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((value) => !value)}
       >
-        {user.avatar_url ? <img src={user.avatar_url} alt="" className="account-avatar" /> : <Icon name="user" size={15} color="var(--paper)" />}
+        {/* 头像是 provider 的外链图，referrerPolicy 拦住 Referer：不然每次加载都把读者在看哪一页告诉 Google / GitHub */}
+        {user.avatar_url ? (
+          <img src={user.avatar_url} alt="" className="account-avatar" referrerPolicy="no-referrer" />
+        ) : (
+          <Icon name="user" size={15} color="var(--paper)" />
+        )}
       </button>
       {open ? (
         <div className="menu-card" role="menu" id={menuId}>
-          <div className="menu-head">
+          {/* role="menu" 的孩子只能是 menuitem，顶部这行邮箱不是；role="none" 把它从菜单结构里摘出去 */}
+          <div className="menu-head" role="none">
             <Mixed text={user.email ?? user.display_name} size="var(--fs-12)" color="var(--ink2)" />
           </div>
           <Link role="menuitem" className="menu-item" href={SETTINGS} onClick={close}>

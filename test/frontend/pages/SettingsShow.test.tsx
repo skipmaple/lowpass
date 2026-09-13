@@ -95,9 +95,12 @@ describe('Settings/Show', () => {
     expect(screen.getByText('这个邮箱无法自动合并。如果你之前用其他方式登录过，请改用原方式。')).toBeInTheDocument()
   })
 
-  it('有头像时圆里是图片', () => {
+  // 头像是 provider 的外链图：加载它别把读者在看哪一页捎给 Google / GitHub
+  it('有头像时圆里是图片，且不带 Referer', () => {
     const { container } = show({ user: { display_name: 'Drew Lee', email: 'drew@example.com', avatar_url: 'https://avatars.example/drew.png', role: 'admin' } })
 
-    expect(container.querySelector('.settings-avatar img')).toHaveAttribute('src', 'https://avatars.example/drew.png')
+    const img = container.querySelector('.settings-avatar img')
+    expect(img).toHaveAttribute('src', 'https://avatars.example/drew.png')
+    expect(img).toHaveAttribute('referrerpolicy', 'no-referrer')
   })
 })

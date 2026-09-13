@@ -83,10 +83,10 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 
 - 登录方式是 Google / GitHub OAuth（5.5），不是 fizzy 的邮箱验证码 / 通行密钥。〔不采用其登录方式〕
 - 形状借 fizzy：`Session` 记录 + 签名 cookie `session_token`；`Current` 保存 session、user 与请求属性（request_id、ip、user_agent）；
-  `Authentication` concern 提供 `allow_unauthenticated_access` / `require_unauthenticated_access` 类方法；
-  未登录跳 `/login?next=`，`next` 只接受站内相对路径（R-5.7）。〔改造〕
-- 登录回调与搜索用 Rails 8 的 `rate_limit`（回调按 IP 每分钟 10 次，R-5.9；搜索每用户每分钟 60 次，R-4.10）。〔采用〕
-- `Rails.error.add_middleware` 往错误上下文里加 user id；`allow_browser versions: :modern`；
+  `Authentication` concern 只提供 `allow_unauthenticated_access` 一个类方法（反向那条没有：已登录访问登录页跳首页，
+  是 `SessionsController` 自己的 `before_action :redirect_signed_in`）；未登录跳 `/login?next=`，`next` 只接受站内相对路径（R-5.7）。〔改造〕
+- 搜索与点击上报用 Rails 8 的 `rate_limit`（每用户每分钟 60 次，R-4.10）；登录回调不是——它在 OmniAuth 之前的 Rack 中间件里（见下条）。〔采用〕
+- `Rails.error.set_context(user_id:)` 往错误上下文里加 user id（`Authentication#find_session_by_cookie` 续上会话时调）；`allow_browser versions: :modern`；
   CSP 用 nonce（Inertia 的 script 需要 nonce），来源列表可由环境变量覆盖。〔采用自 fizzy `error_context.rb`、`content_security_policy.rb`〕
 - OAuth 客户端用 OmniAuth（`omniauth`、`omniauth-google-oauth2`、`omniauth-github`、`omniauth-rails_csrf_protection`），
   只负责从 provider 拿资料；匹配与合并在 `Identity::Resolution`。回调限流（R-5.9）是 OmniAuth 之前的一层 Rack 中间件

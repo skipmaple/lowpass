@@ -61,6 +61,24 @@ class Identity::ProfileTest < ActiveSupport::TestCase
     assert_equal "读者", profile.display_name
   end
 
+  # 列长度就是上限（7.2）：名字截一截还是那个人，邮箱与头像地址截了就不是原来那个，超长一律当没有，
+  # 免得 Resolution 的 update! 抛异常、把登录变成 500
+  test "超长的邮箱当没有邮箱，连带不算已验证" do
+    profile = Identity::Profile.from(OmniAuth::AuthHash.new(provider: "google_oauth2", uid: "g-long",
+      info: { name: "Long", email: "#{"a" * 250}@x.io", email_verified: true }))
+
+    assert_nil profile.email
+    assert_not profile.email_verified?
+  end
+
+  test "超长的头像地址当没有头像；名字截到 100" do
+    profile = Identity::Profile.from(OmniAuth::AuthHash.new(provider: "google_oauth2", uid: "g-img",
+      info: { name: "名" * 120, email: "img@x.io", email_verified: true, image: "https://lh3.example/#{"a" * 2048}" }))
+
+    assert_nil profile.avatar_url
+    assert_equal 100, profile.display_name.length
+  end
+
   test "不认识的策略名报错" do
     assert_raises(ArgumentError) { Identity::Profile.from(OmniAuth::AuthHash.new(provider: "twitter", uid: "1", info: {})) }
   end

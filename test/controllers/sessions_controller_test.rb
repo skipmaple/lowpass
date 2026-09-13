@@ -128,6 +128,22 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, Session.count
   end
 
+  # R-5.8：匹配与合并这一步炸了（唯一键撞车、校验不过）也是登录失败，不是 500
+  test "解析身份时抛异常：不建会话，显示登录失败" do
+    mock_omniauth(:google_oauth2, OmniAuth::AuthHash.new(provider: "google_oauth2", uid: "g-boom",
+      info: { name: "Boom", email: "boom@x.io", email_verified: true }))
+    Identity::Resolution.stubs(:call).raises(ActiveRecord::RecordInvalid)
+
+    post "/auth/google_oauth2"
+    follow_redirect!
+
+    assert_redirected_to login_path
+    assert_equal 0, Session.count
+    assert_nil cookies[:session_token].presence
+    follow_redirect!
+    assert_equal({ "alert" => "登录失败，请重试。" }, page_props["flash"])
+  end
+
   test "没挂载的 provider 的回调当登录失败，不建会话" do
     get "/auth/nope/callback"
 

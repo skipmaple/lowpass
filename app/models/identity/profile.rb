@@ -3,6 +3,10 @@ module Identity
   # 三家 provider 的字段位置不同，差异只在这里；下游（Resolution、设置页）只认这一个形状。
   class Profile
     STRATEGIES = { "google_oauth2" => "google", "github" => "github", "developer" => "developer" }.freeze
+    # 列长度（7.2）就是这里的上限：provider 给的资料再离谱，也只该少存一点，不该让 Resolution 的 update! 抛异常
+    DISPLAY_NAME_LIMIT = 100
+    EMAIL_LIMIT = 254
+    AVATAR_URL_LIMIT = 2048
 
     attr_reader :provider, :uid, :display_name, :avatar_url, :email, :email_verified
     alias email_verified? email_verified
@@ -47,10 +51,12 @@ module Identity
     def initialize(provider:, uid:, display_name:, avatar_url:, email:, email_verified:)
       @provider = provider
       @uid = uid
-      @display_name = display_name.to_s[0, 100]
-      @avatar_url = avatar_url
-      @email = email
-      @email_verified = email_verified
+      @display_name = display_name.to_s[0, DISPLAY_NAME_LIMIT]
+      # 名字截一截还是那个人；邮箱与头像地址截了就不是原来那个，超长一律当没有。
+      # 邮箱没了，合并也就无从谈起（R-5.3），已验证跟着落空
+      @avatar_url = avatar_url.to_s.length > AVATAR_URL_LIMIT ? nil : avatar_url
+      @email = email.to_s.length > EMAIL_LIMIT ? nil : email
+      @email_verified = email_verified && @email.present?
       freeze
     end
   end

@@ -79,5 +79,7 @@ export default function Show({ providers, next }: LoginShowProps) {
   )
 }
 
-// 不套 application.tsx 里默认的 Layout（报头 / 页脚）
-Show.layout = (page: React.ReactNode) => page
+// 不套 application.tsx 里默认的 Layout（报头 / 页脚）。包一层 Fragment 不是多余：
+// Inertia 3.7 先拿 props 试调一次 layout 函数（dist/index.js 的 renderChildren），返回的是元素才当布局函数，
+// 不是就当成「解析 props 的回调」并套上默认布局——恒等函数原样交回 props 对象，正好落进后一条
+Show.layout = (page: React.ReactNode) => <>{page}</>

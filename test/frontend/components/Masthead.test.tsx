@@ -125,13 +125,27 @@ describe('Masthead 搜索与账户', () => {
     expect(button).toHaveFocus()
   })
 
-  it('没有邮箱时菜单顶部写显示名；有头像时圆里是图片', async () => {
+  // 头像是 provider 的外链图：加载它别把读者在看哪一页捎给 Google / GitHub
+  it('没有邮箱时菜单顶部写显示名；有头像时圆里是图片，且不带 Referer', async () => {
     setPageProps({ current_user: currentUser({ email: null, display_name: '客人', avatar_url: 'https://avatars.example/a.png' }) })
     const { container } = render(<Masthead />)
 
     expect(container.querySelector('.account-avatar')).toHaveAttribute('src', 'https://avatars.example/a.png')
+    expect(container.querySelector('.account-avatar')).toHaveAttribute('referrerpolicy', 'no-referrer')
     await userEvent.click(screen.getByRole('button', { name: '账户' }))
     expect(within(screen.getByRole('menu')).getByText('客人')).toBeInTheDocument()
+  })
+
+  // role="menu" 的孩子只能是 menuitem：顶部那行邮箱不是，得标 role="none" 摘出去
+  it('菜单顶部那行邮箱标 role="none"，不冒充菜单项', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<Masthead />)
+
+    await userEvent.click(screen.getByRole('button', { name: '账户' }))
+    const menu = screen.getByRole('menu')
+
+    expect(menu.querySelector('.menu-head')).toHaveAttribute('role', 'none')
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['设置', '登出'])
   })
 
   it('菜单卡没有阴影（设计 L1）', async () => {

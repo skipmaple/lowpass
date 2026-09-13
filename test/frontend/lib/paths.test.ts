@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest'
 import {
   DAILY_ARCHIVE,
   DAILY_LATEST,
+  SEARCH,
+  SEARCH_CLICKS,
   WEEKLY_ARCHIVE,
   dailyHref,
   latestWeeklyHref,
   monthHref,
+  searchHref,
   weeklyHref,
   yearHref,
 } from '@/lib/paths'
@@ -38,5 +41,20 @@ describe('paths', () => {
   // R51：一期周刊都还没有时页脚那条链接落到归档，不能拼出 /weekly/null
   it('一期周刊都没有时落到归档', () => {
     expect(latestWeeklyHref(null)).toBe('/weekly')
+  })
+
+  it('搜索入口与点击端点', () => {
+    expect(SEARCH).toBe('/search')
+    expect(SEARCH_CLICKS).toBe('/search/clicks')
+  })
+
+  // R-4.5：只写非空的键，默认值不进地址；来源逗号连接，中文与空格按 URLSearchParams 编码
+  it('searchHref 只写非空的参数', () => {
+    expect(searchHref()).toBe('/search')
+    expect(searchHref({ q: 'kuber rust', type: 'daily', source: ['a', 'b'], page: 2, sort: 'date' })).toBe(
+      '/search?q=kuber+rust&type=daily&source=a%2Cb&page=2&sort=date',
+    )
+    expect(searchHref({ q: '终端', from: '2026-09-01', to: null, range: '7d' })).toBe('/search?q=%E7%BB%88%E7%AB%AF&from=2026-09-01&range=7d')
+    expect(searchHref({ q: 'x', page: 1, sort: 'relevance', range: 'all', source: [] })).toBe('/search?q=x')
   })
 })

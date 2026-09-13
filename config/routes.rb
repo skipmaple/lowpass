@@ -5,6 +5,12 @@ Rails.application.routes.draw do
   resources :daily_issues, path: "daily", only: [ :index, :show ], param: :period_key
   resources :weekly_issues, path: "weekly", only: [ :index, :show ], param: :period_key
 
+  # P1 搜索（PRD 5.4）：GET /search 是搜索页，参数见 R-4.5；POST /search/clicks 记结果点击（9.1 search_click）
+  resource :search, only: :show, controller: "searches"
+  namespace :search do
+    resources :clicks, only: :create
+  end
+
   # 队列面板：P0 只在开发环境挂载，免认证（config/environments/development.rb 关掉了它默认的
   # HTTP Basic Auth，本来就没提交凭证）。生产环境挂载与管理员认证是 P2，见 AGENTS.md 的 `/admin/jobs`。
   mount MissionControl::Jobs::Engine, at: "/jobs" if Rails.env.development?

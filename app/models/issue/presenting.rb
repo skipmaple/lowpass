@@ -270,11 +270,10 @@ module Issue::Presenting
   end
 
   # R-2.5 一节 = 一个源的一期：源、该源自己的期号与标题、原文链接、按板块分组的条目。
-  # 板块锚点目录点的是 anchor，所以同一页里每个板块得有一个唯一的落点。
+  # 板块锚点是稳定的 slug（Item#anchor：阮一峰 issue-<期号>-<板块>，RSS 源 source-<源 id>），
+  # 搜索结果的「所在期」链接指向同一个值（设计 6.3），所以不能再按位置编号。
   # D19：周刊条目不生成推荐理由，条目字段与日刊同一套（reason 与 interest_tag 一直是空的）。
   def weekly_section_props
-    anchor = 0
-
     weekly_sections.map do |section|
       source = section[:source]
       {
@@ -285,8 +284,7 @@ module Issue::Presenting
         degraded: section[:degraded],
         original_url: section_original_url(section),
         groups: section[:sections].map do |(name, list)|
-          anchor += 1
-          { name: name, anchor: "#{source.id}-#{anchor}", items: list.map { |item| item_props(item) } }
+          { name: name, anchor: list.first.anchor, items: list.map { |item| item_props(item) } }
         end
       }
     end

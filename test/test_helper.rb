@@ -4,6 +4,8 @@ require "rails/test_help"
 
 require "webmock/minitest"
 require "mocha/minitest"
+
+Dir[Rails.root.join("test/test_helpers/**/*.rb")].sort.each { |file| require file }
 WebMock.disable_net_connect!(allow_localhost: true)
 
 module FixtureUuids
@@ -27,6 +29,7 @@ class ActiveSupport::TestCase
   parallelize(workers: [ (Concurrent.available_processor_count || Concurrent.processor_count).floor, 8 ].min)
   fixtures :all
   include ActiveJob::TestHelper
+  include SearchTestHelpers
 end
 
 class ActionDispatch::IntegrationTest

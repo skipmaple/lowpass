@@ -1,7 +1,8 @@
+import Chip from '@/components/Chip'
 import Icon from '@/components/Icon'
 import type * as React from 'react'
 
-import { Mixed, absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
+import { absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
@@ -90,28 +91,10 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
   )
 }
 
-// 兴趣标签：墨色反白小块，22px 高，纸色文字（PRD 6.3、D16）。
-// 文字走 Mixed：中文用文楷，拉丁标签（AI / LLM）落到 Maple——画布 chip() 就是 mixed(text, PAPER, 12)。
-function Chip({ text }: { text: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 22,
-        padding: '0 8px',
-        background: 'var(--ink)',
-        letterSpacing: '0.06em',
-      }}
-    >
-      <Mixed text={text} size="var(--fs-12)" color="var(--paper)" nowrap />
-    </span>
-  )
-}
-
 // D19：周刊条目不生成推荐理由，也就没有兴趣标签；元数据只剩发布时间。
 // heading 是标题的层级（PRD 6.4「标题层级语义正确」）：日刊页 h1 是日期，条目就是 h2；
 // 周刊页 h1 是周次、h2 是源名、h3 是板块，所以条目按所在位置降一到两级。
+// id 是搜索结果所在期链接的落点（设计 6.3）。
 export type ItemVariant = 'daily' | 'weekly'
 export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4' }
 
@@ -119,7 +102,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
   const weekly = variant === 'weekly'
 
   return (
-    <article className="item-row">
+    <article className="item-row" id={`item-${item.id}`}>
       <span className="item-rank">{rank}</span>
 
       <div className="item-body">

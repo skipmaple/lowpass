@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import Show, { type WeeklyShowProps } from '@/pages/Weekly/Show'
 import { item, weeklyGroup, weeklyIssue, weeklySection } from '../support/props'
@@ -180,5 +180,127 @@ describe('降级（R-2.3）', () => {
     const { container } = show({ sections: [degraded] })
 
     expect(container.querySelector('.source-band')).toHaveTextContent('阮一峰科技爱好者周刊')
+  })
+})
+
+describe('板块与锚点', () => {
+  const sections = [
+    weeklySection({
+      groups: [
+        weeklyGroup({ name: '科技动态', anchor: 'src-ruanyf-1', items: [item({ id: 'a', title: '一条科技动态' })] }),
+        weeklyGroup({ name: '文章', anchor: 'src-ruanyf-2', items: [item({ id: 'b', title: '一篇文章' })] }),
+      ],
+    }),
+  ]
+
+  it('每个板块一个锚点小块，指向自己的落点', () => {
+    const { container } = show({ sections })
+
+    const anchors = within(container.querySelector('.anchors') as HTMLElement).getAllByRole('link')
+    expect(anchors.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['科技动态', '#src-ruanyf-1'],
+      ['文章', '#src-ruanyf-2'],
+    ])
+  })
+
+  it('板块名是 h3，落点 id 与锚点对得上', () => {
+    const { container } = show({ sections })
+
+    const heads = screen.getAllByRole('heading', { level: 3 })
+    expect(heads.map((h) => h.textContent)).toEqual(['科技动态', '文章'])
+    expect(container.querySelector('#src-ruanyf-1')).toContainElement(heads[0])
+  })
+
+  it('板块下的条目降到 h4', () => {
+    show({ sections })
+
+    expect(screen.getByRole('heading', { level: 4, name: '一条科技动态' })).toBeInTheDocument()
+  })
+
+  // R-2.6 RSS 周刊源没有板块：直接接条目，也就没有锚点目录，条目回到 h3
+  it('没有板块的源不排锚点目录，条目是 h3', () => {
+    const { container } = show({
+      sections: [
+        weeklySection({
+          source: { id: 'src-feed', name: 'Some Weekly', adapter: 'rss', home_url: 'https://example.com/' },
+          groups: [weeklyGroup({ name: null, anchor: 'src-feed-1', items: [item({ id: 'c', title: '一条 RSS 周刊' })] })],
+        }),
+      ],
+    })
+
+    expect(container.querySelector('.anchors')).toBeNull()
+    expect(screen.getByRole('heading', { level: 3, name: '一条 RSS 周刊' })).toBeInTheDocument()
+  })
+
+  // 中文锚点：DOM id 与目录 href 都是百分号编码的形式，跟地址栏里的 location.hash 原样相等
+  it('中文板块的落点与目录用编码后的锚点', () => {
+    const { container } = show({
+      sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id: 'b', title: '一篇文章' })] })] })],
+    })
+
+    const encoded = encodeURIComponent('issue-366-文章')
+    expect(within(container.querySelector('.anchors') as HTMLElement).getByRole('link', { name: '文章' })).toHaveAttribute('href', `#${encoded}`)
+    expect(document.getElementById(encoded)).toContainElement(screen.getByRole('heading', { level: 3, name: '文章' }))
+  })
+
+  // RSS 源没有板块：搜索结果的所在期落到这一节的头上（Item#anchor 给的是 source-<源 id>）
+  it('没有板块的节把锚点挂在源节头上', () => {
+    show({
+      sections: [
+        weeklySection({
+          source: { id: 'src-feed', name: '命令行周报', adapter: 'rss', home_url: 'https://w.example/' },
+          issue_no: null,
+          issue_title: null,
+          issue_label: null,
+          groups: [weeklyGroup({ name: null, anchor: 'source-src-feed', items: [item({ id: 'c', title: '一条 RSS 周刊' })] })],
+        }),
+      ],
+    })
+
+    const band = document.getElementById('source-src-feed')
+    expect(band).toHaveClass('source-band')
+    expect(band).toHaveTextContent('命令行周报')
+  })
+
+  it('降级的节也把锚点挂在源节头上', () => {
+    show({
+      sections: [weeklySection({ degraded: true, groups: [weeklyGroup({ name: null, anchor: 'source-src-ruanyf', items: [item({ id: 'stub', title: '第 366 期' })] })] })],
+    })
+
+    expect(document.getElementById('source-src-ruanyf')).toHaveClass('source-band')
+  })
+
+  it('有板块的节的源节头没有锚点', () => {
+    show()
+
+    expect(document.querySelector('.source-band')).not.toHaveAttribute('id')
+  })
+})
+
+describe('按 hash 定位', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    window.history.replaceState({}, '', '/weekly/2026-W36')
+  })
+
+  // 周刊锚点带中文，地址里是百分号编码；id 也是编码过的，原样就找得到。滚动排在 setTimeout 里（见 lib/anchors.ts）
+  it('挂载后把板块滚进视口，id 与 hash 原样相等', () => {
+    window.history.replaceState({}, '', '/weekly/2026-W36#' + encodeURIComponent('issue-366-文章'))
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+
+    show({
+      sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id: 'b', title: '一篇文章' })] })] })],
+    })
+    expect(scroll).not.toHaveBeenCalled()
+
+    vi.runAllTimers()
+
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById(encodeURIComponent('issue-366-文章')))
   })
 })

@@ -51,12 +51,13 @@ PostgreSQL 作为 Kamal accessory，每日 `pg_dump` 推到香港区域对象存
 
 ## 搜索在数据库里
 
-PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`ILIKE` 做中文子串，应用层做权重与高亮），不引入搜索引擎；
-上线前用 50 条真实查询验证，不达标再谈替换。
+PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`ILIKE` 做中文子串，权重求和放进 SQL 由数据库排序分页，
+高亮在应用层（ADR 2026-09-11 补记）），不引入搜索引擎；上线前用 50 条真实查询验证，不达标再谈替换。
 
-结构借 fizzy：`Searchable` concern 用 `after_create_commit` / `after_update_commit` / `after_destroy_commit`
-维护一张独立的 `Search::Record` 表（标题、板块、来源、摘要各占一列，权重 标题 > 板块 = 来源 > 摘要，R-4.3），
-提供 `reindex` 与整期重建的 job；下架条目（F-29）从索引删除；停用源的历史条目保留可搜（R-4.8）。
+结构借 fizzy：`Searchable` concern 用 `after_save_commit`（建与改；同名的 after_create_commit / after_update_commit
+会被 Rails 去重成一个；删除由外键级联）维护一张独立的 `Search::Record` 表（标题、板块、来源、摘要各占一列，
+权重 标题 > 板块 = 来源 > 摘要，R-4.3），提供 `bin/rails search:rebuild` 与重建 job；下架条目（F-29）从索引删除；
+停用源的历史条目保留可搜（R-4.8）。
 不要为了搜索改条目表本身。〔改造自 fizzy `app/models/concerns/searchable.rb` 与 `app/models/search/`〕
 
 ## 抓取与出站 HTTP

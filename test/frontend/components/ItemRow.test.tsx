@@ -196,3 +196,12 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(screen.queryByText('不该出现。')).toBeNull()
   })
 })
+
+describe('锚点', () => {
+  // 搜索结果的所在期链接落到 #item-<id>（设计 6.3）
+  it('条目行的 id 是 item-<id>', () => {
+    const { container } = render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+
+    expect(container.querySelector('article')).toHaveAttribute('id', 'item-itm-hn-1')
+  })
+})

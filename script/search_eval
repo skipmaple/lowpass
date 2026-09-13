@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+# 验收脚本（PRD 10.1 P1 出口、设计第 9 节）：读一个文件，一行一条真实查询，逐条跑 Search::Runner，
+# 打印每条的结果数与耗时，最后给 p50 / p95 与有结果率（目标 ≥ 85%，p95 < 500 ms）。不写搜索日志。
+#
+#   mise exec -- ruby script/search_eval queries.txt
+#   RAILS_ENV=production bundle exec ruby script/search_eval queries.txt   # 线上库，在 web 容器里跑
+
+require_relative "../config/environment"
+
+path = ARGV[0] or abort "用法：script/search_eval queries.txt（一行一条查询）"
+queries = File.readlines(path, chomp: true).map(&:strip).reject(&:blank?)
+abort "文件里没有查询" if queries.empty?
+
+latencies = []
+with_results = 0
+queries.each do |q|
+  result = Search::Runner.call(Search::Query.parse(q: q))
+  latencies << result.latency_ms
+  with_results += 1 if result.ok? && result.total.positive?
+  puts format("%-40s %5d 条 %5d ms %s", q[0, 40], result.total, result.latency_ms, result.ok? ? "" : result.status)
+end
+
+sorted = latencies.sort
+percentile = ->(p) { sorted[((sorted.size - 1) * p).round] }
+puts
+puts "查询 #{queries.size} 条 · 有结果率 #{(with_results * 100.0 / queries.size).round(1)}% · p50 #{percentile.call(0.5)} ms · p95 #{percentile.call(0.95)} ms"

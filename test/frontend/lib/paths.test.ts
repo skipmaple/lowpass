@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  ADMIN_JOBS,
   DAILY_ARCHIVE,
   DAILY_LATEST,
+  LOGIN,
   SEARCH,
   SEARCH_CLICKS,
+  SESSION,
+  SETTINGS,
   WEEKLY_ARCHIVE,
+  authCallbackHref,
+  authHref,
   dailyHref,
   latestWeeklyHref,
   monthHref,
@@ -56,5 +62,16 @@ describe('paths', () => {
     )
     expect(searchHref({ q: '终端', from: '2026-09-01', to: null, range: '7d' })).toBe('/search?q=%E7%BB%88%E7%AB%AF&from=2026-09-01&range=7d')
     expect(searchHref({ q: 'x', page: 1, sort: 'relevance', range: 'all', source: [] })).toBe('/search?q=x')
+  })
+})
+
+describe('登录相关地址', () => {
+  it('固定路径与 OmniAuth 发起地址', () => {
+    expect(LOGIN).toBe('/login')
+    expect(SESSION).toBe('/session')
+    expect(SETTINGS).toBe('/settings')
+    expect(ADMIN_JOBS).toBe('/admin/jobs')
+    expect(authHref('google_oauth2')).toBe('/auth/google_oauth2')
+    expect(authCallbackHref('developer')).toBe('/auth/developer/callback')
   })
 })

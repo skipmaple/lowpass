@@ -56,6 +56,31 @@ a.t:hover { text-decoration-color: var(--ink); }
 .masthead-nav { display: flex; gap: 26px; }
 .masthead-actions { display: flex; align-items: center; gap: 22px; }
 
+/* 账户（P2-①）：报头 32px 头像按钮（报头头像圆是唯一的圆形，令牌表既定例外）与 220px 菜单纸卡
+   （画布 pages_front3.py menu_sheet()）；无阴影（设计 L1），项目 44px 高够触控。 */
+.account { position: relative; display: inline-flex; }
+.account-button { width: 32px; height: 32px; padding: 0; border: 1px solid var(--paper); border-radius: 50%; background: none; color: var(--paper);
+                  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; }
+.account-button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+.account-avatar { width: 100%; height: 100%; object-fit: cover; display: block; }
+.menu-card { position: absolute; right: 0; top: 44px; width: 220px; background: var(--paper); border: 1px solid var(--ink); padding: 6px 0; z-index: 20; }
+.menu-head { padding: 8px 16px 10px 16px; border-bottom: 1px solid var(--rule); }
+.menu-item { display: flex; align-items: center; width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 16px; border: 0; background: none;
+             text-align: left; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
+.menu-item:hover { text-decoration: underline; text-underline-offset: 4px; }
+.menu-item:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* 提示行（登录卡与设置页共用，画布 login_card() 的 msg）：警示图标 + 文楷 13 次墨 */
+.notice-line { display: flex; gap: 8px; align-items: flex-start; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); line-height: 1.6; }
+.notice-line svg { flex: none; margin-top: 3px; }
+
+/* 表单字段（画布 field()）：文楷 13 标签在上，40px 1px 描边框，数值 Maple 13；没有圆角、没有底色。后台表单（子项目 ②）沿用 */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+.field-input { height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--ink); background: none;
+               font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink); }
+.field-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
 /* 桌面报头在窄桌面/大手机（480–767px）容不下 40px 两侧边距：品牌 LOWPASS ≈221px +
    40 间距 + 导航 86px（左组 347px）+ 22 间距 + 搜索 20px + 账户 32px（右组 74px）
    = 421px 最小内容宽度；481px 视口减两侧 40px 边距只剩 401px，装不下（实测 masthead-left

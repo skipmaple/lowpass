@@ -42,3 +42,11 @@ export function searchHref(params: SearchParams = {}): string {
   const text = query.toString()
   return text ? `${SEARCH}?${text}` : SEARCH
 }
+
+// P2-① 登录（config/routes.rb 的 login / session / settings，OmniAuth 的 /auth/:provider 与回调）
+export const LOGIN = '/login'
+export const SESSION = '/session'
+export const SETTINGS = '/settings'
+export const ADMIN_JOBS = '/admin/jobs'
+export const authHref = (provider: string) => `/auth/${provider}`
+export const authCallbackHref = (provider: string) => `/auth/${provider}/callback`

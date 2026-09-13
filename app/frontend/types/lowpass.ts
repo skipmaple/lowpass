@@ -37,3 +37,10 @@ export type DatePresets = Record<"7d" | "30d", DatePreset>;
 // 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
 export type HitRun = { text: string; hit: boolean };
 export type SearchResult = { item_id: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null };
+
+// P2-① 登录（PRD 5.5）：ApplicationController 的 inertia_share 每页都带的两样，加登录页与设置页的字段
+export type CurrentUser = { display_name: string; avatar_url: string | null; email: string | null; admin: boolean };
+export type Flash = { notice?: string; alert?: string };
+export type SharedProps = { current_user: CurrentUser | null; flash: Flash };
+export type AuthProvider = "google_oauth2" | "github" | "developer";
+export type SettingsIdentity = { provider: "google" | "github"; strategy: AuthProvider; linked_at_label: string | null };

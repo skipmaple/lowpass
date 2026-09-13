@@ -1,12 +1,21 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import Masthead from '@/components/Masthead'
+import { router, setPageProps } from '../support/inertia'
+import { currentUser } from '../support/props'
 
-// 报头黑带。搜索入口指向 /search（D21）；账户（F-1）是 P2 的路由，之前是占位。
+// 报头黑带。搜索入口指向 /search（D21）；账户（F-1）读 inertia_share 的 current_user（P2-①）。
+
+afterEach(() => {
+  setPageProps({})
+  router.delete.mockClear()
+})
 
 describe('Masthead 导航', () => {
   it('刊名与两条导航指向日刊最新一期与周刊归档', () => {
+    setPageProps({})
     render(<Masthead />)
 
     expect(screen.getByRole('link', { name: 'lowpass' })).toHaveAttribute('href', '/')
@@ -15,6 +24,7 @@ describe('Masthead 导航', () => {
   })
 
   it('当前栏目标 aria-current', () => {
+    setPageProps({})
     const { unmount } = render(<Masthead active="daily" />)
     expect(screen.getByRole('link', { name: '日刊' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: '周刊' })).not.toHaveAttribute('aria-current')
@@ -26,6 +36,7 @@ describe('Masthead 导航', () => {
   })
 
   it('哪一栏都不高亮时两条都不带 aria-current', () => {
+    setPageProps({})
     render(<Masthead />)
 
     expect(screen.getByRole('link', { name: '日刊' })).not.toHaveAttribute('aria-current')
@@ -36,36 +47,87 @@ describe('Masthead 导航', () => {
 describe('Masthead 搜索与账户', () => {
   // D21：搜索入口是链接与图标，搜索框只在搜索页
   it('搜索图标默认指向 /search', () => {
+    setPageProps({})
     render(<Masthead />)
 
     expect(screen.getByRole('link', { name: '搜索' })).toHaveAttribute('href', '/search')
   })
 
-  it('P2 之前没有账户路由：占位不是链接，也不进 tab 序', () => {
+  it('没有当前用户时账户位是占位，不是按钮', () => {
+    setPageProps({})
     const { container } = render(<Masthead />)
 
-    const placeholders = container.querySelectorAll('.masthead-actions [aria-disabled="true"]')
-    expect(placeholders).toHaveLength(1)
-    expect(placeholders[0].tagName.toLowerCase()).toBe('span')
-    expect(placeholders[0]).not.toHaveAttribute('href')
-    expect(placeholders[0]).not.toHaveAttribute('tabindex')
-    expect(screen.queryByRole('link', { name: '账户' })).toBeNull()
+    expect(container.querySelectorAll('.masthead-actions [aria-disabled="true"]')).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: '账户' })).toBeNull()
   })
 
-  it('P2 把 accountHref 传进来就还是链接', () => {
-    const { container } = render(<Masthead accountHref="/account" />)
+  it('有当前用户时账户位是按钮，点开菜单：邮箱、设置、登出；成员没有管理', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<Masthead />)
 
-    expect(screen.getByRole('link', { name: '账户' })).toHaveAttribute('href', '/account')
-    expect(container.querySelectorAll('.masthead-actions [aria-disabled="true"]')).toHaveLength(0)
+    const button = screen.getByRole('button', { name: '账户' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await userEvent.click(button)
+
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    const menu = screen.getByRole('menu')
+    expect(within(menu).getByText('drew@example.com')).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: '设置' })).toHaveAttribute('href', '/settings')
+    expect(within(menu).queryByRole('menuitem', { name: '管理' })).toBeNull()
+    expect(within(menu).getByRole('menuitem', { name: '登出' })).toBeInTheDocument()
   })
 
-  it('两个位置外观一样（占位与链接同一份行内样式）', () => {
-    const { container: off } = render(<Masthead />)
-    const placeholder = off.querySelector('.masthead-actions [aria-disabled="true"]')
+  it('admin 多一项管理，指向 /admin/jobs', async () => {
+    setPageProps({ current_user: currentUser({ admin: true }) })
+    render(<Masthead />)
 
-    const { container: on } = render(<Masthead accountHref="/account" />)
-    const link = on.querySelector('.masthead-actions a[aria-label="账户"]')
+    await userEvent.click(screen.getByRole('button', { name: '账户' }))
 
-    expect(link?.getAttribute('style')).toBe(placeholder?.getAttribute('style'))
+    expect(screen.getByRole('menuitem', { name: '管理' })).toHaveAttribute('href', '/admin/jobs')
+  })
+
+  it('登出走 DELETE /session', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<Masthead />)
+
+    await userEvent.click(screen.getByRole('button', { name: '账户' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '登出' }))
+
+    expect(router.delete).toHaveBeenCalledWith('/session')
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('Escape 与点卡外都关闭菜单', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<Masthead />)
+    const button = screen.getByRole('button', { name: '账户' })
+
+    await userEvent.click(button)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await userEvent.click(button)
+    await userEvent.click(document.body)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('没有邮箱时菜单顶部写显示名；有头像时圆里是图片', async () => {
+    setPageProps({ current_user: currentUser({ email: null, display_name: '客人', avatar_url: 'https://avatars.example/a.png' }) })
+    const { container } = render(<Masthead />)
+
+    expect(container.querySelector('.account-avatar')).toHaveAttribute('src', 'https://avatars.example/a.png')
+    await userEvent.click(screen.getByRole('button', { name: '账户' }))
+    expect(within(screen.getByRole('menu')).getByText('客人')).toBeInTheDocument()
+  })
+
+  it('菜单卡没有阴影（设计 L1）', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<Masthead />)
+
+    await userEvent.click(screen.getByRole('button', { name: '账户' }))
+
+    expect(screen.getByRole('menu').getAttribute('style') ?? '').not.toMatch(/box-shadow/)
   })
 })

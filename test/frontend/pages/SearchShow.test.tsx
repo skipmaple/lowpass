@@ -47,6 +47,8 @@ describe('六态', () => {
   it('未搜索：占位句、筛选器、最新日刊入口，没有结果与计数', () => {
     const { container } = show()
 
+    // PRD 6.4 标题层级：页面的 h1 是「搜索」（视觉上隐藏，读屏器能读到），结果标题才是 h2
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('搜索')
     expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveAttribute('placeholder', '搜标题、摘要或来源。拼写不准也可以。')
     // 「最新日刊 · 9月8日」经 Mixed 拆成多个相邻 <span>，jsdom 的可访问名计算会把落在段边界上的
     // 空格吃掉（最新日刊·9月8日），可见渲染与 textContent 都不受影响；用正则容忍空格差异。

@@ -10,11 +10,27 @@ class SearchesController < ApplicationController
     else
       result = Search::Runner.call(query)
       Search::Log.record(query, result)
-      render_search(query, state: state_for(result), result: result)
+      if beyond_last_page?(query, result)
+        redirect_to last_page_path(query, result.pages)
+      else
+        render_search(query, state: state_for(result), result: result)
+      end
     end
   end
 
   private
+    # R-4.7：页码合法但超过总页数（分享的地址、结果后来变少）时不渲染一页空结果，跳到最后一页；其余参数原样带上
+    def beyond_last_page?(query, result)
+      result.ok? && result.total.positive? && query.page > result.pages
+    end
+
+    # 只用解析过的字段重建地址，不把 request.query_parameters 整个交给路由助手：
+    # 那里面读者能塞 script_name 之类的保留键，拼出协议相对地址就是开放跳转
+    def last_page_path(query, pages)
+      search_path({ q: query.q, type: query.type, source: query.sources.presence&.join(","), from: query.from&.iso8601,
+                    to: query.to&.iso8601, range: query.range, sort: query.sort, page: pages }.compact)
+    end
+
     def render_limited
       render_search(Search::Query.parse(params), state: "limited", status: :too_many_requests)
     end

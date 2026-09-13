@@ -70,4 +70,19 @@ class SourceTest < ActiveSupport::TestCase
 
     assert_not source.valid?
   end
+
+  test "config 为空、刊物为空时是校验错误，不抛异常" do
+    source = Source.new(name: "x", adapter: "rss", publication: "", config: nil)
+
+    assert_not source.valid?
+    assert_includes source.errors[:publication], "is not included in the list"
+    assert_equal({}, source.config)
+  end
+
+  test "非 RSS 源不查 feed 地址唯一" do
+    source = Source.new(name: "HN 2", adapter: "hacker_news", publication: "daily", config: nil)
+
+    assert source.valid?
+    assert_equal({ "list" => "top", "count" => 10, "min_score" => 0 }, source.config)
+  end
 end

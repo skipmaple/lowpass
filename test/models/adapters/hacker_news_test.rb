@@ -73,6 +73,7 @@ class Adapters::HackerNewsTest < ActiveSupport::TestCase
     assert_equal "https://news.ycombinator.com/item?id=45601002", entries.last.url
     assert_equal 312, entries.first.meta[:score]
     assert_equal 145, entries.first.meta[:comments]
+    assert entries.all? { |e| e.published_at.in_time_zone(PeriodKey::ZONE).to_date == Date.new(2026, 9, 3) }
     assert entries.all?(&:valid?)
     assert Adapters::HackerNews.backfill?
   end

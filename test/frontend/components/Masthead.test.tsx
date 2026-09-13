@@ -113,6 +113,18 @@ describe('Masthead 搜索与账户', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
+  it('Escape 关闭后焦点回到头像按钮；打开时焦点进第一项', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<Masthead />)
+    const button = screen.getByRole('button', { name: '账户' })
+
+    await userEvent.click(button)
+    expect(screen.getByRole('menuitem', { name: '设置' })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(button).toHaveFocus()
+  })
+
   it('没有邮箱时菜单顶部写显示名；有头像时圆里是图片', async () => {
     setPageProps({ current_user: currentUser({ email: null, display_name: '客人', avatar_url: 'https://avatars.example/a.png' }) })
     const { container } = render(<Masthead />)

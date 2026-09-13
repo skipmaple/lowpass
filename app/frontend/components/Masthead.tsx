@@ -48,14 +48,21 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
 function AccountMenu({ user }: { user: CurrentUser }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const menuId = useId()
 
   useEffect(() => {
     if (!open) return
     rootRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
 
+    // WAI-ARIA menu button 模式：Escape 关掉的是键盘用户自己进来的菜单，得把焦点还给触发它的按钮，
+    // 不然聚焦的菜单项一卸载，焦点就掉回 <body>，键盘用户在页面上的位置就丢了。点卡外关闭不这样——
+    // 读者点哪儿是读者的选择，不该抢焦点；选中某一项关闭则是导航/登出接管，也不用管。
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+      }
     }
     function onPointer(event: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
@@ -75,12 +82,13 @@ function AccountMenu({ user }: { user: CurrentUser }) {
   return (
     <div className="account" ref={rootRef}>
       <button
+        ref={buttonRef}
         type="button"
         className="account-button"
         aria-label="账户"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls={menuId}
+        aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((value) => !value)}
       >
         {user.avatar_url ? <img src={user.avatar_url} alt="" className="account-avatar" /> : <Icon name="user" size={15} color="var(--paper)" />}

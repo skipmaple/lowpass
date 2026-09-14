@@ -19,7 +19,7 @@ bin/setup
 2. 把 Git 的 `core.hooksPath` 指到 `.githooks`（见下文「提交前检查」）。
 3. `bundle install`、`npm install`。
 4. 若本机 5432 端口没有服务在监听，启动（不存在则新建）名为 `lowpass-postgres` 的
-   `postgres:16` 容器，用户名与密码均为 `postgres`，只发布到 `127.0.0.1:5432`（默认口令不该
+   `postgres:17` 容器，用户名与密码均为 `postgres`，只发布到 `127.0.0.1:5432`（默认口令不该
    跟着局域网走），然后轮询容器里的 `pg_isready`，最多等 30 秒。加 `--skip-server` 参数就整段
    跳过（`config/ci.rb` 的 Setup 步骤与 CI 里的 postgres service 自己管数据库）。
 5. `bin/rails db:prepare`（加 `--reset` 参数则改为 `bin/rails db:reset`）。
@@ -291,7 +291,7 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 
 ## 部署
 
-底座（ADR T4、T5）：阿里云轻量（香港，x86_64，`<DEPLOY_HOST>`）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 16 accessory；
+底座（ADR T4、T5）：阿里云轻量（香港，x86_64，`<DEPLOY_HOST>`）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 17 accessory；
 镜像在 Docker Hub `skipmaple/lowpass`；kamal-proxy 做 Let's Encrypt，域名 `lowpass.tech`。同一台机器上还有另一个 Kamal 应用与 lowpass
 共用 kamal-proxy，按域名分流；它的库占着宿主机的 `127.0.0.1:5432`，所以 lowpass 的库不发布端口，应用走 docker 网络里的 `lowpass-db`。
 配置在 `config/deploy.yml`，变量名在 `.kamal/secrets`，值只从跑 kamal 的那个 shell 读。镜像在服务器上构建（`builder.remote`），
@@ -323,3 +323,4 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 - 日志 `bundle exec kamal app logs -f`；控制台 `bundle exec kamal console`；数据库 `bundle exec kamal dbc`；代理 `bundle exec kamal proxy details`。
 - 服务器上的落点：数据 `/root/lowpass-db/data`，Kamal 记录 `/root/.kamal/apps/lowpass`。证书由 kamal-proxy 自动续。
 - 备份：还没有备份任务（T3）。手动：`bundle exec kamal accessory exec db "pg_dump -U lowpass lowpass_production" > lowpass-$(date +%F).sql`。
+- 升大版本（2026-09-15 从 16 升到 17 的做法）：先在服务器上 `pg_dumpall` 两个库到 `/root/lowpass-backups/`，`kamal app stop`，把 `/root/lowpass-db/data` 改名留着，改 `deploy.yml` 的镜像后 `kamal accessory reboot db`（新目录 initdb），`psql` 灌回 dump，核对各表行数，`kamal app start`。数据目录不跨大版本复用。

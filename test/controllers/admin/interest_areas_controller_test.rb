@@ -35,6 +35,13 @@ class Admin::InterestAreasControllerTest < ActionDispatch::IntegrationTest
     assert_equal "必填 · 最多 200 字", flash[:alert]
   end
 
+  # ?interest_area=x 这种形状不能打成 500：permit 认不了标量，按校验错误回设置页
+  test "参数形状不对按校验错误处理" do
+    post admin_interest_areas_path, params: { interest_area: "x" }
+    assert_redirected_to admin_settings_path
+    assert_equal "必填", flash[:alert]
+  end
+
   test "成员 403" do
     sign_in_as(users(:guest))
     post admin_interest_areas_path, params: { interest_area: { name: "x" } }

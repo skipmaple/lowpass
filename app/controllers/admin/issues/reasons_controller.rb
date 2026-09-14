@@ -2,12 +2,13 @@
 class Admin::Issues::ReasonsController < Admin::BaseController
   def create
     issue = Issue.daily.find_by!(period_key: params[:issue_period_key])
-    if Reasons::Provider.configured?
+    # 画像为空时入队也只是空跑一趟（Generator 会直接 skip），不如当场说清缺的是哪一样
+    if Reasons.ready?
       GenerateReasonsJob.perform_later(issue, false)
       Audit.record("issue.regenerate_reasons", "Issue##{issue.period_key}")
       redirect_back_or_to admin_issues_path, notice: "已开始重生成理由"
     else
-      redirect_back_or_to admin_issues_path, alert: "未配置模型供应商"
+      redirect_back_or_to admin_issues_path, alert: Reasons.unready_label
     end
   end
 end

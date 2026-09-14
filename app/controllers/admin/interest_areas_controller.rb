@@ -20,8 +20,10 @@ class Admin::InterestAreasController < Admin::BaseController
   end
 
   private
+    # 形状不对（?interest_area=x）不能打成 500：认不出来就当没给，落到「必填」那条校验
     def area_params
-      params.fetch(:interest_area, {}).permit(:name, :keywords, :sort_order, :enabled)
+      raw = params[:interest_area]
+      raw.is_a?(ActionController::Parameters) ? raw.permit(:name, :keywords, :sort_order, :enabled) : {}
     end
 
     def save(area, action, notice)

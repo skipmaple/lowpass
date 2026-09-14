@@ -183,4 +183,14 @@ class SchedulerTest < ActiveSupport::TestCase
     Scheduler.tick(now: sh("2026-09-08 07:10"))
     assert_nil AlertEvent.find_by(kind: "reasons_missing")
   end
+
+  # 画像为空时根本不该生成（终审 F1），缺理由就不是事故——后台那一格已经写着「兴趣画像为空」
+  test "5.7 画像为空：缺理由不告警" do
+    issues(:daily_0908).update!(published_at: sh("2026-09-08 06:12"))
+    InterestArea.update_all(enabled: false)
+    with_model_provider do
+      Scheduler.tick(now: sh("2026-09-08 06:43"))
+      assert_nil AlertEvent.find_by(kind: "reasons_missing")
+    end
+  end
 end

@@ -390,4 +390,19 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     Issue.check_weekly_sources!
     assert_not_nil open.reload.recovered_at
   end
+
+  # 手动重抓（refetch_weekly!）成功路径也要恢复未恢复的源失败事件，跟每日检查（check_weekly_sources!）
+  # 走的 ingest 路径不是同一段代码（app/models/issue/weekly.rb 的 class 方法各自调用 Alerts.recover!）
+  test "refetch_weekly! 成功恢复未恢复的源失败事件" do
+    open = alert_event(source: sources(:ruanyf), dedup_key: "w-refetch")
+    ruanyf_item("旧条目", section: "工具")
+    Adapters::RuanyfWeekly.any_instance.expects(:fetch_issue).with(366).returns([
+      Adapters::Entry.new(title: "新条目", url: "https://r.example/366/new", section: "工具", rank: 1, meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" }),
+      Adapters::Entry.new(title: "没有地址的条目", url: nil, section: "工具", rank: 2, meta: { issue_no: 366 })
+    ])
+
+    Issue.refetch_weekly!(issues(:weekly_w36), sources(:ruanyf))
+
+    assert_not_nil open.reload.recovered_at
+  end
 end

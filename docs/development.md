@@ -95,6 +95,25 @@ http://localhost:3000/admin
 `bin/dev` 的 jobs 进程跑着，期页与记录页每 5 秒刷新一次直到任务结束。补生成过去的日子只对支持回填的源产出内容：
 Hacker News 经 Algolia（`hn.algolia.com`），RSS 看 feed 里还有没有那一天的条目，GitHub Trending 标「该来源无法回填」。
 
+## 告警
+
+设计见 `docs/superpowers/specs/2026-09-14-p2-alerts-design.md`。渠道只从环境读（`config/initializers/alerts.rb` 启动时检查一次并把问题写进日志），配一个或两个：
+
+| 变量 | 说明 |
+|---|---|
+| `BASE_URL` | 站点地址，告警里的后台链接与抓取的 User-Agent 都用它（development 默认 `http://localhost:3000`） |
+| `ALERT_EMAIL_TO` | 收件地址，逗号分隔；与 `SMTP_ADDRESS` 一起配了邮件渠道才算开 |
+| `ALERT_EMAIL_FROM` | 发件地址，默认 `lowpass@<BASE_URL 的主机名>` |
+| `SMTP_ADDRESS` `SMTP_PORT` `SMTP_USERNAME` `SMTP_PASSWORD` `SMTP_DOMAIN` `SMTP_AUTHENTICATION` `SMTP_STARTTLS` | SMTP；端口默认 587，认证默认 plain（没配用户名就不认证），STARTTLS 默认开 |
+| `ALERT_WEBHOOK_URL` | https 的 JSON 接收端：Slack incoming webhook、飞书 / 企业微信 / 钉钉的自定义机器人都行 |
+| `ALERT_WEBHOOK_FORMAT` | 报文形状：`generic`（默认，Slack 兼容）· `feishu` · `wecom` · `dingtalk` |
+
+本地看效果：development 的邮件不真发，`bin/rails console` 里看 `ActionMailer::Base.deliveries`；webhook 可以指到自己的 https 接收端。
+验证 AC-7.1：配好变量，`bin/dev` 起着（jobs 进程在跑），到 `/admin/settings` 点「发送测试告警」，1 分钟内应收到「[lowpass] 提示 · 测试告警」。
+事件记在 `alert_events`（`AlertEvent.order(created_at: :desc).limit(20)`），同源同日同类只发一条，恢复后发一条「已恢复」；
+投递失败最多重试 3 次，耗尽写日志并留在 `delivery_error`。触发点：源抓取终态失败、解析退化（丢弃过半、阮一峰降级）、空刊、
+日刊晚于生成时间 30 分钟以上才补跑、搜索连续 3 次不可用；备份失败只有调用口（还没有备份任务）；推荐理由缺失由 ④ 接。
+
 ## 开发数据
 
 ```

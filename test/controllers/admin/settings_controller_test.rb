@@ -9,6 +9,7 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Admin/Settings/Show", page_component
     assert_equal({ "daily_time" => "06:00", "weekly_time" => "09:00" }, page_props["schedule"])
     assert_equal [ "drew@example.com" ], page_props["whitelist"]
+    assert_equal({ "email" => { "configured" => false, "label" => "未配置" }, "webhook" => { "configured" => false, "label" => "未配置" } }, page_props["alerts"])
   end
 
   test "改调度时间，审计记旧值新值" do

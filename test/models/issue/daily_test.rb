@@ -314,4 +314,13 @@ class Issue::DailyTest < ActiveSupport::TestCase
 
     assert_enqueued_with(job: GenerateReasonsJob, args: [ issue ]) { Issue.regenerate_source!(issue, sources(:hn)) }
   end
+
+  # D19 周刊条目没有推荐理由：重抓周刊源同样走 revise!，那一支不能入队生成理由——
+  # 这条保证写在 revise! 自己身上，不靠「只有日刊会被重抓」的调用图
+  test "D19 周刊重抓不入队生成理由" do
+    weekly = issues(:weekly_w36)
+    run = weekly.fetch_runs.create!(source: sources(:ruanyf), trigger: "manual", attempt: 1, status: "succeeded", item_count: 33)
+
+    assert_no_enqueued_jobs(only: GenerateReasonsJob) { weekly.revise!(sources(:ruanyf), run) }
+  end
 end

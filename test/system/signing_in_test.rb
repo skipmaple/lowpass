@@ -24,6 +24,8 @@ class SigningInTest < ApplicationSystemTestCase
     click_on "登出"
 
     assert_current_path login_path
+    # 登出是 router.delete 发起的 Inertia 访问：从套着 Layout 的页面客户端换到登录页，走的是另一条渲染路径
+    assert_no_selector ".masthead"
     visit daily_issue_path("2026-09-08")
     assert_current_path login_path(next: "/daily/2026-09-08")
   end

@@ -46,6 +46,19 @@ env:
     - GITHUB_CLIENT_ID
     - GITHUB_CLIENT_SECRET
     - ADMIN_EMAILS
+    # 告警（P2-③）：渠道与站点地址，见 .kamal/secrets
+    - BASE_URL
+    - ALERT_EMAIL_TO
+    - ALERT_EMAIL_FROM
+    - ALERT_WEBHOOK_URL
+    - ALERT_WEBHOOK_FORMAT
+    - SMTP_ADDRESS
+    - SMTP_PORT
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
+    - SMTP_DOMAIN
+    - SMTP_AUTHENTICATION
+    - SMTP_STARTTLS
   clear:
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.

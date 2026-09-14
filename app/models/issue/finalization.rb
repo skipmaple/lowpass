@@ -12,14 +12,19 @@ module Issue::Finalization
   # 各源的结果在这里固化进 source_states：抓取记录只保留 30 天（F-26），过了保留期就再也
   # 推导不出这一期各栏的结果，页面会把还在库里的条目误报成「今日抓取失败」。
   def finalize!(reason:)
-    with_lock do
-      return unless generating?
+    finalized = with_lock do
+      next false unless generating?
 
       states = daily_sources.index_by(&:id).transform_values { |source| finalized_state(source) }
       published = states.value?("ok") || states.value?("empty")
       update!(state: published ? "published" : "empty", published_at: Time.current, source_states: states)
       Rails.logger.info { "Issue #{period_key} finalized as #{state} (#{reason}): #{states.values.tally.to_a.map { |s, n| "#{s} #{n}" }.join(", ")}" }
+      true
     end
+    return unless finalized
+
+    # 5.7 空刊是严重告警（AC-1.4）；正常发布则把之前的空刊事件收掉
+    empty? ? Alerts.issue_empty!(self) : Alerts.recover!(kind: "issue_empty")
   end
 
   private

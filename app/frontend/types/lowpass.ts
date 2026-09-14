@@ -62,3 +62,5 @@ export type LatestIssue = { period_key: string; label: string } | null;
 export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[] };
 export type AdminUserRow = { id: string; display_name: string; email: string | null; role: "admin" | "member"; providers_label: string; last_login_label: string | null };
 export type Schedule = { daily_time: string; weekly_time: string };
+export type AlertChannel = { configured: boolean; label: string };
+export type AlertChannels = { email: AlertChannel; webhook: AlertChannel };

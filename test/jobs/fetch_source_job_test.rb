@@ -120,4 +120,54 @@ class FetchSourceJobTest < ActiveJob::TestCase
     assert_equal "failed", second.first.status
     assert_equal 1, FetchRun.where(source: sources(:ruanyf), issue: issue, attempt: 3, status: "queued").count
   end
+
+  test "5.7 三次都失败：告警一次，第三次仍然抛出" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
+    issue = Issue.generate_daily!("2026-09-18")
+    job = FetchSourceJob.new(sources(:hn), issue, "scheduled")
+    job.executions = 2
+    # retry_on 的 attempts: 数的是 exception_executions，不是 executions（Task 3 笔记）：新建的 job
+    # 这个计数是空的，只设 executions 触发不了耗尽块；这里把它也垫到 2，加上下面真正抛出的这一次
+    # 正好凑满 3 次。键的写法核对过安装的 activejob 8.1.3.1（exceptions.rb#executions_for 用
+    # exceptions.to_s，即 retry_on 声明的异常数组原样 to_s）
+    job.exception_executions = { "[Adapters::Http::Error, Timeout::Error]" => 2 }
+    assert_difference("AlertEvent.where(kind: 'source_failed').count", 1) { assert_raises(Adapters::Http::Error) { job.perform_now } }
+    event = AlertEvent.find_by!(kind: "source_failed")
+    assert_equal sources(:hn), event.source
+    assert_equal issue, event.issue
+    assert_equal "down", event.summary
+  end
+
+  test "第一次可重试失败不告警" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Error, "down")
+    issue = Issue.generate_daily!("2026-09-19")
+    assert_no_difference("AlertEvent.count") { FetchSourceJob.perform_now(sources(:hn), issue, "scheduled") }
+  end
+
+  test "429 丢弃也告警" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).raises(Adapters::Http::Blocked.new("429"))
+    issue = Issue.generate_daily!("2026-09-20")
+    assert_difference("AlertEvent.where(kind: 'source_failed').count", 1) { FetchSourceJob.perform_now(sources(:hn), issue, "scheduled") }
+  end
+
+  test "解析异常不重试：告警并抛出；无法回填不告警" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).raises(RuntimeError, "bad html")
+    issue = Issue.generate_daily!("2026-09-21")
+    assert_difference("AlertEvent.where(kind: 'source_failed').count", 1) do
+      assert_raises(RuntimeError) { FetchSourceJob.perform_now(sources(:hn), issue, "scheduled") }
+    end
+
+    old = Issue.backfill_daily!("2026-09-01")
+    assert_no_difference("AlertEvent.count") { FetchSourceJob.perform_now(sources(:github), old, "manual", true) }
+  end
+
+  test "抓取成功后恢复同源的未恢复事件" do
+    with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
+      open = alert_event
+      Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "ok", url: "https://h/ok") ])
+      issue = Issue.generate_daily!("2026-09-22")
+      assert_enqueued_with(job: DeliverAlertJob, args: [ open, "recovery" ]) { FetchSourceJob.perform_now(sources(:hn), issue, "scheduled") }
+      assert_not_nil open.reload.recovered_at
+    end
+  end
 end

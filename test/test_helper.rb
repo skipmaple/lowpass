@@ -36,6 +36,7 @@ class ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include SearchTestHelpers
   include AuthenticationTestHelpers
+  include AlertTestHelpers
 end
 
 class ActionDispatch::IntegrationTest

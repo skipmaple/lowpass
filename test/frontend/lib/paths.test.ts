@@ -4,6 +4,7 @@ import {
   ADMIN_JOBS,
   ADMIN_SETTINGS,
   ADMIN_SOURCES,
+  ADMIN_TEST_ALERT,
   ADMIN_TEST_FETCH,
   ADMIN_TODAY_ISSUE,
   DAILY_ARCHIVE,
@@ -100,5 +101,6 @@ describe('后台地址', () => {
     expect(adminIssueBackfillHref('2026-09-03')).toBe('/admin/issues/2026-09-03/backfill')
     expect(ADMIN_TODAY_ISSUE).toBe('/admin/today_issue')
     expect(ADMIN_SETTINGS).toBe('/admin/settings')
+    expect(ADMIN_TEST_ALERT).toBe('/admin/test_alert')
   })
 })

@@ -183,4 +183,20 @@ class Search::RunnerTest < ActiveSupport::TestCase
 
     assert_raises(ActiveRecord::StatementInvalid) { search("rust") }
   end
+
+  test "5.7 搜索连续三次不可用告警一次，恢复后发已恢复" do
+    Rails.cache.clear
+    # pg_sleep 是按行睡的（跟上面的超时用例一样）：search_records 一条都没有的话这个 WHERE
+    # 根本不会对任何行求值，也就永远不会真的超时，所以这里先索引一条
+    index_item("Rust")
+    with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
+      Search::Runner.any_instance.stubs(:matching).returns(Search::Record.published.where("pg_sleep(1) IS NOT NULL"))
+      assert_no_difference("AlertEvent.count") { 2.times { Search::Runner.call(Search::Query.parse({ q: "rust" }), timeout_ms: 50) } }
+      assert_difference("AlertEvent.where(kind: 'search_unavailable').count", 1) { Search::Runner.call(Search::Query.parse({ q: "rust" }), timeout_ms: 50) }
+
+      Search::Runner.any_instance.unstub(:matching)
+      Search::Runner.call(Search::Query.parse({ q: "rust" }))
+      assert_not_nil AlertEvent.find_by!(kind: "search_unavailable").recovered_at
+    end
+  end
 end

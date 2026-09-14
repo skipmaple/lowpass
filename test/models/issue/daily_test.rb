@@ -35,6 +35,10 @@ class Issue::DailyTest < ActiveSupport::TestCase
     issue = Issue.generate_daily!("2026-09-10")
     perform_enqueued_jobs
     assert issue.reload.empty?
+
+    event = AlertEvent.find_by!(kind: "issue_empty")
+    assert_equal "critical", event.level
+    assert_equal issue, event.issue
   end
 
   # AC-1.7 适配器返回 0 条是成功，不是失败：记录记 succeeded / 0，栏内说「今日无新内容」
@@ -280,5 +284,20 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert issue.empty?
     assert_equal({ sources(:hn).id => "no_backfill", sources(:github).id => "no_backfill", sources(:hackaday).id => "no_backfill" }, issue.source_states)
     assert_no_enqueued_jobs
+  end
+
+  test "发布成功恢复未恢复的空刊事件；重抓让空刊有了内容也恢复" do
+    open = alert_event(kind: "issue_empty", source: nil, issue: issues(:daily_0908), dedup_key: "e1")
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "a", url: "https://h/a") ])
+    issue = Issue.generate_daily!("2026-09-26")
+    Source.enabled.daily.find_each { |s| s.fetch_runs.create!(issue: issue, trigger: "scheduled", attempt: 1, status: "failed") unless s == sources(:hn) }
+    sources(:hn).fetch_now(issue, trigger: "scheduled")
+    issue.finalize!(reason: "complete")
+    assert_equal "published", issue.reload.state
+    assert_not_nil open.reload.recovered_at
+
+    again = alert_event(kind: "issue_empty", source: nil, issue: issue, dedup_key: "e2")
+    Issue.regenerate_source!(issue, sources(:hn))
+    assert_not_nil again.reload.recovered_at
   end
 end

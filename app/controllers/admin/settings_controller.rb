@@ -1,9 +1,9 @@
-# 设置（5.6）：调度时间可改；白名单只读（R-5.5 由环境配置）。告警（③）与兴趣画像、模型供应商（④）往这一页加节
+# 设置（5.6）：调度时间可改；白名单只读（R-5.5 由环境配置）。告警渠道状态与测试告警（③）在这一页；兴趣画像、模型供应商（④）往这一页加节
 class Admin::SettingsController < Admin::BaseController
   KEYS = %w[ daily_time weekly_time ].freeze
 
   def show
-    render inertia: "Admin/Settings/Show", props: { schedule: KEYS.index_with { |key| Setting.get(key) }, whitelist: Identity::Whitelist.emails }
+    render inertia: "Admin/Settings/Show", props: { schedule: KEYS.index_with { |key| Setting.get(key) }, whitelist: Identity::Whitelist.emails, alerts: Alerts::Config.status_props }
   end
 
   def update

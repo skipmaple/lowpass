@@ -22,16 +22,22 @@ class Search::Runner
     # 空查询不下库（R-4.1「不搜索」）：控制器不会传空查询进来，但公开入口不能因为一个 Arel 错误 500
     return Search::Result.new(entries: [], total: 0, page: @query.page, latency_ms: 0, status: "ok") if @query.blank?
 
-    started = now_ms
-    rows, total = Search::Record.transaction { run }
-    Search::Result.new(entries: entries(rows), total: total, page: @query.page, latency_ms: now_ms - started, status: "ok")
-  rescue ActiveRecord::QueryCanceled => e
-    unavailable(e, "timeout", started)
-  rescue ActiveRecord::ConnectionNotEstablished, PG::ConnectionBad => e
-    unavailable(e, "error", started)
+    result = search
+    Alerts.search_status(result.status)   # 5.7 连续三次不可用告警（B5）
+    result
   end
 
   private
+    def search
+      started = now_ms
+      rows, total = Search::Record.transaction { run }
+      Search::Result.new(entries: entries(rows), total: total, page: @query.page, latency_ms: now_ms - started, status: "ok")
+    rescue ActiveRecord::QueryCanceled => e
+      unavailable(e, "timeout", started)
+    rescue ActiveRecord::ConnectionNotEstablished, PG::ConnectionBad => e
+      unavailable(e, "error", started)
+    end
+
     def run
       connection = Search::Record.connection
       connection.execute(Search::Record.sanitize_sql_array([ "SET LOCAL statement_timeout = ?", @timeout_ms ]))

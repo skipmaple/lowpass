@@ -31,6 +31,9 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # 告警邮件在本地只进 ActionMailer::Base.deliveries，不连 SMTP（设计 §7.1）
+  config.action_mailer.delivery_method = :test
+
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 

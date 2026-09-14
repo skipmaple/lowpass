@@ -35,6 +35,7 @@ Rails.application.routes.draw do
     resource :today_issue, only: :create
     resources :users, only: :index
     resource :settings, only: [ :show, :update ]
+    resource :test_alert, only: :create
   end
 
   # 队列面板（ADR T12）：三个环境都挂在 /admin/jobs，认证由 Admin::BaseController 做（config/application.rb）。

@@ -58,4 +58,19 @@ class AdminTest < ApplicationSystemTestCase
 
     assert_text "你没有权限访问这个页面。"
   end
+
+  test "AC-7.1 发送测试告警：webhook 收到一次，事件记下投递时间" do
+    Alerts::Config.load!({ "ALERT_WEBHOOK_URL" => "https://hooks.example/lowpass", "BASE_URL" => "http://localhost:3000" })
+    stub_request(:post, "https://hooks.example/lowpass").to_return(status: 200, body: "ok")
+
+    visit admin_settings_path
+    click_on "发送测试告警"
+    assert_text "已发送测试告警"
+
+    perform_enqueued_jobs
+    assert_requested :post, "https://hooks.example/lowpass", times: 1
+    assert_not_nil AlertEvent.find_by!(kind: "test").sent_at
+  ensure
+    Alerts::Config.load!({})
+  end
 end

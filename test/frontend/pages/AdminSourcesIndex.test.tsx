@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import Index from '@/pages/Admin/Sources/Index'
 import * as admin from '@/lib/admin'
+import type { TestFetchResult } from '@/types/lowpass'
 import { router, setPageProps } from '../support/inertia'
 import { adminSourceRow, testFetchResult } from '../support/props'
 
@@ -13,6 +14,15 @@ function show(rows = [adminSourceRow(), adminSourceRow({ id: 'src-ry', sort_orde
   const props = { sources: rows, summary: '2 个来源 · 1 个日刊 · 1 个周刊', active_runs: [], daily_time: '06:00', latest_weekly_key: null }
   setPageProps({ ...props, flash: {}, errors: {} })
   return render(<Index {...props} />)
+}
+
+// 造一个能手动控制 resolve 时机的 Promise：要断言「请求还没回来时按钮是禁用的」，得先卡住这一步
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
 }
 
 afterEach(() => {
@@ -57,14 +67,20 @@ describe('Admin/Sources/Index', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('列表里的测试抓取只弹一条提示', async () => {
-    const spy = vi.spyOn(admin, 'testFetch').mockResolvedValue(testFetchResult())
+  it('列表里的测试抓取只弹一条提示，进行中该行按钮禁用，结束后恢复', async () => {
+    const { promise, resolve } = deferred<TestFetchResult>()
+    const spy = vi.spyOn(admin, 'testFetch').mockReturnValue(promise)
     show()
 
-    await userEvent.click(screen.getAllByRole('button', { name: '测试抓取' })[0])
+    const button = screen.getAllByRole('button', { name: '测试抓取' })[0]
+    await userEvent.click(button)
 
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ id: 'src-hn', adapter: 'hacker_news' }))
+    expect(button).toBeDisabled()
+
+    resolve(testFetchResult())
     expect(await screen.findByRole('status')).toHaveTextContent('解析 24 条 · 丢弃 0 条 · 用时 1.8 秒')
+    expect(button).toBeEnabled()
   })
 
   it('测试抓取失败弹失败句', async () => {

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import Form from '@/pages/Admin/Sources/Form'
 import * as admin from '@/lib/admin'
+import * as inertia from '../support/inertia'
 import { formPatch, formPost, setPageProps } from '../support/inertia'
 import { ADAPTER_OPTIONS, adminSourceForm, testFetchResult } from '../support/props'
 
@@ -51,6 +52,23 @@ describe('Admin/Sources/Form', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'GitHub Trending' }))
     expect(screen.getByLabelText('语言列表')).toBeInTheDocument()
+  })
+
+  it('切换适配器不丢已经填好的名称与排序值', async () => {
+    show()
+
+    await userEvent.type(screen.getByLabelText('名称'), 'Hackaday')
+    await userEvent.clear(screen.getByLabelText('排序值'))
+    await userEvent.type(screen.getByLabelText('排序值'), '9')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hacker News' }))
+
+    // 断言读 lastFormData（真实 data 快照）而不是 <input> 的 DOM 值：一个受控字段的 value 一旦从
+    // 字符串变成 undefined，React 不会把输入框里已经打出的字清空，toHaveValue 测不出「setData 传
+    // 对象把 name/sort_order 丢了」这类缺陷（已用最小复现验证过），必须直接看真正的表单数据。
+    expect(inertia.lastFormData).toMatchObject({ name: 'Hackaday', sort_order: '9', adapter: 'hacker_news' })
+    expect(screen.getByLabelText('名称')).toHaveValue('Hackaday')
+    expect(screen.getByLabelText('排序值')).toHaveValue('9')
   })
 
   it('编辑：适配器是文字，保存 PATCH', async () => {

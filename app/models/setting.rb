@@ -1,5 +1,6 @@
 class Setting < ApplicationRecord
-  DEFAULTS = { "daily_time" => "06:00", "weekly_time" => "09:00", "weekly_checked_on" => "", "cleaned_on" => "" }.freeze
+  DEFAULTS = { "daily_time" => "06:00", "weekly_time" => "09:00", "weekly_checked_on" => "", "cleaned_on" => "",
+               "model_base_url" => "", "model_name" => "", "model_input_price" => "0", "model_output_price" => "0", "model_monthly_cap" => "0" }.freeze
   TIME = /\A([01]\d|2[0-3]):[0-5]\d\z/
 
   validates :key, presence: true, uniqueness: true

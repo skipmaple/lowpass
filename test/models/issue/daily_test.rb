@@ -300,4 +300,27 @@ class Issue::DailyTest < ActiveSupport::TestCase
     Issue.regenerate_source!(issue, sources(:hn))
     assert_not_nil again.reload.recovered_at
   end
+
+  test "R-9.1 日刊发布后入队生成理由；空刊不入队；重抓后再入队补缺" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "a", url: "https://h/a") ])
+    issue = Issue.generate_daily!("2026-09-27")
+    Source.enabled.daily.find_each { |s| s.fetch_runs.create!(issue: issue, trigger: "scheduled", attempt: 1, status: "failed") unless s == sources(:hn) }
+    sources(:hn).fetch_now(issue, trigger: "scheduled")
+    assert_enqueued_with(job: GenerateReasonsJob, args: [ issue ]) { issue.finalize!(reason: "complete") }
+
+    empty = Issue.generate_daily!("2026-09-28")
+    Source.enabled.daily.find_each { |s| s.fetch_runs.create!(issue: empty, trigger: "scheduled", attempt: 1, status: "failed") }
+    assert_no_enqueued_jobs(only: GenerateReasonsJob) { empty.finalize!(reason: "complete") }
+
+    assert_enqueued_with(job: GenerateReasonsJob, args: [ issue ]) { Issue.regenerate_source!(issue, sources(:hn)) }
+  end
+
+  # D19 周刊条目没有推荐理由：重抓周刊源同样走 revise!，那一支不能入队生成理由——
+  # 这条保证写在 revise! 自己身上，不靠「只有日刊会被重抓」的调用图
+  test "D19 周刊重抓不入队生成理由" do
+    weekly = issues(:weekly_w36)
+    run = weekly.fetch_runs.create!(source: sources(:ruanyf), trigger: "manual", attempt: 1, status: "succeeded", item_count: 33)
+
+    assert_no_enqueued_jobs(only: GenerateReasonsJob) { weekly.revise!(sources(:ruanyf), run) }
+  end
 end

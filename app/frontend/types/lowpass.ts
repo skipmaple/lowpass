@@ -59,8 +59,14 @@ export type AdminRunRow = { id: string; started_label: string | null; duration_l
 export type ManualRun = { id: string; source_name: string; period_key: string | null };
 export type FinishedRun = { id: string; source_name: string; status: RunStatus; item_count: number | null; error_summary: string | null };
 export type LatestIssue = { period_key: string; label: string } | null;
-export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[] };
+// reasons 只有日刊行才有值（Issue::Administering#admin_reasons）：未发布 / 生成中 / 缺期是 null；周刊行整个键都不带
+export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[]; reasons?: { label: string; missing: number; ready: boolean } | null };
 export type AdminUserRow = { id: string; display_name: string; email: string | null; role: "admin" | "member"; providers_label: string; last_login_label: string | null };
 export type Schedule = { daily_time: string; weekly_time: string };
 export type AlertChannel = { configured: boolean; label: string };
 export type AlertChannels = { email: AlertChannel; webhook: AlertChannel };
+
+// P2-④ 推荐理由（设计 §6.1）：设置页「兴趣画像」「推荐理由」两节（Reasons::Status#props、InterestArea）
+export type ReasonsStatus = { configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
+export type InterestArea = { id: string; name: string; keywords: string; sort_order: number; enabled: boolean };
+export type ModelConfig = { base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };

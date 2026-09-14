@@ -31,16 +31,33 @@ module Issue::Administering
         issues = daily.where(period_key: first.iso8601..last.iso8601).includes(:fetch_runs).index_by(&:period_key)
         sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
-        (first..last).to_a.reverse.map { |date| admin_daily_row(date.iso8601, issues[date.iso8601], sources, counts) }
+        missing_counts = Item.visible.where(issue_id: issues.values.map(&:id), reason: nil).group(:issue_id).count
+        # 一页最多 31 行，能不能生成是整页一样的：算一次带下去，别每行再查一遍 settings 与 interest_areas
+        ready = Reasons.ready?
+        unready_label = ready ? nil : Reasons.unready_label
+        (first..last).to_a.reverse.map { |date| admin_daily_row(date.iso8601, issues[date.iso8601], sources, counts, missing_counts, ready: ready, unready_label: unready_label) }
       end
 
-      def admin_daily_row(key, issue, sources, counts)
+      def admin_daily_row(key, issue, sources, counts, missing_counts, ready:, unready_label:)
         columns = issue ? daily_columns(issue, sources) : []
         {
           kind: "daily", period_key: key, state: issue&.state || "missing", state_label: admin_state_label(issue),
           time_label: admin_time_label(issue), source_marks: issue && columns.map { |source| "#{abbr(source)} #{mark(issue, source, counts)}" }.join(" · "),
-          refetchable_sources: (issue&.generating? ? [] : columns.map { |source| { id: source.id, name: source.name } })
+          refetchable_sources: (issue&.generating? ? [] : columns.map { |source| { id: source.id, name: source.name } }),
+          reasons: admin_reasons(issue, missing_counts, ready: ready, unready_label: unready_label)
         }
+      end
+
+      # 期页「理由」格（设计 §6.2）：未配置 / 兴趣画像为空 / 缺 N 条 / 已生成；生成中或缺期是 nil。
+      # ready 也给前端：「重生成理由」按不按得下去看它，不看那句文案长什么样
+      def admin_reasons(issue, missing_counts, ready:, unready_label:)
+        return nil unless issue&.state == "published"
+        missing = missing_counts.fetch(issue.id, 0)
+        label = if !ready then unready_label
+        elsif missing.positive? then "缺 #{missing} 条"
+        else "已生成"
+        end
+        { label: label, missing: missing, ready: ready }
       end
 
       # 一个 ISO 周可能横跨两个月（周一在上个月），周一是否落在这个月不能决定这周算哪个月：

@@ -6,3 +6,6 @@
   { name: "Hackaday", adapter: "rss", publication: "daily", sort_order: 3, config: { feed_url: "https://hackaday.com/feed/", count: 10, window_hours: 24 } },
   { name: "阮一峰科技爱好者周刊", adapter: "ruanyf_weekly", publication: "weekly", sort_order: 1, config: { min_items: 5 } }
 ].each { |attrs| Source.find_or_create_by!(name: attrs[:name]) { |s| s.assign_attributes(attrs) } }
+
+# PRD 5.9 的初始兴趣画像：找不到才建，管理员改过的不覆盖
+InterestArea.seed_defaults!

@@ -1,9 +1,12 @@
-import Chip from '@/components/Chip'
-import Icon from '@/components/Icon'
+import { router, usePage } from '@inertiajs/react'
+import { useState } from 'react'
 import type * as React from 'react'
 
+import Chip from '@/components/Chip'
+import Icon from '@/components/Icon'
+import { adminItemReasonHref } from '@/lib/paths'
 import { absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
-import type { Adapter, Item } from '@/types/lowpass'
+import type { Adapter, Item, SharedProps } from '@/types/lowpass'
 
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
 // 兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
@@ -100,6 +103,15 @@ export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant
 
 export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
   const weekly = variant === 'weekly'
+  // 读者页管理员的单条重生成（R-9.6，设计 C6）：读者页面上唯一的管理控件，周刊条目没有理由，也就没有这个按钮
+  const admin = usePage<SharedProps>().props.current_user?.admin
+  const [sending, setSending] = useState(false)
+
+  // 这一趟是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点排三份账
+  function regenerate() {
+    setSending(true)
+    router.post(adminItemReasonHref(item.id), {}, { onFinish: () => setSending(false) })
+  }
 
   return (
     <article className="item-row" id={`item-${item.id}`}>
@@ -118,6 +130,11 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         {item.summary ? <span className={weekly ? 'item-summary item-summary--weekly' : 'item-summary'}>{item.summary}</span> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
+        {!weekly && admin ? (
+          <button type="button" className="link-button" disabled={sending} onClick={regenerate}>
+            重生成
+          </button>
+        ) : null}
       </div>
 
       {!weekly && item.interest_tag ? (

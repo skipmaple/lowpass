@@ -37,6 +37,13 @@ class Alerts::ConfigTest < ActiveSupport::TestCase
     assert_equal "d***@example.com · o***@example.com", Alerts::Config.status_props.dig(:email, :label)
   end
 
+  # 脱敏不认识的地址就整条盖掉，别把它原样贴到设置页上
+  test "地址里没有 @：整条脱敏成 ***" do
+    Alerts::Config.load!({ "ALERT_EMAIL_TO" => "ops", "SMTP_ADDRESS" => "smtp.example.com" })
+
+    assert_equal "***", Alerts::Config.status_props.dig(:email, :label)
+  end
+
   test "webhook 只认 https；格式不认识按 generic" do
     Alerts::Config.load!({ "ALERT_WEBHOOK_URL" => "http://hooks.example/x" })
     assert_not Alerts::Config.webhook?

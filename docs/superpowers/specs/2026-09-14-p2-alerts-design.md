@@ -128,8 +128,8 @@ https://lowpass.example.com/admin/sources/01j…/runs
 ## 8. 设置页 `/admin/settings`「告警」一节（PRD 5.6 那行的「告警渠道状态」「发送测试告警」）
 
 - props 加 `alerts: { email: { configured: boolean, label: string }, webhook: { configured: boolean, label: string } }`。`label`：邮件已配置时是收件地址脱敏（`d***@example.com`，多个用 ` · ` 连），未配置是「未配置」；webhook 已配置时是主机名加格式（`open.feishu.cn · feishu`），未配置是「未配置」。
-- 画法：两行键值（`.kv-row` / `.kv-key` / `.kv-value` 装置）：「邮件」「Webhook」；下面一个 `.btn-primary`「发送测试告警」（POST `/admin/test_alert`），两渠道都未配置时按钮禁用，旁边一句 `field-note`「渠道由环境配置，见 docs/development.md」。
-- 结果用 flash：`已发送测试告警`（notice）/ `告警渠道未配置`（alert）。
+- 画法：两行键值（`.kv-row` / `.kv-key` / `.kv-value` 装置）：「邮件」「Webhook」；下面一个 `.btn-primary`「发送测试告警」（POST `/admin/test_alert`），两渠道都未配置时按钮禁用，旁边一句 `field-note`「渠道由环境配置，见 docs/development.md」（这句只在都未配置时出现）；点击后到请求结束（`onFinish`）前按钮也禁着，一次点击一封。
+- 结果用 flash：`已发送测试告警`（notice）/ `告警渠道未配置`（alert）/ `测试告警没有发出，请查看日志`（alert，门面返回 nil）。
 
 ## 9. 路由与控制器
 
@@ -139,7 +139,7 @@ namespace :admin do
 end
 ```
 
-`Admin::TestAlertsController#create`：`Alerts.configured?` 为假 → `redirect_to admin_settings_path, alert: "告警渠道未配置"`；否则 `event = Alerts.test!(Current.user)` → `Audit.record("alert.test", "AlertEvent##{event.id}")` → `redirect_to admin_settings_path, notice: "已发送测试告警"`。`rate_limit to: 5, within: 1.minute, by: -> { Current.user.id }`（一次测试一封，别刷）。非 admin 403（`Admin::BaseController`）。
+`Admin::TestAlertsController#create`：`Alerts.configured?` 为假 → `redirect_to admin_settings_path, alert: "告警渠道未配置"`；否则 `if (event = Alerts.test!(Current.user))` → `Audit.record("alert.test", "AlertEvent##{event.id}")` → `redirect_to admin_settings_path, notice: "已发送测试告警"`。门面建记录或入队失败时返回 nil（B10：告警不抛给调用方），这时没有事件可审计 → `redirect_to admin_settings_path, alert: "测试告警没有发出，请查看日志"`。`rate_limit to: 5, within: 1.minute, by: -> { Current.user.id }`（一次测试一封，别刷）。非 admin 403（`Admin::BaseController`）。
 
 ## 10. 现有代码的改动点
 

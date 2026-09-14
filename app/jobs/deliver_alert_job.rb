@@ -6,6 +6,8 @@
 # 这里直接按 executions 自己判断是不是最后一次，跟 job 实际执行次数（也是日志里报的次数）严格一致。
 class DeliverAlertJob < ApplicationJob
   queue_as :default
+  # 恢复阶段的 job 会与告警阶段的重试撞在同一条事件上，两边都读改写 delivered：一条事件只许一个在跑
+  limits_concurrency to: 1, key: ->(event, _phase) { event.id }, duration: 10.minutes
   WAITS = [ 30.seconds, 120.seconds ].freeze
   MAX_ATTEMPTS = 3
 

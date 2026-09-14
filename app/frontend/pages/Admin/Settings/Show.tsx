@@ -1,4 +1,5 @@
 import { router, useForm } from '@inertiajs/react'
+import { useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
@@ -48,10 +49,17 @@ export default function Show({ schedule, whitelist, alerts }: AdminSettingsShowP
   form.transform((data) => ({ schedule: data }))
   const errors = form.errors as unknown as Record<string, string | string[] | undefined>
   const configured = alerts.email.configured || alerts.webhook.configured
+  const [sending, setSending] = useState(false)
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
     form.patch(ADMIN_SETTINGS)
+  }
+
+  // 一次点击一封：请求回来之前按钮禁着（每分钟 5 次的限流是后一道门）
+  function sendTestAlert() {
+    setSending(true)
+    router.post(ADMIN_TEST_ALERT, {}, { onFinish: () => setSending(false) })
   }
 
   return (
@@ -85,7 +93,7 @@ export default function Show({ schedule, whitelist, alerts }: AdminSettingsShowP
         <ChannelRow label="邮件" channel={alerts.email} />
         <ChannelRow label="Webhook" channel={alerts.webhook} />
         <div className="admin-actions" style={{ alignItems: 'center' }}>
-          <button type="button" className="btn-primary" disabled={!configured} onClick={() => router.post(ADMIN_TEST_ALERT)}>
+          <button type="button" className="btn-primary" disabled={!configured || sending} onClick={sendTestAlert}>
             发送测试告警
           </button>
           {configured ? null : <span className="field-note">渠道由环境配置，见 docs/development.md</span>}

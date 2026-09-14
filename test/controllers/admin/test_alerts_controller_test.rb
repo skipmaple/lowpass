@@ -21,6 +21,17 @@ class Admin::TestAlertsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "告警渠道未配置", flash[:alert]
   end
 
+  # 门面在建记录 / 入队失败时返回 nil（设计 §5 B10：告警永远不抛给调用方），按钮不能因此 500
+  test "门面返回 nil：提示没发出，不记审计" do
+    with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
+      Alerts.stubs(:test!).returns(nil)
+
+      assert_no_difference("AuditLog.count") { post admin_test_alert_path }
+      assert_redirected_to admin_settings_path
+      assert_equal "测试告警没有发出，请查看日志", flash[:alert]
+    end
+  end
+
   test "每分钟 5 次" do
     with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
       5.times { post admin_test_alert_path }

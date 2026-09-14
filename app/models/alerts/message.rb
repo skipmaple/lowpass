@@ -3,7 +3,7 @@ module Alerts::Message
   class << self
     def headline(event, phase) = "[lowpass] #{phase == "recovery" ? "已恢复" : event.level_label} · #{event.kind_label}"
 
-    def subject(event, phase) = [ headline(event, phase), event.source&.name ].compact.join(" · ")
+    def subject(event, phase) = [ headline(event, phase), first_line(event.source&.name) ].compact.join(" · ")
 
     def url(event) = Alerts::Config.base_url.chomp("/") + event.url_path
 
@@ -15,5 +15,9 @@ module Alerts::Message
       lines << url(event)
       lines.join("\n")
     end
+
+    private
+      # 主题进的是邮件的 Subject 头：来源名里的换行会把这个头截断，只取第一行
+      def first_line(name) = name.to_s.lines.first.to_s.strip.presence
   end
 end

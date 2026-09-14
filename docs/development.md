@@ -115,6 +115,19 @@ Hacker News 经 Algolia（`hn.algolia.com`），RSS 看 feed 里还有没有那�
 投递失败最多重试 3 次，耗尽写日志并留在 `delivery_error`。触发点：源抓取终态失败、解析退化（丢弃过半、阮一峰降级）、空刊、
 日刊晚于生成时间 30 分钟以上才补跑、搜索连续 3 次不可用；备份失败只有调用口（还没有备份任务）；推荐理由缺失由 ④ 接。
 
+## 推荐理由
+
+设计见 `docs/superpowers/specs/2026-09-14-p2-reasons-design.md`。接入层只认 OpenAI 兼容的 chat completions：在 `/admin/settings`「推荐理由」一节填接口地址（如 `https://api.openai.com/v1`、`https://api.deepseek.com/v1`，本地 Ollama 是 `http://localhost:11434/v1`）、模型名、每百万 token 的输入 / 输出单价与月费用上限（0 = 不限）；密钥只从环境读：
+
+```
+MODEL_API_KEY=…
+```
+
+三样齐了才生成：日刊发布后入队 `GenerateReasonsJob`，一期顺序做，单条 20 秒超时、重试 2 次，缺领域名判失败；跨天重复的条目沿用前一期理由。
+后台期页每期显示「已生成 / 缺 N 条」并可「重生成理由」（整期覆盖）；管理员在读者页每条条目下有「重生成」（单条，同步）。
+账本在 `model_calls`（`ModelCall.order(created_at: :desc).limit(20)`），保留 90 天；月费用到上限就停止生成并告警一次。
+发布 30 分钟后仍缺理由会告警（③ 的「推荐理由缺失」）。初始兴趣画像由 `bin/rails db:seed` 建，后台可增删改。
+
 ## 开发数据
 
 ```

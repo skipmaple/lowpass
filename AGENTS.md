@@ -32,6 +32,7 @@
 - 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。
 - 测试：Minitest + fixtures；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 快速循环，`bin/ci` 是合并门禁（rubocop、brakeman、bundler-audit、gitleaks、测试、系统测试）。
 - 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite；密钥只从环境读。`main` 分支用 Kamal 部署 `web` 与 `job` 两个角色加 PostgreSQL accessory；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。
+- 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。
 
 ## 不要做
 

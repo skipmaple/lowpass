@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+# 起 web 容器（./bin/thrust ./bin/rails server）时先建库、跑迁移：主库与队列库都在 db:prepare 里。
+# 其它命令（console、runner、db:seed、search:rebuild）原样执行，不碰库。
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

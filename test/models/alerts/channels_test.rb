@@ -40,6 +40,13 @@ class Alerts::ChannelsTest < ActiveSupport::TestCase
       error = assert_raises(Alerts::DeliveryError) { Alerts::Channels::Webhook.deliver(event, "alert") }
       assert_equal "webhook 500: boom", error.message
 
+      # 消息要整体封顶 200 字（AlertEvent#delivery_error 的列上限与 CHECK），不能只截 body 那一段——
+      # 否则"webhook 500: " 前缀一加，body 截到 200 后总长还是会超
+      stub_request(:post, AlertTestHelpers::WEBHOOK).to_return(status: 500, body: "x" * 300)
+      error = assert_raises(Alerts::DeliveryError) { Alerts::Channels::Webhook.deliver(event, "alert") }
+      assert_operator error.message.length, :<=, 200
+      assert error.message.start_with?("webhook 500: ")
+
       stub_request(:post, AlertTestHelpers::WEBHOOK).to_timeout
       assert_raises(Alerts::DeliveryError) { Alerts::Channels::Webhook.deliver(event, "alert") }
     end

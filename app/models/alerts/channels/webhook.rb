@@ -19,7 +19,7 @@ module Alerts::Channels::Webhook
     response = http.request(request)
     return if response.is_a?(Net::HTTPSuccess)
 
-    raise Alerts::DeliveryError, "webhook #{response.code}: #{response.body.to_s[0, 200]}"
+    raise Alerts::DeliveryError, "webhook #{response.code}: #{response.body.to_s[0, 200]}"[0, 200]
   rescue Timeout::Error, IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError => e
     raise Alerts::DeliveryError, "webhook #{e.class}: #{e.message}"[0, 200]
   end
@@ -32,4 +32,5 @@ module Alerts::Channels::Webhook
     else { text: text, title: Alerts::Message.subject(event, phase), level: event.level, kind: event.kind, url: Alerts::Message.url(event) }
     end
   end
+  private_class_method :payload
 end

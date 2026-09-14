@@ -3,7 +3,9 @@ class Admin::SettingsController < Admin::BaseController
   KEYS = %w[ daily_time weekly_time ].freeze
   MODEL_KEYS = { "base_url" => "model_base_url", "model_name" => "model_name", "input_price" => "model_input_price",
                  "output_price" => "model_output_price", "monthly_cap" => "model_monthly_cap" }.freeze
+  NUMBER_KEYS = %w[ input_price output_price monthly_cap ].freeze
   NUMBER = /\A\d+(\.\d+)?\z/
+  MAX_LENGTH = 255             # settings.value 是 varchar(255)
 
   def show
     render inertia: "Admin/Settings/Show", props: {
@@ -41,9 +43,7 @@ class Admin::SettingsController < Admin::BaseController
     def update_model
       given = params.permit(model: MODEL_KEYS.keys).fetch(:model, {})
       values = MODEL_KEYS.keys.index_with { |key| given[key].to_s.strip }
-      errors = {}
-      errors["base_url"] = [ "地址必须是 https" ] if values["base_url"].present? && !Reasons::Provider.valid_base_url?(values["base_url"])
-      %w[ input_price output_price monthly_cap ].each { |key| errors[key] = [ "不小于 0" ] unless values[key].match?(NUMBER) }
+      errors = model_errors(values)
       if errors.any?
         redirect_to admin_settings_path, inertia: { errors: errors }
       else
@@ -52,5 +52,14 @@ class Admin::SettingsController < Admin::BaseController
         Audit.record("settings.update", "Setting#model", changes)
         redirect_to admin_settings_path, notice: "已保存"
       end
+    end
+
+    # 一个字段只报最要紧的那一条：先是长度（超了进不了库，别的都不用谈），再是地址与数字格式；
+    # 数字字段空着是没填，不是填错了
+    def model_errors(values)
+      errors = values.select { |_, value| value.length > MAX_LENGTH }.transform_values { [ "最多 #{MAX_LENGTH} 字" ] }
+      errors["base_url"] ||= [ "地址必须是 https" ] if values["base_url"].present? && !Reasons::Provider.valid_base_url?(values["base_url"])
+      NUMBER_KEYS.each { |key| errors[key] ||= [ values[key].blank? ? "必填" : "不小于 0" ] unless values[key].match?(NUMBER) }
+      errors
     end
 end

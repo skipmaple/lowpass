@@ -52,7 +52,8 @@ class Scheduler
 
     # 5.7「推荐理由缺失」：当天发布超过 30 分钟仍有条目没理由（供应商配好了才算事故；没配是读者页静默、后台显示）
     def check_reasons_if_due
-      return unless Reasons::Provider.configured?
+      # 画像为空时本来就不生成（终审 F1），缺理由不是事故：后台那一格已经写着「兴趣画像为空」
+      return unless Reasons.ready?
 
       Issue.daily.where(state: "published", period_key: PeriodKey.daily(@now)).where(published_at: ..(@now - Reasons::MISSING_AFTER)).find_each do |issue|
         missing = issue.items.visible.where(reason: nil).count

@@ -29,4 +29,32 @@ class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
     post admin_item_reason_path(items(:hn_one))
     assert_response :forbidden
   end
+
+  # 供应商配好了但画像是空的：调了也是每条判「缺领域名」，白花钱（终审 F1）
+  test "画像为空：提示兴趣画像为空，不调模型" do
+    with_model_provider do
+      InterestArea.update_all(enabled: false)
+      assert_no_difference("ModelCall.count") { post admin_item_reason_path(items(:hn_one)) }
+    end
+    assert_redirected_to daily_issue_path("2026-09-08")
+    assert_equal "兴趣画像为空", flash[:alert]
+  end
+
+  # 单条这条路也走模型，月上限一样要拦（设计 §10 的文案，终审 F2）
+  test "月上限到了：提示已停止生成，不调模型" do
+    ModelCall.create!(status: "ok", cost: 1)
+    with_model_provider do
+      Setting.set("model_monthly_cap", "1")
+      assert_no_difference("ModelCall.count") { post admin_item_reason_path(items(:hn_one)) }
+    end
+    assert_equal "本月费用已达上限，已停止生成", flash[:alert]
+  end
+
+  # D19 周刊条目没有理由，也就没有这个端点
+  test "周刊条目 404" do
+    weekly_item = Item.create!(source: sources(:ruanyf), issue: issues(:weekly_w36), title: "本周的一条", url: "https://ruanyf.example/1",
+                               url_hash: Digest::SHA256.hexdigest("https://ruanyf.example/1"), rank: 1, fetched_at: Time.current)
+    with_model_provider { post admin_item_reason_path(weekly_item) }
+    assert_response :not_found
+  end
 end

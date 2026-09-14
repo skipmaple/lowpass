@@ -37,15 +37,19 @@ class Reasons::ProviderTest < ActiveSupport::TestCase
     end
   end
 
-  test "401 / 403 是密钥被拒绝；5xx、429、超时、坏 JSON 是可重试错误" do
+  test "401 / 403 是密钥被拒绝；429 是限流；5xx、超时、坏 JSON 是可重试错误" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 401, body: "{}")
       error = assert_raises(Reasons::Provider::Rejected) { Reasons::Provider.chat([]) }
       assert_equal "密钥被拒绝（401）", error.message
 
+      # 429 单独成一类：仓库不变量「429 / 403 不追加重试」，Generator 见到它就停掉本期
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 429, body: "slow down")
-      error = assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }
-      assert_equal "模型服务 429: slow down", error.message
+      error = assert_raises(Reasons::Provider::Limited) { Reasons::Provider.chat([]) }
+      assert_equal "模型服务限流（429）", error.message
+
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 500, body: "boom")
+      assert_equal "模型服务 500: boom", assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }.message
 
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_timeout
       assert_raises(Reasons::Provider::TimedOut) { Reasons::Provider.chat([]) }
@@ -63,6 +67,31 @@ class Reasons::ProviderTest < ActiveSupport::TestCase
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "r", interest_tag: "t"))
       Reasons::Provider.chat([])
       assert_requested stub
+    end
+  end
+
+  test "响应体超过 64 KB：边读边截，读到上限就抛" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: "x" * 100 * 1024)
+      assert_equal "响应超过 64 KB", assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }.message
+    end
+  end
+
+  test "非 2xx 的长响应体只取前 200 字节做摘要" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 500, body: "x" * 100 * 1024)
+      error = assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }
+      assert_operator error.message.length, :<=, 200
+      assert error.message.start_with?("模型服务 500: xxx"), error.message
+    end
+  end
+
+  # 纵深防御：库里的地址不是 https（也不是本机）就不发请求（终审 F6）
+  test "地址不合法时直接抛，不发请求" do
+    with_model_provider(base_url: "http://evil.example/v1") do
+      stub = stub_request(:post, "http://evil.example/v1/chat/completions")
+      assert_equal "地址不合法", assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }.message
+      assert_not_requested stub
     end
   end
 

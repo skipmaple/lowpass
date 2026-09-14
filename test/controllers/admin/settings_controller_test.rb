@@ -77,6 +77,25 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "", "gpt-x" ], log.payload["model_name"]
   end
 
+  # settings.value 是 varchar(255)：超长的值进库会被数据库的 CHECK 挡成 500，先在这里说清楚
+  test "模型配置最多 255 字" do
+    patch admin_settings_path, params: { model: { base_url: "https://model.example/#{"a" * 250}", model_name: "m" * 256, input_price: "0", output_price: "0", monthly_cap: "0" } }
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "最多 255 字" ], page_props.dig("errors", "base_url")
+    assert_equal [ "最多 255 字" ], page_props.dig("errors", "model_name")
+    assert_equal "", Setting.get("model_name")
+  end
+
+  test "数字字段留空是「必填」，不是「不小于 0」" do
+    patch admin_settings_path, params: { model: { base_url: "", model_name: "", input_price: "", output_price: "0", monthly_cap: " " } }
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "必填" ], page_props.dig("errors", "input_price")
+    assert_equal [ "必填" ], page_props.dig("errors", "monthly_cap")
+    assert_nil page_props.dig("errors", "output_price")
+  end
+
   test "模型配置可以清空（地址与模型名留空 = 未配置）" do
     Setting.set("model_base_url", "https://model.example/v1")
     patch admin_settings_path, params: { model: { base_url: "", model_name: "", input_price: "0", output_price: "0", monthly_cap: "0" } }

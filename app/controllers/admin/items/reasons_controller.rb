@@ -3,7 +3,9 @@ class Admin::Items::ReasonsController < Admin::BaseController
   def create
     item = Item.joins(:issue).where(issues: { kind: "daily" }).find(params[:item_id])
     back = daily_issue_path(item.issue.period_key)
-    return redirect_back_or_to(back, alert: "未配置模型供应商") unless Reasons::Provider.configured?
+    return redirect_back_or_to(back, alert: Reasons.unready_label) unless Reasons.ready?
+    # 单条这条路同样受月上限约束（终审 F2）：上限到了就一条也不生成，附录 B 的句子
+    return redirect_back_or_to(back, alert: "本月费用已达上限，已停止生成") if Reasons::Budget.exhausted?
 
     if Reasons::Generator.generate_item!(item)
       Audit.record("item.regenerate_reason", "Item##{item.id}")
@@ -13,7 +15,7 @@ class Admin::Items::ReasonsController < Admin::BaseController
       reason = ModelCall.where(item: item).order(:created_at, :id).last&.error_summary.presence || "输出不合规"
       redirect_back_or_to back, alert: "重生成失败：#{reason}"
     end
-  rescue Reasons::Provider::Rejected => e
+  rescue Reasons::Provider::Rejected, Reasons::Provider::Limited => e
     redirect_back_or_to back, alert: "重生成失败：#{e.message}"
   end
 end

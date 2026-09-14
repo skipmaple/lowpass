@@ -39,13 +39,17 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     assert_equal "06:12 / 06:42", row[:time_label]
   end
 
-  test "日刊行带理由状态：未配置 / 缺 N 条 / 已生成" do
+  test "日刊行带理由状态：未配置 / 兴趣画像为空 / 缺 N 条 / 已生成" do
     row = -> { Issue.admin_rows(kind: "daily", month: "2026-09", now: Time.find_zone("Asia/Shanghai").parse("2026-09-10 12:00"))[:rows].find { |r| r[:period_key] == "2026-09-08" } }
-    assert_equal({ label: "未配置模型供应商", missing: 1 }, row.call[:reasons])
+    assert_equal({ label: "未配置模型供应商", missing: 1, ready: false }, row.call[:reasons])
     with_model_provider do
-      assert_equal({ label: "缺 1 条", missing: 1 }, row.call[:reasons])
+      InterestArea.update_all(enabled: false)
+      assert_equal({ label: "兴趣画像为空", missing: 1, ready: false }, row.call[:reasons])
+      InterestArea.update_all(enabled: true)
+
+      assert_equal({ label: "缺 1 条", missing: 1, ready: true }, row.call[:reasons])
       items(:hn_one).update!(reason: "有了", interest_tag: "AI / LLM")
-      assert_equal({ label: "已生成", missing: 0 }, row.call[:reasons])
+      assert_equal({ label: "已生成", missing: 0, ready: true }, row.call[:reasons])
     end
   end
 

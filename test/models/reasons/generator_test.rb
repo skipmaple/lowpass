@@ -16,6 +16,19 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_nil @item.reload.reason
   end
 
+  # 画像空着每条都会判「缺领域名」，三次调用三次白花钱：现有生产库里画像本来就是空的
+  # （db:prepare 只给新建的库播种），首次发布前这道门必须挡住
+  test "画像为空：不调模型、不记账" do
+    InterestArea.update_all(enabled: false)
+    with_model_provider do
+      outcome = Reasons::Generator.generate!(@issue)
+      assert outcome.skipped
+      assert_not Reasons::Generator.generate_item!(@item)
+    end
+    assert_equal 0, ModelCall.count
+    assert_nil @item.reload.reason
+  end
+
   test "一期全部生成：理由、标签、时间与账本；跑完收掉缺理由事件" do
     open = alert_event(kind: "reasons_missing", source: nil, issue: @issue, dedup_key: "rm")
     with_model_provider do
@@ -57,6 +70,18 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # 仓库不变量「429 / 403 不追加重试」：条内不重试，本期也到此为止（设计 C11）
+  test "429：只调一次，账本一条 failed，后面的条目不再调" do
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 429, body: "slow down")
+      assert_equal 1, Reasons::Generator.generate!(@issue).failed
+      assert_requested stub, times: 1
+      assert_equal [ "failed" ], ModelCall.pluck(:status)
+      assert_equal "模型服务限流（429）", ModelCall.sole.error_summary
+    end
+    assert_nil @item.reload.reason
+  end
+
   test "月上限到了：不调模型，告警一次" do
     with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
       with_model_provider do
@@ -92,5 +117,19 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_equal @item.reason, dup.reload.reason
     assert_equal "AI / LLM", dup.interest_tag
     assert_equal 0, ModelCall.count
+  end
+
+  # 沿用只在补缺时算数：整期重生成要能把跨天沿用来的理由也换掉，不然这个按钮对重复条目没有效果
+  test "整期重生成覆盖跨天沿用来的理由" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    with_model_provider do
+      assert_equal 1, Reasons::Generator.generate!(later).reused
+
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "重新写过的推荐理由，前端开发相关，二十字以上。", interest_tag: "前端开发"))
+      assert_equal 1, Reasons::Generator.generate!(later, only_missing: false).generated
+    end
+    assert_equal [ "重新写过的推荐理由，前端开发相关，二十字以上。", "前端开发" ], [ dup.reload.reason, dup.interest_tag ]
   end
 end

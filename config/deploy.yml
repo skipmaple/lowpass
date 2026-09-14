@@ -79,7 +79,7 @@ asset_path: /rails/public/vite
 
 accessories:
   db:
-    image: postgres:16
+    image: postgres:17
     host: <DEPLOY_HOST>
     # 不发布到宿主机端口：127.0.0.1:5432 已被这台机器上另一个应用的库占用；应用走 docker 网络访问。
     # 要在本机连库用 bin/kamal accessory exec db "psql -U lowpass lowpass_production" 或 dbc。

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
+import Chip from '@/components/Chip'
 import { Ctrl } from '@/components/Ctrl'
 import Dialog from '@/components/Dialog'
 import Icon from '@/components/Icon'
@@ -61,7 +62,14 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
       </>,
       row.time_label ? <Mixed text={row.time_label} /> : null,
       row.source_marks ? <Mixed text={row.source_marks} /> : null,
-      row.reasons ? <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: row.reasons.missing > 0 ? 'var(--ink)' : 'var(--ink2)' }}>{row.reasons.label}</span> : null,
+      // 缺 N 条是反白小签（设计 §6.2）；已生成与生成不了的两句都是文楷灰字
+      row.reasons ? (
+        row.reasons.ready && row.reasons.missing > 0 ? (
+          <Chip text={row.reasons.label} />
+        ) : (
+          <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>{row.reasons.label}</span>
+        )
+      ) : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
           <button type="button" className="btn-primary" onClick={() => router.post(adminIssueBackfillHref(row.period_key))}>
@@ -78,7 +86,7 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
               )
             ) : null}
             {row.kind === 'daily' && row.reasons ? (
-              <button type="button" className="link-button" disabled={row.reasons.label === '未配置模型供应商'} onClick={() => router.post(adminIssueReasonsHref(row.period_key))}>重生成理由</button>
+              <button type="button" className="link-button" disabled={!row.reasons.ready} onClick={() => router.post(adminIssueReasonsHref(row.period_key))}>重生成理由</button>
             ) : null}
             <Link className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
           </>

@@ -49,4 +49,57 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     get admin_settings_path
     assert_response :forbidden
   end
+
+  test "设置页带推荐理由配置、用量与兴趣画像" do
+    get admin_settings_path
+    assert_equal false, page_props.dig("reasons", "configured")
+    assert_equal [ "AI / LLM", "前端开发", "硬件设计" ], page_props["interest_areas"].map { |a| a["name"] }
+    assert_equal false, page_props["interest_areas"].last["enabled"]
+  end
+
+  test "改模型配置：地址要 https，数字不小于 0；保存记审计" do
+    patch admin_settings_path, params: { model: { base_url: "http://model.example/v1", model_name: "m", input_price: "-1", output_price: "abc", monthly_cap: "10" } }
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "地址必须是 https" ], page_props.dig("errors", "base_url")
+    assert_equal [ "不小于 0" ], page_props.dig("errors", "input_price")
+    assert_equal [ "不小于 0" ], page_props.dig("errors", "output_price")
+    assert_equal "", Setting.get("model_base_url")
+
+    patch admin_settings_path, params: { model: { base_url: "https://model.example/v1", model_name: "gpt-x", input_price: "0.5", output_price: "1.5", monthly_cap: "10" } }
+    assert_redirected_to admin_settings_path
+    assert_equal "已保存", flash[:notice]
+    assert_equal "https://model.example/v1", Setting.get("model_base_url")
+    assert_equal "gpt-x", Setting.get("model_name")
+    assert_equal "0.5", Setting.get("model_input_price")
+    log = AuditLog.last
+    assert_equal "Setting#model", log.target
+    assert_equal [ "", "gpt-x" ], log.payload["model_name"]
+  end
+
+  # settings.value 是 varchar(255)：超长的值进库会被数据库的 CHECK 挡成 500，先在这里说清楚
+  test "模型配置最多 255 字" do
+    patch admin_settings_path, params: { model: { base_url: "https://model.example/#{"a" * 250}", model_name: "m" * 256, input_price: "0", output_price: "0", monthly_cap: "0" } }
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "最多 255 字" ], page_props.dig("errors", "base_url")
+    assert_equal [ "最多 255 字" ], page_props.dig("errors", "model_name")
+    assert_equal "", Setting.get("model_name")
+  end
+
+  test "数字字段留空是「必填」，不是「不小于 0」" do
+    patch admin_settings_path, params: { model: { base_url: "", model_name: "", input_price: "", output_price: "0", monthly_cap: " " } }
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "必填" ], page_props.dig("errors", "input_price")
+    assert_equal [ "必填" ], page_props.dig("errors", "monthly_cap")
+    assert_nil page_props.dig("errors", "output_price")
+  end
+
+  test "模型配置可以清空（地址与模型名留空 = 未配置）" do
+    Setting.set("model_base_url", "https://model.example/v1")
+    patch admin_settings_path, params: { model: { base_url: "", model_name: "", input_price: "0", output_price: "0", monthly_cap: "0" } }
+    assert_redirected_to admin_settings_path
+    assert_equal "", Setting.get("model_base_url")
+  end
 end

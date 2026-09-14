@@ -36,6 +36,9 @@ afterEach(() => {
   router.reload.mockClear()
 })
 
+// 「理由」格里的反白小签（第 6 格）。整行找会撞上状态格里同样是墨色方块的 Mark
+const reasonChip = (row: HTMLElement) => within(row).getAllByRole('cell')[5].querySelector('span[style*="background: var(--ink)"]')
+
 describe('Admin/Issues/Index', () => {
   it('期头、筛选、翻月、行与汇总', () => {
     const { container } = show()
@@ -95,5 +98,34 @@ describe('Admin/Issues/Index', () => {
 
     const row = screen.getAllByRole('row')[2]
     expect(within(row).getByRole('button', { name: '进行中' })).toBeDisabled()
+  })
+
+  it('日刊行的理由格与整期重生成', async () => {
+    show({ rows: [adminIssueRow({ reasons: { label: '缺 3 条', missing: 3, ready: true } }), adminIssueRow({ period_key: '2026-09-07', reasons: { label: '已生成', missing: 0, ready: true } })] })
+    const rows = screen.getAllByRole('row')
+    // 缺 N 条是反白小签（设计 §6.2）：文字在墨色块里，Mixed 会把中文与数字切成几段，按 textContent 断言
+    expect(reasonChip(rows[1])?.textContent).toBe('缺 3 条')
+    expect(within(rows[2]).getByText('已生成')).toBeInTheDocument()
+    expect(reasonChip(rows[2])).toBeNull()
+    await userEvent.click(within(rows[1]).getByRole('button', { name: '重生成理由' }))
+    expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/reasons')
+  })
+
+  it('生成不了时理由格写明、按钮禁用（看 ready 不看文案）；周刊行没有理由格', () => {
+    show({
+      rows: [
+        adminIssueRow({ reasons: { label: '未配置模型供应商', missing: 10, ready: false } }),
+        adminIssueRow({ period_key: '2026-09-07', reasons: { label: '兴趣画像为空', missing: 10, ready: false } }),
+        adminIssueRow({ kind: 'weekly', period_key: '2026-W36', reasons: null }),
+      ],
+    })
+    const rows = screen.getAllByRole('row')
+    expect(within(rows[1]).getByText('未配置模型供应商')).toBeInTheDocument()
+    expect(within(rows[1]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
+    // 生成不了的时候那一格不是「缺 N 条」，也就不该反白
+    expect(reasonChip(rows[2])).toBeNull()
+    expect(within(rows[2]).getByText('兴趣画像为空')).toBeInTheDocument()
+    expect(within(rows[2]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
+    expect(within(rows[3]).queryByRole('button', { name: '重生成理由' })).toBeNull()
   })
 })

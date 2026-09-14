@@ -15,6 +15,7 @@ class Scheduler
     step(:generate_daily_if_due)
     step(:finalize_stale_issues)
     step(:check_weekly_if_due)
+    step(:check_reasons_if_due)
     step(:cleanup_if_due)
   end
 
@@ -49,9 +50,20 @@ class Scheduler
       Setting.set("weekly_checked_on", today)
     end
 
+    # 5.7「推荐理由缺失」：当天发布超过 30 分钟仍有条目没理由（供应商配好了才算事故；没配是读者页静默、后台显示）
+    def check_reasons_if_due
+      # 画像为空时本来就不生成（终审 F1），缺理由不是事故：后台那一格已经写着「兴趣画像为空」
+      return unless Reasons.ready?
+
+      Issue.daily.where(state: "published", period_key: PeriodKey.daily(@now)).where(published_at: ..(@now - Reasons::MISSING_AFTER)).find_each do |issue|
+        missing = issue.items.visible.where(reason: nil).count
+        Alerts.reasons_missing!(issue, missing) if missing.positive?
+      end
+    end
+
     # F-26 抓取记录保留 30 天，搜索日志 30 天（D12）、结果点击 90 天（9.1）；会话过期即删（附录 A）；
-    # 审计日志 90 天（7.8）；告警事件 90 天。跟周刊检查一样按上海时区的自然日记账：只认「今天清过没有」，
-    # 不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
+    # 审计日志 90 天（7.8）；告警事件 90 天；模型调用账本 90 天（R-9.8）。跟周刊检查一样按上海时区的自然日记账：
+    # 只认「今天清过没有」，不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
     def cleanup_if_due
       today = PeriodKey.daily(@now)
       return if @now < today_at(CLEANUP_TIME) || Setting.get("cleaned_on") == today
@@ -62,6 +74,7 @@ class Scheduler
       Session.cleanup
       AuditLog.cleanup
       AlertEvent.cleanup
+      ModelCall.cleanup
       Setting.set("cleaned_on", today)
     end
 

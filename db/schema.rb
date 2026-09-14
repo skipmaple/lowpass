@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -139,6 +139,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_130000) do
     t.string "url_hash", limit: 64, null: false
     t.index ["issue_id", "source_id", "rank"], name: "index_items_on_issue_id_and_source_id_and_rank"
     t.index ["source_id", "issue_id", "url_hash"], name: "index_items_on_source_id_and_issue_id_and_url_hash", unique: true
+    t.index ["url_hash"], name: "index_items_on_url_hash"
     t.check_constraint "length(summary::text) <= 500", name: "items_summary_len"
     t.check_constraint "length(title::text) <= 300", name: "items_title_len"
     t.check_constraint "length(url::text) <= 2048", name: "items_url_len"
@@ -157,7 +158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_130000) do
     t.index ["created_at"], name: "index_model_calls_on_created_at"
     t.index ["issue_id"], name: "index_model_calls_on_issue_id"
     t.check_constraint "length(error_summary::text) <= 200", name: "model_calls_error_summary_len"
-    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying, 'failed'::character varying, 'timed_out'::character varying, 'invalid'::character varying]::text[])", name: "model_calls_status"
+    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text, 'invalid'::character varying::text])", name: "model_calls_status"
   end
 
   create_table "search_clicks", id: { type: :string, limit: 25 }, force: :cascade do |t|

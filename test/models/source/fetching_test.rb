@@ -94,4 +94,27 @@ class Source::FetchingTest < ActiveSupport::TestCase
     source.fetch_runs.create!(trigger: "scheduled", status: "failed", attempt: 1)
     assert_equal "recent_failure", source.health
   end
+
+  test "5.1 丢弃过半：解析退化告警，剩下的照常写入；不过半不告" do
+    issue = Issue.generate_daily!("2026-09-23")
+    entries = [ Adapters::Entry.new(title: "a", url: "https://h/a"), Adapters::Entry.new(title: "b", url: "https://h/b") ] +
+              3.times.map { |i| Adapters::Entry.new(title: "no url #{i}", url: nil) }
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns(entries)
+
+    run = nil
+    assert_difference("AlertEvent.where(kind: 'parse_degraded').count", 1) { run = sources(:hn).fetch_now(issue, trigger: "scheduled") }
+    assert_equal "succeeded", run.status
+    assert_equal 2, run.item_count
+    assert_equal "丢弃 3 / 5 条", AlertEvent.find_by!(kind: "parse_degraded").summary
+
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns(entries.first(4))   # 丢 2 留 2，不过半
+    assert_no_difference("AlertEvent.count") { sources(:hn).fetch_now(Issue.generate_daily!("2026-09-24"), trigger: "scheduled") }
+  end
+
+  test "丢弃不过半的成功抓取恢复解析退化事件" do
+    open = alert_event(kind: "parse_degraded", dedup_key: "pd")
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "a", url: "https://h/a") ])
+    sources(:hn).fetch_now(Issue.generate_daily!("2026-09-25"), trigger: "scheduled")
+    assert_not_nil open.reload.recovered_at
+  end
 end

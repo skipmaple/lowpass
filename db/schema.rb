@@ -10,10 +10,37 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "alert_events", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.integer "attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.string "dedup_key", limit: 120, null: false
+    t.jsonb "delivered", default: [], null: false
+    t.string "delivery_error", limit: 200
+    t.string "issue_id", limit: 25
+    t.string "kind", limit: 40, null: false
+    t.string "level", limit: 10, null: false
+    t.datetime "recovered_at"
+    t.datetime "recovery_sent_at"
+    t.datetime "sent_at"
+    t.string "source_id", limit: 25
+    t.string "summary", limit: 200, default: "", null: false
+    t.datetime "updated_at", null: false
+    t.string "url_path", limit: 200, default: "", null: false
+    t.index ["created_at"], name: "index_alert_events_on_created_at"
+    t.index ["dedup_key"], name: "index_alert_events_on_dedup_key", unique: true
+    t.index ["kind", "source_id", "recovered_at"], name: "index_alert_events_on_kind_and_source_id_and_recovered_at"
+    t.check_constraint "kind::text = ANY (ARRAY['source_failed'::character varying, 'parse_degraded'::character varying, 'issue_empty'::character varying, 'issue_late'::character varying, 'search_unavailable'::character varying, 'backup_failed'::character varying, 'reasons_missing'::character varying, 'test'::character varying]::text[])", name: "alert_events_kind"
+    t.check_constraint "length(dedup_key::text) <= 120", name: "alert_events_dedup_key_len"
+    t.check_constraint "length(delivery_error::text) <= 200", name: "alert_events_delivery_error_len"
+    t.check_constraint "length(summary::text) <= 200", name: "alert_events_summary_len"
+    t.check_constraint "length(url_path::text) <= 200", name: "alert_events_url_path_len"
+    t.check_constraint "level::text = ANY (ARRAY['warning'::character varying, 'critical'::character varying, 'info'::character varying]::text[])", name: "alert_events_level"
+  end
 
   create_table "audit_logs", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.string "action", limit: 50, null: false
@@ -226,6 +253,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_090000) do
     t.check_constraint "role::text = ANY (ARRAY['admin'::character varying::text, 'member'::character varying::text])", name: "users_role"
   end
 
+  add_foreign_key "alert_events", "issues", on_delete: :nullify
+  add_foreign_key "alert_events", "sources", on_delete: :nullify
   add_foreign_key "audit_logs", "users", on_delete: :nullify
   add_foreign_key "auth_identities", "users", on_delete: :cascade
   add_foreign_key "fetch_runs", "issues"

@@ -27,7 +27,10 @@ class Scheduler
       key = PeriodKey.daily(@now)
       return if Issue.daily.exists?(period_key: key)
 
-      Issue.generate_daily!(key, late: @now - due_at > LATE_AFTER)
+      late_by = @now - due_at
+      issue = Issue.generate_daily!(key, late: late_by > LATE_AFTER)
+      # 5.7「日刊未生成」：06:00 的期到 06:30 还没有才算事故（设计 B4）；一两分钟的重启只标延迟
+      Alerts.issue_late!(issue, (late_by / 60).floor) if late_by > Alerts::LATE_ALERT_AFTER
     end
 
     # R-1.2 期级总超时 20 分钟：没有源再回来的话，由 tick 替这一期收尾
@@ -47,8 +50,8 @@ class Scheduler
     end
 
     # F-26 抓取记录保留 30 天，搜索日志 30 天（D12）、结果点击 90 天（9.1）；会话过期即删（附录 A）；
-    # 审计日志 90 天（7.8）。跟周刊检查一样按上海时区的自然日记账：只认「今天清过没有」，不认「现在是不是
-    # 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
+    # 审计日志 90 天（7.8）；告警事件 90 天。跟周刊检查一样按上海时区的自然日记账：只认「今天清过没有」，
+    # 不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
     def cleanup_if_due
       today = PeriodKey.daily(@now)
       return if @now < today_at(CLEANUP_TIME) || Setting.get("cleaned_on") == today
@@ -58,6 +61,7 @@ class Scheduler
       Search::Click.cleanup
       Session.cleanup
       AuditLog.cleanup
+      AlertEvent.cleanup
       Setting.set("cleaned_on", today)
     end
 

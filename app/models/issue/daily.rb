@@ -62,6 +62,8 @@ module Issue::Daily
       update!(revised_at: Time.current, state: "published", published_at: published_at || Time.current,
         source_states: source_states.merge(source.id => run.item_count.to_i.zero? ? "empty" : "ok"))
     end
+    # 5.7 重抓让空刊有了内容：revise! 已经把期置回 published，把之前的空刊事件也收掉
+    Alerts.recover!(kind: "issue_empty")
   end
 
   def timed_out?

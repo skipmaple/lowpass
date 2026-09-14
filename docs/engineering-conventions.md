@@ -81,6 +81,8 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 - 后台（P2-②）：`Admin::` 控制器是 CRUD 资源（启停是 `enablement`，重抓 / 补生成 / 立即生成各是一个资源，STYLE.md），
   写操作成功后 `Audit.record`；手动重抓复用 `FetchSourceJob`（`trigger: "manual"`），页面轮询 `FetchRun.manual_recent`；
   测试抓取是同步的 JSON 端点（30 秒超时）；源配置的模式与中文校验在 `Source::Config`。〔P2-② 设计文档〕
+- 告警（P2-③）：触发点只调 `Alerts.<kind>!`，去重（`alert_events.dedup_key`：kind + 范围 + 上海日）、建记录、`DeliverAlertJob` 入队都在门面里，
+  门面从不让业务路径失败；渠道只从环境读（`Alerts::Config`），邮件走 SMTP、webhook 走 HTTPS JSON（四种报文形状）；投递按渠道记已送达，重试不重发。〔P2-③ 设计文档〕
 
 ## 认证、会话与请求上下文
 

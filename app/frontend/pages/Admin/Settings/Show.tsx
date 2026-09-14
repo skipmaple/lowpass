@@ -1,14 +1,15 @@
-import { useForm } from '@inertiajs/react'
+import { router, useForm } from '@inertiajs/react'
+import { useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import Field from '@/components/Field'
-import { ADMIN_SETTINGS } from '@/lib/paths'
-import type { Schedule } from '@/types/lowpass'
+import { ADMIN_SETTINGS, ADMIN_TEST_ALERT } from '@/lib/paths'
+import type { AlertChannel, AlertChannels, Schedule } from '@/types/lowpass'
 
 // 设置（5.6，画布 admin_settings()）：调度时间可改（R-1.1 精确到分）；白名单只读（R-5.5 由环境配置）。
-// 告警（③）、兴趣画像与推荐理由（④）各自往这一页加节。
-export type AdminSettingsShowProps = { schedule: Schedule; whitelist: string[] }
+// 告警渠道状态与测试告警（③）在这一页；兴趣画像与推荐理由（④）往这一页加节。
+export type AdminSettingsShowProps = { schedule: Schedule; whitelist: string[]; alerts: AlertChannels }
 
 function Section({ title, children }: React.PropsWithChildren<{ title: string }>) {
   return (
@@ -27,14 +28,38 @@ function fieldError(errors: Record<string, string | string[] | undefined>, key: 
   return Array.isArray(value) ? value[0] : value
 }
 
-export default function Show({ schedule, whitelist }: AdminSettingsShowProps) {
+// 渠道状态一行：已配置显示脱敏地址 / 主机名（数据，Maple），未配置是一句中文
+function ChannelRow({ label, channel }: { label: string; channel: AlertChannel }) {
+  return (
+    <div className="kv-row">
+      <span className="kv-key">{label}</span>
+      <div className="kv-value">
+        {channel.configured ? (
+          <span className="data" style={{ color: 'var(--ink)' }}>{channel.label}</span>
+        ) : (
+          <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: 'var(--ink2)' }}>{channel.label}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function Show({ schedule, whitelist, alerts }: AdminSettingsShowProps) {
   const form = useForm<Schedule>(schedule)
   form.transform((data) => ({ schedule: data }))
   const errors = form.errors as unknown as Record<string, string | string[] | undefined>
+  const configured = alerts.email.configured || alerts.webhook.configured
+  const [sending, setSending] = useState(false)
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
     form.patch(ADMIN_SETTINGS)
+  }
+
+  // 一次点击一封：请求回来之前按钮禁着（每分钟 5 次的限流是后一道门）
+  function sendTestAlert() {
+    setSending(true)
+    router.post(ADMIN_TEST_ALERT, {}, { onFinish: () => setSending(false) })
   }
 
   return (
@@ -62,6 +87,17 @@ export default function Show({ schedule, whitelist }: AdminSettingsShowProps) {
           ))
         )}
         <span className="field-note">白名单由环境配置，改动在下次登录生效。</span>
+      </Section>
+
+      <Section title="告警">
+        <ChannelRow label="邮件" channel={alerts.email} />
+        <ChannelRow label="Webhook" channel={alerts.webhook} />
+        <div className="admin-actions" style={{ alignItems: 'center' }}>
+          <button type="button" className="btn-primary" disabled={!configured || sending} onClick={sendTestAlert}>
+            发送测试告警
+          </button>
+          {configured ? null : <span className="field-note">渠道由环境配置，见 docs/development.md</span>}
+        </div>
       </Section>
     </AdminPage>
   )

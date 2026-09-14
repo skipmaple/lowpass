@@ -34,6 +34,7 @@ module Issue::Weekly
           issue.update!(revised_at: Time.current)
           run.update!(status: "succeeded", item_count: counts.sum(&:first), dropped_count: counts.sum(&:last), duration_ms: elapsed_ms(run))
         end
+        Alerts.recover!(kind: "source_failed", source: source)
       else
         # 这一期里没有这个源的条目，也就没有期号可抓：重试多少次都还是没有，记一条失败就到此为止（不抛，job 不重试）
         run.update!(status: "failed", error_summary: "这一期里没有这个源的期号", duration_ms: elapsed_ms(run))
@@ -53,8 +54,10 @@ module Issue::Weekly
         when "ruanyf_weekly" then ingest_ruanyf(source, run)
         else ingest_rss_weekly(source, run)
         end
+        Alerts.recover!(kind: "source_failed", source: source)
       rescue StandardError => e
         run.update!(status: "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200])
+        Alerts.source_failed!(source, nil, e.message)
       end
 
       # 期号是阮一峰的新内容标识：已经入库的期号只记一次检查，不重抓也不改写它所在的期；
@@ -71,8 +74,9 @@ module Issue::Weekly
           bind!(source, run, PeriodKey.weekly(entries.first.published_at || Time.current), entries, issue_no: number)
         end
       rescue Adapters::RuanyfWeekly::Degraded => e
-        # R-2.3 原文结构变了：整期降级成一条指向原文的条目。P0 只记录，告警是 P2
+        # R-2.3 原文结构变了：整期降级成一条指向原文的条目。降级也告警（5.7 解析退化）
         bind!(source, run, PeriodKey.this_week, [ degraded_entry(e) ], issue_no: e.issue_no, error_summary: "降级：#{e.message}"[0, 200])
+        Alerts.parse_degraded!(source, nil, "降级：#{e.message}")
       end
 
       # R-2.4 通用 RSS 周刊源：本周内每条 entry 就是一条条目。这一节从周一起就在页面上了，

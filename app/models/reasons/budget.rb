@@ -2,7 +2,7 @@
 module Reasons::Budget
   class << self
     def cap = decimal(Setting.get("model_monthly_cap"))
-    def month_cost = ModelCall.where(created_at: month_range).sum(:cost)
+    def month_cost = ModelCall.where(created_at: month_range).sum(:cost).to_d
     def month_calls = ModelCall.where(created_at: month_range).count
     def today_calls = ModelCall.where(created_at: day_range).count
     def exhausted? = cap.positive? && month_cost >= cap

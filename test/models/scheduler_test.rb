@@ -166,4 +166,21 @@ class SchedulerTest < ActiveSupport::TestCase
     assert_enqueued_with(job: WeeklyCheckJob) { Scheduler.tick(now: sh("2026-09-11 09:00:30")) }
     assert_equal "2026-09-11", Setting.get("weekly_checked_on")
   end
+
+  test "5.7 发布 30 分钟后仍缺理由：告警一次；未到 30 分钟或没配供应商不告" do
+    issue = issues(:daily_0908)
+    issue.update!(published_at: sh("2026-09-08 06:12"))
+    with_model_provider do
+      Scheduler.tick(now: sh("2026-09-08 06:40"))
+      assert_nil AlertEvent.find_by(kind: "reasons_missing")
+
+      Scheduler.tick(now: sh("2026-09-08 06:43"))
+      event = AlertEvent.find_by!(kind: "reasons_missing")
+      assert_equal "理由缺失 1 条", event.summary
+      assert_no_difference("AlertEvent.count") { Scheduler.tick(now: sh("2026-09-08 07:00")) }
+    end
+    AlertEvent.delete_all
+    Scheduler.tick(now: sh("2026-09-08 07:10"))
+    assert_nil AlertEvent.find_by(kind: "reasons_missing")
+  end
 end

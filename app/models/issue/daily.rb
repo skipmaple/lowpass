@@ -64,6 +64,8 @@ module Issue::Daily
     end
     # 5.7 重抓让空刊有了内容：revise! 已经把期置回 published，把之前的空刊事件也收掉
     Alerts.recover!(kind: "issue_empty")
+    # 重抓来的新条目没有理由，补缺
+    GenerateReasonsJob.perform_later(self)
   end
 
   def timed_out?

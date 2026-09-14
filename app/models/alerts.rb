@@ -12,7 +12,7 @@ module Alerts
     def issue_late!(issue, minutes) = raise!("issue_late", "critical", issue: issue, summary: "晚于生成时间 #{minutes} 分钟", url_path: issues_path(issue))
     def search_unavailable!(summary) = raise!("search_unavailable", "critical", summary: summary, url_path: "/search")
     def backup_failed!(summary) = raise!("backup_failed", "critical", summary: summary, url_path: "/admin/settings")
-    def reasons_missing!(issue, count) = raise!("reasons_missing", "warning", issue: issue, summary: "理由缺失 #{count} 条", url_path: issues_path(issue))
+    def reasons_missing!(issue, count, summary: nil) = raise!("reasons_missing", "warning", issue: issue, summary: summary || "理由缺失 #{count} 条", url_path: issues_path(issue))
 
     # 后台「发送测试告警」（R-7.4）：不去重；限流在控制器（B12）
     def test!(user)

@@ -4,6 +4,7 @@ import type {
   AdminRunRow,
   AdminSourceForm,
   AdminSourceRow,
+  AdminUserRow,
   ArchiveDay,
   ArchiveWeek,
   CurrentUser,
@@ -210,4 +211,9 @@ export function adminRunRow(overrides: Partial<AdminRunRow> = {}): AdminRunRow {
 // 后台期列表一行（5.6，Issue::Administering#admin_rows）
 export function adminIssueRow(overrides: Partial<AdminIssueRow> = {}): AdminIssueRow {
   return { kind: 'daily', period_key: '2026-09-08', state: 'published', state_label: '已发布', time_label: '06:12', source_marks: 'HN 10 · GH 10 · HAD 10', refetchable_sources: [{ id: 'src-hn', name: 'Hacker News' }, { id: 'src-gh', name: 'GitHub Trending' }], ...overrides }
+}
+
+// 后台用户列表一行（5.6，User.admin_rows）
+export function adminUserRow(overrides: Partial<AdminUserRow> = {}): AdminUserRow {
+  return { id: 'u1', display_name: 'Drew Lee', email: 'drew@example.com', role: 'admin', providers_label: 'Google · GitHub', last_login_label: '2026-09-09 08:12', ...overrides }
 }

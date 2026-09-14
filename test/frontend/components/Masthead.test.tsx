@@ -85,7 +85,7 @@ describe('Masthead 搜索与账户', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '账户' }))
 
-    expect(screen.getByRole('menuitem', { name: '管理' })).toHaveAttribute('href', '/admin/jobs')
+    expect(screen.getByRole('menuitem', { name: '管理' })).toHaveAttribute('href', '/admin/sources')
   })
 
   it('登出走 DELETE /session', async () => {

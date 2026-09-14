@@ -54,7 +54,8 @@ module Alerts
         event = AlertEvent.new(kind: kind, level: level, source: source, issue: issue, summary: truncate(summary), url_path: url_path,
                                dedup_key: dedup ? dedup_key(kind, source, issue) : "test:#{Lowpass::Uuid.generate}")
         event.delivery_error = "未配置渠道" unless configured?
-        event.save!
+        # 自己一层 savepoint：撞唯一索引是常态（当天已发过），咽掉之后调用方手里的外层事务还得能用（B10）
+        AlertEvent.transaction(requires_new: true) { event.save! }
         DeliverAlertJob.perform_later(event, "alert") if configured?
         event
       rescue ActiveRecord::RecordNotUnique

@@ -53,6 +53,18 @@ class DeliverAlertJobTest < ActiveJob::TestCase
     end
   end
 
+  # 恢复阶段的 job 会与告警阶段的重试撞在同一条事件上：两边都读改写 delivered，并发跑要丢更新
+  test "同一条事件同时只允许一个投递任务" do
+    assert_equal 1, DeliverAlertJob.concurrency_limit
+
+    event = alert_event
+    other = alert_event(dedup_key: "k2", source: sources(:github))
+    key = DeliverAlertJob.new(event, "alert").concurrency_key
+    assert_includes key, event.id
+    assert_equal key, DeliverAlertJob.new(event, "recovery").concurrency_key
+    refute_equal key, DeliverAlertJob.new(other, "alert").concurrency_key
+  end
+
   test "两次重试分别等 30 秒与 120 秒" do
     with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
       freeze_time do

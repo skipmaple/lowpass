@@ -25,4 +25,12 @@ class Alerts::MessageTest < ActiveSupport::TestCase
       assert_equal "[lowpass] 提示 · 测试告警", Alerts::Message.subject(test_event, "alert")
     end
   end
+
+  # 主题进的是邮件 Subject 头：来源名里的换行会把头截断
+  test "来源名含换行时主题只取第一行" do
+    event = alert_event(source: sources(:hn))
+    event.source.name = "Hacker News\nX-Injected: 1"
+
+    assert_equal "[lowpass] 警告 · 源抓取失败 · Hacker News", Alerts::Message.subject(event, "alert")
+  end
 end

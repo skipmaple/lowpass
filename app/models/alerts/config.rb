@@ -59,9 +59,14 @@ module Alerts::Config
         nil
       end
 
+      # 不像地址的值（没有 @）整条盖掉：脱敏不该反过来把它原样贴到设置页上
       def mask(address)
         local, domain = address.split("@", 2)
-        "#{local.to_s[0]}***@#{domain}"
+        if domain.present?
+          "#{local.to_s[0]}***@#{domain}"
+        else
+          "***"
+        end
       end
   end
 end

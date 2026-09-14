@@ -86,4 +86,20 @@ class AlertsTest < ActiveSupport::TestCase
     AlertEvent.stubs(:new).raises(RuntimeError, "db down")
     assert_nil Alerts.source_failed!(sources(:hn), issues(:daily_0908), "down")
   end
+
+  # B10 的反面：调用方可能正握着一个事务（定稿、写抓取记录），撞唯一索引被咽掉之后
+  # 那个事务还得能接着用——所以建记录要自己一层 savepoint
+  test "去重撞车不毒化调用方的外层事务" do
+    with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
+      AlertEvent.transaction do
+        Alerts.source_failed!(sources(:hn), issues(:daily_0908), "down")
+        assert_nil Alerts.source_failed!(sources(:hn), issues(:daily_0908), "again")
+
+        assert_equal 1, AlertEvent.count
+        alert_event(dedup_key: "issue_empty:-:2026-09-14", kind: "issue_empty", level: "critical")
+      end
+
+      assert_equal 2, AlertEvent.count
+    end
+  end
 end

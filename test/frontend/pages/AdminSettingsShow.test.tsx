@@ -57,7 +57,9 @@ describe('Admin/Settings/Show', () => {
     const button = screen.getByRole('button', { name: '发送测试告警' })
     expect(button).toBeEnabled()
     await userEvent.click(button)
-    expect(router.post).toHaveBeenCalledWith('/admin/test_alert')
+    expect(router.post).toHaveBeenCalledWith('/admin/test_alert', {}, expect.objectContaining({ onFinish: expect.any(Function) }))
+    // 一次点击一封：请求回来之前按钮就该禁着（限流是后一道门，不是第一道）
+    expect(button).toBeDisabled()
   })
 
   it('告警：都没配时按钮禁用并说明', () => {

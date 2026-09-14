@@ -27,7 +27,7 @@
 - 搜索：PostgreSQL 内建。`Searchable` concern 用 `after_*_commit` 维护独立的 `Search::Record` 表，不为搜索改条目表。
 - 出站 HTTP：超时、有限重试、标明 lowpass 的 User-Agent、响应体上限；429 / 403 不追加重试；feed 地址先经 `surfguard` 解析成公网 IP 再连。
 - 后台任务：Solid Queue，浅 job 调富模型（`_later` 入队、`_now` 同步）；周期任务写在 `config/recurring.yml`；job 幂等，某期某源同时只允许一个重抓。
-- 认证：OAuth。`Session` 记录 + 签名 cookie；`Current` 承载 session、user 与请求属性；`rate_limit` 保护登录回调与搜索；`next` 只接受站内相对路径。
+- 认证：OAuth（OmniAuth）。`Session` 记录 + 签名 cookie；`Current` 承载 session、user 与请求属性；登录回调限流在 OmniAuth 之前的 Rack 中间件，搜索用 `rate_limit` 按用户；`next` 只接受站内相对路径；development 有 `developer` 策略的开发登录。
 - 前端：控制器是 CRUD 资源，每个动作渲染一个 Inertia 页面；props 必须有类型；首屏资源不超过 300 KB；颜色、字体、字号只从设计 skill 的令牌取。
 - 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。
 - 测试：Minitest + fixtures；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 快速循环，`bin/ci` 是合并门禁（rubocop、brakeman、bundler-audit、gitleaks、测试、系统测试）。

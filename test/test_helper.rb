@@ -1,4 +1,6 @@
 ENV["RAILS_ENV"] ||= "test"
+# R-5.5 的白名单从环境读；测试不依赖机器上的环境变量，fixture 里 drew 就是这个人
+ENV["ADMIN_EMAILS"] = "drew@example.com"
 require_relative "../config/environment"
 require "rails/test_help"
 
@@ -7,6 +9,9 @@ require "mocha/minitest"
 
 Dir[Rails.root.join("test/test_helpers/**/*.rb")].sort.each { |file| require file }
 WebMock.disable_net_connect!(allow_localhost: true)
+
+# 登录走 OmniAuth 的 mock（test/test_helpers/authentication_test_helpers.rb），不连 Google / GitHub
+OmniAuth.config.test_mode = true
 
 module FixtureUuids
   extend ActiveSupport::Concern
@@ -30,9 +35,16 @@ class ActiveSupport::TestCase
   fixtures :all
   include ActiveJob::TestHelper
   include SearchTestHelpers
+  include AuthenticationTestHelpers
 end
 
 class ActionDispatch::IntegrationTest
+  # rate_limit 与回调限流的计数都在 memory_store 里；上一条测试的登录次数不能漏进这一条
+  setup { Rails.cache.clear }
+
+  # OmniAuth.config.mock_auth 是进程级的：不清掉，忘了 mock_omniauth 的测试会拿上一条测试的身份登录成功
+  teardown { OmniAuth.config.mock_auth.clear }
+
   # inertia_rails 的 use_script_element_for_initial_page 把整个 payload 渲染成
   # <script data-page="app" type="application/json"> 的文本内容（page.to_json.html_safe，没有 HTML 转义），
   # 没有开 SSR，所以页面上能读到的每个字符串都必须先出现在 props 里。

@@ -1,6 +1,7 @@
 import type {
   ArchiveDay,
   ArchiveWeek,
+  CurrentUser,
   DailyIssue,
   Item,
   SearchFilters,
@@ -154,4 +155,9 @@ export function searchResult(overrides: Partial<SearchResult> = {}): SearchResul
     ],
     ...overrides,
   }
+}
+
+// ApplicationController 的 inertia_share 每页都带的当前用户
+export function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
+  return { display_name: 'Drew Lee', avatar_url: null, email: 'drew@example.com', admin: false, ...overrides }
 }

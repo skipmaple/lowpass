@@ -2,6 +2,8 @@ require "test_helper"
 
 # 周刊详情（PRD 5.2、R-2.5 到 R-2.7）。fixture 的 2026-W36 是 8月31日 至 9月6日 那一周。
 class WeeklyIssuesControllerTest < ActionDispatch::IntegrationTest
+  setup { sign_in_as(users(:drew)) }
+
   def ruanyf_item(title, section:, issue_no: 366, rank: 1, degraded: false, url: nil)
     issues(:weekly_w36).items.create!(
       source: sources(:ruanyf), title: title, section: section, rank: rank, fetched_at: Time.current,
@@ -99,6 +101,8 @@ end
 
 # 周刊归档：按年一页，每周一行（PRD 6.2、R-2.7）。上海 2026-09-10 12:00 时本周是 2026-W37。
 class WeeklyArchiveTest < ActionDispatch::IntegrationTest
+  setup { sign_in_as(users(:drew)) }
+
   NOW = Time.utc(2026, 9, 10, 4)
 
   test "周刊归档标出无内容的周" do

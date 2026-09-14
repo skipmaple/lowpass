@@ -1,0 +1,17 @@
+# drew 是白名单里的管理员（test_helper 设 ADMIN_EMAILS=drew@example.com）；guest 是普通成员；nomail 是 GitHub 邮箱不可见的账号
+drew:
+  id: <%= ActiveRecord::FixtureSet.identify(:drew, :uuid) %>
+  display_name: Drew Lee
+  email: drew@example.com
+  avatar_url: https://avatars.example/drew.png
+  role: admin
+  last_login_at: <%= Time.utc(2026, 9, 9, 0, 12).to_fs(:db) %>
+guest:
+  id: <%= ActiveRecord::FixtureSet.identify(:guest, :uuid) %>
+  display_name: 客人
+  email: guest@example.com
+  role: member
+nomail:
+  id: <%= ActiveRecord::FixtureSet.identify(:nomail, :uuid) %>
+  display_name: octocat
+  role: member

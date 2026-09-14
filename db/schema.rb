@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -34,12 +34,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
     t.index ["created_at"], name: "index_alert_events_on_created_at"
     t.index ["dedup_key"], name: "index_alert_events_on_dedup_key", unique: true
     t.index ["kind", "source_id", "recovered_at"], name: "index_alert_events_on_kind_and_source_id_and_recovered_at"
-    t.check_constraint "kind::text = ANY (ARRAY['source_failed'::character varying, 'parse_degraded'::character varying, 'issue_empty'::character varying, 'issue_late'::character varying, 'search_unavailable'::character varying, 'backup_failed'::character varying, 'reasons_missing'::character varying, 'test'::character varying]::text[])", name: "alert_events_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['source_failed'::character varying::text, 'parse_degraded'::character varying::text, 'issue_empty'::character varying::text, 'issue_late'::character varying::text, 'search_unavailable'::character varying::text, 'backup_failed'::character varying::text, 'reasons_missing'::character varying::text, 'test'::character varying::text])", name: "alert_events_kind"
     t.check_constraint "length(dedup_key::text) <= 120", name: "alert_events_dedup_key_len"
     t.check_constraint "length(delivery_error::text) <= 200", name: "alert_events_delivery_error_len"
     t.check_constraint "length(summary::text) <= 200", name: "alert_events_summary_len"
     t.check_constraint "length(url_path::text) <= 200", name: "alert_events_url_path_len"
-    t.check_constraint "level::text = ANY (ARRAY['warning'::character varying, 'critical'::character varying, 'info'::character varying]::text[])", name: "alert_events_level"
+    t.check_constraint "level::text = ANY (ARRAY['warning'::character varying::text, 'critical'::character varying::text, 'info'::character varying::text])", name: "alert_events_level"
   end
 
   create_table "audit_logs", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -90,6 +90,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
     t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying::text, 'manual'::character varying::text, 'test'::character varying::text])", name: "fetch_runs_trigger"
   end
 
+  create_table "interest_areas", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "enabled", default: true, null: false
+    t.string "keywords", limit: 200, default: "", null: false
+    t.string "name", limit: 20, null: false
+    t.integer "sort_order", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((name)::text)", name: "index_interest_areas_on_lower_name", unique: true
+    t.check_constraint "length(keywords::text) <= 200", name: "interest_areas_keywords_len"
+    t.check_constraint "length(name::text) <= 20", name: "interest_areas_name_len"
+  end
+
   create_table "issues", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "generated_late", default: false, null: false
@@ -130,6 +142,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
     t.check_constraint "length(summary::text) <= 500", name: "items_summary_len"
     t.check_constraint "length(title::text) <= 300", name: "items_title_len"
     t.check_constraint "length(url::text) <= 2048", name: "items_url_len"
+  end
+
+  create_table "model_calls", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.integer "completion_tokens", default: 0, null: false
+    t.decimal "cost", precision: 10, scale: 4, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.integer "duration_ms"
+    t.string "error_summary", limit: 200
+    t.string "issue_id", limit: 25
+    t.string "item_id", limit: 25
+    t.integer "prompt_tokens", default: 0, null: false
+    t.string "status", limit: 10, null: false
+    t.index ["created_at"], name: "index_model_calls_on_created_at"
+    t.index ["issue_id"], name: "index_model_calls_on_issue_id"
+    t.check_constraint "length(error_summary::text) <= 200", name: "model_calls_error_summary_len"
+    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying, 'failed'::character varying, 'timed_out'::character varying, 'invalid'::character varying]::text[])", name: "model_calls_status"
   end
 
   create_table "search_clicks", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -261,6 +289,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
   add_foreign_key "fetch_runs", "sources"
   add_foreign_key "items", "issues"
   add_foreign_key "items", "sources"
+  add_foreign_key "model_calls", "issues", on_delete: :nullify
+  add_foreign_key "model_calls", "items", on_delete: :nullify
   add_foreign_key "search_clicks", "items", on_delete: :cascade
   add_foreign_key "search_records", "issues", on_delete: :cascade
   add_foreign_key "search_records", "items", on_delete: :cascade

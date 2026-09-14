@@ -1,0 +1,18 @@
+ai:
+  id: <%= ActiveRecord::FixtureSet.identify(:ai, :uuid) %>
+  name: AI / LLM
+  keywords: 本地模型部署、Agent 框架、语音 AI、ASR/TTS、RAG
+  sort_order: 2
+  enabled: true
+frontend:
+  id: <%= ActiveRecord::FixtureSet.identify(:frontend, :uuid) %>
+  name: 前端开发
+  keywords: React、Web 技术、浏览器 API
+  sort_order: 3
+  enabled: true
+disabled_area:
+  id: <%= ActiveRecord::FixtureSet.identify(:disabled_area, :uuid) %>
+  name: 硬件设计
+  keywords: 电路、PCB、传感器、音频系统
+  sort_order: 7
+  enabled: false

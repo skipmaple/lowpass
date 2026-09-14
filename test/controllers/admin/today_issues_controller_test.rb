@@ -40,6 +40,18 @@ class Admin::TodayIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "refetched" => 3 }, AuditLog.sole.payload)
   end
 
+  test "今天已有期：确认后每个可重抓的源先有一条 queued 记录" do
+    travel_to Time.utc(2026, 9, 7, 22, 30) do
+      post admin_today_issue_path, params: { confirm: "1" }
+
+      assert_equal 3, FetchRun.active.where(issue: issues(:daily_0908), trigger: "manual").count
+
+      get admin_issues_path
+
+      assert_equal 3, page_props["active_runs"].size
+    end
+  end
+
   test "今天已有期：全部来源都在跑就没有可重抓的" do
     issues(:daily_0908).source_states.each_key do |source_id|
       FetchRun.create!(source_id: source_id, issue: issues(:daily_0908), trigger: "manual", attempt: 1, status: "running", started_at: Time.current)

@@ -101,16 +101,17 @@ Hacker News 经 Algolia（`hn.algolia.com`），RSS 看 feed 里还有没有那�
 
 | 变量 | 说明 |
 |---|---|
-| `BASE_URL` | 站点地址，告警里的后台链接与抓取的 User-Agent 都用它（development 默认 `http://localhost:3000`） |
+| `BASE_URL` | 站点地址，告警里的后台链接与抓取的 User-Agent 都用它（默认 `http://localhost:3000`；production 必填，缺了链接会指向 localhost） |
 | `ALERT_EMAIL_TO` | 收件地址，逗号分隔；与 `SMTP_ADDRESS` 一起配了邮件渠道才算开 |
 | `ALERT_EMAIL_FROM` | 发件地址，默认 `lowpass@<BASE_URL 的主机名>` |
-| `SMTP_ADDRESS` `SMTP_PORT` `SMTP_USERNAME` `SMTP_PASSWORD` `SMTP_DOMAIN` `SMTP_AUTHENTICATION` `SMTP_STARTTLS` | SMTP；端口默认 587，认证默认 plain（没配用户名就不认证），STARTTLS 默认开 |
+| `SMTP_ADDRESS` `SMTP_PORT` `SMTP_USERNAME` `SMTP_PASSWORD` `SMTP_DOMAIN` `SMTP_AUTHENTICATION` `SMTP_STARTTLS` | SMTP；`SMTP_PORT` 留空按 587，`SMTP_DOMAIN` 默认取 `BASE_URL` 的主机名，认证默认 plain（没配用户名就不认证），STARTTLS 默认开。每个变量留空都等于没配（Kamal 对没配的变量注入空串） |
 | `ALERT_WEBHOOK_URL` | https 的 JSON 接收端：Slack incoming webhook、飞书 / 企业微信 / 钉钉的自定义机器人都行 |
 | `ALERT_WEBHOOK_FORMAT` | 报文形状：`generic`（默认，Slack 兼容）· `feishu` · `wecom` · `dingtalk` |
 
 本地看效果：development 的邮件不真发，`bin/rails console` 里看 `ActionMailer::Base.deliveries`；webhook 可以指到自己的 https 接收端。
 验证 AC-7.1：配好变量，`bin/dev` 起着（jobs 进程在跑），到 `/admin/settings` 点「发送测试告警」，1 分钟内应收到「[lowpass] 提示 · 测试告警」。
 事件记在 `alert_events`（`AlertEvent.order(created_at: :desc).limit(20)`），同源同日同类只发一条，恢复后发一条「已恢复」；
+事件保留 90 天，由每天 04:00 的清理一并删。
 投递失败最多重试 3 次，耗尽写日志并留在 `delivery_error`。触发点：源抓取终态失败、解析退化（丢弃过半、阮一峰降级）、空刊、
 日刊晚于生成时间 30 分钟以上才补跑、搜索连续 3 次不可用；备份失败只有调用口（还没有备份任务）；推荐理由缺失由 ④ 接。
 

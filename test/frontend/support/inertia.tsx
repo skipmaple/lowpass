@@ -43,5 +43,6 @@ export function useForm<T extends Record<string, unknown>>(initial: T) {
     if (typeof key === 'object') setState((prev) => ({ ...prev, ...key }))
     else setState((prev) => ({ ...prev, [key]: value }))
   }
-  return { data, setData, post: formPost, patch: formPatch, processing: false, errors }
+  // transform 是真 useForm 提交前改一遍 data 的钩子；测试不提交，替身只要能被调用就够（no-op）
+  return { data, setData, post: formPost, patch: formPatch, processing: false, errors, transform: () => {} }
 }

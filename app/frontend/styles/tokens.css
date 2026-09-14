@@ -8,6 +8,7 @@
   --ink2: #55504B;
   --green: #96B59F;
   --rule: rgba(29, 29, 27, 0.35);
+  --shade: rgba(29, 29, 27, 0.40); /* 遮罩：对话框下面 40% 的墨（画布 dialog()） */
   --underline: rgba(29, 29, 27, 0.30);
 
   /* 家族名按自托管包的声明写：@fontsource-variable 的可变字体带 Variable 后缀 */
@@ -402,7 +403,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 .table-empty { padding: 28px 0; }
 
 /* 确认对话框：遮罩 + 480px 纸卡，1px 墨线加 2px 顶线 */
-.dialog-shade { position: fixed; inset: 0; background: rgba(29, 29, 27, 0.4); display: flex; align-items: center; justify-content: center; z-index: 30; padding: 24px; }
+.dialog-shade { position: fixed; inset: 0; background: var(--shade); display: flex; align-items: center; justify-content: center; z-index: 30; padding: 24px; }
 .dialog { width: 480px; max-width: 100%; background: var(--paper); border: 1px solid var(--ink); border-top: 2px solid var(--ink); padding: 28px 28px 24px 28px;
           display: flex; flex-direction: column; gap: 24px; }
 .dialog-text { margin: 0; font-family: var(--font-cjk); font-size: var(--fs-20); line-height: 1.6; }
@@ -410,9 +411,9 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 操作反馈：顶部一行 44px */
 .toasts { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; }
-.toast { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 16px; background: var(--paper); border: 1px solid var(--ink); align-self: flex-start; max-width: 100%; }
+.toast { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 8px 0 16px; background: var(--paper); border: 1px solid var(--ink); align-self: flex-start; max-width: 100%; }
 .toast-text { font-family: var(--font-cjk); font-size: var(--fs-15); }
-.toast-close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: 4px; padding: 0; border: 0; background: none; cursor: pointer; }
+.toast-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: 4px; padding: 0; border: 0; background: none; cursor: pointer; }
 .toast-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* 表单：字段说明、文楷值的输入框、按钮行、预览块 */

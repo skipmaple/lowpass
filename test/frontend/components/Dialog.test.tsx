@@ -28,4 +28,26 @@ describe('Dialog', () => {
     rerender(<Dialog open text="x" cancel="取消" confirm="好" busy onCancel={() => {}} onConfirm={() => {}} />)
     expect(screen.getByRole('button', { name: '好' })).toBeDisabled()
   })
+
+  // 父组件重渲染（比如 usePolling 每 5 秒 reload）时常会传一个新的内联 onCancel；
+  // 副作用不该因为这个而重跑——重跑会把焦点收回去再塞回来，用户能看见按钮"闪"一下。
+  it('rerender 时内联 onCancel 变了不重跑副作用：确认按钮不重新聚焦，Escape 仍调用最新回调', async () => {
+    const onCancel1 = vi.fn()
+    const onConfirm = vi.fn()
+    const { rerender } = render(<Dialog open text="x" cancel="取消" confirm="停用" onCancel={onCancel1} onConfirm={onConfirm} />)
+
+    const confirmButton = screen.getByRole('button', { name: '停用' })
+    expect(confirmButton).toHaveFocus()
+    const focusSpy = vi.spyOn(confirmButton, 'focus')
+
+    const onCancel2 = vi.fn()
+    rerender(<Dialog open text="x" cancel="取消" confirm="停用" onCancel={onCancel2} onConfirm={onConfirm} />)
+
+    expect(focusSpy).not.toHaveBeenCalled()
+    expect(confirmButton).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(onCancel1).not.toHaveBeenCalled()
+    expect(onCancel2).toHaveBeenCalledTimes(1)
+  })
 })

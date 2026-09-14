@@ -26,8 +26,10 @@ module Source::Presenting
     end
   end
 
+  # 新建来源时 name 还没填，AR 属性是 nil；AdminSourceForm.name 的类型承诺是 string 不是 string | null——
+  # 不补 to_s 的话表单拿到 null，测试抓取成功后自动填名称那行的 name.trim() 直接抛出
   def form_props
-    { id: id, name: name, adapter: adapter, publication: publication, sort_order: sort_order, config: config }
+    { id: id, name: name.to_s, adapter: adapter, publication: publication, sort_order: sort_order, config: config }
   end
 
   # 「9月8日 06:12 · 成功 · 10 条」/「9月9日 06:05 · 超时 · 连接超时」；测试抓取不算

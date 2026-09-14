@@ -53,21 +53,20 @@ Rails.application.configure do
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }
 
-  # Ignore bad email addresses and do not raise email delivery errors.
-  # Set this to true and configure the email server for immediate delivery to raise delivery errors.
-  # config.action_mailer.raise_delivery_errors = false
-
-  # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
-
-  # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
-  # config.action_mailer.smtp_settings = {
-  #   user_name: Rails.application.credentials.dig(:smtp, :user_name),
-  #   password: Rails.application.credentials.dig(:smtp, :password),
-  #   address: "smtp.example.com",
-  #   port: 587,
-  #   authentication: :plain
-  # }
+  # 告警邮件（P2-③）：SMTP 只从环境读；投递失败要抛出来，DeliverAlertJob 靠它重试（R-7.3）。
+  # 没配 SMTP_USERNAME 就不做认证（mail gem 对 nil 用户名跳过 AUTH）
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.raise_delivery_errors = true
+  config.action_mailer.smtp_settings = {
+    address: ENV["SMTP_ADDRESS"],
+    port: Integer(ENV.fetch("SMTP_PORT", "587")),
+    user_name: ENV["SMTP_USERNAME"].presence,
+    password: ENV["SMTP_PASSWORD"].presence,
+    domain: ENV["SMTP_DOMAIN"].presence || URI(ENV.fetch("BASE_URL", "https://lowpass.example")).host,
+    authentication: (ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym if ENV["SMTP_USERNAME"].present?),
+    enable_starttls_auto: ENV.fetch("SMTP_STARTTLS", "true") == "true"
+  }.compact
+  config.action_mailer.default_url_options = { host: URI(ENV.fetch("BASE_URL", "https://lowpass.example")).host }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

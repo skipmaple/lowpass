@@ -1,5 +1,7 @@
 import type {
   AdapterOption,
+  AdminIssueRow,
+  AdminRunRow,
   AdminSourceForm,
   AdminSourceRow,
   ArchiveDay,
@@ -198,4 +200,14 @@ export function testFetchResult(overrides: Partial<TestFetchResult> = {}): TestF
     ],
     ...overrides,
   }
+}
+
+// 后台抓取记录一行（R-3.9，Source::Presenting#run_rows）
+export function adminRunRow(overrides: Partial<AdminRunRow> = {}): AdminRunRow {
+  return { id: 'run-1', started_label: '9月8日 06:12:01', duration_label: '1.8 秒', status: 'succeeded', status_label: '成功', attempt_label: '1 / 3', item_count: 10, dropped_count: 0, error_summary: null, trigger_label: '调度', ...overrides }
+}
+
+// 后台期列表一行（5.6，Issue::Administering#admin_rows）
+export function adminIssueRow(overrides: Partial<AdminIssueRow> = {}): AdminIssueRow {
+  return { kind: 'daily', period_key: '2026-09-08', state: 'published', state_label: '已发布', time_label: '06:12', source_marks: 'HN 10 · GH 10 · HAD 10', refetchable_sources: [{ id: 'src-hn', name: 'Hacker News' }, { id: 'src-gh', name: 'GitHub Trending' }], ...overrides }
 }

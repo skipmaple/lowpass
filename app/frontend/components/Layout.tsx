@@ -7,7 +7,7 @@ import Masthead, { type MastheadProps } from '@/components/Masthead'
 // 报头黑带整宽贴边，其余内容与页脚在留边的 .sheet-body 里。
 export type LayoutProps = React.PropsWithChildren<{
   masthead?: MastheadProps
-  footer?: FooterProps
+  footer?: FooterProps | false
 }>
 
 export default function Layout({ children, masthead, footer }: LayoutProps) {
@@ -16,7 +16,7 @@ export default function Layout({ children, masthead, footer }: LayoutProps) {
       <Masthead {...masthead} />
       <div className="sheet-body">
         {children}
-        <Footer {...footer} />
+        {footer === false ? null : <Footer {...footer} />}
       </div>
     </div>
   )

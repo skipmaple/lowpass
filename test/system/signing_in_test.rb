@@ -19,7 +19,7 @@ class SigningInTest < ApplicationSystemTestCase
     # 头像按钮只有 aria-label，Capybara 默认不按它找按钮（enable_aria_label 关着）
     find("button[aria-label='账户']").click
     assert_selector "[role='menu']", text: "drew@example.com"
-    assert_link "管理", href: "/admin/jobs"
+    assert_link "管理", href: "/admin/sources"
 
     click_on "登出"
 

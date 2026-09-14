@@ -8,6 +8,7 @@
   --ink2: #55504B;
   --green: #96B59F;
   --rule: rgba(29, 29, 27, 0.35);
+  --shade: rgba(29, 29, 27, 0.40); /* 遮罩：对话框下面 40% 的墨（画布 dialog()） */
   --underline: rgba(29, 29, 27, 0.30);
 
   /* 家族名按自托管包的声明写：@fontsource-variable 的可变字体带 Variable 后缀 */
@@ -376,4 +377,66 @@ a.t:hover { text-decoration-color: var(--ink); }
 .link-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 480px) {
   .kv-row { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* ─── 管理后台（P2-②，画布 pages_site.py 的 admin_*() / table() / dialog() / toast()）──────────────── */
+.admin-nav { display: flex; margin-top: 24px; }
+.admin-nav-item { flex: 1 1 0; display: flex; align-items: center; justify-content: center; height: 56px; border: 1px solid var(--ink);
+                  font-family: var(--font-cjk); font-size: var(--fs-20); color: var(--ink); }
+.admin-nav-item + .admin-nav-item { margin-left: -1px; }
+.admin-nav-item[aria-current="page"] { background: var(--ink); color: var(--paper); }
+.admin-nav-item:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.admin-body { padding-top: 28px; }
+.admin-summary { padding-top: 16px; }
+.admin-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 28px 0 16px 0; }
+.admin-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.admin-actions .link-button { min-height: 44px; }
+/* 同一格里「补生成」是唯一的反白按钮：跟旁边的文字按钮一样 44px，行高才不会因为哪种按钮而跳 */
+.admin-actions .btn-primary { min-height: 44px; }
+
+/* 表格：grid，表头文楷 12 次墨 + 1px 墨线，行间 35% 线；外层横向滚 */
+.table-wrap { overflow-x: auto; }
+.table { min-width: 720px; }
+.table-head, .table-row { display: grid; gap: 0 16px; align-items: center; }
+.table-head { padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
+.table-th { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
+.table-row { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.table-td { min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.table-empty { padding: 28px 0; }
+
+/* 确认对话框：遮罩 + 480px 纸卡，1px 墨线加 2px 顶线 */
+.dialog-shade { position: fixed; inset: 0; background: var(--shade); display: flex; align-items: center; justify-content: center; z-index: 30; padding: 24px; }
+.dialog { width: 480px; max-width: 100%; background: var(--paper); border: 1px solid var(--ink); border-top: 2px solid var(--ink); padding: 28px 28px 24px 28px;
+          display: flex; flex-direction: column; gap: 24px; }
+.dialog-text { margin: 0; font-family: var(--font-cjk); font-size: var(--fs-20); line-height: 1.6; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* 操作反馈：顶部一行 44px */
+.toasts { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; }
+.toast { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 8px 0 16px; background: var(--paper); border: 1px solid var(--ink); align-self: flex-start; max-width: 100%; }
+.toast-text { font-family: var(--font-cjk); font-size: var(--fs-15); }
+.toast-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: 4px; padding: 0; border: 0; background: none; cursor: pointer; }
+.toast-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* 表单：字段说明、文楷值的输入框、按钮行、预览块 */
+.field-note { font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+.field-input-cjk { font-family: var(--font-cjk); font-size: var(--fs-15); }
+.seg-button { background: none; cursor: pointer; font: inherit; }
+.seg-button:disabled { cursor: default; color: var(--ink2); }
+.admin-form { display: flex; flex-direction: column; gap: 24px; padding-top: 28px; max-width: 760px; }
+.admin-form-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+.admin-form-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; }
+.preview { margin-top: 40px; }
+.preview-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
+.preview-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.preview-warning { display: flex; gap: 8px; align-items: center; padding-top: 12px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+
+/* 设置页的分节：文楷 22 标题 + 1px 线 */
+.admin-section { padding-top: 32px; }
+.admin-section-title { margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--ink); font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-22); }
+.admin-section-body { padding-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+@media (max-width: 480px) {
+  .admin-nav-item { font-size: var(--fs-15); height: 48px; }
+  .admin-form-row { flex-direction: column; }
 }

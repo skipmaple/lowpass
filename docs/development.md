@@ -79,6 +79,22 @@ GITHUB_CLIENT_SECRET=…
 测试不连 provider：`OmniAuth.config.test_mode`，`test/test_helpers/authentication_test_helpers.rb` 的 `sign_in_as` 按 fixture 里的
 身份伪造一次登录；系统测试用 `sign_in_with_browser`，真的在浏览器里点登录按钮。
 
+## 管理后台
+
+```
+http://localhost:3000/admin
+```
+
+白名单邮箱登录后，报头头像菜单的「管理」进 `/admin/sources`。四个分页：信息源（新建 / 编辑 / 启停 / 测试抓取 / 抓取记录）、
+期（某期某源重抓、补生成缺期、立即生成今日日刊）、用户（只读）、设置（日刊生成时间、周刊检查时间；白名单只读）。
+写操作都记进 `audit_logs`（谁、何时、对什么、改了什么），保留 90 天，没有界面，要看用 `bin/rails console`：
+`AuditLog.order(created_at: :desc).limit(20)`。
+
+测试抓取是 `POST /admin/test_fetches` 的 JSON 端点，请求内同步等最多 30 秒；本机代理是 fake-IP 模式时会得到
+「地址解析不到公网 IP。」（见「抓不到内容？」）。手动重抓走 `FetchSourceJob`（`trigger: "manual"`），本地要让
+`bin/dev` 的 jobs 进程跑着，期页与记录页每 5 秒刷新一次直到任务结束。补生成过去的日子只对支持回填的源产出内容：
+Hacker News 经 Algolia（`hn.algolia.com`），RSS 看 feed 里还有没有那一天的条目，GitHub Trending 标「该来源无法回填」。
+
 ## 开发数据
 
 ```

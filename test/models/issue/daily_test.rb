@@ -157,6 +157,26 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert_nil issue.reload.revised_at
   end
 
+  # R-1.5 手动重抓成功记 revised_at——走 job 的路径也要记，不只 regenerate_source!
+  test "手动重抓由 fetch_now 自己记修订" do
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "new", url: "https://h/new") ])
+    issue = issues(:daily_0908)
+
+    run = sources(:hn).fetch_now(issue, trigger: "manual")
+
+    assert_equal "succeeded", run.status
+    assert issue.reload.revised_at.present?
+    assert_equal "ok", issue.source_states[sources(:hn).id]
+    assert_equal [ "new" ], issue.items.where(source: sources(:hn)).pluck(:title)
+  end
+
+  test "调度触发的迟到抓取仍然不改已定稿的期" do
+    run = sources(:hn).fetch_now(issues(:daily_0908), trigger: "scheduled")
+
+    assert_equal "failed", run.status
+    assert_nil issues(:daily_0908).reload.revised_at
+  end
+
   # R58 抓取记录只保留 30 天（F-26）：栏目状态在定稿时固化，不再从 fetch_runs 推导
   test "定稿把各源结果写进 source_states" do
     stub_all(Adapters::HackerNews => [ Adapters::Entry.new(title: "h", url: "https://h/1") ], Adapters::GithubTrending => [])
@@ -231,5 +251,34 @@ class Issue::DailyTest < ActiveSupport::TestCase
     sources(:hackaday).update!(enabled: false)
 
     assert_equal [ sources(:hn), sources(:github) ], Issue.daily_columns(issue, Source.ordered.to_a)
+  end
+
+  # R-1.6 补生成：支持回填的源抓那一天，不支持的固化为 no_backfill；期标延迟生成
+  test "backfill_daily! 回填 HN 与 RSS，GitHub 标无法回填" do
+    Adapters::HackerNews.any_instance.stubs(:backfill).returns([ Adapters::Entry.new(title: "h", url: "https://h/1") ])
+    Adapters::Rss.any_instance.stubs(:backfill).returns([])
+
+    issue = Issue.backfill_daily!("2026-09-03")
+    assert issue.generated_late
+    assert_equal "no_backfill", issue.source_state(sources(:github))
+    perform_enqueued_jobs
+
+    issue.reload
+    assert issue.published?
+    assert_equal "ok", issue.source_state(sources(:hn))
+    assert_equal "empty", issue.source_state(sources(:hackaday))
+    assert_equal "no_backfill", issue.source_state(sources(:github))
+    assert_equal %w[ manual ], issue.fetch_runs.pluck(:trigger).uniq
+  end
+
+  test "backfill_daily! 全都不支持时立刻收尾成空刊" do
+    Adapters::HackerNews.stubs(:backfill?).returns(false)
+    Adapters::Rss.stubs(:backfill?).returns(false)
+
+    issue = Issue.backfill_daily!("2026-09-03")
+
+    assert issue.empty?
+    assert_equal({ sources(:hn).id => "no_backfill", sources(:github).id => "no_backfill", sources(:hackaday).id => "no_backfill" }, issue.source_states)
+    assert_no_enqueued_jobs
   end
 end

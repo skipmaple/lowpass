@@ -78,6 +78,9 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   〔改造自 fizzy `config/recurring.yml` 与 `Webhook::Delivery.cleanup`〕
 - Job 必须幂等：tick 可能重复触发；"某期 + 某源"同时只允许一个重抓任务（R-3.10）。
 - 推荐理由生成是独立 job，失败不影响发布；单条重试 2 次，缺失在后台可见（R-9.6）。
+- 后台（P2-②）：`Admin::` 控制器是 CRUD 资源（启停是 `enablement`，重抓 / 补生成 / 立即生成各是一个资源，STYLE.md），
+  写操作成功后 `Audit.record`；手动重抓复用 `FetchSourceJob`（`trigger: "manual"`），页面轮询 `FetchRun.manual_recent`；
+  测试抓取是同步的 JSON 端点（30 秒超时）；源配置的模式与中文校验在 `Source::Config`。〔P2-② 设计文档〕
 
 ## 认证、会话与请求上下文
 

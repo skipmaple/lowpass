@@ -1,7 +1,9 @@
 class Source < ApplicationRecord
   include Source::Fetching
+  include Source::Presenting
 
   ADAPTERS = %w[ hacker_news github_trending rss ruanyf_weekly ].freeze
+  ADAPTER_LABELS = { "hacker_news" => "Hacker News", "github_trending" => "GitHub Trending", "rss" => "RSS/Atom", "ruanyf_weekly" => "阮一峰周刊" }.freeze
 
   # 栏尾「去源站看完整榜单」的落点（PRD 6.2）。榜单类源有固定地址，RSS 源回到 feed 的站点根。
   HOME_URLS = {
@@ -13,9 +15,17 @@ class Source < ApplicationRecord
   has_many :items, dependent: :restrict_with_exception
   has_many :fetch_runs, dependent: :delete_all
 
-  validates :name, presence: true, length: { maximum: 100 }
-  validates :adapter, inclusion: { in: ADAPTERS }
-  validates :publication, inclusion: { in: %w[ daily weekly ] }
+  # 每条都带 message：这些文案会原样出现在表单里，不能是 Rails 默认的 "can't be blank"
+  validates :name, presence: { message: "必填" }, length: { maximum: 100, message: "最多 100 字" }, uniqueness: { message: "名称已存在" }
+  validates :adapter, inclusion: { in: ADAPTERS, message: "适配器无效" }
+  validates :publication, inclusion: { in: %w[ daily weekly ], message: "刊物无效" }
+  validates :sort_order, numericality: { only_integer: true, message: "必须是整数" }
+  # 分两条才能给 only_integer 与 greater_than_or_equal_to 各自的句子；第二条只在真是整数时跑，
+  # 不然清空这个字段会同时收到「必须是整数」和「不小于 0」两句
+  validates :sort_order, numericality: { greater_than_or_equal_to: 0, message: "不小于 0" }, if: -> { sort_order.is_a?(Integer) }
+  # 配置按适配器的模式归一与校验（R-3.2）；刊物与适配器绑定；RSS 的 feed 同刊物唯一（R-3.8）
+  before_validation :normalize_config
+  validate :publication_allowed, :config_conforms, :feed_url_unique
 
   scope :enabled, -> { where(enabled: true) }
   scope :daily,   -> { where(publication: "daily") }
@@ -26,11 +36,51 @@ class Source < ApplicationRecord
     "Adapters::#{adapter.camelize}".constantize
   end
 
+  def schema
+    Source::Config.for(adapter)
+  end
+
+  def adapter_label
+    ADAPTER_LABELS.fetch(adapter)
+  end
+
   def home_url
     HOME_URLS[adapter] || feed_home_url
   end
 
+  # `:"config.<field>"` 是挂 config 字段错误用的记号，不是真方法：符号类型的错误（比如 feed_url_unique
+  # 的 :duplicate）生成文案时会经 ActiveModel 取一次这个「属性」当前的值，得翻到 config 哈希里，
+  # 不能真的按这个名字调方法（会是 NoMethodError）。
+  def read_attribute_for_validation(key)
+    key.to_s.start_with?("config.") ? config.to_h[key.to_s.delete_prefix("config.")] : super
+  end
+
   private
+    def normalize_config
+      self.config = {} if config.nil?
+      self.config = schema.normalize(config, publication) if ADAPTERS.include?(adapter) && publication.present?
+    end
+
+    def publication_allowed
+      if ADAPTERS.include?(adapter) && publication.present? && !schema.publications.include?(publication)
+        errors.add(:publication, "这个适配器只能是#{schema.publications.first == "daily" ? "日刊" : "周刊"}")
+      end
+    end
+
+    def config_conforms
+      schema.validate(config, publication, errors) if ADAPTERS.include?(adapter) && schema.publications.include?(publication.to_s)
+    end
+
+    def feed_url_unique
+      return unless adapter == "rss" && config.is_a?(Hash)
+
+      url = config["feed_url"]
+      if url.present? && Source.where(adapter: "rss", publication: publication).where("config->>'feed_url' = ?", url).where.not(id: id).exists?
+        # :duplicate 这个类型给 Source::TestFetch 用来识别「这是重复，不是格式错」，不看这句中文文案
+        errors.add(:"config.feed_url", :duplicate, message: "这个 feed 地址已经在同一刊物里")
+      end
+    end
+
     # feed 地址不是 http(s)（配错了、写成裸域名、写成 file:）就没有栏尾外链可去：
     # 返回 nil，页面把整条外链收掉，而不是渲染一个点不开的链接。
     def feed_home_url

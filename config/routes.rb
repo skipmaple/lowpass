@@ -19,6 +19,24 @@ Rails.application.routes.draw do
     resources :clicks, only: :create
   end
 
+  # P2-② 管理后台（PRD 5.3、5.6）：CRUD 资源（STYLE.md），全部继承 Admin::BaseController。
+  # 启停是 enablement 资源（POST 启用 / DELETE 停用）；某期某源重抓、补生成、立即生成今日日刊各是一个资源
+  namespace :admin do
+    root to: redirect("/admin/sources")
+    resources :sources, except: [ :destroy, :show ] do
+      resource :enablement, only: [ :create, :destroy ], module: :sources
+      resources :runs, only: :index, module: :sources
+    end
+    resources :test_fetches, only: :create, controller: "sources/test_fetches"
+    resources :issues, only: :index, param: :period_key, constraints: { period_key: /\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}/ } do
+      resource :refetch, only: :create, module: :issues
+      resource :backfill, only: :create, module: :issues
+    end
+    resource :today_issue, only: :create
+    resources :users, only: :index
+    resource :settings, only: [ :show, :update ]
+  end
+
   # 队列面板（ADR T12）：三个环境都挂在 /admin/jobs，认证由 Admin::BaseController 做（config/application.rb）。
   # /admin 下其余路径先过 admin 检查再落 404（AC-3.5：非 admin 访问 /admin 下任意路径都是 403）；
   # 子项目 ② 的后台页面加在这一段前面。

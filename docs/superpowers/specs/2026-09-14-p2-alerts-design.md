@@ -99,6 +99,7 @@ https://lowpass.example.com/admin/sources/01j…/runs
 ```
 [lowpass] 已恢复 · 源抓取失败
 来源：GitHub Trending
+期：2026-09-08
 https://lowpass.example.com/admin/sources/01j…/runs
 ```
 
@@ -115,13 +116,13 @@ https://lowpass.example.com/admin/sources/01j…/runs
 ### 7.2 Webhook `Alerts::Channels::Webhook`
 
 - 配置：`ALERT_WEBHOOK_URL`（必须 `https://`）、`ALERT_WEBHOOK_FORMAT`（`generic` 默认）。已配置 = URL 非空且合法。
-- 报文：`generic` → `{ "text": <全文>, "title": <首行>, "level": "warning", "kind": "source_failed", "url": <链接> }`（Slack incoming webhook 读 `text`，通用接收端拿全部字段）；`feishu` → `{ "msg_type": "text", "content": { "text": <全文> } }`；`wecom` → `{ "msgtype": "text", "text": { "content": <全文> } }`；`dingtalk` → `{ "msgtype": "text", "text": { "content": <全文> } }`（钉钉的关键词模式下首行含「lowpass」即可通过）。
+- 报文：`generic` → `{ "text": <全文>, "title": <主题（首行 · 来源名）>, "level": "warning", "kind": "source_failed", "url": <链接> }`（Slack incoming webhook 读 `text`，通用接收端拿全部字段）；`feishu` → `{ "msg_type": "text", "content": { "text": <全文> } }`；`wecom` → `{ "msgtype": "text", "text": { "content": <全文> } }`；`dingtalk` → `{ "msgtype": "text", "text": { "content": <全文> } }`（钉钉的关键词模式下首行含「lowpass」即可通过）。
 - 发送：`Net::HTTP`，open / read 各 5 秒，`Content-Type: application/json`，`User-Agent` 复用 `Adapters::Http::USER_AGENT`，不跟重定向，2xx 算成功，其它状态或异常抛 `Alerts::DeliveryError`（含状态码与响应前 200 字）。URL 由运维在环境里配（可信输入），不过 surfguard；但只接受 `https://`，`config/initializers/alerts.rb` 启动时读一次配置、非法就 `warn` 并视为未配置。
 
 ### 7.3 投递 `DeliverAlertJob`
 
-- `perform(event, phase)`，`phase` 是 `"alert"` 或 `"recovery"`。对每个已配置渠道：已在 `event.delivered`（按 `"#{channel}:#{phase}"` 记）就跳过；否则发送，成功就追加进 `delivered` 并（首次）写 `sent_at` / `recovery_sent_at`；失败记 `delivery_error`、`attempts += 1`，最后统一抛 `Alerts::DeliveryError` 让 `retry_on` 接手。
-- `retry_on Alerts::DeliveryError, wait: [ 30.seconds, 120.seconds ], attempts: 3`；耗尽后回调里 `Rails.logger.error` 一行（R-7.3「发送失败写日志，最多重试 3 次」），事件留在库里带 `delivery_error`。
+- `perform(event, phase)`，`phase` 是 `"alert"` 或 `"recovery"`。对每个已配置渠道：已在 `event.delivered`（按 `"#{channel}:#{phase}"` 记）就跳过；否则发送，成功就追加进 `delivered` 并（首次）写 `sent_at` / `recovery_sent_at`；失败记 `delivery_error`、`attempts += 1`，最后统一抛 `Alerts::DeliveryError` 交给下面的重试逻辑接手。
+- 三次重试、等待 `[ 30.seconds, 120.seconds ]`：实现是 `rescue_from Alerts::DeliveryError` 配 `retry_job`，按 `executions`（job 实际执行次数）判断是否到最后一次，不用 `retry_on` 的 `attempts:`——那是按异常类名单独累计的 `exception_executions`，经反序列化才与 `executions` 对齐，不严格等于这里要的执行次数。耗尽后回调里 `Rails.logger.error` 一行（R-7.3「发送失败写日志，最多重试 3 次」），事件留在库里带 `delivery_error`。
 - 没有任何渠道配置：不入队，事件 `delivery_error = "未配置渠道"`，仍然记录（去重与恢复照常，渠道配好后不会补发历史）。
 
 ## 8. 设置页 `/admin/settings`「告警」一节（PRD 5.6 那行的「告警渠道状态」「发送测试告警」）

@@ -72,14 +72,14 @@ Reasons::Generator.generate!(issue, only_missing: true)   # 整期；后台「�
 Reasons::Generator.generate_item!(item)                    # 单条（后台「重生成」单条）
 ```
 
-- 前置：`Reasons::Provider.configured?`，否则直接返回（读者页不提示，后台显示「未配置模型供应商」）；`Reasons::Budget.exhausted?` 则返回并 `Alerts.reasons_missing!(issue, 缺理由数)`（摘要「本月费用已达上限」）。
-- 跨天重复（R-1.11）：同 `url_hash` 在更早的日刊里已有理由的条目，直接复制理由与标签（不调模型，`reason_generated_at` 记现在）。
+- 前置：`Reasons.ready?`（供应商配好 + 画像里有启用的领域，C12），否则直接返回（读者页不提示，后台显示「未配置模型供应商」或「兴趣画像为空」）；`Reasons::Budget.exhausted?` 则返回并 `Alerts.reasons_missing!(issue, 缺理由数)`（摘要「本月费用已达上限」）。
+- 跨天重复（R-1.11）：补缺时，同 `url_hash` 在更早的日刊里已有理由的条目直接复制理由与标签（不调模型，`reason_generated_at` 记现在）；`only_missing: false` 一律重新生成（C10）。
 - 每条：`Reasons::Provider.chat(messages)` → `Reasons::Parser.parse(text)` → 校验 → 写 `items`（`update_columns` 不走校验回调即可，理由是发布后唯一可补写字段，R-9.7）；每次调用记一条 `model_calls`。
 - 一期跑完：`Alerts.recover!(kind: "reasons_missing")` 当该期没有缺理由的条目。
 
 ### 4.4 `Reasons::Provider`（接入层）
 
-`Net::HTTP` POST `#{base_url}/chat/completions`，`open_timeout 5`、`read_timeout 20`（R-9.8 单条 20 秒），响应体上限 64 KB，`User-Agent` 复用 `Adapters::Http::USER_AGENT`。地址必须 https，`localhost` / `127.0.0.1` 允许 http（本地 Ollama）。429 / 5xx / 超时 → `Reasons::Provider::Error`（单条重试范围内）；401 / 403 → 同样失败但摘要写「密钥被拒绝」，本期不再继续（其余条目都会一样失败）。
+`Net::HTTP` POST `#{base_url}/chat/completions`，`open_timeout 5`、`read_timeout 20`（R-9.8 单条 20 秒），响应体边读边截、上限 64 KB（超了当场抛，不整段读进内存；同 `Adapters::Http#read_capped`），`User-Agent` 复用 `Adapters::Http::USER_AGENT`。地址必须 https，`localhost` / `127.0.0.1` 允许 http（本地 Ollama），发请求前再校验一次。5xx / 超时 → `Reasons::Provider::Error`（单条重试范围内）；401 / 403 → `Rejected`，摘要写「密钥被拒绝」，本期不再继续（其余条目都会一样失败）；429 → `Limited`，同样不重试、本期停止（C11）。
 
 ### 4.5 `GenerateReasonsJob`
 
@@ -91,7 +91,7 @@ Reasons::Generator.generate_item!(item)                    # 单条（后台「�
 
 ## 5. 告警（复用③）
 
-- 缺理由：`Scheduler#check_reasons_if_due`（每个 tick）：当天已发布超过 30 分钟、供应商已配置、仍有条目 `reason IS NULL` 的日刊 → `Alerts.reasons_missing!(issue, count)`（按期按日去重，③ 已定义 kind）。
+- 缺理由：`Scheduler#check_reasons_if_due`（每个 tick）：当天已发布超过 30 分钟、`Reasons.ready?`、仍有条目 `reason IS NULL` 的日刊 → `Alerts.reasons_missing!(issue, count)`（按期按日去重，③ 已定义 kind）。
 - 上限：`Budget.exhausted?` 首次拦下生成时 → 同一 kind，摘要「本月费用已达上限」，范围按期。
 - 恢复：整期补齐后 `recover!(kind: "reasons_missing")`。
 
@@ -101,11 +101,11 @@ Reasons::Generator.generate_item!(item)                    # 单条（后台「�
 
 「兴趣画像」：表格（名称 / 关键词 / 排序 / 启用），每行可改（`PATCH /admin/interest_areas/:id`）、可删（`DELETE`，有条目用着该标签也允许删，标签是文本快照）、末尾一行新增（`POST /admin/interest_areas`）；校验：名称必填 ≤ 20 字、唯一（「名称已存在」）、关键词 ≤ 200 字。
 
-「推荐理由」：表单（接口地址、模型名、输入单价、输出单价、月费用上限；`PATCH /admin/settings` 的 `model` 组）+ 只读行「密钥：已配置 / 未配置（MODEL_API_KEY）」+ 用量行「本月 N 次 · 费用 X / 上限 Y」「今日 N 次」+ 一句「未配置模型供应商」当三样缺一。
+「推荐理由」：表单（接口地址、模型名、输入单价、输出单价、月费用上限；`PATCH /admin/settings` 的 `model` 组）+ 只读行「密钥」（值是「已配置 / 未配置」，来自 `MODEL_API_KEY`）+ 用量行「本月 N 次 · 费用 X / 上限 Y」「今日 N 次」+ 一句「未配置模型供应商」当三样缺一。
 
 ### 6.2 期页 `/admin/issues`
 
-日刊行加一格「理由」：`已生成 · 缺 N 条 · 未配置`（缺 N 条时反白小签）；操作加「重生成理由」（`POST /admin/issues/:period_key/reasons`，整期覆盖，入队后 flash 「已开始重生成理由」，进行中按③的轮询装置禁用）。
+日刊行加一格「理由」：`已生成 · 缺 N 条 · 未配置模型供应商 · 兴趣画像为空`（缺 N 条时反白小签，其余是文楷灰字；行里还带 `ready` 布尔值，「重生成理由」的禁用看它不看文案）；操作加「重生成理由」（`POST /admin/issues/:period_key/reasons`，整期覆盖，入队后 flash 「已开始重生成理由」，进行中按③的轮询装置禁用）。
 
 ### 6.3 读者页（管理员）
 
@@ -143,14 +143,14 @@ end
 - 系统测试：配置供应商（WebMock 假端点）→ 期页「重生成理由」→ `perform_enqueued_jobs` → 读者页看到理由与标签。
 - 全部不碰网络。
 
-## 10. 文案（附录 B，v0.3.12）
+## 10. 文案（附录 B，v0.3.13）
 
 | 位置 | 文案 |
 |---|---|
-| 推荐理由状态 | 已生成 · 缺 N 条 · 未配置模型供应商 · 本月 N 次 · 费用 X / 上限 Y · 今日 N 次 · 密钥：已配置 · 未配置 |
-| 重生成 | 已开始重生成理由 · 已重生成 · 重生成失败：{reason} · 本月费用已达上限，已停止生成 |
+| 推荐理由状态 | 已生成 · 缺 N 条 · 未配置模型供应商 · 兴趣画像为空 · 本月 N 次 · 费用 X / 上限 Y · 今日 N 次 · 密钥 · 已配置 · 未配置 |
+| 重生成 | 已开始重生成理由 · 已重生成 · 重生成失败：{reason} · 本月费用已达上限，已停止生成 · 兴趣画像为空 · 未配置模型供应商 |
 | 兴趣画像校验 | 名称已存在 · 最多 20 字 · 最多 200 字 · 必填 |
-| 模型配置校验 | 地址必须是 https · 不小于 0 · 必填 |
+| 模型配置校验 | 地址必须是 https · 不小于 0 · 必填 · 最多 255 字 |
 
 ## 11. 运维
 
@@ -171,7 +171,9 @@ end
 | C7 | 缺理由告警由 tick 检查发布 30 分钟后的当天日刊 | 5.7 的表；不另起 job |
 | C8 | 上限为 0 视为不限 | 默认不拦，让首次配置能跑起来 |
 | C9 | 理由写入用 `update!`（走校验与 `after_save_commit`） | R-9.7 唯一可补写字段；`Searchable` 的注释本来就把「推荐理由补写」列为单条改动经回调同步索引的情形，索引本身不含 reason，重建一次无害 |
-| C10 | 跨天重复直接复制上一期理由 | R-1.11 与 5.9「沿用前一日的理由」 |
+| C10 | 跨天重复直接复制上一期理由，但只在补缺时沿用（`only_missing: false` 一律重新生成） | R-1.11 与 5.9「沿用前一日的理由」；整期重生成要能覆盖沿用来的那几条（R-9.7） |
+| C11 | 429 与 401 / 403 一样不重试，本期停止 | 仓库不变量「429 / 403 不追加重试」；重试只会把上游的限流窗口拉得更长 |
+| C12 | 画像里没有启用的领域就不生成（`Reasons.ready?`） | 画像为空时每条都会判「缺领域名」，三次调用三次白花钱；现有库里画像是空的（`db:prepare` 只给新建的库播种） |
 
 ## 13. 实现顺序
 

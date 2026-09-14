@@ -102,4 +102,10 @@ class AlertsTest < ActiveSupport::TestCase
       assert_equal 2, AlertEvent.count
     end
   end
+
+  test "reasons_missing! 可以换摘要" do
+    event = Alerts.reasons_missing!(issues(:daily_0908), 2, summary: "本月费用已达上限，缺理由 2 条")
+    assert_equal "本月费用已达上限，缺理由 2 条", event.summary
+    assert_equal "理由缺失 3 条", Alerts.reasons_missing!(issues(:weekly_w36), 3).summary
+  end
 end

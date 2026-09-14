@@ -332,6 +332,7 @@ Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Enviro
 名字与 `.kamal/secrets` 一致，外加两项：`RAILS_MASTER_KEY`（job 把它写成 `config/master.key`）与 `SSH_PRIVATE_KEY`
 （专用 deploy key，公钥在服务器 root 的 `authorized_keys`，注释 `lowpass-ci-deploy`）。
 镜像在 runner 上构建（`deploy.yml` 看 `KAMAL_BUILD_LOCAL` 这个变量），层缓存在 GitHub Actions cache，服务器只拉镜像。
+服务器的 ed25519 host key 钉在 `.github/known_hosts`（本机 `ssh-keyscan -t ed25519 <DEPLOY_HOST>` 的输出），服务器重装或换 key 时更新它。
 
 - 填或改 secrets（值不进仓库，本机的 env 文件整份导入）：
   `gh secret set -f ~/.config/lowpass/deploy.env --env production`（GitHub 拒绝以 `GITHUB_` 开头的 secret 名，

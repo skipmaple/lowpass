@@ -26,9 +26,7 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment:
-      name: production
-      url: https://lowpass.tech
+    environment: production
     env:
       # 让 config/deploy.yml 走本地构建（runner 与服务器同为 x86_64）并打开 GitHub Actions 层缓存，
       # 而不是本机那条 ssh 到服务器远程构建的路。
@@ -58,8 +56,12 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Trust the server's host key
-        run: ssh-keyscan -H <DEPLOY_HOST> >> ~/.ssh/known_hosts
+      # 服务器的 ed25519 host key 钉在仓库里（.github/known_hosts，明文单条），不在部署时 ssh-keyscan：
+      # net-ssh 认不全 ssh-keyscan -H 写出的哈希多类型条目，而且部署时扫描等于盲信。服务器换 host key 时更新这个文件。
+      - name: Trust the server.s host key
+        run: |
+          mkdir -p ~/.ssh
+          cat .github/known_hosts >> ~/.ssh/known_hosts
 
       # .kamal/secrets 用 $(cat config/master.key) 读主密钥；这个文件在 .gitignore 里，CI 从 secret 写出来。
       - name: Write the Rails master key

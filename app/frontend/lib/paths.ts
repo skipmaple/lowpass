@@ -74,3 +74,9 @@ export const ADMIN_TODAY_ISSUE = '/admin/today_issue'
 export const ADMIN_USERS = '/admin/users'
 export const ADMIN_SETTINGS = '/admin/settings'
 export const ADMIN_TEST_ALERT = '/admin/test_alert'
+
+// ④ 推荐理由：兴趣画像 CRUD（namespace :admin 的 interest_areas）、期与条目各自的重生成理由端点
+export const ADMIN_INTEREST_AREAS = '/admin/interest_areas'
+export const adminInterestAreaHref = (id: string) => `${ADMIN_INTEREST_AREAS}/${id}`
+export const adminIssueReasonsHref = (periodKey: string) => `${ADMIN_ISSUES}/${periodKey}/reasons`
+export const adminItemReasonHref = (id: string) => `/admin/items/${id}/reason`

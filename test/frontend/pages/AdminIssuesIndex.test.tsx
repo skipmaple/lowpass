@@ -96,4 +96,21 @@ describe('Admin/Issues/Index', () => {
     const row = screen.getAllByRole('row')[2]
     expect(within(row).getByRole('button', { name: '进行中' })).toBeDisabled()
   })
+
+  it('日刊行的理由格与整期重生成', async () => {
+    show({ rows: [adminIssueRow({ reasons: { label: '缺 3 条', missing: 3 } }), adminIssueRow({ period_key: '2026-09-07', reasons: { label: '已生成', missing: 0 } })] })
+    const rows = screen.getAllByRole('row')
+    expect(within(rows[1]).getByText('缺 3 条')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('已生成')).toBeInTheDocument()
+    await userEvent.click(within(rows[1]).getByRole('button', { name: '重生成理由' }))
+    expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/reasons')
+  })
+
+  it('未配置模型供应商时理由格写明、按钮禁用；周刊行没有理由格', () => {
+    show({ rows: [adminIssueRow({ reasons: { label: '未配置模型供应商', missing: 10 } }), adminIssueRow({ kind: 'weekly', period_key: '2026-W36', reasons: null })] })
+    const rows = screen.getAllByRole('row')
+    expect(within(rows[1]).getByText('未配置模型供应商')).toBeInTheDocument()
+    expect(within(rows[1]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
+    expect(within(rows[2]).queryByRole('button', { name: '重生成理由' })).toBeNull()
+  })
 })

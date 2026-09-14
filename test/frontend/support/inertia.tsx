@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type * as React from 'react'
 import { vi } from 'vitest'
 
@@ -18,8 +19,8 @@ export function usePage<T = PageProps>() {
   return { props: pageProps as T, url: window.location.pathname + window.location.search, component: 'Test', version: null }
 }
 
-// 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」
-export const router = { visit: vi.fn(), get: vi.fn(), reload: vi.fn(), delete: vi.fn() }
+// 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」；后台表单提交也走 spy（post/patch）
+export const router = { visit: vi.fn(), get: vi.fn(), reload: vi.fn(), delete: vi.fn(), post: vi.fn(), patch: vi.fn() }
 
 export function Link({ href, children, ...rest }: React.ComponentProps<'a'>) {
   return (
@@ -27,4 +28,20 @@ export function Link({ href, children, ...rest }: React.ComponentProps<'a'>) {
       {children}
     </a>
   )
+}
+
+// useForm 的最小替身：data 是本地状态，errors 读页面 props 里的 errors（每字段第一条），提交是 spy
+export const formPost = vi.fn()
+export const formPatch = vi.fn()
+
+export function useForm<T extends Record<string, unknown>>(initial: T) {
+  const [data, setState] = useState<T>(initial)
+  const raw = (pageProps.errors as Record<string, string[] | string> | undefined) ?? {}
+  const errors: Record<string, string> = {}
+  for (const [key, value] of Object.entries(raw)) errors[key] = Array.isArray(value) ? (value[0] ?? '') : value
+  function setData(key: keyof T | Partial<T>, value?: T[keyof T]) {
+    if (typeof key === 'object') setState((prev) => ({ ...prev, ...key }))
+    else setState((prev) => ({ ...prev, [key]: value }))
+  }
+  return { data, setData, post: formPost, patch: formPatch, processing: false, errors }
 }

@@ -32,4 +32,8 @@ class Reasons::BudgetTest < ActiveSupport::TestCase
       assert_equal 1, Reasons::Budget.today_calls
     end
   end
+
+  test "没有调用记录时，月费用仍是 BigDecimal（sum 在空表上回落到 Integer 0）" do
+    assert_instance_of BigDecimal, Reasons::Budget.month_cost
+  end
 end

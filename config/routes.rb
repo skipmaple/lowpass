@@ -31,10 +31,15 @@ Rails.application.routes.draw do
     resources :issues, only: :index, param: :period_key, constraints: { period_key: /\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}/ } do
       resource :refetch, only: :create, module: :issues
       resource :backfill, only: :create, module: :issues
+      resource :reasons, only: :create, module: :issues
+    end
+    resources :items, only: [] do
+      resource :reason, only: :create, module: :items
     end
     resource :today_issue, only: :create
     resources :users, only: :index
     resource :settings, only: [ :show, :update ]
+    resources :interest_areas, only: [ :create, :update, :destroy ]
     resource :test_alert, only: :create
   end
 

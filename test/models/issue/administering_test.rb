@@ -39,6 +39,16 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     assert_equal "06:12 / 06:42", row[:time_label]
   end
 
+  test "日刊行带理由状态：未配置 / 缺 N 条 / 已生成" do
+    row = -> { Issue.admin_rows(kind: "daily", month: "2026-09", now: Time.find_zone("Asia/Shanghai").parse("2026-09-10 12:00"))[:rows].find { |r| r[:period_key] == "2026-09-08" } }
+    assert_equal({ label: "未配置模型供应商", missing: 1 }, row.call[:reasons])
+    with_model_provider do
+      assert_equal({ label: "缺 1 条", missing: 1 }, row.call[:reasons])
+      items(:hn_one).update!(reason: "有了", interest_tag: "AI / LLM")
+      assert_equal({ label: "已生成", missing: 0 }, row.call[:reasons])
+    end
+  end
+
   # 月份只在「最早一期所在月 到 本月」之间有页（与日刊归档一致），越界返回 nil 让控制器 404
   test "翻月与越界" do
     now = Time.utc(2026, 9, 9, 4)

@@ -46,6 +46,11 @@ class Source::PresentingTest < ActiveSupport::TestCase
     assert_equal %w[ daily weekly ], options.find { |o| o[:key] == "rss" }[:publications]
   end
 
+  # 新建表单的名称必须是 ""：React 受控输入框拿到 null 会当成非受控，再填就不受控了
+  test "form_props 的名称是空串，不是 nil" do
+    assert_equal "", Source.new(adapter: "rss", publication: "daily", sort_order: 1).form_props[:name]
+  end
+
   test "run_rows 最近 50 条、按状态筛选" do
     60.times { |i| sources(:hn).fetch_runs.create!(trigger: "scheduled", attempt: 1, status: i.even? ? "succeeded" : "failed", started_at: i.hours.ago, item_count: 10, error_summary: (i.odd? ? "boom" : nil)) }
 

@@ -11,11 +11,11 @@ import { useToasts } from '@/components/Toast'
 import { testFetch } from '@/lib/admin'
 import { ADMIN_SOURCES_NEW, adminSourceEditHref, adminSourceEnablementHref, adminSourceRunsHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
-import type { AdminSourceRow, ManualRun } from '@/types/lowpass'
+import type { AdminSourceRow } from '@/types/lowpass'
 
 // 信息源列表（R-3.1，画布 admin_sources()）：排序、名称、适配器、刊物、状态、健康度、上次抓取、下次计划、操作。
 // 停用走附录 B 的确认对话框；列表里的「测试抓取」只弹一条提示（设计 A3），预览在表单页。
-export type AdminSourcesIndexProps = { sources: AdminSourceRow[]; summary: string; active_runs: ManualRun[] }
+export type AdminSourcesIndexProps = { sources: AdminSourceRow[]; summary: string }
 
 const HEADERS = ['排序', '名称', '适配器', '刊物', '状态', '健康度', '上次抓取', '下次计划', '操作']
 const WIDTHS = ['40px', '170px', '120px', '60px', '44px', '110px', 'minmax(0, 1fr)', '120px', '200px']

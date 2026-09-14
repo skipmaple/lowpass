@@ -11,7 +11,7 @@ import { adminSourceRow, testFetchResult } from '../support/props'
 // 信息源列表（R-3.1，画布 admin_sources()）：表、汇总、新建按钮、停用对话框、列表里的测试抓取只弹提示
 
 function show(rows = [adminSourceRow(), adminSourceRow({ id: 'src-ry', sort_order: 1, name: '阮一峰科技爱好者周刊', adapter: 'ruanyf_weekly', adapter_label: '阮一峰周刊', publication: 'weekly', health: 'consecutive_failures', health_label: '连续失败', last_fetch_label: '9月9日 09:00 · 失败 · GitHub API 403', next_run_label: '9月10日 09:00' })]) {
-  const props = { sources: rows, summary: '2 个来源 · 1 个日刊 · 1 个周刊', active_runs: [], daily_time: '06:00', latest_weekly_key: null }
+  const props = { sources: rows, summary: '2 个来源 · 1 个日刊 · 1 个周刊', daily_time: '06:00', latest_weekly_key: null }
   setPageProps({ ...props, flash: {}, errors: {} })
   return render(<Index {...props} />)
 }

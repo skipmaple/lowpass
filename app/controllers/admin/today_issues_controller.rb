@@ -13,12 +13,12 @@ class Admin::TodayIssuesController < Admin::BaseController
     # 二次确认在页面上；全部来源都还在跑时一条也入不了队，说清楚而不是报「正在重抓 0 个来源」
     def refetch(issue)
       if params[:confirm] != "1"
-        redirect_to admin_issues_path, alert: "今日日刊已存在"
+        redirect_back_or_to admin_issues_path, alert: "今日日刊已存在"
       elsif (count = refetch_all(issue)).zero?
-        redirect_to admin_issues_path, alert: "没有可重抓的来源"
+        redirect_back_or_to admin_issues_path, alert: "没有可重抓的来源"
       else
         Audit.record("issue.generate_today", "Issue##{issue.period_key}", { refetched: count })
-        redirect_to admin_issues_path, notice: "正在重抓 #{count} 个来源…"
+        redirect_back_or_to admin_issues_path, notice: "正在重抓 #{count} 个来源…"
       end
     end
 
@@ -30,7 +30,7 @@ class Admin::TodayIssuesController < Admin::BaseController
     def generate(key)
       Issue.generate_daily!(key, late: late_now?, trigger: "manual")
       Audit.record("issue.generate_today", "Issue##{key}")
-      redirect_to admin_issues_path, notice: "已开始生成今日日刊"
+      redirect_back_or_to admin_issues_path, notice: "已开始生成今日日刊"
     end
 
     def late_now?

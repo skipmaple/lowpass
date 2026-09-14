@@ -391,6 +391,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 .admin-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 28px 0 16px 0; }
 .admin-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .admin-actions .link-button { min-height: 44px; }
+/* 同一格里「补生成」是唯一的反白按钮：跟旁边的文字按钮一样 44px，行高才不会因为哪种按钮而跳 */
+.admin-actions .btn-primary { min-height: 44px; }
 
 /* 表格：grid，表头文楷 12 次墨 + 1px 墨线，行间 35% 线；外层横向滚 */
 .table-wrap { overflow-x: auto; }

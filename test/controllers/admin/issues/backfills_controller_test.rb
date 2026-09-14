@@ -47,6 +47,17 @@ class Admin::Issues::BackfillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "已开始生成今日日刊", flash[:notice]
   end
 
+  # 缺期几乎总在过去的月份页上：补生成之后该回那一页，不是弹回本月
+  test "回到来路" do
+    Issue.expects(:backfill_daily!).with("2026-08-20").returns(Issue.new(period_key: "2026-08-20"))
+
+    travel_to Time.utc(2026, 9, 9, 4) do
+      post admin_issue_backfill_path("2026-08-20"), headers: { "Referer" => admin_issues_path(month: "2026-08") }
+    end
+
+    assert_redirected_to admin_issues_path(month: "2026-08")
+  end
+
   test "周刊键 404" do
     post admin_issue_backfill_path("2026-W40")
 

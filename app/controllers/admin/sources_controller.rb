@@ -6,8 +6,7 @@ class Admin::SourcesController < Admin::BaseController
     rows = Source.admin_rows
     render inertia: "Admin/Sources/Index", props: {
       sources: rows,
-      summary: "#{rows.size} 个来源 · #{rows.count { |r| r[:publication] == "daily" }} 个日刊 · #{rows.count { |r| r[:publication] == "weekly" }} 个周刊",
-      active_runs: FetchRun.manual_run_props(FetchRun.manual_recent)[:active]
+      summary: "#{rows.size} 个来源 · #{rows.count { |r| r[:publication] == "daily" }} 个日刊 · #{rows.count { |r| r[:publication] == "weekly" }} 个周刊"
     }
   end
 

@@ -44,14 +44,14 @@ jobs:
           bundler-cache: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # buildx 的 type=gha 缓存要拿到 runner 的 ACTIONS_RUNTIME_TOKEN / ACTIONS_CACHE_URL，这个 action 负责暴露它们。
       - name: Expose GitHub Actions cache to buildx
-        uses: crazy-max/ghaction-github-runtime@v3
+        uses: crazy-max/ghaction-github-runtime@v4
 
       - name: Start ssh-agent with the deploy key
-        uses: webfactory/ssh-agent@v0.9.1
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 

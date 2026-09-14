@@ -79,7 +79,7 @@ describe('Masthead 搜索与账户', () => {
     expect(within(menu).getByRole('menuitem', { name: '登出' })).toBeInTheDocument()
   })
 
-  it('admin 多一项管理，指向 /admin/jobs', async () => {
+  it('admin 多一项管理，指向 /admin/sources', async () => {
     setPageProps({ current_user: currentUser({ admin: true }) })
     render(<Masthead />)
 

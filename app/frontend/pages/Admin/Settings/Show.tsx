@@ -112,13 +112,16 @@ export default function Show({ schedule, whitelist, alerts, reasons, interest_ar
       </Section>
 
       <Section title="兴趣画像">
-        <table className="admin-table" aria-label="兴趣画像">
-          <thead><tr>{['名称', '关键词', '排序', '启用', '操作'].map((h) => <th key={h} className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)', textAlign: 'left' }}>{h}</th>)}</tr></thead>
-          <tbody>
-            {interest_areas.map((area) => <InterestAreaRow key={area.id} area={area} />)}
-            <InterestAreaRow key="new" />
-          </tbody>
-        </table>
+        <div className="admin-table-wrap">
+          <table className="admin-table" aria-label="兴趣画像">
+            <thead><tr>{['名称', '关键词', '排序', '启用', '操作'].map((h) => <th key={h} className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)', textAlign: 'left' }}>{h}</th>)}</tr></thead>
+            <tbody>
+              {interest_areas.map((area) => <InterestAreaRow key={area.id} area={area} />)}
+              {/* 空白的新增行按行数取 key：新增成功后 props 回来行数就变了，这一行重新挂载，刚提交过的字自己清掉 */}
+              <InterestAreaRow key={`new-${interest_areas.length}`} />
+            </tbody>
+          </table>
+        </div>
       </Section>
 
       <Section title="推荐理由">

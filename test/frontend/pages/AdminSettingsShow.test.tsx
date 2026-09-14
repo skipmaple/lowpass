@@ -18,8 +18,8 @@ type ShowOverrides = {
   interest_areas?: InterestArea[]
 }
 
-function show(overrides: ShowOverrides = {}) {
-  const props = {
+function showProps(overrides: ShowOverrides = {}) {
+  return {
     schedule: { daily_time: '06:00', weekly_time: '09:00' },
     whitelist: overrides.whitelist ?? ['drew@example.com'],
     alerts: overrides.alerts ?? { email: { configured: false, label: '未配置' }, webhook: { configured: false, label: '未配置' } },
@@ -28,6 +28,10 @@ function show(overrides: ShowOverrides = {}) {
     daily_time: '06:00',
     latest_weekly_key: null,
   }
+}
+
+function show(overrides: ShowOverrides = {}) {
+  const props = showProps(overrides)
   setPageProps({ ...props, flash: {}, errors: overrides.errors ?? {} })
   return render(<Show {...props} />)
 }
@@ -106,6 +110,27 @@ describe('Admin/Settings/Show', () => {
     await userEvent.type(within(last).getByLabelText('名称'), 'Rust')
     await userEvent.click(within(last).getByRole('button', { name: '新增' }))
     expect(router.post).toHaveBeenCalledWith('/admin/interest_areas', { interest_area: { name: 'Rust', keywords: '', sort_order: 0, enabled: true } })
+  })
+
+  it('兴趣画像：新增成功后空白行清空', async () => {
+    const areas = [interestArea(), interestArea({ id: 'ia-2', name: '前端开发', keywords: 'React', sort_order: 2, enabled: false })]
+    const { rerender } = show({ interest_areas: areas })
+    const rows = () => within(screen.getByRole('table', { name: '兴趣画像' })).getAllByRole('row')
+
+    await userEvent.type(within(rows()[3]).getByLabelText('名称'), 'Rust')
+    expect(within(rows()[3]).getByLabelText('名称')).toHaveValue('Rust')
+
+    // 新增成功后 Inertia 把多一个领域的 props 送回来：空白行要重新挂一遍，刚打的字不能留在里面
+    const grown = [...areas, interestArea({ id: 'ia-3', name: 'Rust', keywords: '所有权', sort_order: 3 })]
+    rerender(<Show {...showProps({ interest_areas: grown })} />)
+    expect(rows()).toHaveLength(5)
+    expect(within(rows()[4]).getByLabelText('名称')).toHaveValue('')
+  })
+
+  it('兴趣画像表在自己的容器里横向滚', () => {
+    const { container } = show()
+
+    expect(container.querySelector('.admin-table-wrap')).toContainElement(screen.getByRole('table', { name: '兴趣画像' }))
   })
 
   it('推荐理由：未配置时一句说明与密钥状态；配置表单 PATCH model 组', async () => {

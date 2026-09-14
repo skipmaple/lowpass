@@ -436,7 +436,9 @@ a.t:hover { text-decoration-color: var(--ink); }
 .admin-section-title { margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--ink); font-family: var(--font-cjk); font-weight: 400; font-size: var(--fs-22); }
 .admin-section-body { padding-top: 20px; display: flex; flex-direction: column; gap: 14px; }
 
-/* 兴趣画像表（④，设置页）：1px 墨线表头，行间 35% 墨线，td 上下各 8px；单元格字体角色由调用方决定 */
+/* 兴趣画像表（④，设置页）：1px 墨线表头，行间 35% 墨线，td 上下各 8px；单元格字体角色由调用方决定。
+   表里有五列输入框，窄屏排不下：宽内容在自己的容器里横向滚，页面本身不出现横向滚动条 */
+.admin-table-wrap { overflow-x: auto; }
 .admin-table { width: 100%; border-collapse: collapse; }
 .admin-table th { padding: 0 0 8px 0; border-bottom: 1px solid var(--ink); }
 .admin-table td { padding: 8px 0; border-bottom: 1px solid var(--rule); }

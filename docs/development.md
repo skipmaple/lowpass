@@ -334,7 +334,8 @@ Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Enviro
 镜像在 runner 上构建（`deploy.yml` 看 `KAMAL_BUILD_LOCAL` 这个变量），层缓存在 GitHub Actions cache，服务器只拉镜像。
 
 - 填或改 secrets（值不进仓库，本机的 env 文件整份导入）：
-  `gh secret set -f ~/.config/lowpass/deploy.env --env production`；
+  `gh secret set -f ~/.config/lowpass/deploy.env --env production`（GitHub 拒绝以 `GITHUB_` 开头的 secret 名，
+  所以 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 两项要另外以 `OAUTH_GITHUB_CLIENT_ID` / `OAUTH_GITHUB_CLIENT_SECRET` 的名字设，工作流里再映射回原名）；
   `gh secret set RAILS_MASTER_KEY --env production < config/master.key`；
   `gh secret set SSH_PRIVATE_KEY --env production < ~/.config/lowpass/deploy_key`。
 - 换 deploy key：本机 `ssh-keygen -t ed25519 -C lowpass-ci-deploy -f ~/.config/lowpass/deploy_key`，

@@ -65,4 +65,23 @@ class Reasons::ProviderTest < ActiveSupport::TestCase
       assert_requested stub
     end
   end
+
+  test "响应体是带非法字节的二进制字符串：错误信息截成合法 UTF-8，不抛 Encoding 错误" do
+    with_model_provider do
+      # Net::HTTP 的响应体是 ASCII-8BIT；拼一段合法 UTF-8 前缀加一个不成对的高位字节，模拟被截断的多字节字符
+      body = "网关错误 ".b + "\xE7".b
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 502, body: body)
+      error = assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }
+      assert error.message.start_with?("模型服务 502:"), error.message
+    end
+  end
+
+  test "响应体标成二进制但内容合法：多字节的理由照常解析" do
+    with_model_provider do
+      body = model_reply(reason: "这是一条用来验证二进制编码标记不影响正常解析的中文推荐理由。", interest_tag: "前端开发").b
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: body)
+      response = Reasons::Provider.chat([])
+      assert_equal({ "reason" => "这是一条用来验证二进制编码标记不影响正常解析的中文推荐理由。", "interest_tag" => "前端开发" }, JSON.parse(response.text))
+    end
+  end
 end

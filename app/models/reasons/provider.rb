@@ -29,7 +29,7 @@ module Reasons::Provider
     end
 
     def chat(messages, temperature: 0.3, max_tokens: 200)
-      uri = URI("#{base_url.chomp('/')}/chat/completions")
+      uri = URI("#{base_url.sub(%r{/+\z}, "")}/chat/completions")
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.is_a?(URI::HTTPS)
       http.open_timeout = OPEN_TIMEOUT
@@ -38,9 +38,9 @@ module Reasons::Provider
       request.body = { model: model_name, messages: messages, temperature: temperature, max_tokens: max_tokens, response_format: { type: "json_object" } }.to_json
       response = http.request(request)
       case response
-      when Net::HTTPSuccess then parse(response.body.to_s[0, MAX_BYTES])
+      when Net::HTTPSuccess then parse(body_text(response, MAX_BYTES))
       when Net::HTTPUnauthorized, Net::HTTPForbidden then raise Rejected, "密钥被拒绝（#{response.code}）"
-      else raise Error, "模型服务 #{response.code}: #{response.body.to_s[0, 200]}"[0, 200]
+      else raise Error, "模型服务 #{response.code}: #{body_text(response, 200)}"[0, 200]
       end
     rescue Timeout::Error => e
       raise TimedOut, "#{e.class}: #{e.message}"[0, 200]
@@ -49,6 +49,11 @@ module Reasons::Provider
     end
 
     private
+      # Net::HTTP 的响应体标成 ASCII-8BIT：按字节裁可能切在多字节字符中间，force_encoding 之后
+      # 就是一段非法 UTF-8——不 scrub 掉，拼进中文错误信息或喂给 blank? 都会直接抛 Encoding::CompatibilityError
+      # / ArgumentError，逃出 Error 体系，Reasons::Generator 的 rescue 就接不住了
+      def body_text(response, limit) = response.body.to_s.b[0, limit].force_encoding(Encoding::UTF_8).scrub
+
       def parse(body)
         json = JSON.parse(body)
         text = json.is_a?(Hash) ? json.dig("choices", 0, "message", "content").to_s : ""

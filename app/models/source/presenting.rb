@@ -15,7 +15,8 @@ module Source::Presenting
         {
           id: source.id, sort_order: source.sort_order, name: source.name, adapter: source.adapter, adapter_label: source.adapter_label,
           publication: source.publication, enabled: source.enabled, health: health, health_label: HEALTH_LABELS.fetch(health),
-          last_fetch_label: source.last_fetch_label, next_run_label: (source.next_run_label(times.fetch(source.publication), now: now) if source.enabled?)
+          last_fetch_label: source.last_fetch_label, next_run_label: (source.next_run_label(times.fetch(source.publication), now: now) if source.enabled?),
+          config: source.config
         }
       end
     end

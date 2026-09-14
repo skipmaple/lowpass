@@ -44,6 +44,7 @@ class SchedulerTest < ActiveSupport::TestCase
   end
 
   test "过了 04:00 清理一次抓取记录、搜索日志与点击" do
+    alert_event(created_at: 91.days.ago)
     FetchRun.expects(:cleanup).once
     Search::Log.expects(:cleanup).once
     Search::Click.expects(:cleanup).once
@@ -51,6 +52,7 @@ class SchedulerTest < ActiveSupport::TestCase
     AuditLog.expects(:cleanup).once
     Scheduler.tick(now: sh("2026-09-10 04:02:10"))
     assert_equal "2026-09-10", Setting.get("cleaned_on")
+    assert_equal 0, AlertEvent.count
   end
 
   test "未到 04:00 不清理" do

@@ -4,10 +4,19 @@ require "test_helper"
 # （非法周期键、越界月份/年份）分别在各自的 controller test 里。
 class ErrorsControllerTest < ActionDispatch::IntegrationTest
   test "站内没有的地址渲染附录 B 的 404 页" do
+    sign_in_as(users(:drew))
+
     get "/no-such-page"
 
     assert_response :not_found
     assert_equal "Errors/NotFound", page_component
+  end
+
+  # 设计 L4：兜底 404 也在登录墙内，没登录先去登录
+  test "没登录时不存在的地址也先去登录" do
+    get "/no-such-page"
+
+    assert_redirected_to login_path(next: "/no-such-page")
   end
 
   # 兜底路由只接 GET（HEAD 由 Rack::Head 折算成 GET）：非 GET 方法没有路由可落，落到

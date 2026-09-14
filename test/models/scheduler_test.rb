@@ -47,6 +47,7 @@ class SchedulerTest < ActiveSupport::TestCase
     FetchRun.expects(:cleanup).once
     Search::Log.expects(:cleanup).once
     Search::Click.expects(:cleanup).once
+    Session.expects(:cleanup).once
     Scheduler.tick(now: sh("2026-09-10 04:02:10"))
     assert_equal "2026-09-10", Setting.get("cleaned_on")
   end
@@ -55,6 +56,7 @@ class SchedulerTest < ActiveSupport::TestCase
     FetchRun.expects(:cleanup).never
     Search::Log.expects(:cleanup).never
     Search::Click.expects(:cleanup).never
+    Session.expects(:cleanup).never
     Scheduler.tick(now: sh("2026-09-10 03:59:00"))
   end
 
@@ -64,6 +66,7 @@ class SchedulerTest < ActiveSupport::TestCase
     FetchRun.expects(:cleanup).never
     Search::Log.expects(:cleanup).never
     Search::Click.expects(:cleanup).never
+    Session.expects(:cleanup).never
     Scheduler.tick(now: sh("2026-09-10 09:30:00"))
   end
 

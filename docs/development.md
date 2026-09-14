@@ -42,14 +42,42 @@ bin/dev
 ## 队列面板
 
 ```
-http://localhost:3000/jobs
+http://localhost:3000/admin/jobs
 ```
 
-`mission_control-jobs` 只在开发环境挂载（见 `config/routes.rb`），能看到 Solid Queue 的队列、
-待执行与失败的任务。这个 gem 默认打开 HTTP Basic Auth 且要求配置凭证，没配就直接拒绝访问；
-P0 不往仓库里提交凭证，所以在 `config/environments/development.rb` 里把
-`config.mission_control.jobs.http_basic_auth_enabled` 关掉了，只在开发环境生效。生产环境挂载
-`/admin/jobs` 与管理员认证是 P2（见 `AGENTS.md`）。
+`mission_control-jobs` 三个环境都挂在 `/admin/jobs`（`config/routes.rb`），只给 admin：认证由 `Admin::BaseController`
+做（登录墙 + 白名单角色，`config/application.rb` 的 `base_controller_class`），引擎自带的 HTTP Basic Auth 关掉了，
+仓库里没有凭证。本地要看它，先用开发登录、邮箱填在 `ADMIN_EMAILS` 里的那个（见下文「登录」）。
+
+## 登录
+
+全站要登录才能读（PRD D1）。development 的登录页多一个「开发登录」表单（OmniAuth 的 `developer` 策略，
+只在 development 挂载）：填显示名与邮箱就进来，不需要任何 OAuth 应用。管理员由白名单推导（R-5.5）：
+
+```
+# .env（仓库已忽略 /.env*；bin/dev 用的 Foreman 会自动读它）
+ADMIN_EMAILS=you@example.com
+```
+
+填在白名单里的邮箱登录后，报头头像菜单多一项「管理」。换一个邮箱登录就是普通成员，方便看两种视图。
+
+想在本地走真实的 Google / GitHub 登录，在两家各建一个 OAuth 应用：Google Cloud Console 的「OAuth 客户端 ID」
+（Web 应用，已授权的重定向 URI 填 `http://localhost:3000/auth/google_oauth2/callback`，同意屏幕范围 `openid email profile`）；
+GitHub Settings → Developer settings → OAuth Apps（Authorization callback URL 填 `http://localhost:3000/auth/github/callback`，
+登录时申请 `user:email`）。把凭证放进 `.env`：
+
+```
+GOOGLE_CLIENT_ID=…
+GOOGLE_CLIENT_SECRET=…
+GITHUB_CLIENT_ID=…
+GITHUB_CLIENT_SECRET=…
+```
+
+哪家的两个变量都配了，登录页就多出那家的按钮（`config/initializers/omniauth.rb`）。会话 30 天滑动、最长 90 天，
+存在 `sessions` 表，cookie 里只有签名过的 token；登出即删。登录回调按 IP 每分钟 10 次（`lib/middleware/auth/callback_rate_limit.rb`）。
+
+测试不连 provider：`OmniAuth.config.test_mode`，`test/test_helpers/authentication_test_helpers.rb` 的 `sign_in_as` 按 fixture 里的
+身份伪造一次登录；系统测试用 `sign_in_with_browser`，真的在浏览器里点登录按钮。
 
 ## 开发数据
 
@@ -150,7 +178,8 @@ mise exec -- ruby script/search_eval queries.txt
 ```
 bin/rails test          # 快速循环，不连网络
 npm test                # 前端单元测试（Vitest，jsdom），npm run test:watch 是监视模式
-bin/rails test:system   # 无头 Chrome 里读一期日刊、搜一条并回到所在期（test/system/reading_test.rb、searching_test.rb）
+bin/rails test:system   # 无头 Chrome 里读一期日刊、搜一条并回到所在期、走一遍登录与登出
+                         # （test/system/reading_test.rb、searching_test.rb、signing_in_test.rb）
 bin/ci                  # 合并门禁，见 config/ci.rb
 ```
 

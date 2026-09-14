@@ -3,7 +3,10 @@ require "test_helper"
 # P0 出口：一期日刊从建期、三个源并行抓取、定稿，一路走到读者在页面上读得到。
 # 只有适配器出网那一层是替身，其余（job、装订、定稿、props）都是正式代码路径。
 class P0ExitTest < ActionDispatch::IntegrationTest
-  setup { Surfguard.stubs(:resolve_public_ips).returns([ "1.1.1.1" ]) }
+  setup do
+    sign_in_as(users(:drew))
+    Surfguard.stubs(:resolve_public_ips).returns([ "1.1.1.1" ])
+  end
 
   test "生成一期日刊，三个源的条目都读得到" do
     Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "A terminal log viewer", url: "https://h.example/1", rank: 1) ])

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
+  setup { sign_in_as(users(:drew)) }
+
   test "首页渲染最新一期" do
     get root_path
     follow_redirect!
@@ -163,6 +165,8 @@ end
 
 # 日刊归档：按月一页，每天一行（PRD 6.2）。上海 2026-09-10 12:00，fixture 最早一期是 2026-09-08。
 class DailyArchiveTest < ActionDispatch::IntegrationTest
+  setup { sign_in_as(users(:drew)) }
+
   NOW = Time.utc(2026, 9, 10, 4)
 
   test "日刊归档按月列出并标缺期" do

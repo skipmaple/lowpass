@@ -5,6 +5,10 @@ require "application_system_test_case"
 class ReadingTest < ApplicationSystemTestCase
   HN_TITLE = "Show HN: A terminal log viewer written in Rust".freeze
 
+  setup do
+    sign_in_with_browser(users(:drew))
+  end
+
   test "读一期日刊并切到另一个来源" do
     visit daily_issue_path("2026-09-08")
 

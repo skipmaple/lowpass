@@ -1,7 +1,7 @@
 # 搜索页（PRD 5.4、设计第 6 节）：参数解析、执行、日志都在模型里，这里只把结果摆成 props。
-# 限流按 IP 每分钟 60 次（R-4.10；P2 有了登录改按用户 id），超限渲染同一页的 limited 态并回 429，不写日志。
+# 限流按用户每分钟 60 次（R-4.10），超限渲染同一页的 limited 态并回 429，不写日志。
 class SearchesController < ApplicationController
-  rate_limit to: 60, within: 1.minute, by: -> { request.remote_ip }, with: :render_limited
+  rate_limit to: 60, within: 1.minute, by: -> { Current.user.id }, with: :render_limited
 
   def show
     query = Search::Query.parse(params)

@@ -65,6 +65,13 @@ gem "nokogiri"
 gem "surfguard", github: "basecamp/surfguard"
 gem "mission_control-jobs"
 
+# 登录（PRD 5.5，设计 docs/superpowers/specs/2026-09-13-p2-login-design.md）：OmniAuth 只做「从 provider 拿到资料」这一步，
+# 匹配、合并、会话都在我们的代码里。omniauth-rails_csrf_protection 让 /auth/:provider 只接受带 CSRF 令牌的 POST。
+gem "omniauth", "~> 2.1"
+gem "omniauth-google-oauth2", "~> 1.2"
+gem "omniauth-github", "~> 2.0"
+gem "omniauth-rails_csrf_protection", "~> 2.0"
+
 group :development, :test do
   gem "webmock"
   gem "mocha"

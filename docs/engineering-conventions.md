@@ -83,7 +83,8 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   测试抓取是同步的 JSON 端点（30 秒超时）；源配置的模式与中文校验在 `Source::Config`。〔P2-② 设计文档〕
 - 告警（P2-③）：触发点只调 `Alerts.<kind>!`，去重（`alert_events.dedup_key`：kind + 范围 + 上海日）、建记录、`DeliverAlertJob` 入队都在门面里，
   门面从不让业务路径失败；渠道只从环境读（`Alerts::Config`），邮件走 SMTP、webhook 走 HTTPS JSON（四种报文形状）；投递按渠道记已送达，重试不重发。〔P2-③ 设计文档〕
-- 推荐理由（P2-④）：`Reasons::Provider` 只做 OpenAI 兼容协议（地址、模型名、单价、上限在 `settings`，密钥只从环境读）；`Reasons::Generator` 一期顺序生成、单条重试 2 次、跨天沿用；`GenerateReasonsJob` 按期限并发；账本 `model_calls` 90 天；缺理由由 tick 检查后走告警。〔P2-④ 设计文档〕
+- 推荐理由（P2-④）：`Reasons::Provider` 只做 OpenAI 兼容协议（地址、模型名、单价、上限在 `settings`，密钥只从环境读）；`Reasons::Generator` 一期顺序生成、单条重试 2 次、补缺时跨天沿用；`GenerateReasonsJob` 按期限并发；账本 `model_calls` 90 天；缺理由由 tick 检查后走告警。
+  模型端点与 feed 地址不同：它是管理员在后台填的可信地址，只要求 https（本机 http 允许，给本地 Ollama），**不经 surfguard**——这是对上面「出站 HTTP」那条不变量的明示例外，理由是它不是从源站内容里读来的地址，且请求体里带着密钥，不能被重定向到别处。401 / 403 与 429 都不追加重试，本期停止（`Rejected` / `Limited`）；没配供应商或画像为空（`Reasons.ready?`）一律不调模型。〔P2-④ 设计文档〕
 
 ## 认证、会话与请求上下文
 

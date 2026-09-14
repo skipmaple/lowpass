@@ -111,6 +111,30 @@ class Source::TestFetchTest < ActiveSupport::TestCase
     assert_not_requested :get, "https://hackaday.com/feed/"
   end
 
+  # adapter_class 是拿原始值 constantize：nil 是 NoMethodError、"foo" 是 NameError、
+  # "base" 是 ScriptError（rescue *FAILURES 接不住），端点会 500。校验不过就不该走到那一步
+  test "适配器不在白名单里：校验失败，不抛异常也不发请求" do
+    [ nil, "foo", "base" ].each do |adapter|
+      result = Source::TestFetch.call(rss_attrs(adapter: adapter))
+
+      assert_not result.ok, "adapter=#{adapter.inspect} 该是校验失败"
+      assert_equal "配置不完整：适配器无效", result.error
+      assert_not_requested :get, "https://hackaday.com/feed/"
+    end
+  end
+
+  # 表单可以送来一个库里没有的 id（旧标签页、手改的请求）：当新建处理，不记录，也不撞 fetch_runs 的外键
+  test "库里没有的 id 当新建：抓得动，不记抓取记录" do
+    newest = RSS::Parser.parse(file_fixture("rss/hackaday.xml").read, false).items.map(&:pubDate).max
+    travel_to newest + 1.hour do
+      assert_no_difference -> { FetchRun.count } do
+        result = Source::TestFetch.call(rss_attrs(id: "03nosuchsourceid000000000"))
+
+        assert result.ok
+      end
+    end
+  end
+
   test "HN 的预览带分数与评论" do
     ids = JSON.parse(file_fixture("hacker_news/topstories.json").read)
     stub_request(:get, "https://hacker-news.firebaseio.com/v0/topstories.json").to_return(body: ids.to_json)

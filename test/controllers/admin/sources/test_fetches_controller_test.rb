@@ -31,6 +31,16 @@ class Admin::Sources::TestFetchesControllerTest < ActionDispatch::IntegrationTes
     assert_equal "test", sources(:hackaday).fetch_runs.sole.trigger
   end
 
+  # 适配器不在白名单里时不能去 constantize 它（nil / "foo" / "base" 分别是 NoMethodError、
+  # NameError、ScriptError）：跟别的校验失败一样，200 加一句话
+  test "适配器不合法也是 200 加一句失败" do
+    post admin_test_fetches_path, params: { adapter: "foo", publication: "daily", name: "x", config: { feed_url: "https://hackaday.com/feed/" } }, as: :json
+
+    assert_response :success
+    assert_equal false, response.parsed_body["ok"]
+    assert_equal "配置不完整：适配器无效", response.parsed_body["error"]
+  end
+
   test "每用户每分钟 10 次" do
     10.times { post admin_test_fetches_path, params: { adapter: "rss", publication: "daily", config: { feed_url: "https://hackaday.com/feed/" } }, as: :json }
     post admin_test_fetches_path, params: { adapter: "rss", publication: "daily", config: { feed_url: "https://hackaday.com/feed/" } }, as: :json

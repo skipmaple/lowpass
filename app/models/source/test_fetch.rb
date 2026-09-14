@@ -19,7 +19,8 @@ class Source::TestFetch
 
   def initialize(attrs)
     attrs = attrs.to_h.symbolize_keys
-    @id = attrs[:id].presence
+    # 库里没有的 id（旧标签页、手改的请求）当新建：不记抓取记录（外键会拒），也不参与 feed 唯一性判断
+    @id = Source.where(id: attrs[:id].presence).pick(:id)
     @source = Source.new(attrs.slice(:name, :adapter, :publication, :config))
     @source.id = @id if @id
   end
@@ -43,12 +44,13 @@ class Source::TestFetch
       @adapter ||= source.adapter_class.new(source)
     end
 
-    # 只看配置与刊物的错误：名称重复不妨碍试抓；feed 地址跟别的源重复（:duplicate）是保存时的事，表单在保存时报，试抓只答「能不能抓」
+    # 只看适配器、刊物与配置的错误：名称重复不妨碍试抓；feed 地址跟别的源重复（:duplicate）是保存时的事，
+    # 表单在保存时报，试抓只答「能不能抓」。适配器必须先过这一关——白名单外的值不能拿去 adapter_class
     def config_problems
       source.valid?
       source.errors.filter_map do |error|
         name = error.attribute.to_s.delete_prefix("config.")
-        if error.attribute == :publication
+        if error.attribute.in?(%i[ adapter publication ])
           error.message
         elsif error.attribute.to_s.start_with?("config.") && error.type != :duplicate
           "#{Source::Config::LABELS.fetch(name, name)}#{error.message}"

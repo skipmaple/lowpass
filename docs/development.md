@@ -288,3 +288,38 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 
 `bin/setup` 把 `core.hooksPath` 设为 `.githooks`；`.githooks/pre-commit` 对本次提交改动的 `.rb`
 文件跑 `bin/rubocop --force-exclusion`，未改动 Ruby 文件时直接放行。
+
+## 部署
+
+底座（ADR T4、T5）：阿里云轻量（香港，x86_64，`43.103.50.22`）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 16 accessory；
+镜像在 Docker Hub `skipmaple/lowpass`；kamal-proxy 做 Let's Encrypt，域名 `lowpass.tech`。同一台机器上还有另一个 Kamal 应用与 lowpass
+共用 kamal-proxy，按域名分流；它的库占着宿主机的 `127.0.0.1:5432`，所以 lowpass 的库不发布端口，应用走 docker 网络里的 `lowpass-db`。
+配置在 `config/deploy.yml`，变量名在 `.kamal/secrets`，值只从跑 kamal 的那个 shell 读。镜像在服务器上构建（`builder.remote`），
+本机不需要模拟 x86。
+
+### 首次部署
+
+1. Docker Hub：Account settings → Personal access tokens，建一个 Read & Write 的令牌，作 `KAMAL_REGISTRY_PASSWORD`。
+2. 数据库口令：`openssl rand -hex 24`，作 `POSTGRES_PASSWORD`（应用侧的 `PGPASSWORD` 取同一个值，`.kamal/secrets` 已写好）。
+3. 变量放进仓库外的一个文件（例如 `~/.config/lowpass/deploy.env`），跑 kamal 前 `set -a; source ~/.config/lowpass/deploy.env; set +a`：
+   `KAMAL_REGISTRY_PASSWORD`、`POSTGRES_PASSWORD`、`BASE_URL=https://lowpass.tech`、`GOOGLE_CLIENT_ID/SECRET`、`GITHUB_CLIENT_ID/SECRET`、
+   `ADMIN_EMAILS`，以及「告警」「推荐理由」两节列的变量；没用到的留空。
+4. Cloudflare：SSL/TLS 加密模式设「完全」；首次签证书前关掉「始终使用 HTTPS」，签完再开。橙云代理开着也行，
+   Let's Encrypt 的 HTTP-01 校验会经 Cloudflare 转到源站的 80。
+5. `bundle exec kamal setup`：服务器已有 Docker 与 kamal-proxy，这一步实际做的是起 accessory、在服务器上构建镜像并推到 Docker Hub、
+   起 web 容器（入口先 `db:prepare` 建主库与队列库）、向 kamal-proxy 注册 `lowpass.tech` 并签证书。
+6. 播种与索引：
+
+   ```
+   bundle exec kamal app exec --reuse "bin/rails db:seed"
+   bundle exec kamal app exec --reuse "bin/rails search:rebuild"
+   ```
+
+7. 验证：登录页有两家按钮；白名单邮箱登录后报头有「管理」；设置页「发送测试告警」一分钟内收到；填好模型配置后期页「重生成理由」。
+
+### 日常
+
+- 发布：`bundle exec kamal deploy`（构建、推送、零停机切换）；回滚 `bundle exec kamal rollback <版本>`，版本是 git sha，`kamal app containers` 能看。
+- 日志 `bundle exec kamal app logs -f`；控制台 `bundle exec kamal console`；数据库 `bundle exec kamal dbc`；代理 `bundle exec kamal proxy details`。
+- 服务器上的落点：数据 `/root/lowpass-db/data`，Kamal 记录 `/root/.kamal/apps/lowpass`。证书由 kamal-proxy 自动续。
+- 备份：还没有备份任务（T3）。手动：`bundle exec kamal accessory exec db "pg_dump -U lowpass lowpass_production" > lowpass-$(date +%F).sql`。

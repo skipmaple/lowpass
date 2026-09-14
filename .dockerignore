@@ -1,0 +1,48 @@
+# 进不了镜像的东西：git、密钥、环境文件、日志、本地构建产物、测试与文档、部署与代理配置
+
+# git
+/.git/
+/.gitignore
+
+# bundler 本地配置
+/.bundle
+
+# 环境文件与密钥：密钥只从环境读（AGENTS.md）
+/.env*
+/config/master.key
+/config/credentials/*.key
+
+# 日志与临时文件（保留目录）
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/.keep
+
+# 本地存储
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/.keep
+
+# 前端：依赖在构建阶段 npm ci 装，资源在构建阶段 vite build 出；本地的这几份都不要
+/node_modules/
+/public/vite/
+/public/vite-dev/
+/public/vite-test/
+/coverage/
+
+# 测试、文档、代理与工作区文件：生产不需要
+/test/
+/docs/
+/.github/
+/.claude/
+/.superpowers/
+/.devcontainer
+
+# Kamal 与 Docker 自身的文件
+/config/deploy*.yml
+/.kamal
+/.dockerignore
+/Dockerfile*

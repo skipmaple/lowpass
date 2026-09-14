@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
   ADMIN_JOBS,
+  ADMIN_SETTINGS,
+  ADMIN_SOURCES,
+  ADMIN_TEST_FETCH,
+  ADMIN_TODAY_ISSUE,
   DAILY_ARCHIVE,
   DAILY_LATEST,
   LOGIN,
@@ -10,6 +14,12 @@ import {
   SESSION,
   SETTINGS,
   WEEKLY_ARCHIVE,
+  adminIssueBackfillHref,
+  adminIssueRefetchHref,
+  adminIssuesHref,
+  adminSourceEditHref,
+  adminSourceEnablementHref,
+  adminSourceRunsHref,
   authCallbackHref,
   authHref,
   dailyHref,
@@ -73,5 +83,22 @@ describe('登录相关地址', () => {
     expect(ADMIN_JOBS).toBe('/admin/jobs')
     expect(authHref('google_oauth2')).toBe('/auth/google_oauth2')
     expect(authCallbackHref('developer')).toBe('/auth/developer/callback')
+  })
+})
+
+describe('后台地址', () => {
+  it('列表、表单、记录、期与操作', () => {
+    expect(ADMIN_SOURCES).toBe('/admin/sources')
+    expect(adminSourceEditHref('s1')).toBe('/admin/sources/s1/edit')
+    expect(adminSourceRunsHref('s1')).toBe('/admin/sources/s1/runs')
+    expect(adminSourceRunsHref('s1', 'failed')).toBe('/admin/sources/s1/runs?status=failed')
+    expect(adminSourceEnablementHref('s1')).toBe('/admin/sources/s1/enablement')
+    expect(ADMIN_TEST_FETCH).toBe('/admin/test_fetches')
+    expect(adminIssuesHref({})).toBe('/admin/issues')
+    expect(adminIssuesHref({ kind: 'daily', month: '2026-08' })).toBe('/admin/issues?kind=daily&month=2026-08')
+    expect(adminIssueRefetchHref('2026-09-08')).toBe('/admin/issues/2026-09-08/refetch')
+    expect(adminIssueBackfillHref('2026-09-03')).toBe('/admin/issues/2026-09-03/backfill')
+    expect(ADMIN_TODAY_ISSUE).toBe('/admin/today_issue')
+    expect(ADMIN_SETTINGS).toBe('/admin/settings')
   })
 })

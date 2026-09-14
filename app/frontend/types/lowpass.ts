@@ -44,3 +44,21 @@ export type Flash = { notice?: string; alert?: string };
 export type SharedProps = { current_user: CurrentUser | null; flash: Flash };
 export type AuthProvider = "google_oauth2" | "github" | "developer";
 export type SettingsIdentity = { provider: "google" | "github"; strategy: AuthProvider; linked_at_label: string | null };
+
+// P2-② 管理后台（PRD 5.3、5.6）
+export type AdminHealth = "ok" | "recent_failure" | "consecutive_failures" | "disabled";
+export type AdminSourceRow = { id: string; sort_order: number; name: string; adapter: Adapter; adapter_label: string; publication: Publication; enabled: boolean; health: AdminHealth; health_label: string; last_fetch_label: string; next_run_label: string | null };
+export type SourceConfig = Record<string, string | number | string[]>;
+export type AdminSourceForm = { id: string | null; name: string; adapter: Adapter; publication: Publication; sort_order: number; config: SourceConfig };
+export type AdapterOption = { key: Adapter; label: string; publications: Publication[] };
+export type TestFetchPayload = { id?: string | null; name: string; adapter: Adapter; publication: Publication; config: Record<string, string | number | string[]> };
+export type TestFetchEntry = { title: string; url: string; summary: string | null; author: string | null; published_label: string | null; meta: Record<string, string | number> };
+export type TestFetchResult = { ok: boolean; entries: TestFetchEntry[]; warnings: string[]; parsed: number; dropped: number; duration_ms: number; feed_title: string | null; error: string | null };
+export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "timed_out";
+export type AdminRunRow = { id: string; started_label: string | null; duration_label: string | null; status: RunStatus; status_label: string; attempt_label: string; item_count: number | null; dropped_count: number | null; error_summary: string | null; trigger_label: string };
+export type ManualRun = { id: string; source_name: string; period_key: string | null };
+export type FinishedRun = { id: string; source_name: string; status: RunStatus; item_count: number | null; error_summary: string | null };
+export type LatestIssue = { period_key: string; label: string } | null;
+export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[] };
+export type AdminUserRow = { id: string; display_name: string; email: string | null; role: "admin" | "member"; providers_label: string; last_login_label: string | null };
+export type Schedule = { daily_time: string; weekly_time: string };

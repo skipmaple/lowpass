@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react'
+import { useState } from 'react'
 import type * as React from 'react'
 
 import Chip from '@/components/Chip'
@@ -104,6 +105,13 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
   const weekly = variant === 'weekly'
   // 读者页管理员的单条重生成（R-9.6，设计 C6）：读者页面上唯一的管理控件，周刊条目没有理由，也就没有这个按钮
   const admin = usePage<SharedProps>().props.current_user?.admin
+  const [sending, setSending] = useState(false)
+
+  // 这一趟是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点排三份账
+  function regenerate() {
+    setSending(true)
+    router.post(adminItemReasonHref(item.id), {}, { onFinish: () => setSending(false) })
+  }
 
   return (
     <article className="item-row" id={`item-${item.id}`}>
@@ -123,7 +131,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
         {!weekly && admin ? (
-          <button type="button" className="link-button" onClick={() => router.post(adminItemReasonHref(item.id))}>
+          <button type="button" className="link-button" disabled={sending} onClick={regenerate}>
             重生成
           </button>
         ) : null}

@@ -74,7 +74,8 @@ describe('Admin/Settings/Show', () => {
 
     expect(screen.getByRole('heading', { level: 2, name: '告警' })).toBeInTheDocument()
     expect(screen.getByText('d***@example.com')).toBeInTheDocument()
-    expect(screen.getAllByText('未配置')).toHaveLength(1)
+    // 「未配置」这一节只有 webhook 那一行有（密钥行在「推荐理由」那一节，另算）
+    expect(within(screen.getByRole('heading', { level: 2, name: '告警' }).parentElement!).getAllByText('未配置')).toHaveLength(1)
     const button = screen.getByRole('button', { name: '发送测试告警' })
     expect(button).toBeEnabled()
     await userEvent.click(button)
@@ -137,7 +138,8 @@ describe('Admin/Settings/Show', () => {
     show()
     expect(screen.getByRole('heading', { level: 2, name: '推荐理由' })).toBeInTheDocument()
     expect(screen.getByText('未配置模型供应商')).toBeInTheDocument()
-    expect(screen.getByText('密钥：未配置')).toBeInTheDocument()
+    // 键是「密钥」，值只放状态（其余 kv-row 也是这个形状）
+    expect(within(screen.getByText('密钥').closest('.kv-row')!).getByText('未配置')).toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText('接口地址'), 'https://model.example/v1')
     await userEvent.type(screen.getByLabelText('模型名'), 'gpt-x')
@@ -149,7 +151,7 @@ describe('Admin/Settings/Show', () => {
 
   it('推荐理由：配置好后显示用量', () => {
     show({ reasons: reasonsStatus({ configured: true, key_configured: true, base_url: 'https://model.example/v1', model_name: 'gpt-x', month_calls: 12, month_cost: '0.35', monthly_cap: '10', today_calls: 3 }) })
-    expect(screen.getByText('密钥：已配置')).toBeInTheDocument()
+    expect(within(screen.getByText('密钥').closest('.kv-row')!).getByText('已配置')).toBeInTheDocument()
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('本月 12 次 · 费用 0.35 / 上限 10')
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('今日 3 次')
   })

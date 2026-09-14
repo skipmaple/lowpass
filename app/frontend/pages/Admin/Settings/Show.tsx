@@ -134,7 +134,7 @@ export default function Show({ schedule, whitelist, alerts, reasons, interest_ar
           <Field label="月费用上限" name="monthly_cap" value={model.data.monthly_cap} onChange={(v) => model.setData('monthly_cap', v)} mono width={120} note="0 = 不限" error={fieldError(modelErrors, 'monthly_cap')} />
           <div style={{ paddingTop: 26 }}><button type="submit" className="btn-primary" disabled={model.processing}>保存</button></div>
         </form>
-        <div className="kv-row"><span className="kv-key">密钥</span><div className="kv-value"><span className="cjk" style={{ fontSize: 'var(--fs-15)', color: reasons.key_configured ? 'var(--ink)' : 'var(--ink2)' }}>{reasons.key_configured ? '密钥：已配置' : '密钥：未配置'}</span></div></div>
+        <div className="kv-row"><span className="kv-key">密钥</span><div className="kv-value"><span className="cjk" style={{ fontSize: 'var(--fs-15)', color: reasons.key_configured ? 'var(--ink)' : 'var(--ink2)' }}>{reasons.key_configured ? '已配置' : '未配置'}</span></div></div>
         <div className="reasons-usage">
           <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} / 上限 ${reasons.monthly_cap === '0' ? '不限' : reasons.monthly_cap}`} />
           <Mixed text={`今日 ${reasons.today_calls} 次`} />

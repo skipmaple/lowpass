@@ -214,7 +214,9 @@ describe('ItemRow 管理员的单条重生成（R-9.6）', () => {
     setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin: true }, flash: {}, errors: {} })
     const { unmount } = render(<ItemRow item={item({ id: 'it-1', reason: null })} adapter="hacker_news" rank={1} />)
     await userEvent.click(screen.getByRole('button', { name: '重生成' }))
-    expect(router.post).toHaveBeenCalledWith('/admin/items/it-1/reason')
+    // 单条重生成是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点
+    expect(router.post).toHaveBeenCalledWith('/admin/items/it-1/reason', {}, expect.objectContaining({ onFinish: expect.any(Function) }))
+    expect(screen.getByRole('button', { name: '重生成' })).toBeDisabled()
     unmount()
 
     setPageProps({ current_user: { display_name: 'G', avatar_url: null, email: null, admin: false }, flash: {}, errors: {} })

@@ -73,3 +73,4 @@ export const adminIssueBackfillHref = (periodKey: string) => `${ADMIN_ISSUES}/${
 export const ADMIN_TODAY_ISSUE = '/admin/today_issue'
 export const ADMIN_USERS = '/admin/users'
 export const ADMIN_SETTINGS = '/admin/settings'
+export const ADMIN_TEST_ALERT = '/admin/test_alert'

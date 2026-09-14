@@ -22,8 +22,8 @@ concurrency:
 
 jobs:
   deploy:
-    # 手动触发直接跑；自动触发只在 CI 成功时跑（失败或取消的 CI 也会发 completed 事件）。
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # 手动触发直接跑；CI 触发只在成功时跑（失败或取消的 CI 也会发 completed 事件）。
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:

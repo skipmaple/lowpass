@@ -6,4 +6,7 @@ Rails.application.config.after_initialize do
   unless Alerts::Config.configured?
     Rails.logger.warn { "没有配置任何告警渠道（ALERT_EMAIL_TO + SMTP_ADDRESS，或 ALERT_WEBHOOK_URL），告警只记录不发送" }
   end
+  if Rails.env.production? && ENV["BASE_URL"].blank?
+    Rails.logger.warn { "BASE_URL 未配置，告警里的后台链接会指向 localhost" }
+  end
 end

@@ -1,5 +1,8 @@
 require "active_support/core_ext/integer/time"
 
+# BASE_URL 在生产必填：缺了告警里的后台链接会指向 localhost。下面所有 ENV 都按「空字符串等于没配」读
+# ——Kamal 把 .kamal/secrets 里没值的变量当空串注入容器，`Integer("")` 会让 web 与 job 两个角色启动即崩。
+# 这里不能引用 Alerts::Config::DEFAULT_BASE_URL（环境配置先于自动加载），默认值与它是同一个字符串。
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
@@ -58,15 +61,15 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.smtp_settings = {
-    address: ENV["SMTP_ADDRESS"],
-    port: Integer(ENV.fetch("SMTP_PORT", "587")),
+    address: ENV["SMTP_ADDRESS"].presence,
+    port: Integer(ENV["SMTP_PORT"].presence || 587),
     user_name: ENV["SMTP_USERNAME"].presence,
     password: ENV["SMTP_PASSWORD"].presence,
-    domain: ENV["SMTP_DOMAIN"].presence || URI(ENV.fetch("BASE_URL", "https://lowpass.example")).host,
-    authentication: (ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym if ENV["SMTP_USERNAME"].present?),
-    enable_starttls_auto: ENV.fetch("SMTP_STARTTLS", "true") == "true"
+    domain: ENV["SMTP_DOMAIN"].presence || URI(ENV["BASE_URL"].presence || "http://localhost:3000").host,
+    authentication: (ENV["SMTP_AUTHENTICATION"].presence&.to_sym || :plain if ENV["SMTP_USERNAME"].present?),
+    enable_starttls_auto: ENV["SMTP_STARTTLS"].presence != "false"
   }.compact
-  config.action_mailer.default_url_options = { host: URI(ENV.fetch("BASE_URL", "https://lowpass.example")).host }
+  config.action_mailer.default_url_options = { host: URI(ENV["BASE_URL"].presence || "http://localhost:3000").host }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

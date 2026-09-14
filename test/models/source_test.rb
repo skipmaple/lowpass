@@ -75,8 +75,27 @@ class SourceTest < ActiveSupport::TestCase
     source = Source.new(name: "x", adapter: "rss", publication: "", config: nil)
 
     assert_not source.valid?
-    assert_includes source.errors[:publication], "is not included in the list"
+    assert_includes source.errors[:publication], "刊物无效"
     assert_equal({}, source.config)
+  end
+
+  # 文案只来自附录 B 或数据：内置校验也要中文，不然表单里会冒出 "can't be blank" / "is not a number"
+  test "内置校验的文案都是中文" do
+    blank = Source.new(name: "", adapter: nil, publication: nil, sort_order: nil)
+
+    assert_not blank.valid?
+    assert_equal [ "必填" ], blank.errors[:name]
+    assert_equal [ "适配器无效" ], blank.errors[:adapter]
+    assert_equal [ "刊物无效" ], blank.errors[:publication]
+    assert_equal [ "必须是整数" ], blank.errors[:sort_order]
+
+    too_long = Source.new(name: "名" * 101, adapter: "rss", publication: "daily", sort_order: 1)
+    assert_not too_long.valid?
+    assert_equal [ "最多 100 字" ], too_long.errors[:name]
+
+    negative = Source.new(name: "x", adapter: "rss", publication: "daily", sort_order: -1)
+    assert_not negative.valid?
+    assert_equal [ "不小于 0" ], negative.errors[:sort_order]
   end
 
   test "非 RSS 源不查 feed 地址唯一" do

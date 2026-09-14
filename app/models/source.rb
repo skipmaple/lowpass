@@ -15,10 +15,14 @@ class Source < ApplicationRecord
   has_many :items, dependent: :restrict_with_exception
   has_many :fetch_runs, dependent: :delete_all
 
-  validates :name, presence: true, length: { maximum: 100 }, uniqueness: { message: "名称已存在" }
-  validates :adapter, inclusion: { in: ADAPTERS }
-  validates :publication, inclusion: { in: %w[ daily weekly ] }
-  validates :sort_order, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  # 每条都带 message：这些文案会原样出现在表单里，不能是 Rails 默认的 "can't be blank"
+  validates :name, presence: { message: "必填" }, length: { maximum: 100, message: "最多 100 字" }, uniqueness: { message: "名称已存在" }
+  validates :adapter, inclusion: { in: ADAPTERS, message: "适配器无效" }
+  validates :publication, inclusion: { in: %w[ daily weekly ], message: "刊物无效" }
+  validates :sort_order, numericality: { only_integer: true, message: "必须是整数" }
+  # 分两条才能给 only_integer 与 greater_than_or_equal_to 各自的句子；第二条只在真是整数时跑，
+  # 不然清空这个字段会同时收到「必须是整数」和「不小于 0」两句
+  validates :sort_order, numericality: { greater_than_or_equal_to: 0, message: "不小于 0" }, if: -> { sort_order.is_a?(Integer) }
   # 配置按适配器的模式归一与校验（R-3.2）；刊物与适配器绑定；RSS 的 feed 同刊物唯一（R-3.8）
   before_validation :normalize_config
   validate :publication_allowed, :config_conforms, :feed_url_unique

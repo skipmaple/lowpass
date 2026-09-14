@@ -10,6 +10,8 @@ class Admin::InterestAreasControllerTest < ActionDispatch::IntegrationTest
     area = InterestArea.find_by!(name: "Rust")
     assert_equal 8, area.sort_order   # 排在最后（fixture 里最大排序值 7 + 1）
     assert_equal "interest_area.create", AuditLog.last.action
+    # 审计只记改了什么：target 里已经有 id，payload 里再来一对 [nil, id] 是噪音
+    assert_not_includes AuditLog.last.payload.keys, "id"
 
     patch admin_interest_area_path(area), params: { interest_area: { name: "Rust", keywords: "所有权", sort_order: 1, enabled: false } }
     assert_redirected_to admin_settings_path

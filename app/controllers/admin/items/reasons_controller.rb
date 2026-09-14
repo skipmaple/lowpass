@@ -9,10 +9,11 @@ class Admin::Items::ReasonsController < Admin::BaseController
       Audit.record("item.regenerate_reason", "Item##{item.id}")
       redirect_back_or_to back, notice: "已重生成"
     else
-      reason = ModelCall.where(item: item).order(:created_at).last&.error_summary.presence || "输出不合规"
+      # 账本按 created_at 排到毫秒仍可能同时刻（三次重试在同一个事务里连着写），id 是 UUIDv7，做次序的兜底
+      reason = ModelCall.where(item: item).order(:created_at, :id).last&.error_summary.presence || "输出不合规"
       redirect_back_or_to back, alert: "重生成失败：#{reason}"
     end
   rescue Reasons::Provider::Rejected => e
-    redirect_back_or_to daily_issue_path(item.issue.period_key), alert: "重生成失败：#{e.message}"
+    redirect_back_or_to back, alert: "重生成失败：#{e.message}"
   end
 end

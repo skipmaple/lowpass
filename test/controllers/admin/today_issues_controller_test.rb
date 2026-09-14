@@ -67,6 +67,14 @@ class Admin::TodayIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, AuditLog.count
   end
 
+  test "回到来路" do
+    travel_to Time.utc(2026, 9, 7, 22, 30) do
+      post admin_today_issue_path, params: { confirm: "1" }, headers: { "Referer" => admin_issues_path(kind: "daily") }
+    end
+
+    assert_redirected_to admin_issues_path(kind: "daily")
+  end
+
   test "成员是 403" do
     sign_in_as(users(:guest))
     post admin_today_issue_path

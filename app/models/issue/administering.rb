@@ -1,4 +1,4 @@
-# 后台期列表（5.6）：一页一个月，日刊逐天列（缺期也占一行，好给「补生成」按钮），周刊列周一落在该月的周；
+# 后台期列表（5.6）：一页一个月，日刊逐天列（缺期也占一行，好给「补生成」按钮），周刊列与该月有重叠的周；
 # 各源结果与状态词沿用归档页的推导（Issue::Presenting）
 module Issue::Administering
   extend ActiveSupport::Concern

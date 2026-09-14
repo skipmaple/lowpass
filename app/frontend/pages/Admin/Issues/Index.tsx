@@ -63,7 +63,7 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
       row.source_marks ? <Mixed text={row.source_marks} /> : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
-          <button type="button" className="btn-primary" style={{ height: 32 }} onClick={() => router.post(adminIssueBackfillHref(row.period_key))}>
+          <button type="button" className="btn-primary" onClick={() => router.post(adminIssueBackfillHref(row.period_key))}>
             <Icon name="refresh-cw" color="currentColor" />
             <span>补生成</span>
           </button>

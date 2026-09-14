@@ -24,7 +24,7 @@ class Admin::TodayIssuesController < Admin::BaseController
 
     def refetch_all(issue)
       sources = issue.generating? ? Source.enabled.daily : Source.where(id: issue.source_states.keys)
-      sources.reject { |source| source.fetch_runs.active.exists?(issue: issue) }.each { |source| source.fetch_later(issue, trigger: "manual") }.size
+      sources.reject { |source| source.fetch_runs.active.exists?(issue: issue) }.each { |source| source.refetch_later(issue) }.size
     end
 
     def generate(key)

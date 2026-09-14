@@ -5,6 +5,20 @@ module Source::Fetching
     FetchSourceJob.perform_later(self, issue, trigger, backfill)
   end
 
+  # R-3.10 管理员手动重抓：排队记录先写下再入队。重定向回来的页面就是靠它开轮询、把按钮画成
+  # 「进行中」的，等 worker 拿到 job 才建就晚了——那几秒里 active_runs 是空的，重复点击也挡不住。
+  # fetch_now 与 Issue::Weekly.refetch_weekly! 会认领这条占位，不另开一条
+  def refetch_later(issue)
+    run = queue_retry(issue, trigger: "manual", attempt: 1)
+    begin
+      FetchSourceJob.perform_later(self, issue, "manual", false)
+    rescue StandardError
+      run.destroy   # 入不了队就别留一条永远「进行中」的占位
+      raise
+    end
+    run
+  end
+
   def fetch_now(issue, trigger:, attempt: 1, backfill: false)
     run = fetch_runs.find_by(issue: issue, attempt: attempt, status: "queued", trigger: trigger) || fetch_runs.new(issue: issue, trigger: trigger, attempt: attempt)
     run.update!(status: "running", started_at: Time.current)

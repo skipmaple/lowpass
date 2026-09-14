@@ -5,7 +5,7 @@ class Admin::Issues::RefetchesController < Admin::BaseController
     source = refetchable_sources(issue).find { |s| s.id == params[:source_id] } or raise ActiveRecord::RecordNotFound
 
     unless source.fetch_runs.active.exists?(issue: issue)
-      source.fetch_later(issue, trigger: "manual")
+      source.refetch_later(issue)
       Audit.record("issue.refetch", "Issue##{issue.period_key}", { source_id: source.id, source_name: source.name })
     end
     redirect_back_or_to admin_issues_path, notice: "正在重抓 #{source.name}…"

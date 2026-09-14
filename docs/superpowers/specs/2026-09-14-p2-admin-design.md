@@ -91,13 +91,13 @@
 
 1. 找期（按 `period_key` 形状判断日刊 / 周刊）与源；源必须属于该期的 `source_states` 或（生成中时）启用的同刊物源，否则 404。
 2. 已有 `queued` / `running` 的 `FetchRun(issue:, source:)` → 只 flash「正在重抓 {source}…」，不再入队。
-3. 否则 `source.fetch_later(issue, trigger: "manual")`，`Audit.record!("issue.refetch", "Issue#…", { source_id:, source_name: })`，flash「正在重抓 {source}…」，重定向回来路（`redirect_back_or_to admin_issues_path`）。
+3. 否则 `source.refetch_later(issue)`（先写下 `queued` 记录再入队，页面一落地就能轮询），`Audit.record!("issue.refetch", "Issue#…", { source_id:, source_name: })`，flash「正在重抓 {source}…」，重定向回来路（`redirect_back_or_to admin_issues_path`）。
 
 `FetchSourceJob#perform`：日刊期照旧 `source.fetch_now`；周刊期改调 `Issue::Weekly.refetch!(issue, source)`（新）：阮一峰按该期里这个源已有的期号逐一 `adapter.fetch_issue(number)` 后 `write_section!(source, entries, issue_no: number)` 整节替换；RSS 周刊源 `adapter.fetch(period_key:)` 后 `write_section!(source, entries, append: false)`；`Degraded` 与其他错误记 `failed`、原内容保留。
 
 `Source#fetch_now` 在 `trigger == "manual"` 且期已定稿时成功后调 `issue.revise!(self, run)`（R-1.5 的 `revised_at`）；`Issue.regenerate_source!` 退化为「同步版」，只剩测试用。
 
-`FetchRun` 加 `scope :manual_recent`（`trigger: "manual"`、`updated_at > 60 秒前`），期页与记录页把它们放进 props（`active_runs`：queued / running；`finished_runs`：其余）供轮询与提示。
+`FetchRun` 加 `scope :manual_recent`（`trigger: "manual"`，且「还在 queued / running」**或**「`updated_at` 在 60 秒内」——抓取本身就允许 60 秒，进行中的不设时间窗），期页与记录页把它们放进 props（`active_runs`：queued / running；`finished_runs`：其余，但同一源同一期还有重试在排队时先不算结束）供轮询与提示。
 
 ### 6.3 进度与反馈
 
@@ -227,6 +227,7 @@ end
 | A11 | 重抓的确认不弹对话框，停用与「立即生成（已有期）」弹 | 附录 B 只给了这两句确认文案 |
 | A12 | 「测试抓取」端点每用户每分钟 10 次 | 每次最长 30 秒 |
 | A13 | 期页的周刊行按「与该月有重叠」取周，而不是「周一落在该月」 | 跨月的周在两个月的页上都出现（Task 5 裁定） |
+| A14 | 手动重抓在入队前先建 queued 记录，页面一落地就能轮询并挡住重复点击；manual_recent 对进行中不设时间窗，重试排队时不提前弹失败（终审裁定） | 记录等 worker 才建，重定向回来的页面读不到它；抓取允许 60 秒，按时间窗筛会把跑得久的漏掉 |
 
 ## 16. 实现顺序（供计划拆任务）
 

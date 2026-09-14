@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Icon, { type IconName } from '@/components/Icon'
 import type { Flash } from '@/types/lowpass'
@@ -10,11 +10,17 @@ const ICONS: Record<ToastKind, IconName> = { info: 'clock', ok: 'check', fail: '
 const AUTO_HIDE_MS = 4000
 
 export default function Toast({ kind, text, onClose }: { kind: ToastKind; text: string; onClose: () => void }) {
+  // 取最新的 onClose：只有 kind/text 变化才需要重开计时器。父组件重渲染（比如轮询）常会传一个
+  // 新的内联 onClose 引用——若把它放进依赖数组，计时器会被重置，一条提示在轮询期间可能永远
+  // 等不到自动收起。
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+
   useEffect(() => {
     if (kind === 'fail') return
-    const timer = setTimeout(onClose, AUTO_HIDE_MS)
+    const timer = setTimeout(() => closeRef.current(), AUTO_HIDE_MS)
     return () => clearTimeout(timer)
-  }, [kind, onClose])
+  }, [kind, text])
 
   return (
     <div className="toast" role="status">

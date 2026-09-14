@@ -14,20 +14,25 @@ export type DialogProps = {
 
 export default function Dialog({ open, text, cancel, confirm, busy = false, onCancel, onConfirm }: DialogProps) {
   const confirmRef = useRef<HTMLButtonElement>(null)
+  // 取最新的 onCancel：只有 open 变化才需要重挂载监听与焦点。父组件重渲染（比如 usePolling 每
+  // 5 秒 reload）常会传一个新的内联 onCancel 引用——若把它放进依赖数组，副作用会跟着重跑，
+  // 焦点被收回去再塞回来，用户能看见确认按钮"闪"一下。
+  const cancelRef = useRef(onCancel)
+  cancelRef.current = onCancel
 
   useEffect(() => {
     if (!open) return
     const previous = document.activeElement as HTMLElement | null
     confirmRef.current?.focus()
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onCancel()
+      if (event.key === 'Escape') cancelRef.current()
     }
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
       previous?.focus()
     }
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
 

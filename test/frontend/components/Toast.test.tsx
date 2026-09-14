@@ -22,6 +22,21 @@ describe('Toast', () => {
     expect(onCloseFail).not.toHaveBeenCalled()
   })
 
+  // 父组件重渲染（比如轮询）时常会传一个新的内联 onClose；4 秒计时器不该被这个重置——
+  // 不然一条提示在轮询期间可能永远等不到自动收起。
+  it('rerender 时内联 onClose 变了不重置计时器', () => {
+    const onClose1 = vi.fn()
+    const { rerender } = render(<Toast kind="ok" text="已更新 Hackaday（10 条）" onClose={onClose1} />)
+
+    act(() => vi.advanceTimersByTime(3000))
+    const onClose2 = vi.fn()
+    rerender(<Toast kind="ok" text="已更新 Hackaday（10 条）" onClose={onClose2} />)
+
+    act(() => vi.advanceTimersByTime(1000))
+    expect(onClose1).not.toHaveBeenCalled()
+    expect(onClose2).toHaveBeenCalledTimes(1)
+  })
+
   it('关闭叉', async () => {
     vi.useRealTimers()
     const onClose = vi.fn()

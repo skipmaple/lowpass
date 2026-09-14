@@ -149,7 +149,8 @@ end
 - `app/models/issue/finalization.rb#finalize!`：`update!` 之后 `state == "empty" ? Alerts.issue_empty!(self) : Alerts.recover!(kind: "issue_empty")`。`Issue::Daily#revise!`（它已经把期置回 `published`）之后 `Alerts.recover!(kind: "issue_empty")`。
 - `app/models/scheduler.rb#generate_daily_if_due`：`late` 且 `@now - due_at > Alerts::LATE_ALERT_AFTER (30.minutes)` → 生成之后 `Alerts.issue_late!(issue, minutes)`。`cleanup_if_due` 加 `AlertEvent.cleanup`。
 - `app/models/search/runner.rb#call`：返回前 `Alerts.search_status(result.status)`（两条路径都调）。
-- `config/environments/production.rb`：mailer 段按 §7.1；`config/deploy.yml` `env` 与 `.kamal/secrets` 加 `BASE_URL`（clear）、`ALERT_EMAIL_TO`、`ALERT_EMAIL_FROM`、`ALERT_WEBHOOK_URL`、`ALERT_WEBHOOK_FORMAT`、`SMTP_*`（secret）。
+- `config/environments/production.rb`：mailer 段按 §7.1，每个变量都按「空字符串等于没配」读（Kamal 对没配的变量注入空串，`Integer("")` 会让容器启动即崩）；`BASE_URL` 缺失时链接退回 `http://localhost:3000`，`config/initializers/alerts.rb` 在 production 喊一句。`config/environments/development.rb`：`delivery_method = :test`（§7.1）。
+- `config/deploy.yml` `env` 与 `.kamal/secrets` 加 `BASE_URL`、`ALERT_EMAIL_TO`、`ALERT_EMAIL_FROM`、`ALERT_WEBHOOK_URL`、`ALERT_WEBHOOK_FORMAT`、`SMTP_*`（含 `SMTP_AUTHENTICATION`、`SMTP_STARTTLS`），全部走 `secret`。`BASE_URL` 走 `.kamal/secrets` 而不是 `env.clear`，仓库里不出现域名。
 - `Audit` 复用；`Current` 不动。
 
 ## 11. 测试
@@ -178,6 +179,7 @@ end
 - 迁移：`create_table :alert_events`（§3.1），全部 `string` 带 `limit` 与 CHECK，唯一索引与两个普通索引，两个 FK `on_delete: :nullify`。
 - 内存预算：没有新常驻进程；投递走现有 jobs 进程。
 - `docs/development.md` 加「告警」一节：环境变量表、本地怎么看（development 邮件在 `ActionMailer::Base.deliveries`，webhook 可指到一个自己的 https 接收端试）、AC-7.1 的验证步骤；`docs/engineering-conventions.md` 后台任务节加一条；`AGENTS.md` 不变量「某个源失败只告警，不阻塞发布」已经在，不改。
+- 部署变量：`BASE_URL` 走 `.kamal/secrets` 而不是 `env.clear`，仓库里不出现域名；同理 `SMTP_AUTHENTICATION` 与 `SMTP_STARTTLS` 也在清单里（production.rb 在读它们）。没配的变量 Kamal 注入空串，production.rb 按没配处理。
 - 部署前（产品负责人）：选一个渠道，把变量放进部署机环境；`kamal deploy` 后到设置页点「发送测试告警」。
 
 ## 14. 默认决定（代理定，可推翻）

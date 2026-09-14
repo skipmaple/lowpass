@@ -13,6 +13,18 @@ class Alerts::ConfigTest < ActiveSupport::TestCase
     assert_equal({ email: { configured: false, label: "未配置" }, webhook: { configured: false, label: "未配置" } }, Alerts::Config.status_props)
   end
 
+  # Kamal 把没配的变量当空串注进容器：空串必须等于没配，不能当成「配了一个空值」
+  test "空字符串当没配" do
+    Alerts::Config.load!({ "SMTP_PORT" => "", "BASE_URL" => "", "ALERT_EMAIL_TO" => "", "ALERT_WEBHOOK_URL" => "" })
+
+    assert_equal "http://localhost:3000", Alerts::Config.base_url
+    assert_empty Alerts::Config.email_to
+    assert_not Alerts::Config.email?
+    assert_not Alerts::Config.webhook?
+    assert_not Alerts::Config.configured?
+    assert_empty Alerts::Config.warnings
+  end
+
   test "邮件要 ALERT_EMAIL_TO 与 SMTP_ADDRESS 都有；地址脱敏" do
     Alerts::Config.load!({ "ALERT_EMAIL_TO" => "drew@example.com, ops@example.com", "BASE_URL" => "https://lowpass.example.com" })
     assert_not Alerts::Config.email?

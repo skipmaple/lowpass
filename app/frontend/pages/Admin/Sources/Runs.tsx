@@ -32,8 +32,8 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
   const rows = runs.map((run) => ({
     key: run.id,
     cells: [
-      <span className="data" style={{ color: 'var(--ink)' }}>{run.started_label}</span>,
-      <span className="data">{run.duration_label}</span>,
+      run.started_label ? <Mixed text={run.started_label} color="var(--ink)" /> : null,
+      run.duration_label ? <Mixed text={run.duration_label} /> : null,
       <>
         <Mark state={run.status === 'succeeded' ? 'published' : run.status === 'queued' || run.status === 'running' ? 'generating' : 'empty'} label={run.status_label} />
         <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: run.status === 'succeeded' ? 'var(--ink)' : 'var(--ink2)' }}>{run.status_label}</span>
@@ -41,7 +41,7 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
       <span className="data">{run.attempt_label}</span>,
       run.item_count === null ? null : <span className="data">{run.item_count}</span>,
       run.dropped_count === null ? null : <span className="data">{run.dropped_count}</span>,
-      run.error_summary ? <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>{run.error_summary}</span> : null,
+      run.error_summary ? <Mixed text={run.error_summary} /> : null,
       <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>{run.trigger_label}</span>,
     ],
   }))
@@ -50,7 +50,7 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
     <AdminPage
       section="sources"
       big={source.name}
-      top={<span className="data">{source.adapter_label}</span>}
+      top={<Mixed text={source.adapter_label} font="latin" />}
       bottom="抓取记录"
       toasts={manual.toasts}
       onDismissToast={manual.dismiss}

@@ -291,7 +291,7 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 
 ## 部署
 
-底座（ADR T4、T5）：阿里云轻量（香港，x86_64，`<DEPLOY_HOST>`）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 17 accessory；
+底座（ADR T4、T5）：阿里云轻量（香港，x86_64；地址不进仓库，本机放在 deploy.env 的 `DEPLOY_HOST`，`config/deploy.yml` 经 ERB 读它）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 17 accessory；
 镜像在 Docker Hub `skipmaple/lowpass`；kamal-proxy 做 Let's Encrypt，域名 `lowpass.tech`。同一台机器上还有另一个 Kamal 应用与 lowpass
 共用 kamal-proxy，按域名分流；它的库占着宿主机的 `127.0.0.1:5432`，所以 lowpass 的库不发布端口，应用走 docker 网络里的 `lowpass-db`。
 配置在 `config/deploy.yml`，变量名在 `.kamal/secrets`，值只从跑 kamal 的那个 shell 读。本机手动部署时镜像在服务器上构建（`builder.remote`），不用模拟 x86；
@@ -302,7 +302,7 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
 1. Docker Hub：Account settings → Personal access tokens，建一个 Read & Write 的令牌，作 `KAMAL_REGISTRY_PASSWORD`。
 2. 数据库口令：`openssl rand -hex 24`，作 `POSTGRES_PASSWORD`（应用侧的 `PGPASSWORD` 取同一个值，`.kamal/secrets` 已写好）。
 3. 变量放进仓库外的一个文件（例如 `~/.config/lowpass/deploy.env`），跑 kamal 前 `set -a; source ~/.config/lowpass/deploy.env; set +a`：
-   `KAMAL_REGISTRY_PASSWORD`、`POSTGRES_PASSWORD`、`BASE_URL=https://lowpass.tech`、`GOOGLE_CLIENT_ID/SECRET`、`GITHUB_CLIENT_ID/SECRET`、
+   `DEPLOY_HOST`（服务器 IP，`config/deploy.yml` 经 ERB 读它）、`KAMAL_REGISTRY_PASSWORD`、`POSTGRES_PASSWORD`、`BASE_URL=https://lowpass.tech`、`GOOGLE_CLIENT_ID/SECRET`、`GITHUB_CLIENT_ID/SECRET`、
    `ADMIN_EMAILS`，以及「告警」「推荐理由」两节列的变量；没用到的留空。
 4. Cloudflare：SSL/TLS 加密模式设「完全」；首次签证书前关掉「始终使用 HTTPS」，签完再开。橙云代理开着也行，
    Let's Encrypt 的 HTTP-01 校验会经 Cloudflare 转到源站的 80。
@@ -329,10 +329,10 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
 
 `.github/workflows/deploy.yml`：main 上名为 CI 的工作流跑完且成功后自动 `kamal deploy`，部署的是那次 CI 测过的 sha；
 Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Environment「production」，密钥都在这个 Environment 的 secrets 里，
-名字与 `.kamal/secrets` 一致，外加两项：`RAILS_MASTER_KEY`（job 把它写成 `config/master.key`）与 `SSH_PRIVATE_KEY`
+名字与 `.kamal/secrets` 一致，外加四项：`DEPLOY_HOST`、`DEPLOY_KNOWN_HOSTS`（见下）、`RAILS_MASTER_KEY`（job 把它写成 `config/master.key`）与 `SSH_PRIVATE_KEY`
 （专用 deploy key，公钥在服务器 root 的 `authorized_keys`，注释 `lowpass-ci-deploy`）。
 镜像在 runner 上构建（`deploy.yml` 看 `KAMAL_BUILD_LOCAL` 这个变量），层缓存在 GitHub Actions cache，服务器只拉镜像。
-服务器的 ed25519 host key 钉在 `.github/known_hosts`（本机 `ssh-keyscan -t ed25519 <DEPLOY_HOST>` 的输出），服务器重装或换 key 时更新它。
+服务器地址与 host key 都不进仓库：Environment 里另有 `DEPLOY_HOST`（IP）与 `DEPLOY_KNOWN_HOSTS`（本机 `ssh-keyscan -t ed25519 $DEPLOY_HOST` 输出的那一行），服务器重装或换 key 时更新它们。
 
 - 填或改 secrets（值不进仓库，本机的 env 文件整份导入）：
   `gh secret set -f ~/.config/lowpass/deploy.env --env production`（GitHub 拒绝以 `GITHUB_` 开头的 secret 名，

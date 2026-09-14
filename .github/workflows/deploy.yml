@@ -8,6 +8,9 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+  # 临时：验证这条链路用，合并前删掉
+  push:
+    branches: [ci-deploy]
 
 permissions:
   contents: read
@@ -25,6 +28,8 @@ jobs:
     timeout-minutes: 30
     environment: production
     env:
+      # 服务器地址不进仓库，config/deploy.yml 经 ERB 从它读主机
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       # 让 config/deploy.yml 走本地构建（runner 与服务器同为 x86_64）并打开 GitHub Actions 层缓存，
       # 而不是本机那条 ssh 到服务器远程构建的路。
       KAMAL_BUILD_LOCAL: "1"
@@ -53,12 +58,14 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 服务器的 ed25519 host key 钉在仓库里（.github/known_hosts，明文单条），不在部署时 ssh-keyscan：
-      # net-ssh 认不全 ssh-keyscan -H 写出的哈希多类型条目，而且部署时扫描等于盲信。服务器换 host key 时更新这个文件。
+      # 服务器 host key 那一行（"IP ssh-ed25519 …"）放在 secret DEPLOY_KNOWN_HOSTS 里，IP 与 host key 都不进仓库。
+      # 不在部署时 ssh-keyscan：net-ssh 认不全它 -H 写出的哈希多类型条目，而且部署时扫描等于盲信。服务器换 key 时更新这个 secret。
       - name: Trust the server.s host key
         run: |
           mkdir -p ~/.ssh
-          cat .github/known_hosts >> ~/.ssh/known_hosts
+          printf "%s\n" "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
 
       # .kamal/secrets 用 $(cat config/master.key) 读主密钥；这个文件在 .gitignore 里，CI 从 secret 写出来。
       - name: Write the Rails master key

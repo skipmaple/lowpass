@@ -8,9 +8,6 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
-  # 临时：验证这条链路用，合并前删掉
-  push:
-    branches: [ci-deploy]
 
 permissions:
   contents: read

@@ -26,7 +26,8 @@ class Admin::InterestAreasController < Admin::BaseController
 
     def save(area, action, notice)
       if area.save
-        Audit.record(action, "InterestArea##{area.id}", area.saved_changes.except("updated_at", "created_at"))
+        # 新建时 saved_changes 里也有 id：target 已经写了 InterestArea#<id>，payload 里那一对是噪音
+        Audit.record(action, "InterestArea##{area.id}", area.saved_changes.except("id", "updated_at", "created_at"))
         redirect_to admin_settings_path, notice: notice
       else
         redirect_to admin_settings_path, alert: area.errors.map(&:message).uniq.join(" · ")

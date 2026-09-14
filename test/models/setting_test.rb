@@ -17,4 +17,12 @@ class SettingTest < ActiveSupport::TestCase
     assert_equal "07:30", Setting.get("daily_time")
     assert_equal 1, Setting.where(key: "daily_time").count
   end
+
+  test "valid_time? 认 HH:MM" do
+    assert Setting.valid_time?("06:00")
+    assert Setting.valid_time?("23:59")
+    assert_not Setting.valid_time?("6:00")
+    assert_not Setting.valid_time?("24:00")
+    assert_not Setting.valid_time?("")
+  end
 end

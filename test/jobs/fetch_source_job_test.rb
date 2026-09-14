@@ -68,4 +68,56 @@ class FetchSourceJobTest < ActiveJob::TestCase
     key2 = job2.concurrency_key
     refute_equal key, key2
   end
+
+  test "backfill 参数走适配器的 backfill，而不是 fetch" do
+    Adapters::HackerNews.any_instance.expects(:fetch).never
+    Adapters::HackerNews.any_instance.expects(:backfill).with(Date.new(2026, 9, 3)).returns([ Adapters::Entry.new(title: "h", url: "https://h/1") ])
+    issue = Issue.daily.create!(period_key: "2026-09-03", state: "generating", generation_started_at: Time.current, generated_late: true)
+
+    FetchSourceJob.perform_now(sources(:hn), issue, "manual", true)
+
+    assert_equal "succeeded", FetchRun.find_by(source: sources(:hn), issue: issue).status
+  end
+
+  # 7.7 无法回填是设计上的「不能」：记一条固定文案的失败就到此为止，不重试
+  test "不支持回填的源直接丢弃，不排重试" do
+    issue = Issue.daily.create!(period_key: "2026-09-03", state: "generating", generation_started_at: Time.current, generated_late: true)
+
+    assert_no_enqueued_jobs do
+      FetchSourceJob.perform_now(sources(:github), issue, "manual", true)
+    end
+
+    run = FetchRun.find_by(source: sources(:github), issue: issue)
+    assert_equal "failed", run.status
+    assert_equal "该来源无法回填", run.error_summary
+  end
+
+  test "周刊期的手动重抓走 Issue.refetch_weekly!" do
+    Issue.expects(:refetch_weekly!).with(issues(:weekly_w36), sources(:ruanyf), attempt: 1).returns(FetchRun.new(status: "succeeded"))
+    Source.any_instance.expects(:fetch_now).never
+
+    FetchSourceJob.perform_now(sources(:ruanyf), issues(:weekly_w36), "manual")
+  end
+
+  # 跟日刊路径同一个做法：可重试失败先写 queued 占位，重试认领它而不是新开一条，
+  # 不然那条 queued 永远留在 FetchRun.active 里，后台会把这个源一直报成运行中
+  test "周刊重抓可重试失败后写入排队记录，重试复用它而不是新增一条" do
+    Adapters::RuanyfWeekly.any_instance.stubs(:fetch_issue).raises(Adapters::Http::Error, "down")
+    issue = issues(:weekly_w36)
+    issue.items.create!(source: sources(:ruanyf), title: "x", url: "https://x/1", url_hash: "0" * 64, fetched_at: Time.current, meta: { issue_no: 366 })
+
+    FetchSourceJob.perform_now(sources(:ruanyf), issue, "manual")
+
+    assert_equal 1, FetchRun.where(source: sources(:ruanyf), issue: issue, attempt: 1, status: "failed").count
+    assert_equal 1, FetchRun.where(source: sources(:ruanyf), issue: issue, attempt: 2, status: "queued").count
+
+    retry_job = FetchSourceJob.new(sources(:ruanyf), issue, "manual")
+    retry_job.executions = 1   # 第二次执行，attempt 2
+    retry_job.perform_now
+
+    second = FetchRun.where(source: sources(:ruanyf), issue: issue, attempt: 2)
+    assert_equal 1, second.count
+    assert_equal "failed", second.first.status
+    assert_equal 1, FetchRun.where(source: sources(:ruanyf), issue: issue, attempt: 3, status: "queued").count
+  end
 end

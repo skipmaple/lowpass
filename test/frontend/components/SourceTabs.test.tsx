@@ -84,6 +84,17 @@ describe('SourceTabs', () => {
     expect(within(tabs[0]).queryByText('今日无新内容')).toBeNull()
   })
 
+  // R-1.6 补生成的期：不支持回填的源（7.7）在索引条上标短形，长句「该来源无法回填」留给列表区
+  it('无法回填标在名字下面', () => {
+    render(
+      <SourceTabs sources={[source({ state: 'no_backfill' })]} activeId="src-hn" onSelect={vi.fn()}>
+        {(current) => <div>面板 {current.name}</div>}
+      </SourceTabs>,
+    )
+
+    expect(within(screen.getByRole('tab')).getByText('无法回填')).toBeInTheDocument()
+  })
+
   it('生成中的源在索引条上不说话（期头的标签已经写着）', () => {
     render(
       <SourceTabs sources={[source({ state: 'pending' })]} activeId="src-hn" onSelect={vi.fn()}>

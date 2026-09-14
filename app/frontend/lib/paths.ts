@@ -50,3 +50,26 @@ export const SETTINGS = '/settings'
 export const ADMIN_JOBS = '/admin/jobs'
 export const authHref = (provider: string) => `/auth/${provider}`
 export const authCallbackHref = (provider: string) => `/auth/${provider}/callback`
+
+// P2-② 管理后台（config/routes.rb 的 namespace :admin）
+export const ADMIN_ROOT = '/admin'
+export const ADMIN_SOURCES = '/admin/sources'
+export const ADMIN_SOURCES_NEW = '/admin/sources/new'
+export const adminSourceHref = (id: string) => `${ADMIN_SOURCES}/${id}`
+export const adminSourceEditHref = (id: string) => `${ADMIN_SOURCES}/${id}/edit`
+export const adminSourceEnablementHref = (id: string) => `${ADMIN_SOURCES}/${id}/enablement`
+export const adminSourceRunsHref = (id: string, status?: string) => `${ADMIN_SOURCES}/${id}/runs${status && status !== 'all' ? `?status=${status}` : ''}`
+export const ADMIN_TEST_FETCH = '/admin/test_fetches'
+export const ADMIN_ISSUES = '/admin/issues'
+export function adminIssuesHref(params: { kind?: string | null; month?: string | null }): string {
+  const query = new URLSearchParams()
+  if (params.kind && params.kind !== 'all') query.set('kind', params.kind)
+  if (params.month) query.set('month', params.month)
+  const text = query.toString()
+  return text ? `${ADMIN_ISSUES}?${text}` : ADMIN_ISSUES
+}
+export const adminIssueRefetchHref = (periodKey: string) => `${ADMIN_ISSUES}/${periodKey}/refetch`
+export const adminIssueBackfillHref = (periodKey: string) => `${ADMIN_ISSUES}/${periodKey}/backfill`
+export const ADMIN_TODAY_ISSUE = '/admin/today_issue'
+export const ADMIN_USERS = '/admin/users'
+export const ADMIN_SETTINGS = '/admin/settings'

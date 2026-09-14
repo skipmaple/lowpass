@@ -1,11 +1,25 @@
 module Source::Fetching
   extend ActiveSupport::Concern
 
-  def fetch_later(issue, trigger: "scheduled")
-    FetchSourceJob.perform_later(self, issue, trigger)
+  def fetch_later(issue, trigger: "scheduled", backfill: false)
+    FetchSourceJob.perform_later(self, issue, trigger, backfill)
   end
 
-  def fetch_now(issue, trigger:, attempt: 1)
+  # R-3.10 管理员手动重抓：排队记录先写下再入队。重定向回来的页面就是靠它开轮询、把按钮画成
+  # 「进行中」的，等 worker 拿到 job 才建就晚了——那几秒里 active_runs 是空的，重复点击也挡不住。
+  # fetch_now 与 Issue::Weekly.refetch_weekly! 会认领这条占位，不另开一条
+  def refetch_later(issue)
+    run = queue_retry(issue, trigger: "manual", attempt: 1)
+    begin
+      FetchSourceJob.perform_later(self, issue, "manual", false)
+    rescue StandardError
+      run.destroy   # 入不了队就别留一条永远「进行中」的占位
+      raise
+    end
+    run
+  end
+
+  def fetch_now(issue, trigger:, attempt: 1, backfill: false)
     run = fetch_runs.find_by(issue: issue, attempt: attempt, status: "queued", trigger: trigger) || fetch_runs.new(issue: issue, trigger: trigger, attempt: attempt)
     run.update!(status: "running", started_at: Time.current)
 
@@ -13,15 +27,27 @@ module Source::Fetching
     if issue && !issue.generating? && trigger != "manual"
       run.update!(status: "failed", error_summary: "期已定稿，放弃写入", duration_ms: 0)
     else
-      entries = adapter_class.new(self).fetch(period_key: (issue.period_key if issue&.kind == "weekly"))
+      entries = if backfill
+        adapter_class.new(self).backfill(PeriodKey.date_of(issue.period_key))
+      else
+        adapter_class.new(self).fetch(period_key: (issue.period_key if issue&.kind == "weekly"))
+      end
       kept, dropped = entries.partition(&:valid?)
       # 同源重复地址在写入时被去掉，也要计进 dropped_count：不然 item_count 报的是抓到几条，
       # 不是这一栏真的有几条，栏级「今日无新内容」也就判错了
       deduped = issue ? issue.replace_section!(self, kept) : 0
       run.update!(status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, duration_ms: elapsed(run))
+      # 一次抓取允许 60 秒，期可能正好在这中间定稿：按最新状态决定，不是进来时那份
+      issue&.reload
+      # R-1.5 管理员手动重抓已定稿的期：整栏已换过，记修订时间与该栏结果。走 job 的路径也要记，不只同步的 regenerate_source!
+      issue.revise!(self, run) if issue && trigger == "manual" && !issue.generating?
     end
 
     run
+  # 设计上的「不能」，不是这次抓取出了事：错误文案是固定的那一句，不重试也不进告警（FetchSourceJob 丢弃）
+  rescue Adapters::NoBackfill
+    run.update!(status: "failed", error_summary: "该来源无法回填", duration_ms: elapsed(run))
+    raise
   rescue Timeout::Error => e
     run.update!(status: "timed_out", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200], duration_ms: elapsed(run))
     raise

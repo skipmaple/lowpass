@@ -11,12 +11,24 @@ module Issue::Daily
       issue
     end
 
-    # R-1.5 重抓成功则整栏替换并记修订时间；失败时 fetch_now 抛出，旧内容原样保留
-    # 期还在生成中时不提前发布：这次抓取只贡献它那一栏，是否结束这一期交给 finalize_if_done! 判断
+    # R-1.6 补生成过去的某一天：只有支持回填的源去抓（7.7），其余栏直接固化成 no_backfill；
+    # 期标延迟生成——它确实晚于那一天。全都不支持时这里就收尾成空刊
+    def backfill_daily!(period_key)
+      issue = daily.create!(period_key: period_key, state: "generating", generation_started_at: Time.current, generated_late: true)
+      Source.enabled.daily.find_each do |source|
+        if source.adapter_class.backfill?
+          source.fetch_later(issue, trigger: "manual", backfill: true)
+        else
+          issue.update!(source_states: issue.source_states.merge(source.id => "no_backfill"))
+        end
+      end
+      issue.finalize_if_done!
+      issue
+    end
+
+    # R-1.5 同步版的重抓（测试与 console 用）；后台走 fetch_later，修订由 fetch_now 自己记
     def regenerate_source!(issue, source)
-      run = source.fetch_now(issue, trigger: "manual")
-      issue.revise!(source, run) if !issue.generating? && run.status == "succeeded"
-      run
+      source.fetch_now(issue, trigger: "manual")
     end
 
     # 一期列哪些栏：定稿的期只认它自己记下的源（R58），后来停用的源照样有内容，后来新增的
@@ -37,8 +49,9 @@ module Issue::Daily
 
   # AC-1.7 成功返回 0 条也算成功，栏内显示「今日无新内容」。
   # 定稿之后读固化下来的结果：抓取记录 30 天后清掉（F-26），推导不出来的栏不能变成失败。
+  # 固化下来的值先于抓取记录：补生成时 no_backfill 在生成中就写进去了（R-1.6），那几栏根本不会有记录。
   def source_state(source)
-    generating? ? pending_state(source) : source_states[source.id] || "failed"
+    source_states[source.id] || (generating? ? pending_state(source) : "failed")
   end
 
   # R-1.5 重抓成功：整栏已经换过了，这里记修订时间，并改写这一栏固化下来的结果。

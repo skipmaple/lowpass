@@ -10,10 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_13_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "audit_logs", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "action", limit: 50, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.string "target", limit: 100, null: false
+    t.string "user_id", limit: 25
+    t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["user_id"], name: "index_audit_logs_on_user_id"
+    t.check_constraint "length(action::text) <= 50", name: "audit_logs_action_len"
+    t.check_constraint "length(target::text) <= 100", name: "audit_logs_target_len"
+  end
 
   create_table "auth_identities", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -29,7 +41,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_090000) do
     t.index ["user_id"], name: "index_auth_identities_on_user_id"
     t.check_constraint "length(email::text) <= 254", name: "auth_identities_email_len"
     t.check_constraint "length(provider_uid::text) <= 255", name: "auth_identities_provider_uid_len"
-    t.check_constraint "provider::text = ANY (ARRAY['google'::character varying, 'github'::character varying, 'developer'::character varying]::text[])", name: "auth_identities_provider"
+    t.check_constraint "provider::text = ANY (ARRAY['google'::character varying::text, 'github'::character varying::text, 'developer'::character varying::text])", name: "auth_identities_provider"
   end
 
   create_table "fetch_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -194,6 +206,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_090000) do
     t.string "publication", limit: 10, null: false
     t.integer "sort_order", default: 100, null: false
     t.datetime "updated_at", null: false
+    t.index "publication, ((config ->> 'feed_url'::text))", name: "index_sources_on_publication_and_feed_url", unique: true, where: "((adapter)::text = 'rss'::text)"
     t.index ["name"], name: "index_sources_on_name", unique: true
     t.check_constraint "adapter::text = ANY (ARRAY['hacker_news'::character varying::text, 'github_trending'::character varying::text, 'rss'::character varying::text, 'ruanyf_weekly'::character varying::text])", name: "sources_adapter"
     t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "sources_publication"
@@ -210,9 +223,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_090000) do
     t.check_constraint "length(avatar_url::text) <= 2048", name: "users_avatar_url_len"
     t.check_constraint "length(display_name::text) <= 100", name: "users_display_name_len"
     t.check_constraint "length(email::text) <= 254", name: "users_email_len"
-    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'member'::character varying]::text[])", name: "users_role"
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying::text, 'member'::character varying::text])", name: "users_role"
   end
 
+  add_foreign_key "audit_logs", "users", on_delete: :nullify
   add_foreign_key "auth_identities", "users", on_delete: :cascade
   add_foreign_key "fetch_runs", "issues"
   add_foreign_key "fetch_runs", "sources"

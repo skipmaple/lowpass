@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import Icon from '@/components/Icon'
-import { ADMIN_JOBS, DAILY_LATEST, SEARCH, SESSION, SETTINGS, WEEKLY_ARCHIVE } from '@/lib/paths'
+import { ADMIN_SOURCES, DAILY_LATEST, SEARCH, SESSION, SETTINGS, WEEKLY_ARCHIVE } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { CurrentUser, SharedProps } from '@/types/lowpass'
 
@@ -42,7 +42,7 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
 }
 
 // 头像菜单（R-8.2，画布 pages_front3.py 的 menu_sheet()）：32px 圆是按钮，点开右对齐 220px 纸卡，
-// 顶部等宽邮箱（没邮箱用显示名），「设置」「管理」（仅 admin，指向队列面板——那是 ERB 页，用整页跳转）「登出」。
+// 顶部等宽邮箱（没邮箱用显示名），「设置」「管理」（仅 admin，指向后台的信息源页）「登出」。
 // Escape、点卡外、选中任一项都关闭；打开时焦点进第一项。画布那张卡带阴影，这里不取：
 // 设计规则说纸面里不许有阴影，1px 墨线足够分层（设计 L1）。
 function AccountMenu({ user }: { user: CurrentUser }) {
@@ -108,9 +108,9 @@ function AccountMenu({ user }: { user: CurrentUser }) {
             设置
           </Link>
           {user.admin ? (
-            <a role="menuitem" className="menu-item" href={ADMIN_JOBS} onClick={close}>
+            <Link role="menuitem" className="menu-item" href={ADMIN_SOURCES} onClick={close}>
               管理
-            </a>
+            </Link>
           ) : null}
           <button
             type="button"

@@ -164,6 +164,7 @@ module Issue::Presenting
         when "ok" then counts.fetch([ issue.id, source.id ], 0).to_s
         when "empty" then "0"
         when "pending" then "生成中"
+        when "no_backfill" then "无法回填"
         else "失败"
         end
       end

@@ -72,6 +72,19 @@ class Source::FetchingTest < ActiveSupport::TestCase
     assert Item.exists?(items(:hn_one).id)
   end
 
+  # 一次抓取允许 60 秒，期可能正好在这中间定稿：结束时要按最新状态判断，该记 revised_at（R-1.5）
+  test "抓取期间期定稿了：结束后记下修订时间" do
+    issues(:daily_0908).update!(state: "generating", revised_at: nil)
+    stale = Issue.find(issues(:daily_0908).id)      # 手上这份还是「生成中」
+    Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "A", url: "https://a.b/1") ])
+    Issue.find(stale.id).update!(state: "published", published_at: Time.current)   # 抓取期间定的稿
+
+    sources(:hn).fetch_now(stale, trigger: "manual")
+
+    assert_not_nil stale.reload.revised_at
+    assert_equal "ok", stale.source_states[sources(:hn).id]
+  end
+
   test "进行中的抓取不算失败" do
     source = sources(:hn)
     # hn_ok fixture exists as succeeded run

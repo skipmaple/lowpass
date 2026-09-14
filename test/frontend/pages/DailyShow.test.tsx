@@ -159,6 +159,14 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
     expect(panel().queryByText(/上次成功/)).toBeNull()
   })
 
+  // R-1.6 补生成的期：不支持回填的源（7.7）说自己的那一句，不是「今日抓取失败」
+  it('无法回填只有一句，没有插图', () => {
+    const { container } = show({ sources: [source({ state: 'no_backfill' })], active_source_id: 'src-hn', items_by_source: {} })
+
+    expect(panel().getByText('该来源无法回填')).toBeInTheDocument()
+    expect(container.querySelector('.source-state-failed')).toBeNull()
+  })
+
   it('今日无新内容只有一句，没有插图', () => {
     const { container } = show({ sources: [source({ state: 'empty' })], active_source_id: 'src-hn', items_by_source: {} })
 

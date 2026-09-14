@@ -19,4 +19,89 @@ class SourceTest < ActiveSupport::TestCase
     source = Source.new(name: "Unknown Source", adapter: "unknown", publication: "daily")
     assert_not source.valid?
   end
+
+  test "保存前归一化配置并按适配器校验" do
+    source = Source.new(name: "HN best", adapter: "hacker_news", publication: "daily", config: { "list" => "best", "count" => "5" })
+
+    assert source.valid?
+    assert_equal({ "list" => "best", "count" => 5, "min_score" => 0 }, source.config)
+  end
+
+  test "配置错误挂在 config.<字段> 上" do
+    source = Source.new(name: "HN bad", adapter: "hacker_news", publication: "daily", config: { "count" => "0" })
+
+    assert_not source.valid?
+    assert_equal [ "1 到 100" ], source.errors[:"config.count"]
+  end
+
+  test "AC-3.6 同名源被拒绝" do
+    source = Source.new(name: "Hacker News", adapter: "rss", publication: "daily", config: { "feed_url" => "https://x.example/feed" })
+
+    assert_not source.valid?
+    assert_equal [ "名称已存在" ], source.errors[:name]
+  end
+
+  test "刊物与适配器不符" do
+    source = Source.new(name: "HN weekly", adapter: "hacker_news", publication: "weekly", config: {})
+
+    assert_not source.valid?
+    assert_equal [ "这个适配器只能是日刊" ], source.errors[:publication]
+  end
+
+  # R-3.8 同一刊物内 feed 地址唯一：校验先给可读提示，数据库表达式索引兜底
+  test "同刊物里重复的 feed 地址被拒绝，另一刊物可以" do
+    dup = Source.new(name: "Hackaday 2", adapter: "rss", publication: "daily", config: { "feed_url" => "https://hackaday.com/feed/" })
+    assert_not dup.valid?
+    assert_equal [ "这个 feed 地址已经在同一刊物里" ], dup.errors[:"config.feed_url"]
+
+    weekly = Source.new(name: "Hackaday weekly", adapter: "rss", publication: "weekly", config: { "feed_url" => "https://hackaday.com/feed/" })
+    assert weekly.valid?
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      # insert_all（不带 !）在唯一索引冲突时默认 ON CONFLICT DO NOTHING、静默跳过；
+      # 要证明数据库表达式索引真的兜底会拒绝，得用 insert_all! 让冲突原样抛出。
+      Source.insert_all!([ { id: Lowpass::Uuid.generate, name: "raw", adapter: "rss", publication: "daily", config: { feed_url: "https://hackaday.com/feed/" }, sort_order: 9, enabled: true, created_at: Time.current, updated_at: Time.current } ])
+    end
+  end
+
+  test "排序值是非负整数" do
+    source = sources(:hn)
+    source.sort_order = -1
+
+    assert_not source.valid?
+  end
+
+  test "config 为空、刊物为空时是校验错误，不抛异常" do
+    source = Source.new(name: "x", adapter: "rss", publication: "", config: nil)
+
+    assert_not source.valid?
+    assert_includes source.errors[:publication], "刊物无效"
+    assert_equal({}, source.config)
+  end
+
+  # 文案只来自附录 B 或数据：内置校验也要中文，不然表单里会冒出 "can't be blank" / "is not a number"
+  test "内置校验的文案都是中文" do
+    blank = Source.new(name: "", adapter: nil, publication: nil, sort_order: nil)
+
+    assert_not blank.valid?
+    assert_equal [ "必填" ], blank.errors[:name]
+    assert_equal [ "适配器无效" ], blank.errors[:adapter]
+    assert_equal [ "刊物无效" ], blank.errors[:publication]
+    assert_equal [ "必须是整数" ], blank.errors[:sort_order]
+
+    too_long = Source.new(name: "名" * 101, adapter: "rss", publication: "daily", sort_order: 1)
+    assert_not too_long.valid?
+    assert_equal [ "最多 100 字" ], too_long.errors[:name]
+
+    negative = Source.new(name: "x", adapter: "rss", publication: "daily", sort_order: -1)
+    assert_not negative.valid?
+    assert_equal [ "不小于 0" ], negative.errors[:sort_order]
+  end
+
+  test "非 RSS 源不查 feed 地址唯一" do
+    source = Source.new(name: "HN 2", adapter: "hacker_news", publication: "daily", config: nil)
+
+    assert source.valid?
+    assert_equal({ "list" => "top", "count" => 10, "min_score" => 0 }, source.config)
+  end
 end

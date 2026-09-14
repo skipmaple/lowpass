@@ -31,9 +31,11 @@ class ApplicationController < ActionController::Base
     end
 
     # 附录 B 的 404 页，带页脚：地址形状不对、月份或年份越界都落到这里，
-    # 读者看到的是站内的一页，不是 public/404.html 那张没有报头页脚的静态页
+    # 读者看到的是站内的一页，不是 public/404.html 那张没有报头页脚的静态页。
+    # layout 显式指定的理由同 render_forbidden：Admin::BaseController 把 RecordNotFound 也接到这里，
+    # 而 mission_control-jobs 的控制器继承它、又把 layout 定死成自己那张（依赖它自己的 before_action 设 @application）
     def render_not_found
-      render inertia: "Errors/NotFound", props: footer_props, status: :not_found
+      render inertia: "Errors/NotFound", props: footer_props, status: :not_found, layout: "application"
     end
 
     # 附录 B 的 403 页（AC-3.5）：登录了但不是 admin，不跳登录页。显式指定 layout：

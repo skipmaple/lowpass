@@ -61,7 +61,9 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
   function pickAdapter(key: string) {
     const adapter = key as Adapter
     const next = adapters.find((a) => a.key === adapter)!
-    form.setData({ adapter, publication: next.publications[0], config: { ...DEFAULTS[adapter] } })
+    // 真实 useForm 的 setData 传对象是整份替换（commitData 直接顶掉 data，不是合并），传一个只带
+    // adapter/publication/config 三个键的对象会把 name、sort_order 丢掉；用函数形式自己展开 ...current 才保留其它字段
+    form.setData((current) => ({ ...current, adapter, publication: next.publications[0], config: { ...DEFAULTS[adapter] } }))
     setResult(null)
   }
 

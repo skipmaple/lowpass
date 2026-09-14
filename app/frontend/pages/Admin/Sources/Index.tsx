@@ -33,15 +33,20 @@ function Health({ row }: { row: AdminSourceRow }) {
 
 export default function Index({ sources, summary }: AdminSourcesIndexProps) {
   const [disabling, setDisabling] = useState<AdminSourceRow | null>(null)
+  // 一次只可能有一行在测试抓取（每行的按钮各自控自己的禁用态，不是全表一把锁）
+  const [testingId, setTestingId] = useState<string | null>(null)
   const { toasts, push, dismiss } = useToasts()
 
   async function test(row: AdminSourceRow) {
+    setTestingId(row.id)
     try {
       const result = await testFetch({ id: row.id, name: row.name, adapter: row.adapter, publication: row.publication, config: row.config })
       if (result.ok) push('ok', `解析 ${result.parsed} 条 · 丢弃 ${result.dropped} 条 · 用时 ${(result.duration_ms / 1000).toFixed(1)} 秒`)
       else push('fail', result.error ?? '抓取失败')
     } catch (error) {
       push('fail', error instanceof Error ? error.message : '请求失败')
+    } finally {
+      setTestingId(null)
     }
   }
 
@@ -58,7 +63,7 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
       row.next_run_label ? <Mixed text={row.next_run_label} /> : null,
       <span className="admin-actions">
         <Link className="link-button" href={adminSourceEditHref(row.id)}>编辑</Link>
-        <button type="button" className="link-button" onClick={() => test(row)}>测试抓取</button>
+        <button type="button" className="link-button" disabled={testingId === row.id} onClick={() => test(row)}>测试抓取</button>
         <Link className="link-button" href={adminSourceRunsHref(row.id)}>记录</Link>
         {row.enabled ? (
           <button type="button" className="link-button" onClick={() => setDisabling(row)}>停用</button>

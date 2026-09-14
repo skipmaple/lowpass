@@ -33,10 +33,15 @@ module Source::Fetching
         adapter_class.new(self).fetch(period_key: (issue.period_key if issue&.kind == "weekly"))
       end
       kept, dropped = entries.partition(&:valid?)
+      # 5.7 解析退化：丢弃过半仍然发布剩下的，但要告警；不过半的成功抓取顺手恢复之前的退化事件
+      degraded = entries.any? && dropped.size > kept.size
+      Alerts.parse_degraded!(self, issue, "丢弃 #{dropped.size} / #{entries.size} 条") if degraded
       # 同源重复地址在写入时被去掉，也要计进 dropped_count：不然 item_count 报的是抓到几条，
       # 不是这一栏真的有几条，栏级「今日无新内容」也就判错了
       deduped = issue ? issue.replace_section!(self, kept) : 0
       run.update!(status: "succeeded", item_count: kept.size - deduped, dropped_count: dropped.size + deduped, duration_ms: elapsed(run))
+      Alerts.recover!(kind: "source_failed", source: self)
+      Alerts.recover!(kind: "parse_degraded", source: self) unless degraded
       # 一次抓取允许 60 秒，期可能正好在这中间定稿：按最新状态决定，不是进来时那份
       issue&.reload
       # R-1.5 管理员手动重抓已定稿的期：整栏已换过，记修订时间与该栏结果。走 job 的路径也要记，不只同步的 regenerate_source!

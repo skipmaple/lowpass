@@ -365,4 +365,29 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_equal "boom", run.error_summary
     assert_equal [ "旧条目" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).pluck(:title)
   end
+
+  # 5.7：ingest_ruanyf 实际调用的第一个出网方法是 latest_issue_number（单数）——它就是抓这个源
+  # 拿期号用的那一步，任务说明里的 latest_issue_numbers 只是示意名
+  test "周刊源检查失败告警一次，成功后恢复；降级告解析退化" do
+    # 1) ingest 失败（源站 500）→ source_failed；2) 降级 → parse_degraded；3) 成功 → 恢复
+    # 具体 stub 方式与该文件已有的「降级」「检查」用例一致：Adapters::RuanyfWeekly.any_instance.stubs(...)
+    Adapters::RuanyfWeekly.any_instance.stubs(:latest_issue_number).raises(Adapters::Http::Error, "500")
+    assert_difference("AlertEvent.where(kind: 'source_failed', source_id: sources(:ruanyf).id).count", 1) { Issue.check_weekly_sources! }
+    assert_no_difference("AlertEvent.count") { Issue.check_weekly_sources! }   # 同日去重
+  end
+
+  test "5.7 周刊源降级触发解析退化告警" do
+    Adapters::RuanyfWeekly.any_instance.stubs(:latest_issue_number).returns(367)
+    err = Adapters::RuanyfWeekly::Degraded.new("x").tap { |e| e.issue_no = 367; e.issue_title = "坏了"; e.url = "https://github.com/ruanyf/weekly/blob/master/docs/issue-367.md" }
+    Adapters::RuanyfWeekly.any_instance.stubs(:fetch_issue).raises(err)
+    assert_difference("AlertEvent.where(kind: 'parse_degraded').count", 1) { Issue.check_weekly_sources! }
+  end
+
+  test "周刊源检查成功恢复未恢复的源失败事件" do
+    open = alert_event(source: sources(:ruanyf), dedup_key: "w1")
+    Adapters::RuanyfWeekly.any_instance.stubs(:latest_issue_number).returns(367)
+    Adapters::RuanyfWeekly.any_instance.stubs(:fetch_issue).returns(entries(6, published: Time.utc(2026, 9, 11)))
+    Issue.check_weekly_sources!
+    assert_not_nil open.reload.recovered_at
+  end
 end

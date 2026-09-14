@@ -29,11 +29,18 @@ registry:
   password:
     - KAMAL_REGISTRY_PASSWORD
 
-# 本机是 Apple Silicon，服务器是 x86_64：直接在服务器上构建，省掉 QEMU 模拟的几倍耗时。
-# 想改回本地构建就删掉 remote 一行，保留 arch（Docker Desktop 会用模拟构建 amd64）。
+# 两条构建路：本机是 Apple Silicon，直接在服务器上构建，省掉 QEMU 模拟的几倍耗时；
+# CI（.github/workflows/deploy.yml）设了 KAMAL_BUILD_LOCAL，runner 本身就是 x86_64，就地构建，
+# 层缓存放 GitHub Actions cache。这个文件经 ERB 求值，条件只看这一个环境变量。
 builder:
   arch: amd64
+<% if ENV["KAMAL_BUILD_LOCAL"].to_s.empty? %>
   remote: ssh://root@<DEPLOY_HOST>
+<% else %>
+  cache:
+    type: gha
+    options: mode=max
+<% end %>
 
 env:
   secret:

@@ -294,8 +294,8 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 底座（ADR T4、T5）：阿里云轻量（香港，x86_64，`<DEPLOY_HOST>`）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 17 accessory；
 镜像在 Docker Hub `skipmaple/lowpass`；kamal-proxy 做 Let's Encrypt，域名 `lowpass.tech`。同一台机器上还有另一个 Kamal 应用与 lowpass
 共用 kamal-proxy，按域名分流；它的库占着宿主机的 `127.0.0.1:5432`，所以 lowpass 的库不发布端口，应用走 docker 网络里的 `lowpass-db`。
-配置在 `config/deploy.yml`，变量名在 `.kamal/secrets`，值只从跑 kamal 的那个 shell 读。镜像在服务器上构建（`builder.remote`），
-本机不需要模拟 x86。
+配置在 `config/deploy.yml`，变量名在 `.kamal/secrets`，值只从跑 kamal 的那个 shell 读。本机手动部署时镜像在服务器上构建（`builder.remote`），不用模拟 x86；
+CI 在 runner 上构建，见下面「CI 自动部署」。
 
 ### 首次部署
 
@@ -324,3 +324,20 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 - 服务器上的落点：数据 `/root/lowpass-db/data`，Kamal 记录 `/root/.kamal/apps/lowpass`。证书由 kamal-proxy 自动续。
 - 备份：还没有备份任务（T3）。手动：`bundle exec kamal accessory exec db "pg_dump -U lowpass lowpass_production" > lowpass-$(date +%F).sql`。
 - 升大版本（2026-09-15 从 16 升到 17 的做法）：先在服务器上 `pg_dumpall` 两个库到 `/root/lowpass-backups/`，`kamal app stop`，把 `/root/lowpass-db/data` 改名留着，改 `deploy.yml` 的镜像后 `kamal accessory reboot db`（新目录 initdb），`psql` 灌回 dump，核对各表行数，`kamal app start`。数据目录不跨大版本复用。
+
+### CI 自动部署
+
+`.github/workflows/deploy.yml`：main 上名为 CI 的工作流跑完且成功后自动 `kamal deploy`，部署的是那次 CI 测过的 sha；
+Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Environment「production」，密钥都在这个 Environment 的 secrets 里，
+名字与 `.kamal/secrets` 一致，外加两项：`RAILS_MASTER_KEY`（job 把它写成 `config/master.key`）与 `SSH_PRIVATE_KEY`
+（专用 deploy key，公钥在服务器 root 的 `authorized_keys`，注释 `lowpass-ci-deploy`）。
+镜像在 runner 上构建（`deploy.yml` 看 `KAMAL_BUILD_LOCAL` 这个变量），层缓存在 GitHub Actions cache，服务器只拉镜像。
+
+- 填或改 secrets（值不进仓库，本机的 env 文件整份导入）：
+  `gh secret set -f ~/.config/lowpass/deploy.env --env production`；
+  `gh secret set RAILS_MASTER_KEY --env production < config/master.key`；
+  `gh secret set SSH_PRIVATE_KEY --env production < ~/.config/lowpass/deploy_key`。
+- 换 deploy key：本机 `ssh-keygen -t ed25519 -C lowpass-ci-deploy -f ~/.config/lowpass/deploy_key`，
+  公钥追加到服务器 `/root/.ssh/authorized_keys` 并删掉旧的那行，再 `gh secret set SSH_PRIVATE_KEY`。
+- 要「部署前本人批准」：仓库 Settings → Environments → production 勾 Required reviewers，工作流不用改。
+- 与本机手动 `kamal deploy` 互不冲突：Kamal 的锁保证同一时间只有一次部署；CI 里排队的部署不取消。

@@ -31,7 +31,7 @@
 - 前端：控制器是 CRUD 资源，每个动作渲染一个 Inertia 页面；props 必须有类型；首屏资源不超过 300 KB；颜色、字体、字号只从设计 skill 的令牌取。
 - 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。
 - 测试：Minitest + fixtures；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 快速循环，`bin/ci` 是合并门禁（rubocop、brakeman、bundler-audit、gitleaks、测试、系统测试）。
-- 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite；密钥只从环境读。`main` 分支用 Kamal 部署：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。
+- 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite；密钥只从环境读。`main` 分支用 Kamal 部署（CI 全绿后由 GitHub Actions 自动跑 `kamal deploy`）：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。
 - 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。
 
 ## 不要做

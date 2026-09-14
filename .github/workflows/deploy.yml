@@ -1,0 +1,92 @@
+name: Deploy
+
+# main 上的 CI 全绿后自动部署到生产；也可以在 Actions 页面手动触发，应急重发。
+# 变量清单、换钥匙的步骤见 docs/development.md「部署」的「CI 自动部署」。
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 同一时间只跑一次部署，排队的不取消；Kamal 在服务器上的锁再兜一层。
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # 手动触发直接跑；自动触发只在 CI 成功时跑（失败或取消的 CI 也会发 completed 事件）。
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://lowpass.tech
+    env:
+      # 让 config/deploy.yml 走本地构建（runner 与服务器同为 x86_64）并打开 GitHub Actions 层缓存，
+      # 而不是本机那条 ssh 到服务器远程构建的路。
+      KAMAL_BUILD_LOCAL: "1"
+
+    steps:
+      - name: Checkout the commit CI tested
+        uses: actions/checkout@v7
+        with:
+          # 自动触发时部署 CI 实际测过的那个 sha，不是「此刻的 main 头」；手动触发时是所选分支的头。
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # buildx 的 type=gha 缓存要拿到 runner 的 ACTIONS_RUNTIME_TOKEN / ACTIONS_CACHE_URL，这个 action 负责暴露它们。
+      - name: Expose GitHub Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v3
+
+      - name: Start ssh-agent with the deploy key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Trust the server's host key
+        run: ssh-keyscan -H <DEPLOY_HOST> >> ~/.ssh/known_hosts
+
+      # .kamal/secrets 用 $(cat config/master.key) 读主密钥；这个文件在 .gitignore 里，CI 从 secret 写出来。
+      - name: Write the Rails master key
+        run: |
+          install -m 600 /dev/null config/master.key
+          printf '%s' "$RAILS_MASTER_KEY" > config/master.key
+        env:
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+
+      # 变量名与 .kamal/secrets 一一对应；没配的 secret 是空串，与本机不设该变量的效果相同。
+      - name: Deploy with Kamal
+        run: bundle exec kamal deploy
+        env:
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          ALERT_WEBHOOK_FORMAT: ${{ secrets.ALERT_WEBHOOK_FORMAT }}
+          SMTP_ADDRESS: ${{ secrets.SMTP_ADDRESS }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_DOMAIN: ${{ secrets.SMTP_DOMAIN }}
+          SMTP_AUTHENTICATION: ${{ secrets.SMTP_AUTHENTICATION }}
+          SMTP_STARTTLS: ${{ secrets.SMTP_STARTTLS }}
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}

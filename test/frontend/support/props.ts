@@ -1,4 +1,7 @@
 import type {
+  AdapterOption,
+  AdminSourceForm,
+  AdminSourceRow,
   ArchiveDay,
   ArchiveWeek,
   CurrentUser,
@@ -7,6 +10,7 @@ import type {
   SearchFilters,
   SearchResult,
   SourceSummary,
+  TestFetchResult,
   WeeklyGroup,
   WeeklyIssue,
   WeeklySection,
@@ -160,4 +164,38 @@ export function searchResult(overrides: Partial<SearchResult> = {}): SearchResul
 // ApplicationController 的 inertia_share 每页都带的当前用户
 export function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
   return { display_name: 'Drew Lee', avatar_url: null, email: 'drew@example.com', admin: false, ...overrides }
+}
+
+// 后台信息源列表一行（R-3.1，Source::Presenting#admin_rows）；config 是列表里「测试抓取」要传的完整配置
+export function adminSourceRow(overrides: Partial<AdminSourceRow> = {}): AdminSourceRow {
+  return {
+    id: 'src-hn', sort_order: 1, name: 'Hacker News', adapter: 'hacker_news', adapter_label: 'Hacker News', publication: 'daily', enabled: true,
+    health: 'ok', health_label: '正常', last_fetch_label: '9月8日 06:12 · 成功 · 10 条', next_run_label: '9月9日 06:00',
+    config: { list: 'top', count: 10, min_score: 0 }, ...overrides,
+  }
+}
+
+// 新建 / 编辑来源表单（R-3.2、Source#form_props）
+export function adminSourceForm(overrides: Partial<AdminSourceForm> = {}): AdminSourceForm {
+  return { id: null, name: '', adapter: 'rss', publication: 'daily', sort_order: 5, config: { feed_url: '', count: 10, window_hours: 24 }, ...overrides }
+}
+
+// Source.adapter_options：四种适配器与各自可选的刊物（Source::Config::SCHEMAS）
+export const ADAPTER_OPTIONS: AdapterOption[] = [
+  { key: 'hacker_news', label: 'Hacker News', publications: ['daily'] },
+  { key: 'github_trending', label: 'GitHub Trending', publications: ['daily'] },
+  { key: 'rss', label: 'RSS/Atom', publications: ['daily', 'weekly'] },
+  { key: 'ruanyf_weekly', label: '阮一峰周刊', publications: ['weekly'] },
+]
+
+// R-3.3 测试抓取的结果：前 5 条预览、解析警告、失败原因（Source::TestFetch）
+export function testFetchResult(overrides: Partial<TestFetchResult> = {}): TestFetchResult {
+  return {
+    ok: true, parsed: 24, dropped: 0, duration_ms: 1800, feed_title: 'Hackaday', error: null, warnings: ['1 条无发布时间，已用抓取时间代替'],
+    entries: [
+      { title: 'A Mechanical Keyboard Built From Scrap Relays', url: 'https://hackaday.com/1', summary: null, author: 'M. Okada', published_label: '09-08 03:10', meta: {} },
+      { title: 'Reviving a 1980s Oscilloscope With an ESP32', url: 'https://hackaday.com/2', summary: null, author: 'R. Alvarez', published_label: '09-08 00:02', meta: {} },
+    ],
+    ...overrides,
+  }
 }

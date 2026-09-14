@@ -47,8 +47,8 @@ export type SettingsIdentity = { provider: "google" | "github"; strategy: AuthPr
 
 // P2-② 管理后台（PRD 5.3、5.6）
 export type AdminHealth = "ok" | "recent_failure" | "consecutive_failures" | "disabled";
-export type AdminSourceRow = { id: string; sort_order: number; name: string; adapter: Adapter; adapter_label: string; publication: Publication; enabled: boolean; health: AdminHealth; health_label: string; last_fetch_label: string; next_run_label: string | null };
 export type SourceConfig = Record<string, string | number | string[]>;
+export type AdminSourceRow = { id: string; sort_order: number; name: string; adapter: Adapter; adapter_label: string; publication: Publication; enabled: boolean; health: AdminHealth; health_label: string; last_fetch_label: string; next_run_label: string | null; config: SourceConfig };
 export type AdminSourceForm = { id: string | null; name: string; adapter: Adapter; publication: Publication; sort_order: number; config: SourceConfig };
 export type AdapterOption = { key: Adapter; label: string; publications: Publication[] };
 export type TestFetchPayload = { id?: string | null; name: string; adapter: Adapter; publication: Publication; config: Record<string, string | number | string[]> };

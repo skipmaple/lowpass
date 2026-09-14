@@ -16,8 +16,24 @@ class SchedulerTest < ActiveSupport::TestCase
   end
 
   test "AC-1.7 错过调度后补跑并标记延迟" do
+    # 5.7：告警要读生成出来的期（issue.kind / period_key）并把它挂到 AlertEvent 上，mock 得给一个
+    # 能用的 Issue。不能先 Issue.create! 好再让 mock 返回它：generate_daily_if_due 自己会先查
+    # Issue.daily.exists?(period_key: key)，那条记录一旦提前存在，这一步就直接短路、mock 永远
+    # 不会被调用。这里给未存盘的 Issue.new 补上 NOT NULL 的 generation_started_at，让它在
+    # AlertEvent 的 belongs_to 自动保存里（这时 exists? 早就查过了）能存得进去
     Issue.expects(:generate_daily!).with("2026-09-10", late: true).once
+      .returns(Issue.new(kind: "daily", period_key: "2026-09-10", generation_started_at: Time.current))
     Scheduler.tick(now: sh("2026-09-10 07:05:00"))
+    assert_equal "晚于生成时间 65 分钟", AlertEvent.find_by!(kind: "issue_late").summary
+  end
+
+  # 晚一两分钟是重启之类的正常抖动，不是 5.7 说的「事故」：这里要看真实生成的期，
+  # 不能用 setup 里那个只返回空 Issue 的 stub
+  test "晚一两分钟的补跑只标延迟，不告警" do
+    Issue.unstub(:generate_daily!)
+    Scheduler.tick(now: sh("2026-09-10 06:05:00"))
+    assert Issue.daily.find_by!(period_key: "2026-09-10").generated_late
+    assert_nil AlertEvent.find_by(kind: "issue_late")
   end
 
   test "当日已有期就不再生成" do

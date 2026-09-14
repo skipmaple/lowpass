@@ -27,7 +27,10 @@ class Scheduler
       key = PeriodKey.daily(@now)
       return if Issue.daily.exists?(period_key: key)
 
-      Issue.generate_daily!(key, late: @now - due_at > LATE_AFTER)
+      late_by = @now - due_at
+      issue = Issue.generate_daily!(key, late: late_by > LATE_AFTER)
+      # 5.7「日刊未生成」：06:00 的期到 06:30 还没有才算事故（设计 B4）；一两分钟的重启只标延迟
+      Alerts.issue_late!(issue, (late_by / 60).floor) if late_by > Alerts::LATE_ALERT_AFTER
     end
 
     # R-1.2 期级总超时 20 分钟：没有源再回来的话，由 tick 替这一期收尾

@@ -10,7 +10,7 @@ import Mark from '@/components/Mark'
 import Seg from '@/components/Seg'
 import SegButtons from '@/components/SegButtons'
 import Table from '@/components/Table'
-import { ADMIN_TODAY_ISSUE, adminIssueBackfillHref, adminIssueRefetchHref, adminIssuesHref, dailyHref, weeklyHref } from '@/lib/paths'
+import { ADMIN_TODAY_ISSUE, adminIssueBackfillHref, adminIssueReasonsHref, adminIssueRefetchHref, adminIssuesHref, dailyHref, weeklyHref } from '@/lib/paths'
 import { useManualRuns } from '@/lib/runs'
 import { Mixed } from '@/lib/typeset'
 import type { AdminIssueRow, ArchiveNav, FinishedRun, ManualRun } from '@/types/lowpass'
@@ -29,8 +29,8 @@ export type AdminIssuesIndexProps = {
   finished_runs: FinishedRun[]
 }
 
-const HEADERS = ['刊物', '周期键', '状态', '生成时间', '各源结果', '操作']
-const WIDTHS = ['70px', '120px', '200px', '120px', 'minmax(0, 1fr)', '200px']
+const HEADERS = ['刊物', '周期键', '状态', '生成时间', '各源结果', '理由', '操作']
+const WIDTHS = ['70px', '120px', '200px', '120px', 'minmax(0, 1fr)', '150px', '200px']
 
 function markOf(state: AdminIssueRow['state']) {
   if (state === 'published') return 'published'
@@ -61,6 +61,7 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
       </>,
       row.time_label ? <Mixed text={row.time_label} /> : null,
       row.source_marks ? <Mixed text={row.source_marks} /> : null,
+      row.reasons ? <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: row.reasons.missing > 0 ? 'var(--ink)' : 'var(--ink2)' }}>{row.reasons.label}</span> : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
           <button type="button" className="btn-primary" onClick={() => router.post(adminIssueBackfillHref(row.period_key))}>
@@ -75,6 +76,9 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
               ) : (
                 <button type="button" className="link-button" onClick={() => openRefetch(row)}>重抓某源</button>
               )
+            ) : null}
+            {row.kind === 'daily' && row.reasons ? (
+              <button type="button" className="link-button" disabled={row.reasons.label === '未配置模型供应商'} onClick={() => router.post(adminIssueReasonsHref(row.period_key))}>重生成理由</button>
             ) : null}
             <Link className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
           </>

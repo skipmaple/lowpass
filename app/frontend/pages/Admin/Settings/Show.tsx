@@ -4,12 +4,14 @@ import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import Field from '@/components/Field'
+import InterestAreaRow from '@/components/InterestAreaRow'
 import { ADMIN_SETTINGS, ADMIN_TEST_ALERT } from '@/lib/paths'
-import type { AlertChannel, AlertChannels, Schedule } from '@/types/lowpass'
+import { Mixed } from '@/lib/typeset'
+import type { AlertChannel, AlertChannels, InterestArea, ModelConfig, ReasonsStatus, Schedule } from '@/types/lowpass'
 
 // 设置（5.6，画布 admin_settings()）：调度时间可改（R-1.1 精确到分）；白名单只读（R-5.5 由环境配置）。
-// 告警渠道状态与测试告警（③）在这一页；兴趣画像与推荐理由（④）往这一页加节。
-export type AdminSettingsShowProps = { schedule: Schedule; whitelist: string[]; alerts: AlertChannels }
+// 告警渠道状态与测试告警（③）在这一页；兴趣画像与推荐理由（④，R-9.5、R-9.9、D18、D23）往这一页加了两节。
+export type AdminSettingsShowProps = { schedule: Schedule; whitelist: string[]; alerts: AlertChannels; reasons: ReasonsStatus; interest_areas: InterestArea[] }
 
 function Section({ title, children }: React.PropsWithChildren<{ title: string }>) {
   return (
@@ -44,16 +46,25 @@ function ChannelRow({ label, channel }: { label: string; channel: AlertChannel }
   )
 }
 
-export default function Show({ schedule, whitelist, alerts }: AdminSettingsShowProps) {
+export default function Show({ schedule, whitelist, alerts, reasons, interest_areas }: AdminSettingsShowProps) {
   const form = useForm<Schedule>(schedule)
   form.transform((data) => ({ schedule: data }))
   const errors = form.errors as unknown as Record<string, string | string[] | undefined>
   const configured = alerts.email.configured || alerts.webhook.configured
   const [sending, setSending] = useState(false)
 
+  const model = useForm<ModelConfig>({ base_url: reasons.base_url, model_name: reasons.model_name, input_price: reasons.input_price, output_price: reasons.output_price, monthly_cap: reasons.monthly_cap })
+  model.transform((data) => ({ model: data }))
+  const modelErrors = model.errors as unknown as Record<string, string | string[] | undefined>
+
   function submit(event: React.FormEvent) {
     event.preventDefault()
     form.patch(ADMIN_SETTINGS)
+  }
+
+  function submitModel(event: React.FormEvent) {
+    event.preventDefault()
+    model.patch(ADMIN_SETTINGS)
   }
 
   // 一次点击一封：请求回来之前按钮禁着（每分钟 5 次的限流是后一道门）
@@ -97,6 +108,33 @@ export default function Show({ schedule, whitelist, alerts }: AdminSettingsShowP
             发送测试告警
           </button>
           {configured ? null : <span className="field-note">渠道由环境配置，见 docs/development.md</span>}
+        </div>
+      </Section>
+
+      <Section title="兴趣画像">
+        <table className="admin-table" aria-label="兴趣画像">
+          <thead><tr>{['名称', '关键词', '排序', '启用', '操作'].map((h) => <th key={h} className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)', textAlign: 'left' }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {interest_areas.map((area) => <InterestAreaRow key={area.id} area={area} />)}
+            <InterestAreaRow key="new" />
+          </tbody>
+        </table>
+      </Section>
+
+      <Section title="推荐理由">
+        {reasons.configured ? null : <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: 'var(--ink2)' }}>未配置模型供应商</span>}
+        <form className="admin-form-row" onSubmit={submitModel} style={{ alignItems: 'flex-start' }}>
+          <Field label="接口地址" name="base_url" value={model.data.base_url} onChange={(v) => model.setData('base_url', v)} mono width={320} note="OpenAI 兼容的 chat completions 地址" error={fieldError(modelErrors, 'base_url')} />
+          <Field label="模型名" name="model_name" value={model.data.model_name} onChange={(v) => model.setData('model_name', v)} mono width={200} />
+          <Field label="输入单价" name="input_price" value={model.data.input_price} onChange={(v) => model.setData('input_price', v)} mono width={120} note="每百万 token" error={fieldError(modelErrors, 'input_price')} />
+          <Field label="输出单价" name="output_price" value={model.data.output_price} onChange={(v) => model.setData('output_price', v)} mono width={120} error={fieldError(modelErrors, 'output_price')} />
+          <Field label="月费用上限" name="monthly_cap" value={model.data.monthly_cap} onChange={(v) => model.setData('monthly_cap', v)} mono width={120} note="0 = 不限" error={fieldError(modelErrors, 'monthly_cap')} />
+          <div style={{ paddingTop: 26 }}><button type="submit" className="btn-primary" disabled={model.processing}>保存</button></div>
+        </form>
+        <div className="kv-row"><span className="kv-key">密钥</span><div className="kv-value"><span className="cjk" style={{ fontSize: 'var(--fs-15)', color: reasons.key_configured ? 'var(--ink)' : 'var(--ink2)' }}>{reasons.key_configured ? '密钥：已配置' : '密钥：未配置'}</span></div></div>
+        <div className="reasons-usage">
+          <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} / 上限 ${reasons.monthly_cap === '0' ? '不限' : reasons.monthly_cap}`} />
+          <Mixed text={`今日 ${reasons.today_calls} 次`} />
         </div>
       </Section>
     </AdminPage>

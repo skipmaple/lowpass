@@ -22,8 +22,9 @@ Google / GitHub 登录，单租户。
 
 ## 部署
 
-默认分支 `main`。Kamal 按 `config/deploy.yml` 部署：`web` 与 `job` 两个角色、同一镜像不同启动命令（ADR T4）；
-PostgreSQL 作为 Kamal accessory，每日 `pg_dump` 推到香港区域对象存储（T3）；镜像仓库 Docker Hub（T5）。
+默认分支 `main`。Kamal 按 `config/deploy.yml` 部署：起步是 `web` 单容器，Solid Queue 以 Puma 插件跑在里面（ADR T4 的 A），
+拆 `job` 角色是配置级变更；PostgreSQL 作为 Kamal accessory；镜像仓库 Docker Hub（T5）；kamal-proxy 做 Let's Encrypt，
+与同一台机器上的另一个 Kamal 应用共用，按域名分流。每日 `pg_dump` 推到对象存储（T3）还没做。操作步骤见 `docs/development.md`「部署」。
 内存预算写在 ADR 里，新增常驻进程前先改预算。〔改造自 fizzy 的 Kamal 部署与 `docs/kamal-deployment.md`〕
 
 ## 改动前先看的不变量

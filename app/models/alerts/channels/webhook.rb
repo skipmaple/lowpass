@@ -19,10 +19,15 @@ module Alerts::Channels::Webhook
     response = http.request(request)
     return if response.is_a?(Net::HTTPSuccess)
 
-    raise Alerts::DeliveryError, "webhook #{response.code}: #{response.body.to_s[0, 200]}"[0, 200]
+    # 响应体标成 ASCII-8BIT：按字节裁可能切在多字节字符中间，不 scrub 掉，这条消息就是一段非法 UTF-8，
+    # 存进 alert_events.delivery_error 或拼进别的中文串时才炸（与 Reasons::Provider 同一处）
+    raise Alerts::DeliveryError, "webhook #{response.code}: #{body_text(response)}"[0, 200]
   rescue Timeout::Error, IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError => e
     raise Alerts::DeliveryError, "webhook #{e.class}: #{e.message}"[0, 200]
   end
+
+  def self.body_text(response) = response.body.to_s.b[0, 200].force_encoding(Encoding::UTF_8).scrub
+  private_class_method :body_text
 
   def self.payload(event, phase)
     text = Alerts::Message.text(event, phase)

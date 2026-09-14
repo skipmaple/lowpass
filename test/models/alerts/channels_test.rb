@@ -52,6 +52,19 @@ class Alerts::ChannelsTest < ActiveSupport::TestCase
     end
   end
 
+  # Net::HTTP 的响应体标成 ASCII-8BIT：直接按字节截再拼进中文消息会抛 Encoding::CompatibilityError，
+  # 逃出 DeliveryError 体系，DeliverAlertJob 的 rescue 就接不住了（与 Reasons::Provider 同一处问题）
+  test "webhook 响应体是带非法字节的二进制串：仍然是 DeliveryError" do
+    event = alert_event
+    with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
+      stub_request(:post, AlertTestHelpers::WEBHOOK).to_return(status: 500, body: "网关错误 ".b + "\xE7".b)
+      error = assert_raises(Alerts::DeliveryError) { Alerts::Channels::Webhook.deliver(event, "alert") }
+      assert error.message.start_with?("webhook 500:"), error.message
+      assert_equal Encoding::UTF_8, error.message.encoding
+      assert error.message.valid_encoding?
+    end
+  end
+
   test "邮件渠道发给全部收件人，SMTP 出错换成 DeliveryError" do
     event = alert_event
     with_alert_channels(ALERT_EMAIL_TO: "drew@example.com, ops@example.com", SMTP_ADDRESS: "smtp.example.com", BASE_URL: "https://lowpass.example.com") do

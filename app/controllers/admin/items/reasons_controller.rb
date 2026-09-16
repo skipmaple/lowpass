@@ -1,4 +1,4 @@
-# 单条重生成（R-9.6，设计 C6）：读者页上管理员点，同步调一次模型（最多 20 秒 × 3 次），回到那一期
+# 管理员单条重生成接口（R-9.6）：同步调一次模型（最多 20 秒 × 3 次），回到那一期
 class Admin::Items::ReasonsController < Admin::BaseController
   def create
     item = Item.joins(:issue).where(issues: { kind: "daily" }).find(params[:item_id])

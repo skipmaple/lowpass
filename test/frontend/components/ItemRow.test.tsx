@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ItemRow from '@/components/ItemRow'
@@ -79,31 +80,65 @@ describe('ItemRow 元数据（按适配器）', () => {
   it('HN：分数、评论数链到讨论页、相对时间带绝对时间的悬停', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
 
-    expect(screen.getByText('▲ 312')).toBeInTheDocument()
+    expect(screen.getByText('312')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '得分' })).toBeInTheDocument()
 
-    const comments = screen.getByRole('link', { name: '145' })
+    const comments = screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' })
     expect(comments).toHaveAttribute('href', 'https://news.ycombinator.com/item?id=41000001')
     expect(comments).toHaveAttribute('target', '_blank')
     expect(comments.getAttribute('rel')).toContain('noopener')
 
     const age = screen.getByTitle('09-09 01:12')
     expect(age).toHaveTextContent('5h')
+    expect(age).toHaveAttribute('datetime', '2026-09-08T17:12:00Z')
+    expect(screen.getByRole('img', { name: '发布时间' })).toBeInTheDocument()
+  })
+
+  it('评论图标响应悬停与键盘聚焦，离开后恢复，不改变讨论链接', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+    const comments = screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' })
+    const path = comments.querySelector('path')!
+    const initial = path.getAttribute('d')
+
+    await user.hover(comments)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path.getAttribute('d')).not.toBe(initial)
+    await user.unhover(comments)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path).toHaveAttribute('d', initial!)
+
+    await user.tab()
+    await user.tab()
+    expect(comments).toHaveFocus()
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path.getAttribute('d')).not.toBe(initial)
+    await user.hover(comments)
+    await user.unhover(comments)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path.getAttribute('d')).not.toBe(initial)
+    await user.tab()
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path).toHaveAttribute('d', initial!)
+    expect(comments).toHaveAttribute('href', 'https://news.ycombinator.com/item?id=41000001')
   })
 
   it('HN：没有讨论页地址时评论数不是链接', () => {
     render(<ItemRow item={item({ meta: { score: 312, comments: 145 } })} adapter="hacker_news" rank={1} />)
 
     expect(screen.getByText('145')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '145' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /145 条评论/ })).toBeNull()
+    expect(screen.getByRole('img', { name: '评论' })).toBeInTheDocument()
   })
 
   it('GitHub：语言、收成 k 的 star 数、今日新增', () => {
     render(<ItemRow item={gh()} adapter="github_trending" rank={1} />)
 
     expect(screen.getByText('Rust')).toBeInTheDocument()
-    expect(screen.getByText('★ 12.3k')).toBeInTheDocument()
+    expect(screen.getByText('12.3k')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Star' })).toBeInTheDocument()
     expect(screen.getByText('+312')).toBeInTheDocument()
-    expect(screen.queryByText('▲ 312')).toBeNull()
+    expect(screen.queryByRole('img', { name: '得分' })).toBeNull()
   })
 
   it('GitHub：今日新增只有前三名反白成绿徽章', () => {
@@ -126,18 +161,17 @@ describe('ItemRow 元数据（按适配器）', () => {
   it('没有发布时间就不渲染时间那一段', () => {
     render(<ItemRow item={item({ published_at: null, meta: { score: 312 } })} adapter="hacker_news" rank={1} />)
 
-    expect(screen.getByText('▲ 312')).toBeInTheDocument()
+    expect(screen.getByText('312')).toBeInTheDocument()
     expect(screen.queryByTitle('09-09 01:12')).toBeNull()
   })
 
-  it('无法解析的发布时间不显示，也不留下尾部的点', () => {
+  it('无法解析的发布时间不留下图标或占位', () => {
     const { container } = render(<ItemRow item={item({ published_at: 'not a date', meta: { score: 312 } })} adapter="hacker_news" rank={1} />)
 
     expect(screen.queryByText('NaNd')).toBeNull()
-    expect(screen.getByText('▲ 312')).toBeInTheDocument()
-    // 元数据行应该只有分数，没有尾部点
-    const meta = container.querySelector('span[style*="inline-flex"]')
-    expect(meta?.textContent).toBe('▲ 312')
+    expect(screen.getByText('312')).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '发布时间' })).toBeNull()
+    expect(container.querySelector('.item-meta')?.children).toHaveLength(1)
   })
 })
 
@@ -164,8 +198,8 @@ describe('ItemRow 周刊那一版（D19）', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={1} variant="weekly" />)
 
     expect(screen.getByText('09-09 01:12')).toBeInTheDocument()
-    expect(screen.queryByText('▲ 312')).toBeNull()
-    expect(screen.queryByRole('link', { name: '145' })).toBeNull()
+    expect(screen.queryByRole('img', { name: '得分' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /145 条评论/ })).toBeNull()
   })
 
   it('整期同一天发布时（没有 published_at）整行不渲染', () => {

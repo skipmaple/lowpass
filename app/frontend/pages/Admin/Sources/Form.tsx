@@ -161,8 +161,8 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
         <Field label="排序值" name="sort_order" value={form.data.sort_order} onChange={(v) => form.setData('sort_order', v)} mono width={160} error={fieldError(errors, 'sort_order')} />
 
         <div className="admin-form-buttons">
-          <button type="button" className="ctrl" disabled={testing} onClick={runTest}>
-            <Icon name="refresh-cw" color="currentColor" />
+          <button type="button" className="ctrl" disabled={testing} aria-busy={testing} onClick={runTest}>
+            <Icon name={testing ? 'clock' : result ? (result.ok ? 'check' : 'triangle-alert') : 'refresh-cw'} color="currentColor" />
             <span>测试抓取</span>
           </button>
           <button type="submit" className="btn-primary" disabled={form.processing}>

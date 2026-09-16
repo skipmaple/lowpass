@@ -21,7 +21,6 @@ import {
   adminIssueReasonsHref,
   adminIssueRefetchHref,
   adminIssuesHref,
-  adminItemReasonHref,
   adminSourceEditHref,
   adminSourceEnablementHref,
   adminSourceRunsHref,
@@ -108,11 +107,10 @@ describe('后台地址', () => {
     expect(ADMIN_TEST_ALERT).toBe('/admin/test_alert')
   })
 
-  // ④ 推荐理由：兴趣画像 CRUD、期与条目的重生成理由端点
+  // ④ 推荐理由：兴趣画像 CRUD、整期重生成理由端点
   it('兴趣画像与推荐理由', () => {
     expect(ADMIN_INTEREST_AREAS).toBe('/admin/interest_areas')
     expect(adminInterestAreaHref('x')).toBe('/admin/interest_areas/x')
     expect(adminIssueReasonsHref('2026-09-08')).toBe('/admin/issues/2026-09-08/reasons')
-    expect(adminItemReasonHref('it')).toBe('/admin/items/it/reason')
   })
 })

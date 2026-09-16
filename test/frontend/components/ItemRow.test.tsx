@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ItemRow from '@/components/ItemRow'
-import { router, setPageProps } from '../support/inertia'
+import { setPageProps } from '../support/inertia'
 import { item } from '../support/props'
 
 // 条目行（PRD 5.1「条目结构」）：十条格式一致，元数据行按适配器换内容但只有数字与记号。
@@ -17,7 +16,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
-  router.post.mockClear()
 })
 
 const hn = () =>
@@ -209,18 +207,13 @@ describe('锚点', () => {
   })
 })
 
-describe('ItemRow 管理员的单条重生成（R-9.6）', () => {
-  it('管理员看到「重生成」，普通读者看不到；点了 POST 单条重生成', async () => {
-    setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin: true }, flash: {}, errors: {} })
-    const { unmount } = render(<ItemRow item={item({ id: 'it-1', reason: null })} adapter="hacker_news" rank={1} />)
-    await userEvent.click(screen.getByRole('button', { name: '重生成' }))
-    // 单条重生成是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点
-    expect(router.post).toHaveBeenCalledWith('/admin/items/it-1/reason', {}, expect.objectContaining({ onFinish: expect.any(Function) }))
-    expect(screen.getByRole('button', { name: '重生成' })).toBeDisabled()
-    unmount()
+describe('ItemRow 阅读页不提供重生成入口', () => {
+  it.each([true, false])('日刊展示已有推荐，管理员或读者都没有「重生成」（admin=%s）', (admin) => {
+    setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin }, flash: {}, errors: {} })
+    render(<ItemRow item={item({ reason: '与你关注的终端工具相关。', interest_tag: 'AI' })} adapter="hacker_news" rank={1} />)
 
-    setPageProps({ current_user: { display_name: 'G', avatar_url: null, email: null, admin: false }, flash: {}, errors: {} })
-    render(<ItemRow item={item({ id: 'it-2', reason: '有理由' })} adapter="hacker_news" rank={2} variant="daily" />)
+    expect(screen.getByText('与你关注的终端工具相关。')).toHaveClass('item-reason')
+    expect(screen.getByText('AI')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
   })
 

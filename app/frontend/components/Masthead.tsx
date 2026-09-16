@@ -9,7 +9,7 @@ import type { CurrentUser, SharedProps } from '@/types/lowpass'
 
 // 报头黑带：80px 墨底，LOWPASS 用品牌字 40px 纸色，导航文楷 15，右侧搜索图标与账户位。
 // 尺寸（高度、边距、品牌字号、间距）在 tokens.css 的 .masthead* 里，手机版由那里的 @media 收窄。
-// 图标是墨线内联 SVG（在黑带上用纸色描边），不引图标库、不用 emoji。
+// 图标由 Lucide + Morphicons 渲染（在黑带上用纸色描边），开合时在原位变形。
 //
 // 账户位读 inertia_share 的 current_user（P2-①）：有人就是头像菜单按钮（R-8.2），没有（类型上允许，
 // 实际登录墙后每页都有）就是同样外观的非交互占位。
@@ -91,12 +91,12 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((value) => !value)}
       >
-        {/* 头像是 provider 的外链图，referrerPolicy 拦住 Referer：不然每次加载都把读者在看哪一页告诉 Google / GitHub */}
+        <Icon name={open ? 'x' : 'user'} size={15} color="var(--paper)" />
+        {/* 头像覆盖人像占位，展开时淡出以露出关闭图标；SVG 始终挂载，才能连续变形。
+            provider 头像用 referrerPolicy 拦住 Referer，避免泄露读者正在看的页面。 */}
         {user.avatar_url ? (
-          <img src={user.avatar_url} alt="" className="account-avatar" referrerPolicy="no-referrer" />
-        ) : (
-          <Icon name="user" size={15} color="var(--paper)" />
-        )}
+          <img src={user.avatar_url} alt="" className={`account-avatar${open ? ' account-avatar--open' : ''}`} referrerPolicy="no-referrer" />
+        ) : null}
       </button>
       {open ? (
         <div className="menu-card" role="menu" id={menuId}>

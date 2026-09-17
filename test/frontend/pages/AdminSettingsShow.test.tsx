@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -53,8 +53,8 @@ describe('Admin/Settings/Show', () => {
     expect(daily).toHaveValue('06:00')
     await userEvent.clear(daily)
     await userEvent.type(daily, '06:30')
-    await userEvent.click(within(screen.getByRole('heading', { level: 2, name: '调度' }).parentElement!).getByRole('button', { name: '保存' }))
-    expect(formPatch).toHaveBeenCalledWith('/admin/settings')
+    await userEvent.click(within(screen.getByRole('heading', { level: 2, name: '调度' }).parentElement!).getByRole('button', { name: '保存调度' }))
+    expect(formPatch).toHaveBeenCalledWith('/admin/settings', expect.any(Object))
 
     expect(screen.getByRole('heading', { level: 2, name: '管理员白名单（只读）' })).toBeInTheDocument()
     expect(screen.getByText('drew@example.com')).toBeInTheDocument()
@@ -88,7 +88,7 @@ describe('Admin/Settings/Show', () => {
     show()
 
     expect(screen.getByRole('button', { name: '发送测试告警' })).toBeDisabled()
-    expect(screen.getByText('渠道由环境配置，见 docs/development.md')).toBeInTheDocument()
+    expect(screen.getByText('未配置告警渠道，无法发送测试。')).toBeInTheDocument()
   })
 
   it('兴趣画像：每行可改、可删，末行新增', async () => {
@@ -102,15 +102,17 @@ describe('Admin/Settings/Show', () => {
     await userEvent.clear(within(first).getByLabelText('关键词'))
     await userEvent.type(within(first).getByLabelText('关键词'), 'RAG')
     await userEvent.click(within(first).getByRole('button', { name: '保存' }))
-    expect(router.patch).toHaveBeenCalledWith('/admin/interest_areas/ia-1', { interest_area: { name: 'AI / LLM', keywords: 'RAG', sort_order: 1, enabled: true } })
+    expect(router.patch).toHaveBeenCalledWith('/admin/interest_areas/ia-1', { interest_area: { name: 'AI / LLM', keywords: 'RAG', sort_order: 1, enabled: true } }, expect.any(Object))
 
     await userEvent.click(within(rows[2]).getByRole('button', { name: '删除' }))
-    expect(router.delete).toHaveBeenCalledWith('/admin/interest_areas/ia-2')
+    expect(router.delete).not.toHaveBeenCalled()
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认删除' }))
+    expect(router.delete).toHaveBeenCalledWith('/admin/interest_areas/ia-2', expect.any(Object))
 
     const last = rows[3]
     await userEvent.type(within(last).getByLabelText('名称'), 'Rust')
     await userEvent.click(within(last).getByRole('button', { name: '新增' }))
-    expect(router.post).toHaveBeenCalledWith('/admin/interest_areas', { interest_area: { name: 'Rust', keywords: '', sort_order: 0, enabled: true } })
+    expect(router.post).toHaveBeenCalledWith('/admin/interest_areas', { interest_area: { name: 'Rust', keywords: '', sort_order: 0, enabled: true } }, expect.any(Object))
   })
 
   it('兴趣画像：新增成功后空白行清空', async () => {
@@ -128,12 +130,6 @@ describe('Admin/Settings/Show', () => {
     expect(within(rows()[4]).getByLabelText('名称')).toHaveValue('')
   })
 
-  it('兴趣画像表在自己的容器里横向滚', () => {
-    const { container } = show()
-
-    expect(container.querySelector('.admin-table-wrap')).toContainElement(screen.getByRole('table', { name: '兴趣画像' }))
-  })
-
   it('推荐理由：未配置时一句说明与密钥状态；配置表单 PATCH model 组', async () => {
     show()
     expect(screen.getByRole('heading', { level: 2, name: '推荐理由' })).toBeInTheDocument()
@@ -144,15 +140,48 @@ describe('Admin/Settings/Show', () => {
     await userEvent.type(screen.getByLabelText('接口地址'), 'https://model.example/v1')
     await userEvent.type(screen.getByLabelText('模型名'), 'gpt-x')
     // .at(-1) 在这个仓库的 tsconfig（lib: ES2020）下没有类型，改用下标取最后一个
-    const buttons = screen.getAllByRole('button', { name: '保存' })
-    await userEvent.click(buttons[buttons.length - 1])
-    expect(formPatch).toHaveBeenCalledWith('/admin/settings')
+    await userEvent.click(screen.getByRole('button', { name: '保存模型设置' }))
+    expect(formPatch).toHaveBeenCalledWith('/admin/settings', expect.any(Object))
   })
 
   it('推荐理由：配置好后显示用量', () => {
     show({ reasons: reasonsStatus({ configured: true, key_configured: true, base_url: 'https://model.example/v1', model_name: 'gpt-x', month_calls: 12, month_cost: '0.35', monthly_cap: '10', today_calls: 3 }) })
     expect(within(screen.getByText('密钥').closest('.kv-row')!).getByText('已配置')).toBeInTheDocument()
-    expect(document.querySelector('.reasons-usage')!.textContent).toContain('本月 12 次 · 费用 0.35 / 上限 10')
+    expect(document.querySelector('.reasons-usage')!.textContent).toContain('本月 12 次 · 费用 0.35 未指定币种 / 上限 10 未指定币种')
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('今日 3 次')
   })
+  it('兴趣画像行独立等待，失败保留数据，删除先确认', async () => {
+    show()
+    const rows = within(screen.getByRole('table', { name: '兴趣画像' })).getAllByRole('row')
+    await userEvent.type(within(rows[1]).getByLabelText('关键词'), ' draft')
+    await userEvent.click(within(rows[1]).getByRole('button', { name: '保存' }))
+    expect(within(rows[1]).getByRole('button', { name: '正在保存…' })).toBeDisabled()
+    expect(within(rows[2]).getByRole('button', { name: '保存' })).toBeEnabled()
+    const callbacks = router.patch.mock.calls[0][2]
+    act(() => { callbacks.onSuccess({ props: { flash: { alert: '名称已存在' } } }); callbacks.onFinish() })
+    expect(within(rows[1]).getByText('名称已存在')).toBeInTheDocument()
+    expect((within(rows[1]).getByLabelText('关键词') as HTMLInputElement).value).toContain('draft')
+    await userEvent.click(within(rows[2]).getByRole('button', { name: '删除' }))
+    expect(router.delete).not.toHaveBeenCalled()
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认删除' }))
+    expect(router.delete).toHaveBeenCalledWith('/admin/interest_areas/ia-2', expect.any(Object))
+  })
+
+  it('选择币种不重标未保存的历史费用，旧账确认随币种变化清除', async () => {
+    show({ reasons: reasonsStatus({ has_nonzero_costs: true, month_cost: '1.25' }) })
+    await userEvent.selectOptions(screen.getByLabelText('记账币种'), 'USD')
+    expect(document.querySelector('.reasons-usage')!.textContent).toContain('1.25 未指定币种')
+    const confirmation = screen.getByRole('checkbox', { name: /确认现有单价、上限和历史费用均使用 USD/ })
+    await userEvent.click(confirmation)
+    expect(confirmation).toBeChecked()
+    await userEvent.selectOptions(screen.getByLabelText('记账币种'), 'CNY')
+    expect(screen.getByRole('checkbox', { name: /确认现有单价、上限和历史费用均使用 CNY/ })).not.toBeChecked()
+  })
+
+  it('有已指定币种的非零旧账时，不能改币种', () => {
+    show({ reasons: reasonsStatus({ currency: 'USD', has_nonzero_costs: true, month_cost: '1.25' }) })
+    expect(screen.getByLabelText('记账币种')).toBeDisabled()
+    expect(document.querySelector('.reasons-usage')!.textContent).toContain('1.25 USD')
+  })
+
 })

@@ -1,5 +1,5 @@
-import { useForm } from '@inertiajs/react'
-import { useState } from 'react'
+import { router, useForm } from '@inertiajs/react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
@@ -40,7 +40,7 @@ function fieldError(errors: Record<string, string | string[] | undefined>, key: 
 
 export default function Form({ source, adapters }: AdminSourcesFormProps) {
   const editing = source.id !== null
-  const form = useForm<FormData>({
+  const form = useForm<FormData>(`Source:${source.id ?? 'new'}`, {
     name: source.name,
     adapter: source.adapter,
     publication: source.publication,
@@ -51,14 +51,45 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
   form.transform((data) => ({ source: data }))
   const [result, setResult] = useState<TestFetchResult | null>(null)
   const [testing, setTesting] = useState(false)
+  const [stale, setStale] = useState(false)
+  const [testedAt, setTestedAt] = useState('')
+  const [saveStatus, setSaveStatus] = useState('')
+  const revision = useRef(0)
+  const saving = useRef(false)
+
+  useEffect(() => {
+    if (!form.isDirty) return
+    function unload(event: BeforeUnloadEvent) {
+      if (!saving.current) { event.preventDefault(); event.returnValue = '' }
+    }
+    window.addEventListener('beforeunload', unload)
+    const remove = router.on('before', (event) => {
+      if (!saving.current && !window.confirm('更改尚未保存，确认离开？')) event.preventDefault()
+    })
+    return () => { window.removeEventListener('beforeunload', unload); remove() }
+  }, [form.isDirty])
+
+  function changed() {
+    revision.current += 1
+    if (result || testing) setStale(true)
+    setResult(null)
+    setSaveStatus('')
+  }
+
+  function setValue<K extends keyof FormData>(key: K, value: FormData[K]) {
+    changed()
+    form.setData((current) => ({ ...current, [key]: value }))
+  }
+
   const option = adapters.find((a) => a.key === form.data.adapter) ?? adapters[0]
   const errors = form.errors as unknown as Record<string, string | string[] | undefined>
 
   function setConfig(key: string, value: string) {
-    form.setData('config', { ...form.data.config, [key]: value })
+    setValue('config', { ...form.data.config, [key]: value })
   }
 
   function pickAdapter(key: string) {
+    changed()
     const adapter = key as Adapter
     const next = adapters.find((a) => a.key === adapter)!
     // 真实 useForm 的 setData 传对象是整份替换（commitData 直接顶掉 data，不是合并），传一个只带
@@ -68,12 +99,18 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
   }
 
   async function runTest() {
+    const testedRevision = revision.current
     setTesting(true)
+    setStale(false)
     try {
       const outcome = await testFetch({ id: source.id, name: form.data.name, adapter: form.data.adapter, publication: form.data.publication, config: form.data.config })
+      if (testedRevision !== revision.current) return
+      setTestedAt(new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }))
       setResult(outcome)
       if (outcome.ok && outcome.feed_title && form.data.name.trim() === '') form.setData('name', outcome.feed_title)
     } catch (error) {
+      if (testedRevision !== revision.current) return
+      setTestedAt(new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }))
       setResult({ ok: false, entries: [], warnings: [], parsed: 0, dropped: 0, duration_ms: 0, feed_title: null, error: error instanceof Error ? error.message : '请求失败' })
     } finally {
       setTesting(false)
@@ -82,31 +119,33 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
-    if (editing) form.patch(adminSourceHref(source.id!))
-    else form.post(ADMIN_SOURCES)
+    saving.current = true
+    const options = { onError: () => setSaveStatus('未能保存，请检查字段'), onFinish: () => { saving.current = false } }
+    if (editing) form.patch(adminSourceHref(source.id!), options)
+    else form.post(ADMIN_SOURCES, options)
   }
 
   const config = form.data.config
 
   return (
-    <AdminPage section="sources" big={editing ? '编辑来源' : '新建来源'} bottom={option.label} controls={<Ctrl href={ADMIN_SOURCES} label="返回列表" icon="chevron-left" side="left" />}>
+    <AdminPage section="sources" big={editing ? `编辑来源 · ${source.name}` : '新建来源'} bottom={option.label} controls={<Ctrl href={ADMIN_SOURCES} label="返回列表" icon="chevron-left" side="left" />}>
       <form className="admin-form" onSubmit={submit}>
         {editing ? (
           <div className="field">
-            <span className="field-label">适配器</span>
+            <span className="field-label">来源类型</span>
             <Mixed text={option.label} font="latin" size="var(--fs-15)" color="var(--ink)" />
           </div>
         ) : (
           <div className="field">
-            <span className="field-label">适配器</span>
-            <SegButtons label="适配器" options={adapters.map((a) => ({ value: a.key, label: a.label }))} value={form.data.adapter} onChange={pickAdapter} />
+            <span className="field-label">来源类型</span>
+            <SegButtons label="来源类型" options={adapters.map((a) => ({ value: a.key, label: a.label }))} value={form.data.adapter} onChange={pickAdapter} />
           </div>
         )}
 
-        {form.data.adapter === 'rss' ? <Field label="feed 地址" name="feed_url" value={config.feed_url ?? ''} onChange={(v) => setConfig('feed_url', v)} mono type="url" error={fieldError(errors, 'config.feed_url')} /> : null}
+        {form.data.adapter === 'rss' ? <Field label="feed 地址" name="feed_url" value={config.feed_url ?? ''} onChange={(v) => setConfig('feed_url', v)} mono type="url" required error={fieldError(errors, 'config.feed_url')} /> : null}
 
         <div className="admin-form-row">
-          <Field label="名称" name="name" value={form.data.name} onChange={(v) => form.setData('name', v)} note={form.data.adapter === 'rss' ? '默认取 feed 标题' : undefined} error={fieldError(errors, 'name')} width={320} />
+          <Field label="名称" name="name" required value={form.data.name} onChange={(v) => setValue('name', v)} note={form.data.adapter === 'rss' ? '默认取 feed 标题' : undefined} error={fieldError(errors, 'name')} width={320} />
           <div className="field">
             <span className="field-label">刊物</span>
             <SegButtons
@@ -116,8 +155,9 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
                 { value: 'weekly', label: '周刊', disabled: !option.publications.includes('weekly') },
               ]}
               value={form.data.publication}
-              onChange={(v) => form.setData('publication', v as Publication)}
+              onChange={(v) => setValue('publication', v as Publication)}
             />
+            {option.publications.length === 1 ? <span className="field-note">此来源类型仅支持{option.publications[0] === 'daily' ? '日刊' : '周刊'}</span> : null}
             {fieldError(errors, 'publication') ? <span className="notice-line"><Icon name="triangle-alert" size={14} color="var(--ink2)" /><span>{fieldError(errors, 'publication')}</span></span> : null}
           </div>
         </div>
@@ -129,8 +169,8 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
               <SegButtons label="榜单" options={[{ value: 'top', label: 'top' }, { value: 'best', label: 'best' }]} value={config.list ?? 'top'} onChange={(v) => setConfig('list', v)} />
             </div>
             <div className="admin-form-row">
-              <Field label="条数" name="count" value={config.count ?? ''} onChange={(v) => setConfig('count', v)} mono width={160} note="1 到 100" error={fieldError(errors, 'config.count')} />
-              <Field label="最低分数" name="min_score" value={config.min_score ?? ''} onChange={(v) => setConfig('min_score', v)} mono width={160} error={fieldError(errors, 'config.min_score')} />
+              <Field label="条数" name="count" value={config.count ?? ''} onChange={(v) => setConfig('count', v)} mono type="number" min={1} max={100} width={160} note="1 到 100" error={fieldError(errors, 'config.count')} />
+              <Field label="最低分数" name="min_score" value={config.min_score ?? ''} onChange={(v) => setConfig('min_score', v)} mono type="number" min={0} width={160} error={fieldError(errors, 'config.min_score')} />
             </div>
           </>
         ) : null}
@@ -138,40 +178,46 @@ export default function Form({ source, adapters }: AdminSourcesFormProps) {
         {form.data.adapter === 'github_trending' ? (
           <>
             <Field label="语言列表" name="languages" value={config.languages ?? ''} onChange={(v) => setConfig('languages', v)} note="最多 3 个，逗号分隔，留空为综合榜" error={fieldError(errors, 'config.languages')} />
-            <Field label="每语言条数" name="count" value={config.count ?? ''} onChange={(v) => setConfig('count', v)} mono width={160} note="综合榜 10，多语言各 5" error={fieldError(errors, 'config.count')} />
+            <Field label="每语言条数" name="count" value={config.count ?? ''} onChange={(v) => setConfig('count', v)} mono type="number" min={1} max={25} width={160} note="1 到 25；综合榜 10，多语言各 5" error={fieldError(errors, 'config.count')} />
           </>
         ) : null}
 
         {form.data.adapter === 'rss' ? (
           <div className="admin-form-row">
-            <Field label="条数上限" name="count" value={config.count ?? ''} onChange={(v) => setConfig('count', v)} mono width={160} note="1 到 50" error={fieldError(errors, 'config.count')} />
+            <Field label="条数上限" name="count" value={config.count ?? ''} onChange={(v) => setConfig('count', v)} mono type="number" min={1} max={50} width={160} note="1 到 50" error={fieldError(errors, 'config.count')} />
             {form.data.publication === 'daily' ? (
-              <Field label="时间窗口（小时）" name="window_hours" value={config.window_hours ?? ''} onChange={(v) => setConfig('window_hours', v)} mono width={160} note="1 到 72" error={fieldError(errors, 'config.window_hours')} />
+              <Field label="时间窗口（小时）" name="window_hours" value={config.window_hours ?? ''} onChange={(v) => setConfig('window_hours', v)} mono type="number" min={1} max={72} width={160} note="1 到 72" error={fieldError(errors, 'config.window_hours')} />
             ) : null}
           </div>
         ) : null}
 
         {form.data.adapter === 'ruanyf_weekly' ? (
           <div className="admin-form-row">
-            <Field label="仓库" name="repo" value="ruanyf/weekly" onChange={() => {}} mono width={320} note="固定，不可改" />
-            <Field label="最少条目阈值" name="min_items" value={config.min_items ?? ''} onChange={(v) => setConfig('min_items', v)} mono width={160} note="低于此值降级为整期一条并告警" error={fieldError(errors, 'config.min_items')} />
+            <Field label="仓库" name="repo" value="ruanyf/weekly" onChange={() => {}} mono readOnly width={320} note="固定，不可改" />
+            <Field label="最少条目阈值" name="min_items" value={config.min_items ?? ''} onChange={(v) => setConfig('min_items', v)} mono type="number" min={1} width={160} note="低于此值降级为整期一条并告警" error={fieldError(errors, 'config.min_items')} />
           </div>
         ) : null}
 
-        <Field label="排序值" name="sort_order" value={form.data.sort_order} onChange={(v) => form.setData('sort_order', v)} mono width={160} error={fieldError(errors, 'sort_order')} />
+        <Field label="排序值" name="sort_order" value={form.data.sort_order} onChange={(v) => setValue('sort_order', v)} mono type="number" min={0} width={160} error={fieldError(errors, 'sort_order')} />
 
         <div className="admin-form-buttons">
           <button type="button" className="ctrl" disabled={testing} onClick={runTest}>
             <Icon name="refresh-cw" color="currentColor" />
-            <span>测试抓取</span>
+            <span>{testing ? '测试中…' : '测试抓取'}</span>
           </button>
           <button type="submit" className="btn-primary" disabled={form.processing}>
-            保存
+            {form.processing ? '正在保存…' : '保存'}
           </button>
           {result && !result.ok ? <span className="field-note">尚未通过测试，仍可保存。</span> : null}
         </div>
       </form>
 
+      <div role="status" className="field-note">
+        {form.isDirty ? <p>有未保存的更改</p> : null}
+        {stale ? <p>配置已变化，请重新测试</p> : null}
+        {saveStatus ? <p>{saveStatus}</p> : null}
+        {result ? <p>测试时间（Asia/Shanghai）：{testedAt}</p> : null}
+      </div>
       {result ? <Preview result={result} /> : null}
     </AdminPage>
   )

@@ -3,7 +3,7 @@ export type SegButtonOption = { value: string; label: string; disabled?: boolean
 
 export default function SegButtons({ label, options, value, onChange }: { label: string; options: SegButtonOption[]; value: string; onChange: (value: string) => void }) {
   return (
-    <div className="seg" role="group" aria-label={label}>
+    <div className="seg seg-buttons" role="group" aria-label={label}>
       {options.map((option) => (
         <button
           key={option.value}

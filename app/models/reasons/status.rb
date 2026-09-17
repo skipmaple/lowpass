@@ -9,6 +9,8 @@ module Reasons::Status
       input_price: Setting.get("model_input_price"),
       output_price: Setting.get("model_output_price"),
       monthly_cap: Setting.get("model_monthly_cap"),
+      currency: Setting.get("model_currency"),
+      has_nonzero_costs: ModelCall.where.not(cost: 0).exists?,
       month_calls: Reasons::Budget.month_calls,
       month_cost: Reasons::Budget.month_cost.to_s("F"),
       today_calls: Reasons::Budget.today_calls

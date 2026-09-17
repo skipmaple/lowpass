@@ -20,12 +20,12 @@ export function usePage<T = PageProps>() {
 }
 
 // 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」；后台表单提交也走 spy（post/patch）
-type RouterEvent = 'start' | 'finish'
-type RouterListener = () => void
+type RouterEvent = 'start' | 'finish' | 'before'
+type RouterListener = (event: Event) => void
 const routerListeners = new Map<RouterEvent, Set<RouterListener>>()
 
-export function emitRouterEvent(event: RouterEvent) {
-  routerListeners.get(event)?.forEach((listener) => listener())
+export function emitRouterEvent(event: RouterEvent, detail = new Event(event)) {
+  routerListeners.get(event)?.forEach((listener) => listener(detail))
 }
 
 export const router = {
@@ -67,7 +67,8 @@ export const formPatch = vi.fn()
 // toHaveValue 与「没报那条 warning」都靠不住。测试改成直接读这份快照，跳过 DOM 残留与 warning 去重的干扰。
 export let lastFormData: Record<string, unknown> | null = null
 
-export function useForm<T extends Record<string, unknown>>(initial: T) {
+export function useForm<T extends Record<string, unknown>>(initialOrKey: T | string, remembered?: T) {
+  const initial = typeof initialOrKey === 'string' ? remembered! : initialOrKey
   const [data, setState] = useState<T>(initial)
   lastFormData = data
   const raw = (pageProps.errors as Record<string, string[] | string> | undefined) ?? {}
@@ -82,5 +83,5 @@ export function useForm<T extends Record<string, unknown>>(initial: T) {
     else setState((prev) => ({ ...prev, [keyOrData]: value }))
   }
   // transform 是真 useForm 提交前改一遍 data 的钩子；测试不提交，替身只要能被调用就够（no-op）
-  return { data, setData, post: formPost, patch: formPatch, processing: false, errors, transform: () => {} }
+  return { data, setData, post: formPost, patch: formPatch, processing: false, isDirty: JSON.stringify(data) !== JSON.stringify(initial), errors, transform: () => {} }
 }

@@ -1,10 +1,12 @@
+import type { Page } from '@inertiajs/core'
 import { router } from '@inertiajs/react'
 import { useState } from 'react'
 
+import Dialog from '@/components/Dialog'
+import Field from '@/components/Field'
 import { ADMIN_INTEREST_AREAS, adminInterestAreaHref } from '@/lib/paths'
 import type { InterestArea } from '@/types/lowpass'
 
-// 兴趣画像的一行（设计 §6.1）：名称、关键词、排序、启用，行内改、保存 / 删除；最后一行是新增
 type Props = { area?: InterestArea }
 
 export default function InterestAreaRow({ area }: Props) {
@@ -12,23 +14,42 @@ export default function InterestAreaRow({ area }: Props) {
   const [keywords, setKeywords] = useState(area?.keywords ?? '')
   const [sortOrder, setSortOrder] = useState(String(area?.sort_order ?? 0))
   const [enabled, setEnabled] = useState(area?.enabled ?? true)
-  const payload = { interest_area: { name, keywords, sort_order: Number(sortOrder) || 0, enabled } }
+  const [busy, setBusy] = useState<'save' | 'delete' | null>(null)
+  const [message, setMessage] = useState('')
+  const [confirming, setConfirming] = useState(false)
+
+  function save(remove = false) {
+    setBusy(remove ? 'delete' : 'save')
+    setMessage('')
+    const options = {
+      preserveScroll: true,
+      onSuccess: (page: Page) => {
+        // Existing endpoint reports validation failures in flash, not Inertia errors.
+        setMessage((page.props.flash as { alert?: string } | undefined)?.alert || (remove ? '已删除' : '已保存'))
+        setConfirming(false)
+      },
+      onError: () => setMessage('未能保存，请检查输入后重试'),
+      onFinish: () => setBusy(null),
+    }
+    const payload = { interest_area: { name, keywords, sort_order: Number(sortOrder) || 0, enabled } }
+    if (remove && area) router.delete(adminInterestAreaHref(area.id), options)
+    else if (area) router.patch(adminInterestAreaHref(area.id), payload, options)
+    else router.post(ADMIN_INTEREST_AREAS, payload, options)
+  }
 
   return (
-    <tr>
-      <td><input aria-label="名称" className="field-input field-input-cjk" value={name} onChange={(e) => setName(e.target.value)} style={{ width: 160 }} /></td>
-      <td><input aria-label="关键词" className="field-input field-input-cjk" value={keywords} onChange={(e) => setKeywords(e.target.value)} style={{ width: '100%' }} /></td>
-      <td><input aria-label="排序" className="field-input" inputMode="numeric" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} style={{ width: 64 }} /></td>
-      <td><label className="cjk" style={{ fontSize: 'var(--fs-13)' }}><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> 启用</label></td>
-      <td className="admin-actions">
-        {area ? (
-          <>
-            <button type="button" className="link-button" onClick={() => router.patch(adminInterestAreaHref(area.id), payload)}>保存</button>
-            <button type="button" className="link-button" onClick={() => router.delete(adminInterestAreaHref(area.id))}>删除</button>
-          </>
-        ) : (
-          <button type="button" className="link-button" onClick={() => router.post(ADMIN_INTEREST_AREAS, payload)}>新增</button>
-        )}
+    <tr className="interest-row">
+      <td><Field label="名称" name="name" value={name} onChange={setName} required width={160} /></td>
+      <td className="interest-keywords"><Field label="关键词" name="keywords" value={keywords} onChange={setKeywords} /></td>
+      <td><Field label="排序" name="sort_order" value={sortOrder} onChange={setSortOrder} type="number" mono width={80} /></td>
+      <td><label className="interest-enabled"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> 启用</label></td>
+      <td>
+        <div className="admin-actions">
+          <button type="button" className="link-button" disabled={busy !== null} onClick={() => save()}>{busy === 'save' ? '正在保存…' : area ? '保存' : '新增'}</button>
+          {area ? <button type="button" className="link-button" disabled={busy !== null} onClick={() => setConfirming(true)}>{busy === 'delete' ? '正在删除…' : '删除'}</button> : null}
+        </div>
+        <span role="status" className="field-note">{message}</span>
+        <Dialog open={confirming} text={`确认删除兴趣画像「${area?.name}」？`} cancel="取消" confirm={busy === 'delete' ? '正在删除…' : '确认删除'} busy={busy !== null} onCancel={() => setConfirming(false)} onConfirm={() => save(true)} />
       </td>
     </tr>
   )

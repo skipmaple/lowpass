@@ -553,3 +553,32 @@ a.t:hover { text-decoration-color: var(--ink); }
 }
 
 footer a { display: inline-flex; min-height: 44px; align-items: center; }
+
+/* Source/settings forms: wrap every choice and keep each field usable on narrow paper. */
+.field { min-width: 0; max-width: 100%; }
+.field-input { min-width: 0; width: 100%; max-width: 100%; min-height: 44px; }
+.seg-buttons { flex-wrap: wrap; gap: 4px; max-width: 100%; }
+.seg-buttons .seg-item { margin-left: 0; min-height: 44px; height: auto; white-space: normal; text-align: left; }
+.seg-button:disabled, .field-input:disabled, button:disabled { opacity: .55; cursor: not-allowed; }
+.settings-directory { display: flex; flex-wrap: wrap; gap: 0 24px; padding-top: 20px; font-family: var(--font-cjk); font-size: var(--fs-15); }
+.settings-directory a { display: inline-flex; align-items: center; min-height: 44px; }
+.admin-section { scroll-margin-top: 20px; }
+.interest-table { table-layout: fixed; }
+.interest-table th { display: none; }
+.interest-table td { vertical-align: top; padding: 16px 12px 16px 0; }
+.interest-table td:first-child { width: 20%; }
+.interest-table .interest-keywords { width: 36%; }
+.interest-table td:nth-child(3) { width: 12%; }
+.interest-table td:nth-child(4) { width: 12%; }
+.interest-enabled { display: flex; align-items: center; min-height: 44px; gap: 8px; font-family: var(--font-cjk); font-size: var(--fs-13); }
+.interest-enabled input { flex-shrink: 0; accent-color: var(--ink); }
+.deployment-help { font-family: var(--font-cjk); font-size: var(--fs-15); overflow-wrap: anywhere; }
+.deployment-help code { font-family: var(--font-data); font-size: var(--fs-13); }
+.admin-section summary { min-height: 44px; align-content: center; font-family: var(--font-cjk); cursor: pointer; }
+@media (max-width: 768px) {
+  .interest-table, .interest-table tbody, .interest-table tr, .interest-table td { display: block; width: 100%; }
+  .interest-table thead { display: none; }
+  .interest-table tr { padding: 24px 0; border-bottom: 1px solid var(--rule); }
+  .interest-table td, .interest-table td:first-child, .interest-table td:nth-child(3), .interest-table td:nth-child(4), .interest-table .interest-keywords { width: 100%; padding: 0 0 12px; border: 0; }
+  .interest-table .field { width: 100% !important; }
+}

@@ -67,6 +67,6 @@ export type AlertChannel = { configured: boolean; label: string };
 export type AlertChannels = { email: AlertChannel; webhook: AlertChannel };
 
 // P2-④ 推荐理由（设计 §6.1）：设置页「兴趣画像」「推荐理由」两节（Reasons::Status#props、InterestArea）
-export type ReasonsStatus = { configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
+export type ReasonsStatus = { currency: string; has_nonzero_costs: boolean; configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
 export type InterestArea = { id: string; name: string; keywords: string; sort_order: number; enabled: boolean };
-export type ModelConfig = { base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };
+export type ModelConfig = { currency: string; currency_confirmation: string; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };

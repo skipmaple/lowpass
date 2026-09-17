@@ -22,6 +22,7 @@ function show(overrides: Record<string, unknown> = {}) {
     ],
     today_issue_exists: false,
     today_period_key: '2026-09-09',
+    today_issue_state: null,
     active_runs: [],
     finished_runs: [],
     daily_time: '06:00',

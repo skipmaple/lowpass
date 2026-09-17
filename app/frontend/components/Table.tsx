@@ -10,7 +10,7 @@ export default function Table({ headers, widths, rows, empty, className = '' }: 
   return (
     <div className="table-wrap">
       <div className={`table ${className}`} role="table">
-        <div className="table-head" role="row" style={{ gridTemplateColumns: columns }}>
+        <div className="table-head" role="row" style={{ '--table-columns': columns } as React.CSSProperties}>
           {headers.map((header) => (
             <span key={header} role="columnheader" className="table-th">
               {header}
@@ -18,7 +18,7 @@ export default function Table({ headers, widths, rows, empty, className = '' }: 
           ))}
         </div>
         {rows.map((row) => (
-          <div key={row.key} className="table-row" role="row" style={{ gridTemplateColumns: columns }}>
+          <div key={row.key} className="table-row" role="row" style={{ '--table-columns': columns } as React.CSSProperties}>
             {row.cells.map((cell, index) => (
               <div key={index} role="cell" className="table-td">
                 <span className="table-cell-label" aria-hidden="true">{headers[index]}</span>

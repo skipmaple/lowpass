@@ -18,6 +18,18 @@ class Admin::IssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], page_props["active_runs"]
   end
 
+  test "浏览历史月份仍报告今天的生成状态" do
+    Issue.create!(kind: "daily", period_key: "2026-08-31", state: "empty", generation_started_at: Time.utc(2026, 8, 31))
+    issues(:daily_0908).update_columns(state: "generating", published_at: nil)
+    travel_to Time.utc(2026, 9, 8, 4) do
+      get admin_issues_path(month: "2026-08")
+    end
+
+    assert_equal "generating", page_props["today_issue_state"]
+    assert_equal true, page_props["today_issue_exists"]
+    assert page_props["rows"].none? { |row| row["period_key"] == "2026-09-08" }
+  end
+
   test "筛选与翻月" do
     travel_to Time.utc(2026, 9, 9, 4) do
       get admin_issues_path(kind: "weekly", month: "2026-09")

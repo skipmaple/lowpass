@@ -5,11 +5,14 @@ class Admin::IssuesController < Admin::BaseController
   def index
     kind = params[:kind].presence_in(KINDS) || "all"
     if listing = listing_for(kind)
+      today_key = PeriodKey.today
+      today_state = Issue.daily.where(period_key: today_key).pick(:state)
       runs = FetchRun.manual_run_props(FetchRun.manual_recent)
       render inertia: "Admin/Issues/Index", props: listing.merge(
         kind: kind,
-        today_period_key: PeriodKey.today,
-        today_issue_exists: Issue.daily.exists?(period_key: PeriodKey.today),
+        today_period_key: today_key,
+        today_issue_state: today_state,
+        today_issue_exists: today_state.present?,
         active_runs: runs[:active],
         finished_runs: runs[:finished]
       )

@@ -33,7 +33,7 @@ function Health({ row }: { row: AdminSourceRow }) {
 }
 
 export default function Index({ sources, summary }: AdminSourcesIndexProps) {
-  const operations = useAdminOperations()
+  const operations = useAdminOperations(['sources', 'summary'])
   const [disabling, setDisabling] = useState<AdminSourceRow | null>(null)
   // 各行独立跟踪测试请求，后返回的结果仍保留明确的来源名。
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set())

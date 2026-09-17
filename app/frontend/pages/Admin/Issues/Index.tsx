@@ -11,10 +11,11 @@ import Mark from '@/components/Mark'
 import Seg from '@/components/Seg'
 import Table from '@/components/Table'
 import { ADMIN_TODAY_ISSUE, adminIssueBackfillHref, adminIssueReasonsHref, adminIssueRefetchHref, adminIssuesHref, dailyHref, weeklyHref } from '@/lib/paths'
+import { usePolling } from '@/lib/polling'
 import { useAdminOperations } from '@/lib/operations'
 import { useManualRuns } from '@/lib/runs'
 import { Mixed } from '@/lib/typeset'
-import type { AdminIssueRow, ArchiveNav, FinishedRun, ManualRun } from '@/types/lowpass'
+import type { AdminIssueRow, ArchiveNav, FinishedRun, IssueState, ManualRun } from '@/types/lowpass'
 
 // 期（5.6，画布 admin_issues() 与 admin_dialogs()）：一页一个月，日刊逐天（缺期给「补生成」），周刊按周；
 // 「重抓某源」在对话框里选源；「立即生成今日日刊」已有期时先弹附录 B 的确认（R-3.11）
@@ -27,10 +28,12 @@ export type AdminIssuesIndexProps = {
   rows: AdminIssueRow[]
   today_issue_exists: boolean
   today_period_key: string
+  today_issue_state: IssueState | null
   active_runs: ManualRun[]
   finished_runs: FinishedRun[]
 }
 
+const REFRESH_PROPS = ['rows', 'active_runs', 'finished_runs', 'summary', 'today_issue_exists', 'today_period_key', 'today_issue_state']
 const HEADERS = ['刊物', '日期 / 周次', '状态', '生成时间', '各源结果', '理由', '操作']
 const WIDTHS = ['minmax(0, .5fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)']
 
@@ -41,9 +44,10 @@ function markOf(state: AdminIssueRow['state']) {
   return 'empty'
 }
 
-export default function Index({ month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, active_runs, finished_runs }: AdminIssuesIndexProps) {
-  const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: ['rows', 'active_runs', 'finished_runs', 'summary', 'today_issue_exists', 'today_period_key'] })
-  const operations = useAdminOperations()
+export default function Index({ month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, today_issue_state, active_runs, finished_runs }: AdminIssuesIndexProps) {
+  const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: REFRESH_PROPS })
+  const operations = useAdminOperations(REFRESH_PROPS)
+  usePolling(today_issue_state === 'generating' && active_runs.length === 0, REFRESH_PROPS)
   const [pendingOnly, setPendingOnly] = useState(false)
   const [refetching, setRefetching] = useState<AdminIssueRow | null>(null)
   const [sourceId, setSourceId] = useState<string>('')
@@ -55,7 +59,7 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
   }
 
   const visibleRows = pendingOnly ? rows.filter((row) => row.state === 'missing' || (row.reasons?.missing ?? 0) > 0 || row.source_marks?.split(' · ').some((mark) => mark.endsWith(' 失败'))) : rows
-  const todayRunning = manual.running(today_period_key) || rows.some((row) => row.kind === 'daily' && row.period_key === today_period_key && row.state === 'generating')
+  const todayRunning = manual.running(today_period_key) || today_issue_state === 'generating'
   const selectedSource = refetching?.refetchable_sources.find((source) => source.id === sourceId)
 
   const tableRows = visibleRows.map((row) => ({

@@ -411,7 +411,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 /* 表格：grid，表头文楷 12 次墨 + 1px 墨线，行间 35% 线；外层横向滚 */
 .table-wrap { overflow-x: auto; }
 .table { min-width: 720px; }
-.table-head, .table-row { display: grid; gap: 0 16px; align-items: center; }
+.table-head, .table-row { grid-template-columns: var(--table-columns); display: grid; gap: 0 16px; align-items: center; }
 .table-head { padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
 .table-th { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
 .table-row { padding: 14px 0; border-bottom: 1px solid var(--rule); }

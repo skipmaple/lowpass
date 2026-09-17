@@ -41,7 +41,7 @@ function RunError({ error }: { error: string | null }) {
 
 export default function Runs({ source, status, runs, latest_issue, active_runs, finished_runs }: AdminSourcesRunsProps) {
   const [confirm, setConfirm] = useState(false)
-  const operations = useAdminOperations()
+  const operations = useAdminOperations(['runs', 'active_runs', 'finished_runs', 'latest_issue'])
   const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: ['runs', 'active_runs', 'finished_runs'] })
   const busy = operations.busy('refetch') || (latest_issue !== null && manual.running(latest_issue.period_key, source.name))
 

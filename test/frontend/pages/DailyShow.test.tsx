@@ -90,8 +90,14 @@ describe('切来源（本地状态 + ?source= 深链）', () => {
 
     expect(router.replace).toHaveBeenCalledWith({
       url: '/daily/2026-09-08?source=src-gh',
+      props: expect.any(Function),
       preserveState: true,
       preserveScroll: true,
+    })
+    const replace = router.replace.mock.calls[0][0]
+    expect(replace.props({ active_source_id: 'src-hn', retained: 'yes' })).toEqual({
+      active_source_id: 'src-gh',
+      retained: 'yes',
     })
     expect(replaceState).not.toHaveBeenCalled()
     expect(router.visit).not.toHaveBeenCalled()

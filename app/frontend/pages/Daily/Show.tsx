@@ -38,12 +38,13 @@ function bodyNotice(issue: DailyIssue, missing: boolean): string | null {
 }
 
 // 深链 ?source=<id>：切换时只改 Inertia 当前页与地址栏，不发请求。
-// 直接 history.replaceState 只改浏览器地址，不会更新 Inertia 的 page.url；后续滚动记忆会拿旧地址覆盖回来。
+// URL 与 active_source_id 要一起写回历史页；否则离开后 Back 恢复的缓存 props 仍会选中旧来源。
 function rememberSource(sourceId: string) {
   const url = new URL(window.location.href)
   url.searchParams.set('source', sourceId)
   router.replace({
     url: `${url.pathname}${url.search}${url.hash}`,
+    props: (props) => ({ ...props, active_source_id: sourceId }),
     preserveState: true,
     preserveScroll: true,
   })

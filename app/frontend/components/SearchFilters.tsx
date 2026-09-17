@@ -74,7 +74,7 @@ function DateRange({ q, filters, datePresets }: Omit<SearchFiltersProps, 'source
   }
 
   return (
-    <div className="filter-row">
+    <div className="filter-row date-range">
       <Seg label="日期" options={options} />
       {filters.range === 'custom' ? (
         <div className="filter-row">

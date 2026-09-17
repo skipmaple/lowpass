@@ -352,6 +352,9 @@ button.chip-outline { min-height: 44px; }
   .filters { gap: 20px; padding: 16px 0; }
   .filter-group { width: 100%; min-width: 0; }
   .filter-row, .chips { max-width: 100%; }
+  /* 320px 的 272px 正文宽度放不下四个日期预设；只让这一组换行，保留共享 Seg 的单行布局。 */
+  .date-range { width: 100%; min-width: 0; }
+  .date-range > .seg { width: 100%; max-width: 100%; flex-wrap: wrap; }
   .search-row { padding: 24px 0; }
   .search-count { flex-wrap: wrap; }
 }

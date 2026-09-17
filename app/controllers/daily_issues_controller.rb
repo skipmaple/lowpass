@@ -25,7 +25,9 @@ class DailyIssuesController < ApplicationController
         sources: sources,
         items_by_source: issue&.items_by_source || {},
         active_source_id: params[:source].presence_in(sources.pluck(:id)) || sources.dig(0, :id),
-        latest_weekly_key: Issue.latest_weekly_key
+        latest_weekly_key: Issue.latest_weekly_key,
+        latest_daily_key: Issue.latest_daily_key,
+        backfill_available: Current.user.admin? && issue.nil? && period_key <= PeriodKey.today
       }
     else
       render_not_found

@@ -26,12 +26,12 @@
 
 html { background: var(--ground); color-scheme: light; }
 body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: var(--fs-15); }
-/* 纸纹：3px 横纹 3% 墨 + 4px 竖纹 14% 白。颜色与图层必须分开写——
+/* 纸纹：3px 横纹 1.2% 墨 + 4px 竖纹 5% 白。颜色与图层必须分开写——
    background 简写里颜色只能出现在最后一层，写在第一层整条声明会被丢弃。 */
 .paper {
   background-color: var(--paper);
-  background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.03) 0 1px, transparent 1px 3px),
-                    repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 1px, transparent 1px 4px);
+  background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.012) 0 1px, transparent 1px 3px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px);
   box-shadow: 0 30px 80px rgba(0,0,0,0.45);
 }
 .cjk { font-family: var(--font-cjk); }
@@ -99,7 +99,7 @@ a.t:hover { text-decoration-color: var(--ink); }
   .masthead { height: 56px; padding: 0 24px; }
   .masthead-brand { font-size: var(--fs-26); }
   .masthead-left { gap: 20px; }
-  .masthead-nav { gap: 16px; }
+  .masthead-nav { gap: 0; }
   .masthead-actions { gap: 16px; }
 }
 
@@ -290,13 +290,17 @@ a.t:hover { text-decoration-color: var(--ink); }
 /* 期头：搜索图标 + 文楷 32 输入框 + 反白按钮，底线 2px（与 .page-head 同一条线） */
 .search-head { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
 .search-field { flex: 1 1 320px; display: flex; align-items: center; gap: 16px; min-width: 0; }
-.search-input { flex: 1 1 auto; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--ink);
+.search-input { flex: 1 1 auto; min-width: 0; min-height: 44px; border: 0; padding: 0; background: transparent; color: var(--ink);
                 font-family: var(--font-cjk); font-size: var(--fs-32); line-height: 1.2; }
 .search-input::placeholder { color: var(--ink2); font-size: var(--fs-20); }
-/* type=search 在 Chrome / Safari 里自带一个清除用的「×」，不是这张纸上的装置（画布 search_head() 没有它）：藏掉，清空靠键盘 */
+/* 隐藏 Chrome / Safari 自带的清除叉，改用右侧有明确名称与 44px 目标的 .search-clear。 */
 .search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .search-input:focus { outline: none; }
 .search-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.search-clear { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+                border: 0; background: transparent; cursor: pointer; }
+.search-clear:disabled { visibility: hidden; }
+.search-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
 .search-note { flex-basis: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 /* 反白按钮（画布 btn(primary=True)）：40px 墨块，纸色文楷 15 */
 .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px;
@@ -306,27 +310,31 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 筛选栏：三组「小标 + 控件」横排，底线 1px */
 .filters { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
+.filter-toggle { display: none; }
+.filter-toggle-icon { transition: transform 120ms ease; }
+.filter-toggle-icon[data-open] { transform: rotate(90deg); }
 .filter-group { display: flex; flex-direction: column; gap: 8px; }
 .filter-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
 .filter-row { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 
-/* 分段控件（画布 seg()）：并排描边块共用一条边，当前项反白 */
+/* 分段控件（画布 seg()）：并排描边块共用一条边，当前项反白；链接与按钮在所有宽度都有 44px 目标。 */
 .seg { display: inline-flex; }
-.seg-item { display: inline-flex; align-items: center; height: 40px; padding: 0 14px; border: 1px solid var(--ink); white-space: nowrap; }
+.seg-item { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid var(--ink); white-space: nowrap; }
 .seg-item + .seg-item { margin-left: -1px; }
 .seg-item[aria-current="true"] { background: var(--ink); }
 .seg-item:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* 来源小签（画布 chip_outline()）：22px 描边小签，选中反白成墨块（与条目的兴趣标签同一个块） */
+/* 描边小签本身保持 22px；搜索来源的 button 是交互控件，单独扩到 44px，避免放大后台被动状态签。 */
 .chips { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 40px; }
 .chip-outline { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid var(--rule); background: transparent;
                 letter-spacing: 0.04em; white-space: nowrap; cursor: pointer; }
+button.chip-outline { min-height: 44px; }
 .chip-outline:hover { border-color: var(--ink); }
 .chip-outline:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .chip-on { border-color: var(--ink); background: var(--ink); }
 
-/* 自定义日期：两个 40px 描边框，中间「至」，Maple 13 */
-.date-field { height: 40px; padding: 0 12px; border: 1px solid var(--ink); background: transparent; color: var(--ink);
+/* 自定义日期：两个 44px 描边框，中间「至」，Maple 13 */
+.date-field { min-height: 44px; padding: 0 12px; border: 1px solid var(--ink); background: transparent; color: var(--ink);
               font-family: var(--font-data); font-size: var(--fs-13); }
 .date-sep { font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 
@@ -349,15 +357,21 @@ a.t:hover { text-decoration-color: var(--ink); }
 .search-notice { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 0 8px 0; }
 
 @media (max-width: 480px) {
-  .search-head { gap: 16px; padding: 24px 0 16px 0; }
+  .search-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 24px 0 16px 0; }
+  .search-field { gap: 8px; }
   .search-input { font-size: var(--fs-20); }
   .search-input::placeholder { font-size: var(--fs-15); }
+  .search-note { grid-column: 1 / -1; }
   .btn-primary { height: 44px; }
-  .filters { gap: 20px; }
-  .seg-item { height: 44px; }
-  /* 来源小签是这一页主要的多选控件：手机上也要 44px 触控目标（PRD 6.4，与 .anchor-chip 同一处理） */
-  .chip-outline { height: 44px; }
-  .date-field { height: 44px; }
+  .filter-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 8px 0;
+                   border: 0; border-bottom: 1px solid var(--ink); background: transparent; color: var(--ink); font-family: var(--font-cjk); font-size: var(--fs-15); text-align: left; }
+  .filter-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .filters { gap: 20px; padding: 16px 0; }
+  .filter-group { width: 100%; min-width: 0; }
+  .filter-row, .chips { max-width: 100%; }
+  /* 320px 的 272px 正文宽度放不下四个日期预设；只让这一组换行，保留共享 Seg 的单行布局。 */
+  .date-range { width: 100%; min-width: 0; }
+  .date-range > .seg { width: 100%; max-width: 100%; flex-wrap: wrap; }
   .search-row { padding: 24px 0; }
   .search-count { flex-wrap: wrap; }
 }
@@ -414,7 +428,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 /* 表格：grid，表头文楷 12 次墨 + 1px 墨线，行间 35% 线；外层横向滚 */
 .table-wrap { overflow-x: auto; }
 .table { min-width: 720px; }
-.table-head, .table-row { display: grid; gap: 0 16px; align-items: center; }
+.table-head, .table-row { grid-template-columns: var(--table-columns); display: grid; gap: 0 16px; align-items: center; }
 .table-head { padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
 .table-th { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
 .table-row { padding: 14px 0; border-bottom: 1px solid var(--rule); }
@@ -466,4 +480,165 @@ a.t:hover { text-decoration-color: var(--ink); }
 @media (max-width: 480px) {
   .admin-nav-item { font-size: var(--fs-15); height: 48px; }
   .admin-form-row { flex-direction: column; }
+}
+
+/* 2026-09-17 approved reading/accessibility revision. Keep controls reachable at every width. */
+.skip-link { position: absolute; left: 24px; top: -100px; z-index: 100; padding: 12px 16px; background: var(--paper); color: var(--ink); font-family: var(--font-cjk); }
+.skip-link:focus { top: 8px; }
+#main-content:focus { outline: none; }
+.page-context { margin: 0; width: 100%; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
+.issue-head-main { flex-wrap: wrap; min-width: 0; gap: 12px 16px; }
+.issue-head-title { flex-wrap: wrap; gap: 12px 20px; }
+.issue-head-date { line-height: 1.2; overflow-wrap: anywhere; }
+.issue-head-weekday { line-height: 1.4; }
+.page-nav { flex-wrap: wrap; }
+.masthead-brand { min-height: 44px; display: inline-flex; align-items: center; }
+.masthead-nav a { min-width: 44px; justify-content: center; min-height: 44px; display: inline-flex; align-items: center; }
+.masthead-actions { flex: none; gap: 12px; }
+.account-button { width: 44px; height: 44px; border: 0; border-radius: 0; overflow: visible; position: relative; }
+.account-button::before { content: ''; position: absolute; inset: 6px; border: 1px solid var(--paper); border-radius: 50%; }
+.account-avatar { inset: 6px; width: 32px; height: 32px; border-radius: 50%; }
+.menu-head { overflow-wrap: anywhere; }
+.ctrl, .btn-primary, .link-button, .anchor-chip, .source-band-link { min-height: 44px; height: auto; }
+.ctrl, .btn-primary, .anchor-chip { box-sizing: border-box; padding-top: 8px; padding-bottom: 8px; }
+.toast-close { min-width: 44px; min-height: 44px; }
+.source-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 0; }
+.source-tab { padding: 14px 16px; gap: 12px; min-height: 80px; }
+.source-tab + .source-tab { margin-left: 0; }
+.source-tab-icon { width: 44px; }
+.source-tab-name { font-size: var(--fs-26); line-height: 1.2; overflow-wrap: anywhere; }
+.source-tab-state { white-space: normal; }
+.item-body { max-width: 780px; }
+.item-title, .item-summary, .item-reason { overflow-wrap: anywhere; }
+.source-foot { min-height: 44px; padding: 8px 0; margin-right: 24px; font-family: var(--font-cjk); font-size: var(--fs-15); }
+.operation-feedback { font-family: var(--font-cjk); font-size: var(--fs-13); line-height: 1.7; color: var(--ink2); margin: 8px 0; overflow-wrap: anywhere; }
+.operation-feedback a { display: inline-flex; min-height: 44px; align-items: center; }
+.state-line { font-weight: 400; margin: 0; }
+.anchors { flex-wrap: wrap; overflow: visible; }
+.anchor-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.source-band { flex-wrap: wrap; padding-top: 14px; padding-bottom: 14px; }
+.source-band-name, .source-band-meta { min-width: 0; max-width: 100%; }
+.source-band-name svg { flex: none; }
+.source-band-title { overflow: visible; line-height: 1.4; overflow-wrap: anywhere; }
+.source-band-meta { flex-wrap: wrap; }
+.source-band-issue { opacity: 1; }
+.archive-daily .archive-row { grid-template-columns: 24px 120px 90px minmax(0, 1fr); grid-template-areas: 'mark key sub label' '. meta meta meta'; row-gap: 10px; }
+.archive-weekly .archive-label { font-size: var(--fs-20); }
+.archive-meta { overflow-wrap: anywhere; }
+.dialog { max-height: calc(100dvh - 48px); overflow-y: auto; }
+@media (max-width: 1023px) {
+  .source-tab { flex-direction: column; align-items: center; padding: 12px 8px; }
+  .source-tab-body { align-items: center; text-align: center; }
+  .source-tab-name { font-size: var(--fs-20); }
+  .archive-weekly .archive-row { grid-template-columns: 24px 130px minmax(0, 1fr); grid-template-areas: 'mark key sub' '. label label' '. meta meta'; gap: 10px 16px; }
+}
+@media (max-width: 767px) {
+  .sheet { margin: 0; }
+  .sheet-body { padding: 0 24px 32px; }
+  .masthead { height: auto; min-height: 72px; padding: 12px 24px; gap: 12px; flex-wrap: wrap; }
+  .masthead-left { gap: 4px; }
+  .masthead-brand { font-size: var(--fs-26); }
+  .masthead-nav { gap: 0; }
+  .masthead-actions { gap: 0; }
+  .issue-head-date { font-size: var(--fs-40); }
+  .issue-nav { display: none; }
+  .issue-nav-mobile { display: flex; }
+  .source-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 16px; }
+  .source-tab-name { font-size: var(--fs-13); }
+  .source-tab-icon { width: 37px; height: 24px; }
+  .source-tab { min-height: 80px; gap: 6px; }
+  .item-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'rank tag' 'body body'; gap: 10px 12px; padding: 24px 0; }
+  .item-summary { -webkit-line-clamp: 3; }
+  .archive-daily .archive-row, .archive-weekly .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); grid-template-areas: 'mark key sub' '. label label' '. meta meta'; }
+  .source-band { flex-direction: column; align-items: flex-start; }
+  .source-band-title { font-size: var(--fs-22); }
+  .source-band-meta { flex-wrap: wrap; }
+}
+@media (max-width: 389px) {
+  .masthead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; padding-top: 8px; padding-bottom: 8px; }
+  .masthead-left { display: contents; }
+  .masthead-brand { grid-column: 1; grid-row: 1; }
+  .masthead-actions { grid-column: 2; grid-row: 1; }
+  .masthead-nav { grid-column: 1 / -1; grid-row: 2; }
+  .source-tab-name { font-size: var(--fs-13); }
+}
+
+@media (max-width: 767px) {
+  .page-head { padding-top: 24px; padding-bottom: 12px; }
+  .issue-nav-mobile { padding-top: 10px; }
+  .source-tabs { padding-top: 12px; }
+}
+
+footer a { display: inline-flex; min-height: 44px; align-items: center; }
+
+/* Source/settings forms: wrap every choice and keep each field usable on narrow paper. */
+.field { min-width: 0; max-width: 100%; }
+.field-input { min-width: 0; width: 100%; max-width: 100%; min-height: 44px; }
+.seg-buttons { flex-wrap: wrap; gap: 4px; max-width: 100%; }
+.seg-buttons .seg-item { margin-left: 0; min-height: 44px; height: auto; white-space: normal; text-align: left; }
+.seg-button:disabled, .field-input:disabled, button:disabled { opacity: .55; cursor: not-allowed; }
+.settings-directory { display: flex; flex-wrap: wrap; gap: 0 24px; padding-top: 20px; font-family: var(--font-cjk); font-size: var(--fs-15); }
+.settings-directory a { display: inline-flex; align-items: center; min-height: 44px; }
+.admin-section { scroll-margin-top: 20px; }
+.interest-table { table-layout: fixed; }
+.interest-table th { display: none; }
+.interest-table td { vertical-align: top; padding: 16px 12px 16px 0; }
+.interest-table td:first-child { width: 20%; }
+.interest-table .interest-keywords { width: 36%; }
+.interest-table td:nth-child(3) { width: 12%; }
+.interest-table td:nth-child(4) { width: 12%; }
+.interest-enabled { display: flex; align-items: center; min-height: 44px; gap: 8px; font-family: var(--font-cjk); font-size: var(--fs-13); }
+.interest-enabled input { flex-shrink: 0; accent-color: var(--ink); }
+.deployment-help { font-family: var(--font-cjk); font-size: var(--fs-15); overflow-wrap: anywhere; }
+.deployment-help code { font-family: var(--font-data); font-size: var(--fs-13); }
+.admin-section summary { min-height: 44px; align-content: center; font-family: var(--font-cjk); cursor: pointer; }
+@media (max-width: 768px) {
+  .interest-table, .interest-table tbody, .interest-table tr, .interest-table td { display: block; width: 100%; }
+  .interest-table thead { display: none; }
+  .interest-table tr { padding: 24px 0; border-bottom: 1px solid var(--rule); }
+  .interest-table td, .interest-table td:first-child, .interest-table td:nth-child(3), .interest-table td:nth-child(4), .interest-table .interest-keywords { width: 100%; padding: 0 0 12px; border: 0; }
+  .interest-table .field { width: 100% !important; }
+}
+
+/* Management lists retain their desktop grid and become labeled row groups. */
+.admin-page-head .issue-head-date { font-size: var(--fs-32); }
+.admin-page-head .issue-head-weekday { font-size: var(--fs-20); }
+.admin-nav { flex-wrap: wrap; }
+.admin-nav-item { min-width: 0; flex-basis: 120px; padding: 8px; }
+.table-wrap { overflow: visible; }
+.table { display: block; width: 100%; min-width: 0; }
+.table-td { display: block; overflow-wrap: anywhere; }
+.table-cell-label { display: none; }
+.table-cell-content { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.admin-cell-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.admin-cell-stack .cjk { font-size: var(--fs-13); color: var(--ink2); }
+.admin-details { min-width: 0; width: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); }
+.admin-details summary { min-height: 44px; align-content: center; cursor: pointer; }
+.admin-details[open] > :not(summary) { padding: 8px 0; }
+.admin-pending-filter input { accent-color: var(--ink); }
+.admin-pending-filter { display: flex; gap: 12px; align-items: center; min-height: 44px; font-family: var(--font-cjk); margin-bottom: 16px; }
+.admin-readonly-note { font-size: var(--fs-15); margin: 0 0 24px; }
+.refetch-sources { margin: 0; padding: 0; border: 0; min-width: 0; font-family: var(--font-cjk); }
+.refetch-sources label { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 0; overflow-wrap: anywhere; }
+.refetch-sources input { flex-shrink: 0; accent-color: var(--ink); }
+@media (max-width: 1024px) {
+  .table-head { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+  .table-row { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 24px 0; }
+  .table-td { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .table-cell-label { display: block; font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); padding-top: 3px; }
+  .table-row .admin-actions { gap: 8px 16px; }
+}
+@media (max-width: 480px) {
+  .table-td { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .admin-nav-item { flex-basis: 30%; }
+}
+
+.admin-run-metrics { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.admin-run-metrics dt { font-family: var(--font-cjk); color: var(--ink2); }
+.admin-run-metrics dd { margin: 0; }
+
+@media (max-width: 1024px) {
+  .sources-table .table-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 20px; }
+  .sources-table .table-td { display: flex; flex-direction: column; gap: 4px; }
+  .sources-table .table-td:first-child, .sources-table .table-td:nth-child(n+4) { grid-column: 1 / -1; }
 }

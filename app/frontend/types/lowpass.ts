@@ -23,7 +23,7 @@ export type ArchiveDay = { period_key: string; date_label: string; weekday: stri
 export type ArchiveWeek = { period_key: string; week_label: string; range_label: string; state: ArchiveMark; summary: string; count: number | null };
 
 // 页脚在每个页面都要的两样（R51）
-export type FooterData = { daily_time: string; latest_weekly_key: string | null };
+export type FooterData = { daily_time: string; latest_weekly_key: string | null; latest_daily_key?: string | null };
 
 // ── 搜索（PRD 5.4、设计 6.2）：props 的形状由 SearchesController#render_search 定 ──
 export type Publication = "daily" | "weekly";
@@ -40,7 +40,7 @@ export type SearchResult = { item_id: string; rank: number; publication: Publica
 
 // P2-① 登录（PRD 5.5）：ApplicationController 的 inertia_share 每页都带的两样，加登录页与设置页的字段
 export type CurrentUser = { display_name: string; avatar_url: string | null; email: string | null; admin: boolean };
-export type Flash = { notice?: string; alert?: string };
+export type Flash = { id?: string; notice?: string; alert?: string };
 export type SharedProps = { current_user: CurrentUser | null; flash: Flash };
 export type AuthProvider = "google_oauth2" | "github" | "developer";
 export type SettingsIdentity = { provider: "google" | "github"; strategy: AuthProvider; linked_at_label: string | null };
@@ -57,7 +57,7 @@ export type TestFetchResult = { ok: boolean; entries: TestFetchEntry[]; warnings
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "timed_out";
 export type AdminRunRow = { id: string; started_label: string | null; duration_label: string | null; status: RunStatus; status_label: string; attempt_label: string; item_count: number | null; dropped_count: number | null; error_summary: string | null; trigger_label: string };
 export type ManualRun = { id: string; source_name: string; period_key: string | null };
-export type FinishedRun = { id: string; source_name: string; status: RunStatus; item_count: number | null; error_summary: string | null };
+export type FinishedRun = { id: string; source_name: string; period_key: string | null; status: RunStatus; item_count: number | null; error_summary: string | null };
 export type LatestIssue = { period_key: string; label: string } | null;
 // reasons 只有日刊行才有值（Issue::Administering#admin_reasons）：未发布 / 生成中 / 缺期是 null；周刊行整个键都不带
 export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[]; reasons?: { label: string; missing: number; ready: boolean } | null };
@@ -67,6 +67,6 @@ export type AlertChannel = { configured: boolean; label: string };
 export type AlertChannels = { email: AlertChannel; webhook: AlertChannel };
 
 // P2-④ 推荐理由（设计 §6.1）：设置页「兴趣画像」「推荐理由」两节（Reasons::Status#props、InterestArea）
-export type ReasonsStatus = { configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
+export type ReasonsStatus = { currency: string; has_nonzero_costs: boolean; configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
 export type InterestArea = { id: string; name: string; keywords: string; sort_order: number; enabled: boolean };
-export type ModelConfig = { base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };
+export type ModelConfig = { currency: string; currency_confirmation: string; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };

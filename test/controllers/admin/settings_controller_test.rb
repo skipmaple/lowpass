@@ -102,4 +102,37 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_settings_path
     assert_equal "", Setting.get("model_base_url")
   end
+  test "币种元数据保持旧金额，非零旧账需要确认且不能换标" do
+    call = ModelCall.create!(status: "ok", cost: "1.25")
+    values = { base_url: "", model_name: "", input_price: "0.5", output_price: "1.5", monthly_cap: "10", currency: "USD" }
+    patch admin_settings_path, params: { model: values }
+    follow_redirect!
+    assert page_props.dig("errors", "currency_confirmation").present?
+    assert_equal "", Setting.get("model_currency")
+    assert_equal "1.25", call.reload.cost.to_s("F")
+
+    patch admin_settings_path, params: { model: values.merge(currency_confirmation: "1") }
+    assert_equal "USD", Setting.get("model_currency")
+    assert_equal "0.5", Setting.get("model_input_price")
+    assert_equal [ "", "USD" ], AuditLog.last.payload["currency"]
+    patch admin_settings_path, params: { model: values.merge(currency: "CNY", currency_confirmation: "1") }
+    follow_redirect!
+    assert page_props.dig("errors", "currency").present?
+    assert_equal "USD", Setting.get("model_currency")
+    assert_equal "1.25", call.reload.cost.to_s("F")
+    patch admin_settings_path, params: { model: values.except(:currency) }
+    assert_equal "USD", Setting.get("model_currency")
+  end
+
+  test "新安装可选择币种，拒绝未知币种，未设置保持明确未指定" do
+    get admin_settings_path
+    assert_equal "", page_props.dig("reasons", "currency")
+    assert_equal false, page_props.dig("reasons", "has_nonzero_costs")
+    values = { base_url: "", model_name: "", input_price: "0", output_price: "0", monthly_cap: "0" }
+    patch admin_settings_path, params: { model: values.merge(currency: "EUR") }
+    follow_redirect!
+    assert page_props.dig("errors", "currency").present?
+    patch admin_settings_path, params: { model: values.merge(currency: "CNY") }
+    assert_equal "CNY", Setting.get("model_currency")
+  end
 end

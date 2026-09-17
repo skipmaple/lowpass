@@ -25,7 +25,10 @@ class AdminTest < ApplicationSystemTestCase
     assert_text "已保存 命令行周报"
     assert_text "命令行周报"
 
-    within(:xpath, "//*[@role='row'][.//*[contains(text(), '命令行周报')]]") { click_on "停用" }
+    within(:xpath, "//*[@role='row'][.//*[contains(text(), '命令行周报')]]") do
+      find("summary", text: "更多操作").click
+      click_on "停用"
+    end
     assert_text "停用后不再抓取，历史内容保留。确认停用 命令行周报？"
     within("[role='dialog']") { click_on "停用" }
     assert_text "已停用 命令行周报"
@@ -38,15 +41,39 @@ class AdminTest < ApplicationSystemTestCase
     visit admin_issues_path(month: "2026-09")
     within(:xpath, "//*[@role='row'][.//*[text()='2026-09-08']]") { click_on "重抓某源" }
     within("[role='dialog']") do
-      click_on "Hacker News"
-      click_on "重抓"
+      choose "Hacker News"
+      click_on "重抓 Hacker News"
     end
 
     assert_text "正在重抓 Hacker News…"
     perform_enqueued_jobs
     visit admin_issues_path(month: "2026-09")
     assert_text "已发布 · 已修订"
-    assert_text "已更新 Hacker News（1 条）"
+    assert_text "2026-09-08 · 已更新 Hacker News（1 条）"
+  end
+
+  test "非空队列的翻页箭头至少为 44 像素方形目标" do
+    adapter = ActiveJob::QueueAdapters::SolidQueueAdapter.new
+    adapter.extend(ActiveJob::QueueAdapters::SolidQueueExt)
+    job = ActiveJob::JobProxy.new(GenerateReasonsJob.new(issues(:daily_0908), false).serialize)
+    job.status = :scheduled
+    job.enqueued_at = Time.current
+    job.scheduled_at = 1.hour.from_now
+    adapter.stubs(:queues).returns([ { name: job.queue_name, size: 1, active: true } ])
+    adapter.stubs(:jobs_count).returns(1)
+    adapter.stubs(:fetch_jobs).returns([ job ])
+    applications = MissionControl::Jobs::Applications.new
+    applications.add("Lowpass", solid_queue: adapter)
+    MissionControl::Jobs.stubs(:applications).returns(applications)
+
+    visit "/admin/jobs/applications/lowpass/scheduled/jobs?server_id=solid_queue"
+
+    assert_selector "h1", text: "Scheduled jobs"
+    [ "↞", "↠" ].each do |label|
+      target = find("nav[aria-label='pagination'] a", text: label, exact_text: true).native.rect
+      assert_operator target.width, :>=, 44
+      assert_operator target.height, :>=, 44
+    end
   end
 
   test "成员看不到后台" do
@@ -82,7 +109,7 @@ class AdminTest < ApplicationSystemTestCase
 
     visit admin_issues_path(month: "2026-09")
     within(:xpath, "//*[@role='row'][.//*[text()='2026-09-08']]") { click_on "重生成理由" }
-    assert_text "已开始重生成理由"
+    assert_text "2026-09-08 · 已开始重生成理由"
     perform_enqueued_jobs
 
     visit daily_issue_path("2026-09-08")

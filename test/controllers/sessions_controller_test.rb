@@ -114,7 +114,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil cookies[:session_token].presence
     follow_redirect!
     assert_equal "Login/Show", page_component
-    assert_equal({ "alert" => "登录失败，请重试。" }, page_props["flash"])
+    assert_alert_flash "登录失败，请重试。"
   end
 
   test "用户取消授权：已取消登录" do
@@ -124,7 +124,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     follow_redirect!
 
-    assert_equal({ "alert" => "已取消登录。" }, page_props["flash"])
+    assert_alert_flash "已取消登录。"
     assert_equal 0, Session.count
   end
 
@@ -141,7 +141,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, Session.count
     assert_nil cookies[:session_token].presence
     follow_redirect!
-    assert_equal({ "alert" => "登录失败，请重试。" }, page_props["flash"])
+    assert_alert_flash "登录失败，请重试。"
   end
 
   test "没挂载的 provider 的回调当登录失败，不建会话" do
@@ -150,7 +150,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to login_path
     assert_equal 0, Session.count
     follow_redirect!
-    assert_equal({ "alert" => "登录失败，请重试。" }, page_props["flash"])
+    assert_alert_flash "登录失败，请重试。"
   end
 
   test "R-5.9 同一 IP 一分钟内第 11 次回调被挡在 OmniAuth 之前" do
@@ -164,7 +164,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to "/login"
     follow_redirect!
-    assert_equal({ "alert" => "操作过于频繁，请稍后再试。" }, page_props["flash"])
+    assert_alert_flash "操作过于频繁，请稍后再试。"
   end
 
   # OmniAuth 比对回调路径前先把结尾的 / 去掉、再 downcase（strategy.rb 的 current_path），
@@ -180,7 +180,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to "/login"
     follow_redirect!
-    assert_equal({ "alert" => "操作过于频繁，请稍后再试。" }, page_props["flash"])
+    assert_alert_flash "操作过于频繁，请稍后再试。"
   end
 
   test "R-5.9 回调大小写变形一样计数" do
@@ -194,7 +194,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to "/login"
     follow_redirect!
-    assert_equal({ "alert" => "操作过于频繁，请稍后再试。" }, page_props["flash"])
+    assert_alert_flash "操作过于频繁，请稍后再试。"
   end
 
   # D11：cookie 里只有签名过的 token，浏览器读不到、跨站带不出去，最长活到 90 天的硬上限
@@ -243,4 +243,13 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     get "/up"
     assert_response :success
   end
+
+  private
+    def assert_alert_flash(message)
+      payload = page_props.fetch("flash")
+      assert_equal %w[ alert id ], payload.keys.sort
+      assert_equal message, payload.fetch("alert")
+      assert_predicate payload.fetch("id"), :present?
+      assert_equal response.headers["X-Request-Id"], payload.fetch("id")
+    end
 end

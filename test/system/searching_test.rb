@@ -36,6 +36,24 @@ class SearchingTest < ApplicationSystemTestCase
     assert_selector "article#item-#{items(:hn_one).id}", text: "Show HN"
   end
 
+  test "同一查询词的筛选历史同步搜索框并保留筛选焦点" do
+    visit search_path(q: "rust")
+
+    find(".filters").click_on "日刊"
+    assert_current_path search_path(q: "rust", type: "daily")
+    assert_selector ".filters .seg-item:focus", text: "日刊"
+
+    fill_in "搜索", with: "draft"
+
+    page.go_back
+    assert_current_path search_path(q: "rust")
+    assert_field "搜索", with: "rust"
+
+    page.go_forward
+    assert_current_path search_path(q: "rust", type: "daily")
+    assert_field "搜索", with: "rust"
+  end
+
   # test 环境默认关掉 CSRF 校验（config/environments/test.rb 的 allow_forgery_protection = false）：
   # 这一条把它打开，fetch 带的 X-CSRF-Token 才真的被校验，令牌读错了这里就会是 422 而不是 204
   test "点原文记一次 search_click，带 CSRF 令牌" do

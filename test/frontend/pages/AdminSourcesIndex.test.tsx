@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -56,14 +56,14 @@ describe('Admin/Sources/Index', () => {
     expect(dialog).toHaveTextContent('停用后不再抓取，历史内容保留。确认停用 Hacker News？')
 
     await userEvent.click(within(dialog).getByRole('button', { name: '停用' }))
-    expect(router.delete).toHaveBeenCalledWith('/admin/sources/src-hn/enablement')
+    expect(router.delete).toHaveBeenCalledWith('/admin/sources/src-hn/enablement', expect.any(Object))
   })
 
   it('停用的源给「启用」，直接 POST', async () => {
     show([adminSourceRow({ enabled: false, health: 'disabled', health_label: '已停用', next_run_label: null })])
 
     await userEvent.click(screen.getByRole('button', { name: '启用' }))
-    expect(router.post).toHaveBeenCalledWith('/admin/sources/src-hn/enablement')
+    expect(router.post).toHaveBeenCalledWith('/admin/sources/src-hn/enablement', {}, expect.any(Object))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
@@ -91,4 +91,15 @@ describe('Admin/Sources/Index', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent('连接超时（30 秒），请检查地址或稍后重试。')
   })
+})
+
+it('keeps enablement pending and reports its target on transport failure', async () => {
+  show([adminSourceRow({ enabled: false })])
+  await userEvent.click(screen.getByText('更多操作'))
+  await userEvent.click(screen.getByRole('button', { name: '启用' }))
+  expect(screen.getByRole('button', { name: '正在启用…' })).toBeDisabled()
+  const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
+  act(() => { options.onNetworkError(new Error('offline')); options.onFinish() })
+  expect(screen.getByRole('alert')).toHaveTextContent('Hacker News · 网络连接失败')
+  expect(screen.getByRole('button', { name: '启用' })).toBeEnabled()
 })

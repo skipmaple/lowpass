@@ -30,7 +30,7 @@ export type SourceTabsProps = {
 export default function SourceTabs({ sources, activeId, onSelect, children }: SourceTabsProps) {
   return (
     <Tabs.Root value={activeId} onValueChange={onSelect}>
-      <Tabs.List className="source-tabs" aria-label="来源">
+      <Tabs.List id="source-directory" tabIndex={-1} className="source-tabs" aria-label="来源">
         {sources.map((source) => (
           <Tabs.Trigger key={source.id} value={source.id} className="source-tab">
             <SourceMark adapter={source.adapter} hole="var(--tab-hole)" className="source-tab-icon" />

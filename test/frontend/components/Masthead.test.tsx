@@ -88,7 +88,7 @@ describe('Masthead 搜索与账户', () => {
     expect(button).toHaveAttribute('aria-expanded', 'true')
     const menu = screen.getByRole('menu')
     expect(within(menu).getByText('drew@example.com')).toBeInTheDocument()
-    expect(within(menu).getByRole('menuitem', { name: '设置' })).toHaveAttribute('href', '/settings')
+    expect(within(menu).getByRole('menuitem', { name: '账户信息' })).toHaveAttribute('href', '/settings')
     expect(within(menu).queryByRole('menuitem', { name: '管理' })).toBeNull()
     expect(within(menu).getByRole('menuitem', { name: '登出' })).toBeInTheDocument()
   })
@@ -133,7 +133,7 @@ describe('Masthead 搜索与账户', () => {
     const button = screen.getByRole('button', { name: '账户' })
 
     await userEvent.click(button)
-    expect(screen.getByRole('menuitem', { name: '设置' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: '账户信息' })).toHaveFocus()
 
     await userEvent.keyboard('{Escape}')
     expect(button).toHaveFocus()
@@ -159,7 +159,7 @@ describe('Masthead 搜索与账户', () => {
     const menu = screen.getByRole('menu')
 
     expect(menu.querySelector('.menu-head')).toHaveAttribute('role', 'none')
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['设置', '登出'])
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['账户信息', '登出'])
   })
 
   it('菜单卡没有阴影（设计 L1）', async () => {
@@ -170,4 +170,36 @@ describe('Masthead 搜索与账户', () => {
 
     expect(screen.getByRole('menu').getAttribute('style') ?? '').not.toMatch(/box-shadow/)
   })
+})
+
+ it('菜单支持方向键与 Home/End，Escape 返回账户按钮', async () => {
+   setPageProps({ current_user: currentUser({ admin: true }) })
+   render(<Masthead />)
+   const button = screen.getByRole('button', { name: '账户' })
+   await userEvent.click(button)
+   await userEvent.keyboard('{ArrowDown}')
+   expect(screen.getByRole('menuitem', { name: '管理' })).toHaveFocus()
+   await userEvent.keyboard('{End}')
+   expect(screen.getByRole('menuitem', { name: '登出' })).toHaveFocus()
+   await userEvent.keyboard('{ArrowDown}')
+   expect(screen.getByRole('menuitem', { name: '账户信息' })).toHaveFocus()
+   await userEvent.keyboard('{ArrowUp}')
+   expect(screen.getByRole('menuitem', { name: '登出' })).toHaveFocus()
+   await userEvent.keyboard('{Home}{Escape}')
+   expect(button).toHaveFocus()
+ })
+ it('周刊导航直接进入最新可读周刊', () => {
+   setPageProps({ latest_weekly_key: '2026-W36' })
+   render(<Masthead />)
+   expect(screen.getByRole('link', { name: '周刊' })).toHaveAttribute('href', '/weekly/2026-W36')
+ })
+it('账户按钮的上下方向键打开首尾菜单项', async () => {
+ setPageProps({ current_user: currentUser({ admin: true }) })
+ render(<Masthead />)
+ const button = screen.getByRole('button', { name: '账户' })
+ button.focus()
+ await userEvent.keyboard('{ArrowUp}')
+ expect(screen.getByRole('menuitem', { name: '登出' })).toHaveFocus()
+ await userEvent.keyboard('{Escape}{ArrowDown}')
+ expect(screen.getByRole('menuitem', { name: '账户信息' })).toHaveFocus()
 })

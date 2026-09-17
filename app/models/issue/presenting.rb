@@ -75,7 +75,9 @@ module Issue::Presenting
     end
 
     # 页脚的「最新周刊」在每个页面都指向最新一期；一期都没有时页面落到归档
-    def latest_weekly_key = weekly.maximum(:period_key)
+    def latest_weekly_key = weekly.where(state: "published").joins(:items).merge(Item.visible).maximum(:period_key)
+
+    def latest_daily_key = daily.where(state: "published").joins(:items).merge(Item.visible).maximum(:period_key)
 
     # PRD 6.2 日刊归档：一页一个月，每天一行（含缺期）。上线前的日期不显示，所以行从最早一期那天起算，
     # 到今天为止；整段落在这两头之外的月份一行都没有，翻月的按钮也就到此为止。请求的月份晚于当月时
@@ -141,7 +143,7 @@ module Issue::Presenting
           weekday: WEEKDAYS[date.wday],
           state: issue&.state || "missing",
           published_label: archive_label(issue),
-          source_marks: issue && daily_columns(issue, sources).map { |source| "#{abbr(source)} #{mark(issue, source, counts)}" }.join(" · ")
+          source_marks: issue && daily_columns(issue, sources).map { |source| "#{source.name} #{mark(issue, source, counts)}" }.join(" · ")
         }
       end
 

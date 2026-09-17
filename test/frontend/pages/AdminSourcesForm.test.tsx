@@ -35,11 +35,13 @@ describe('Admin/Sources/Form', () => {
     await userEvent.click(button)
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveTextContent('测试中…')
     await waitFor(() => expect(path.getAttribute('d')).not.toBe(initial))
 
     await act(async () => resolve(testFetchResult()))
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-busy', 'false')
+    expect(button).toHaveTextContent('测试抓取')
     await waitFor(() => expect(path).toHaveAttribute('d', 'M20 6C16.3333 9.6667 12.6667 13.3333 9 17C7.3333 15.3333 5.6667 13.6667 4 12'))
   })
 
@@ -47,7 +49,7 @@ describe('Admin/Sources/Form', () => {
     show()
 
     expect(screen.getByRole('heading', { level: 1, name: '新建来源' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: '适配器' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '来源类型' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'RSS/Atom' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('feed 地址')).toBeInTheDocument()
     expect(screen.getByLabelText('时间窗口（小时）')).toBeInTheDocument()
@@ -56,7 +58,7 @@ describe('Admin/Sources/Form', () => {
     await userEvent.type(screen.getByLabelText('名称'), 'Hackaday')
     await userEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    expect(formPost).toHaveBeenCalledWith('/admin/sources')
+    expect(formPost).toHaveBeenCalledWith('/admin/sources', expect.any(Object))
   })
 
   it('周刊 RSS 没有时间窗口；HN 有榜单与分数；GitHub 有语言列表', async () => {
@@ -88,19 +90,19 @@ describe('Admin/Sources/Form', () => {
     // 对象把 name/sort_order 丢了」这类缺陷（已用最小复现验证过），必须直接看真正的表单数据。
     expect(inertia.lastFormData).toMatchObject({ name: 'Hackaday', sort_order: '9', adapter: 'hacker_news' })
     expect(screen.getByLabelText('名称')).toHaveValue('Hackaday')
-    expect(screen.getByLabelText('排序值')).toHaveValue('9')
+    expect(screen.getByLabelText('排序值')).toHaveValue(9)
   })
 
   it('编辑：适配器是文字，保存 PATCH', async () => {
     const { container } = show(adminSourceForm({ id: 'src-had', name: 'Hackaday', config: { feed_url: 'https://hackaday.com/feed/', count: 10, window_hours: 24 } }))
 
-    expect(screen.getByRole('heading', { level: 1, name: '编辑来源' })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: '适配器' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: '编辑来源 · Hackaday' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '来源类型' })).toBeNull()
     // 期头的 bottom 也是「RSS/Atom」（option.label）：限定在表单容器内找，避免撞上期头那一份
     expect(within(container.querySelector('.admin-form') as HTMLElement).getByText('RSS/Atom')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    expect(formPatch).toHaveBeenCalledWith('/admin/sources/src-had')
+    expect(formPatch).toHaveBeenCalledWith('/admin/sources/src-had', expect.any(Object))
   })
 
   it('错误按字段显示', () => {
@@ -137,4 +139,48 @@ describe('Admin/Sources/Form', () => {
     expect(screen.getByText('尚未通过测试，仍可保存。')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
   })
+  it('编辑配置使预览失效，进行中的旧结果不会覆盖新配置', async () => {
+    let resolve!: (value: ReturnType<typeof testFetchResult>) => void
+    vi.spyOn(admin, 'testFetch').mockImplementation(() => new Promise((done) => { resolve = done }))
+    show()
+    await userEvent.click(screen.getByRole('button', { name: '测试抓取' }))
+    await userEvent.type(screen.getByLabelText('名称'), '新名称')
+    await act(async () => resolve(testFetchResult()))
+    expect(screen.queryByText('测试抓取 · 前 5 条')).toBeNull()
+    expect(screen.getByText('配置已变化，请重新测试')).toBeInTheDocument()
+    expect(screen.getByLabelText('名称')).toHaveValue('新名称')
+    vi.spyOn(admin, 'testFetch').mockResolvedValue(testFetchResult())
+    await userEvent.click(screen.getByRole('button', { name: '测试抓取' }))
+    expect(await screen.findByText('测试抓取 · 前 5 条')).toBeInTheDocument()
+    await userEvent.clear(screen.getByLabelText('条数上限'))
+    expect(screen.queryByText('测试抓取 · 前 5 条')).toBeNull()
+  })
+
+  it('固定仓库可复制但不能编辑', async () => {
+    show()
+    await userEvent.click(screen.getByRole('button', { name: '阮一峰周刊' }))
+    const repo = screen.getByLabelText('仓库')
+    expect(repo).toHaveAttribute('readonly')
+    expect(repo).not.toBeDisabled()
+  })
+
+  it('仅脏表单拦截离开，取消离开保留内容，保存不二次询问', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    show(adminSourceForm({ id: 'src-had', name: 'Hackaday', config: { feed_url: 'https://hackaday.com/feed/', count: 10, window_hours: 24 } }))
+    const clean = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(clean)
+    expect(clean.defaultPrevented).toBe(false)
+    await userEvent.type(screen.getByLabelText('名称'), ' draft')
+    const dirty = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(dirty)
+    expect(dirty.defaultPrevented).toBe(true)
+    const before = new CustomEvent('inertia:before', { cancelable: true })
+    inertia.emitRouterEvent('before', before)
+    expect(before.defaultPrevented).toBe(true)
+    expect(confirm).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: '保存' }))
+    inertia.emitRouterEvent('before', new CustomEvent('inertia:before', { cancelable: true }))
+    expect(confirm).toHaveBeenCalledTimes(1)
+  })
+
 })

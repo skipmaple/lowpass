@@ -1,6 +1,8 @@
+import { Head } from '@inertiajs/react'
 import type * as React from 'react'
 
 import { Ctrl, Square } from '@/components/Ctrl'
+import { Mixed } from '@/lib/typeset'
 
 // 通用期头（画布 pages_site.py 的 page_head()）：大字文楷 56 在左，右侧叠放 Maple 13 与文楷 20，
 // 右端控件，底线 2px。日刊详情、周刊详情、两个归档页共用这一个装置。
@@ -16,6 +18,8 @@ export type PageHeadNav = {
 
 export type PageHeadProps = {
   big: string
+  context?: string
+  title?: string
   top?: React.ReactNode
   bottom?: string | null
   tag?: React.ReactNode
@@ -23,13 +27,15 @@ export type PageHeadProps = {
   controls?: React.ReactNode
 }
 
-export default function PageHead({ big, top, bottom, tag, nav, controls }: PageHeadProps) {
+export default function PageHead({ big, context, title, top, bottom, tag, nav, controls }: PageHeadProps) {
   return (
     <>
+      <Head title={title ?? (context ? `${context} · ${big}` : big)} />
       <header className="page-head">
         <div className="issue-head-main">
+          {context ? <p className="page-context">{context}</p> : null}
           <div className="issue-head-title">
-            <h1 className="issue-head-date">{big}</h1>
+            <h1 className="issue-head-date" aria-label={big}><Mixed text={big} font="latin" size="inherit" color="var(--ink)" /></h1>
             {top || bottom ? (
               <div className="issue-head-stack">
                 {top}

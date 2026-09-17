@@ -1,0 +1,6 @@
+<div class="buttons is-right">
+  <%= button_to "Run now", application_job_dispatch_path(@application, job.job_id), class: "button is-warning is-light mr-0",
+    form: { data: { turbo_confirm: "Run #{job.job_class_name} (#{job.job_id}) now? This dispatches the job now instead of waiting for its scheduled time." } } %>
+  <%= button_to "Discard", application_job_discard_path(@application, job.job_id), class: "button is-danger is-light mr-0",
+    form: { data: { turbo_confirm: "Discard #{job.job_class_name} (#{job.job_id})? This removes the queued job without running it and cannot be undone." } } %>
+</div>

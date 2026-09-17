@@ -46,7 +46,7 @@ class SearchesController < ApplicationController
     end
 
     def render_search(query, state:, result: nil, status: :ok)
-      latest_daily_key = Issue.daily.maximum(:period_key)
+      latest_daily_key = Issue.latest_daily_key
 
       render inertia: "Search/Show", props: {
         q: query.q,

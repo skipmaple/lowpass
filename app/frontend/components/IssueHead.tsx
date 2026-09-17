@@ -28,10 +28,11 @@ export default function IssueHead({ issue, archiveHref, hrefFor }: IssueHeadProp
   return (
     <PageHead
       big={issue.date_label}
+      title={`日刊 · ${issue.date_label}`}
       /* 字号走 .issue-head-time（桌面 13、手机 12，画布 head_m 是 12）：行内样式盖不住 @media */
       top={issue.time_label ? <Mixed text={issue.time_label} className="issue-head-time" size="inherit" nowrap /> : null}
       bottom={issue.weekday}
-      tag={issue.status ? <StatusTag text={issue.status} /> : null}
+      tag={issue.status && issue.state === 'published' ? <StatusTag text={issue.status} /> : null}
       nav={{
         prevHref: issue.prev_key ? hrefFor(issue.prev_key) : null,
         nextHref: issue.next_key ? hrefFor(issue.next_key) : null,

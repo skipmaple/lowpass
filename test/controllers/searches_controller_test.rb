@@ -21,7 +21,7 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Hacker News", "GitHub Trending", "Hackaday", "阮一峰科技爱好者周刊" ], page_props["source_options"].map { |option| option["name"] }
     assert_equal %w[ 7d 30d ], page_props["date_presets"].keys
     assert_equal "06:00", page_props["daily_time"]
-    assert_equal "2026-W36", page_props["latest_weekly_key"]
+    assert_nil page_props["latest_weekly_key"]
   end
 
   test "只有标点也不搜索、不写日志" do

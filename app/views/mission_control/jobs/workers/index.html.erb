@@ -1,0 +1,9 @@
+<% navigation(title: "Workers", section: :workers)  %>
+
+<% if @workers_page.empty? %>
+  <p class="notification is-light" lang="zh-CN">没有正在运行的 Worker。任务会等待 Worker 启动后处理。</p>
+<% else %>
+  <%= render "mission_control/jobs/workers/workers_page", workers_page: @workers_page %>
+<% end %>
+
+<%= render "mission_control/jobs/shared/pagination_toolbar", page: @workers_page, filter_param: {} %>

@@ -48,6 +48,7 @@ export function useToasts() {
 // flash 带来的提示（notice → ok，alert → fail）加页面自己推的，一起画在期头上方
 export function Toasts({ flash, items = [], onDismiss }: { flash?: Flash; items?: ToastItem[]; onDismiss?: (id: string) => void }) {
   const [hidden, setHidden] = useState<string[]>([])
+  useEffect(() => setHidden([]), [flash?.id, flash?.notice, flash?.alert])
   const rows: ToastItem[] = []
   if (flash?.notice && !hidden.includes('notice')) rows.push({ id: 'notice', kind: 'ok', text: flash.notice })
   if (flash?.alert && !hidden.includes('alert')) rows.push({ id: 'alert', kind: 'fail', text: flash.alert })
@@ -58,7 +59,7 @@ export function Toasts({ flash, items = [], onDismiss }: { flash?: Flash; items?
     <div className="toasts">
       {rows.map((row) => (
         <Toast
-          key={row.id}
+          key={row.id === 'notice' || row.id === 'alert' ? `${flash?.id ?? ''}-${row.id}-${row.text}` : row.id}
           kind={row.kind}
           text={row.text}
           onClose={() => (row.id === 'notice' || row.id === 'alert' ? setHidden((h) => [...h, row.id]) : onDismiss?.(row.id))}

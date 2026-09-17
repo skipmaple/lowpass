@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import Layout from '@/components/Layout'
 import Show, { type SettingsShowProps } from '@/pages/Settings/Show'
 import { router, setPageProps } from '../support/inertia'
 
@@ -36,9 +37,9 @@ describe('Settings/Show', () => {
   it('期头与键值行', () => {
     show()
 
-    expect(screen.getByRole('heading', { level: 1, name: '设置' })).toBeInTheDocument()
-    // 期头与「邮箱」行各一次
-    expect(screen.getAllByText('drew@example.com')).toHaveLength(2)
+    expect(screen.getByRole('heading', { level: 1, name: '账户信息' })).toBeInTheDocument()
+    // 账户信息仅在键值行显示
+    expect(screen.getAllByText('drew@example.com')).toHaveLength(1)
     expect(screen.getByText('管理员')).toBeInTheDocument()
     expect(screen.getByText('邮箱在白名单中')).toBeInTheDocument()
     expect(screen.getByText('已绑定')).toBeInTheDocument()
@@ -68,7 +69,7 @@ describe('Settings/Show', () => {
   it('本次会话一行', () => {
     const { container } = show()
 
-    expect(container.textContent).toContain('2026-09-09 08:12 登录 · 30 天内免登录 · 2026-12-08 到期')
+    expect(container.textContent).toContain('2026-09-09 08:12 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · 2026-12-08 到期')
   })
 
   it('登出走 DELETE /session', async () => {
@@ -79,17 +80,17 @@ describe('Settings/Show', () => {
     expect(router.delete).toHaveBeenCalledWith('/session')
   })
 
-  it('flash 的提示句显示在期头之下', () => {
+  it('flash 的提示句由共享布局显示一次', () => {
     const props = { flash: { alert: '这个邮箱无法自动合并。如果你之前用其他方式登录过，请改用原方式。' } }
     setPageProps(props)
     render(
-      <Show
+      <Layout footer={false}><Show
         user={{ display_name: 'X', email: null, avatar_url: null, role: 'member' }}
         identities={[]}
         session={{ logged_in_label: '2026-09-09 08:12', expires_label: '2026-12-08' }}
         daily_time="06:00"
         latest_weekly_key={null}
-      />,
+      /></Layout>,
     )
 
     expect(screen.getByText('这个邮箱无法自动合并。如果你之前用其他方式登录过，请改用原方式。')).toBeInTheDocument()

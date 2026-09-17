@@ -21,6 +21,13 @@ export type DailyIndexProps = FooterData & {
   days: ArchiveDay[]
 }
 
+function SourceMarks({ text }: { text: string }) {
+  return text.split(' · ').map((mark, index) => {
+    const boundary = mark.lastIndexOf(' ')
+    return <span key={index}>{index > 0 ? ' · ' : null}<Mixed text={mark.slice(0, boundary)} font="latin" /> <Mixed text={mark.slice(boundary + 1)} /></span>
+  })
+}
+
 function Row({ day }: { day: ArchiveDay }) {
   return (
     <Link className="archive-row" href={dailyHref(day.period_key)}>
@@ -34,18 +41,20 @@ function Row({ day }: { day: ArchiveDay }) {
           <Mixed text={day.published_label} color={day.state === 'published' ? 'var(--ink)' : 'var(--ink2)'} />
         ) : null}
       </span>
-      <span className="archive-meta">{day.source_marks ? <Mixed text={day.source_marks} /> : null}</span>
+      <span className="archive-meta">{day.source_marks ? <SourceMarks text={day.source_marks} /> : null}</span>
     </Link>
   )
 }
 
-export default function Index({ month_label, prev_month, next_month, days }: DailyIndexProps) {
+export default function Index({ month_label, prev_month, next_month, days, latest_daily_key }: DailyIndexProps) {
   return (
     <>
       <PageHead
         big={month_label}
+        context="日刊归档"
         controls={
           <>
+            {latest_daily_key ? <Ctrl href={dailyHref(latest_daily_key)} label="阅读最新日刊" /> : null}
             {prev_month ? <Ctrl href={monthHref(prev_month.key)} label={prev_month.label} icon="chevron-left" side="left" /> : null}
             {next_month ? <Ctrl href={monthHref(next_month.key)} label={next_month.label} icon="chevron-right" side="right" /> : null}
           </>

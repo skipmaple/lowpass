@@ -8,7 +8,7 @@ class Admin::Issues::ReasonsControllerTest < ActionDispatch::IntegrationTest
       assert_enqueued_with(job: GenerateReasonsJob, args: [ issues(:daily_0908), false ]) { post admin_issue_reasons_path("2026-09-08") }
     end
     assert_redirected_to admin_issues_path
-    assert_equal "已开始重生成理由", flash[:notice]
+    assert_equal "2026-09-08 · 已开始重生成理由", flash[:notice]
     assert_equal "issue.regenerate_reasons", AuditLog.sole.action
   end
 

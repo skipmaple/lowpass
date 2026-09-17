@@ -33,7 +33,7 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
       <div className="source-band-name">
         <Icon name="book-open" size={28} color="var(--paper)" />
         <h2 className="source-band-title">
-          <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" nowrap />
+          <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />
         </h2>
       </div>
 
@@ -56,9 +56,9 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
 }
 
 // 板块锚点目录：1px 描边的锚点小块，横向排一行，窄屏可横向滚动
-function Anchors({ groups }: { groups: WeeklyGroup[] }) {
+function Anchors({ groups, id }: { groups: WeeklyGroup[]; id: string }) {
   return (
-    <nav className="anchors" aria-label="板块">
+    <nav id={id} tabIndex={-1} className="anchors" aria-label="板块">
       {groups.map((group) => (
         <a className="anchor-chip" key={group.anchor} href={`#${anchorId(group.anchor)}`}>
           {group.name}
@@ -85,7 +85,7 @@ function Items({ group, section, heading }: { group: WeeklyGroup; section: Weekl
   )
 }
 
-function Group({ group, section }: { group: WeeklyGroup; section: WeeklySection }) {
+function Group({ group, section, directory }: { group: WeeklyGroup; section: WeeklySection; directory: string }) {
   // RSS 周刊源没有板块：直接接条目，列表区顶上一条 1px 墨线
   if (!group.name) {
     return (
@@ -97,8 +97,15 @@ function Group({ group, section }: { group: WeeklyGroup; section: WeeklySection 
 
   return (
     <section id={anchorId(group.anchor)}>
-      <h3 className="weekly-section-head">{group.name}</h3>
-      <Items group={group} section={section} heading="h4" />
+      {group.items.length === 1 && group.items[0].title === group.name ? (
+        <Items group={group} section={section} heading="h3" />
+      ) : (
+        <>
+          <h3 className="weekly-section-head">{group.name}</h3>
+          <Items group={group} section={section} heading="h4" />
+        </>
+      )}
+      <a className="source-foot" href={`#${directory}`}>返回板块目录</a>
     </section>
   )
 }
@@ -120,6 +127,7 @@ function Degraded({ section }: { section: WeeklySection }) {
 }
 
 function Section({ section }: { section: WeeklySection }) {
+  const directory = `directory-${section.source.id}-${section.issue_no ?? 0}`
   const named = section.groups.filter((group) => group.name)
   // 没有板块的节（RSS 周刊源、降级 stub）的落点是这一节的头：Item#anchor 给这些条目的锚点是 source-<源 id>，
   // 搜索结果的所在期链接指向它（设计 6.3）
@@ -132,9 +140,9 @@ function Section({ section }: { section: WeeklySection }) {
         <Degraded section={section} />
       ) : (
         <>
-          {named.length > 0 ? <Anchors groups={named} /> : null}
+          {named.length > 0 ? <Anchors groups={named} id={directory} /> : null}
           {section.groups.map((group) => (
-            <Group key={group.anchor} group={group} section={section} />
+            <Group key={group.anchor} group={group} section={section} directory={directory} />
           ))}
         </>
       )}
@@ -148,6 +156,7 @@ export default function Show({ issue, sections }: WeeklyShowProps) {
     <>
       <PageHead
         big={issue.week_label}
+        title={`周刊 · ${issue.year} · ${issue.week_label}`}
         top={<span className="issue-head-year">{issue.year}</span>}
         bottom={issue.range_label}
         nav={{

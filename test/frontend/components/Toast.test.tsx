@@ -52,3 +52,23 @@ describe('Toast', () => {
     expect(screen.getAllByRole('status').map((s) => s.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('已保存 Hackaday'), expect.stringContaining('今日日刊已存在')]))
   })
 })
+
+it('后续请求相同反馈可重新显示', async () => {
+ const { rerender } = render(<Toasts flash={{ id: 'request-1', notice: '已保存' }} />)
+ await userEvent.click(screen.getByRole('button', { name: '关闭' }))
+ expect(screen.queryByRole('status')).toBeNull()
+ rerender(<Toasts flash={{ id: 'request-2', notice: '已保存' }} />)
+ expect(screen.getByRole('status')).toHaveTextContent('已保存')
+})
+
+it('新请求的相同提示重新计时，避免刚出现就消失', () => {
+ vi.useFakeTimers()
+ const { rerender } = render(<Toasts flash={{ id: 'first', notice: '已保存' }} />)
+ act(() => vi.advanceTimersByTime(3000))
+ rerender(<Toasts flash={{ id: 'second', notice: '已保存' }} />)
+ act(() => vi.advanceTimersByTime(1000))
+ expect(screen.getByRole('status')).toHaveTextContent('已保存')
+ act(() => vi.advanceTimersByTime(3000))
+ expect(screen.queryByRole('status')).toBeNull()
+ vi.useRealTimers()
+})

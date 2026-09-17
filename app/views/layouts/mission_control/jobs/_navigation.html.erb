@@ -1,0 +1,10 @@
+<p class="queue-tabs-hint" lang="zh-CN">横向滚动查看全部队列视图 →</p>
+<nav class="tabs is-boxed" aria-label="Queue views">
+  <ul>
+    <% navigation_sections.each do |key, (label, url)| %>
+      <li class="<%= "is-active" if key == current_section %>">
+        <%= link_to label, url %>
+      </li>
+    <% end %>
+  </ul>
+</nav>

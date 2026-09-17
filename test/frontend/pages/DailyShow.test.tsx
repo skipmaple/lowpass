@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -42,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks()
   router.visit.mockClear()
+  router.replace.mockClear()
 })
 
 describe('期级状态选哪一句（bodyNotice）', () => {
@@ -80,21 +81,25 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 })
 
 describe('切来源（本地状态 + ?source= 深链）', () => {
-  it('切一次只改地址栏，不回服务端', async () => {
+  it('切一次通过 Inertia 更新当前页面地址并保留状态与滚动，不回服务端', async () => {
     const user = userEvent.setup()
     const replaceState = vi.spyOn(window.history, 'replaceState')
     show()
 
     await user.click(screen.getAllByRole('tab')[1])
 
-    expect(replaceState).toHaveBeenCalledTimes(1)
-    // 带上现有的 history.state：Inertia 的页面快照存在那里，前进后退还要用
-    expect(replaceState).toHaveBeenCalledWith(
-      { page: 'daily' },
-      '',
-      expect.stringContaining('/daily/2026-09-08?source=src-gh'),
-    )
-    expect(window.location.search).toBe('?source=src-gh')
+    expect(router.replace).toHaveBeenCalledWith({
+      url: '/daily/2026-09-08?source=src-gh',
+      props: expect.any(Function),
+      preserveState: true,
+      preserveScroll: true,
+    })
+    const replace = router.replace.mock.calls[0][0]
+    expect(replace.props({ active_source_id: 'src-hn', retained: 'yes' })).toEqual({
+      active_source_id: 'src-gh',
+      retained: 'yes',
+    })
+    expect(replaceState).not.toHaveBeenCalled()
     expect(router.visit).not.toHaveBeenCalled()
   })
 
@@ -179,7 +184,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
   it('栏尾是「来源名 完整榜单」，新标签页打开', () => {
     const { container } = show()
 
-    const foot = container.querySelector('.source-foot')
+    const foot = container.querySelector('.source-foot[target="_blank"]')
     expect(foot).toHaveTextContent('Hacker News 完整榜单')
     expect(foot).toHaveAttribute('href', 'https://news.ycombinator.com/news')
     expect(foot).toHaveAttribute('target', '_blank')
@@ -189,7 +194,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
   it('源站地址算不出来时整条收掉', () => {
     const { container } = show({ sources: [source({ home_url: null })], active_source_id: 'src-hn' })
 
-    expect(container.querySelector('.source-foot')).toBeNull()
+    expect(container.querySelector('.source-foot[target="_blank"]')).toBeNull()
   })
 
   it('条目按 props 里的顺序排，序号用 rank', () => {
@@ -259,4 +264,20 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
 
     expect(scroll).not.toHaveBeenCalled()
   })
+})
+
+it('缺期只说一次事实，并链接最近可读日刊', () => {
+ show({ missing: true, issue: dailyIssue({ state: null, status: '本期未生成' }), latest_daily_key: '2026-09-07' })
+ expect(screen.getAllByText('本期未生成')).toHaveLength(1)
+ expect(screen.getByRole('link', { name: '阅读最新日刊' })).toHaveAttribute('href', '/daily/2026-09-07')
+})
+
+it('管理员补生成保持等待状态并显示实际服务端结果', async () => {
+ show({ missing: true, issue: dailyIssue({ state: null, status: '本期未生成' }), backfill_available: true })
+ await userEvent.click(screen.getByRole('button', { name: '补生成本期' }))
+ expect(screen.getByRole('button', { name: '正在补生成…' })).toBeDisabled()
+ const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
+ act(() => { options.onSuccess({ props: { flash: { alert: '这一天已有期' } } }); options.onFinish() })
+ expect(screen.getByRole('status')).toHaveTextContent('这一天已有期')
+ expect(screen.getByRole('button', { name: '补生成本期' })).toBeEnabled()
 })

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { isValidElement } from 'react'
 import type * as React from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -22,7 +22,7 @@ describe('Login/Show', () => {
     render(<Show providers={['google_oauth2', 'github']} next="/weekly" />)
 
     expect(screen.getByRole('heading', { level: 1, name: '登录' })).toBeInTheDocument()
-    expect(screen.getByText('滤掉噪音，留下信号。')).toBeInTheDocument()
+    expect(screen.getByText('每天一期技术日刊，登录后阅读')).toBeInTheDocument()
     const google = screen.getByRole('button', { name: '使用 Google 登录' })
     const form = google.closest('form')
     expect(form).toHaveAttribute('method', 'post')
@@ -69,4 +69,14 @@ describe('Login/Show', () => {
     expect(container.querySelector('.masthead')).toBeNull()
     expect(container.querySelector('.login-card')).not.toBeNull()
   })
+})
+
+it('各登录方式显示自己的等待状态，从登录方返回后可重试', () => {
+ render(<Show providers={['google_oauth2', 'github']} next={null} />)
+ const google = screen.getByRole('button', { name: '使用 Google 登录' })
+ fireEvent.submit(google.closest('form')!)
+ expect(screen.getByRole('button', { name: '正在前往 Google…' })).toBeDisabled()
+ expect(screen.getByRole('button', { name: '使用 GitHub 登录' })).toBeEnabled()
+ fireEvent(window, new Event('pageshow'))
+ expect(screen.getByRole('button', { name: '使用 Google 登录' })).toBeEnabled()
 })

@@ -30,7 +30,7 @@ class FetchRun < ApplicationRecord
     {
       active: active.map { |run| { id: run.id, source_name: run.source.name, period_key: run.issue&.period_key } },
       finished: finished.reject { |run| retrying.include?([ run.source_id, run.issue_id ]) }
-                        .map { |run| { id: run.id, source_name: run.source.name, status: run.status, item_count: run.item_count, error_summary: run.error_summary } }
+                        .map { |run| { id: run.id, source_name: run.source.name, period_key: run.issue&.period_key, status: run.status, item_count: run.item_count, error_summary: run.error_summary } }
     }
   end
 

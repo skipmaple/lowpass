@@ -2,7 +2,7 @@
 class Admin::SettingsController < Admin::BaseController
   KEYS = %w[ daily_time weekly_time ].freeze
   MODEL_KEYS = { "base_url" => "model_base_url", "model_name" => "model_name", "input_price" => "model_input_price",
-                 "output_price" => "model_output_price", "monthly_cap" => "model_monthly_cap" }.freeze
+                 "output_price" => "model_output_price", "monthly_cap" => "model_monthly_cap", "currency" => "model_currency" }.freeze
   NUMBER_KEYS = %w[ input_price output_price monthly_cap ].freeze
   NUMBER = /\A\d+(\.\d+)?\z/
   MAX_LENGTH = 255             # settings.value 是 varchar(255)
@@ -41,9 +41,11 @@ class Admin::SettingsController < Admin::BaseController
 
     # 模型配置（R-9.9、D23）：地址 https（本机 http 也行）、数字不小于 0；地址与模型名都留空 = 未配置
     def update_model
-      given = params.permit(model: MODEL_KEYS.keys).fetch(:model, {})
+      given = params.permit(model: MODEL_KEYS.keys + [ "currency_confirmation" ]).fetch(:model, {})
       values = MODEL_KEYS.keys.index_with { |key| given[key].to_s.strip }
+      values["currency"] = Setting.get("model_currency") unless given.key?("currency")
       errors = model_errors(values)
+      validate_currency(values["currency"], given["currency_confirmation"], errors)
       if errors.any?
         redirect_to admin_settings_path, inertia: { errors: errors }
       else
@@ -51,6 +53,20 @@ class Admin::SettingsController < Admin::BaseController
         values.each { |key, value| Setting.set(MODEL_KEYS[key], value) }
         Audit.record("settings.update", "Setting#model", changes)
         redirect_to admin_settings_path, notice: "已保存"
+      end
+    end
+
+    # 币种是记账元数据，不做汇率换算；有历史费用时禁止静默改标。
+    def validate_currency(currency, confirmation, errors)
+      current = Setting.get("model_currency")
+      if ![ "", "USD", "CNY" ].include?(currency)
+        errors["currency"] = [ "请选择 USD 或 CNY" ]
+      elsif currency != current && ModelCall.where.not(cost: 0).exists?
+        if current.present?
+          errors["currency"] = [ "仍有非零历史费用，不能更改币种" ]
+        elsif confirmation != "1"
+          errors["currency_confirmation"] = [ "请确认现有单价、上限和历史费用均使用所选币种；数值不会换算" ]
+        end
       end
     end
 

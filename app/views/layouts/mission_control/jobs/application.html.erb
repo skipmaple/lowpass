@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Mission control - <%= page_title %></title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="turbo-cache-control" content="no-cache">
+  <meta name="turbo-prefetch" content="false">
+
+  <%= stylesheet_link_tag "mission_control/jobs/bulma.min" %>
+  <%= stylesheet_link_tag "mission_control/jobs/application", "data-turbo-track": "reload" %>
+  <%= stylesheet_link_tag "admin_jobs", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags "application", importmap: MissionControl::Jobs.importmap  %>
+</head>
+<body>
+
+<main class="section queue-panel">
+  <div class="container">
+    <header class="queue-context" lang="zh-CN">
+      <%= link_to "返回刊物管理", main_app.admin_issues_path(server_id: nil), class: "button is-light" %>
+      <p>队列时间显示时区：<%= Time.zone.name %>。刊物日期按 Asia/Shanghai 划分。</p>
+    </header>
+    <%= render "layouts/mission_control/jobs/application_selection" %>
+    <%= render "layouts/mission_control/jobs/flash" %>
+    <%= render "layouts/mission_control/jobs/navigation" %>
+    <h1 class="title is-4"><%= page_title %></h1>
+    <% if current_section == :blocked_jobs %>
+      <p class="notification is-light" lang="zh-CN">Blocked 表示任务正在等待并发限制释放。Run now 会绕过并发限制，立即放入可执行队列。</p>
+    <% end %>
+    <p class="queue-scroll-hint" lang="zh-CN">表格较宽时可横向滚动查看 →</p>
+    <div class="queue-content" role="region" aria-label="Queue data" tabindex="0"><%= yield %></div>
+  </div>
+</main>
+
+</body>
+</html>

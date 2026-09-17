@@ -1,0 +1,4 @@
+<div class="buttons is-right">
+  <%= button_to "Run now", application_job_dispatch_path(@application, job.job_id), class: "button is-warning is-light mr-0",
+    form: { data: { turbo_confirm: "Run #{job.job_class_name} (#{job.job_id}) now? This bypasses concurrency limits and dispatches the job immediately." } } %>
+</div>

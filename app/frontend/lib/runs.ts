@@ -14,8 +14,9 @@ export function useManualRuns({ active, finished, only }: { active: ManualRun[];
     for (const run of finished) {
       if (seen.current.has(run.id)) continue
       seen.current.add(run.id)
-      if (run.status === 'succeeded') push('ok', `已更新 ${run.source_name}（${run.item_count ?? 0} 条）`, run.id)
-      else push('fail', `重抓失败：${run.error_summary ?? run.status}。已保留原内容。`, run.id)
+      const target = run.period_key ? `${run.period_key} · ` : ''
+      if (run.status === 'succeeded') push('ok', `${target}已更新 ${run.source_name}（${run.item_count ?? 0} 条）`, run.id)
+      else push('fail', `${target}${run.source_name} · 重抓失败：${run.error_summary ?? run.status}。已保留原内容。`, run.id)
     }
   }, [finished, push])
 

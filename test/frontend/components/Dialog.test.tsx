@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import Dialog from '@/components/Dialog'
 
 describe('Dialog', () => {
-  it('open 时是 dialog，焦点在确认按钮，Escape 取消', async () => {
+  it('open 时是 dialog，焦点在取消按钮，Escape 取消', async () => {
     const onCancel = vi.fn()
     const onConfirm = vi.fn()
     render(<Dialog open text="停用后不再抓取，历史内容保留。确认停用 Hackaday？" cancel="取消" confirm="停用" onCancel={onCancel} onConfirm={onConfirm} />)
@@ -14,7 +14,7 @@ describe('Dialog', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     // 名字指向那段问句本身，不是复制一份到 aria-label 上
     expect(dialog).toHaveAccessibleName('停用后不再抓取，历史内容保留。确认停用 Hackaday？')
-    expect(screen.getByRole('button', { name: '停用' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
 
     await userEvent.click(screen.getByRole('button', { name: '停用' }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
@@ -37,7 +37,8 @@ describe('Dialog', () => {
 
     const cancelButton = screen.getByRole('button', { name: '取消' })
     const confirmButton = screen.getByRole('button', { name: '停用' })
-    expect(confirmButton).toHaveFocus()
+    expect(cancelButton).toHaveFocus()
+    confirmButton.focus()
 
     await userEvent.tab()
     expect(cancelButton).toHaveFocus()
@@ -56,7 +57,7 @@ describe('Dialog', () => {
     const onConfirm = vi.fn()
     const { rerender } = render(<Dialog open text="x" cancel="取消" confirm="停用" onCancel={onCancel1} onConfirm={onConfirm} />)
 
-    const confirmButton = screen.getByRole('button', { name: '停用' })
+    const confirmButton = screen.getByRole('button', { name: '取消' })
     expect(confirmButton).toHaveFocus()
     const focusSpy = vi.spyOn(confirmButton, 'focus')
 
@@ -70,4 +71,20 @@ describe('Dialog', () => {
     expect(onCancel1).not.toHaveBeenCalled()
     expect(onCancel2).toHaveBeenCalledTimes(1)
   })
+})
+
+it('关闭时恢复触发按钮与背景滚动', async () => {
+ const trigger = document.createElement('button')
+ document.body.append(trigger)
+ trigger.focus()
+ const props = { text: '确认删除？', cancel: '取消', confirm: '删除', onCancel: () => {}, onConfirm: () => {} }
+ const { rerender } = render(<Dialog open {...props} />)
+ expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
+ expect(document.body.style.overflow).toBe('hidden')
+ expect(trigger).toHaveAttribute('inert')
+ rerender(<Dialog open={false} {...props} />)
+ expect(trigger).toHaveFocus()
+ expect(trigger).not.toHaveAttribute('inert')
+ expect(document.body.style.overflow).toBe('')
+ trigger.remove()
 })

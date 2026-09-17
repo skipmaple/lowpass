@@ -3,6 +3,7 @@
 .queue-context { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 24px; }
 .queue-context p { overflow-wrap: anywhere; }
 .queue-panel .button, .queue-panel .tabs a, .queue-panel .pagination-previous, .queue-panel .pagination-next { min-height: 44px; height: auto; white-space: normal; }
+.queue-panel .pagination-previous, .queue-panel .pagination-next { min-width: 44px; }
 .queue-panel .tabs { max-width: 100%; }
 .queue-panel .tabs a { white-space: nowrap; }
 .queue-content { max-width: 100%; overflow-x: auto; padding-bottom: 12px; }

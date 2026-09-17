@@ -6,7 +6,7 @@ class Admin::Issues::ReasonsController < Admin::BaseController
     if Reasons.ready?
       GenerateReasonsJob.perform_later(issue, false)
       Audit.record("issue.regenerate_reasons", "Issue##{issue.period_key}")
-      redirect_back_or_to admin_issues_path, notice: "已开始重生成理由"
+      redirect_back_or_to admin_issues_path, notice: "#{issue.period_key} · 已开始重生成理由"
     else
       redirect_back_or_to admin_issues_path, alert: Reasons.unready_label
     end

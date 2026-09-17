@@ -26,6 +26,7 @@ class ReadingTest < ApplicationSystemTestCase
     visit daily_issue_path("2026-09-08")
 
     find(".source-tabs").click_on source.name
+    assert_current_path daily_issue_path("2026-09-08", source: source.id)
     assert_equal "source=#{source.id}", URI.parse(page.current_url).query
 
     click_on "返回来源目录"

@@ -36,7 +36,9 @@ class SigningInTest < ApplicationSystemTestCase
     visit login_path
     click_on "使用 GitHub 登录"
 
+    # The native form redirects back to the same URL. Wait for the new document's
+    # specific outcome, rather than letting the old /login URL satisfy the wait.
+    assert_selector ".login-card [role='alert']", text: "已取消登录。"
     assert_current_path login_path
-    assert_text "已取消登录。"
   end
 end

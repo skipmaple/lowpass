@@ -54,8 +54,9 @@ describe('Admin/Sources/Runs', () => {
   it('重抓最新一期：POST refetch 带 source_id；进行中时禁用', async () => {
     show()
 
-    await userEvent.click(screen.getByRole('button', { name: '重抓 9月8日' }))
-    expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/refetch', { source_id: 'src-had' })
+    await userEvent.click(screen.getByRole('button', { name: '重抓最新一期 · 9月8日' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认重抓' }))
+    expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/refetch', { source_id: 'src-had' }, expect.any(Object))
 
     show({ active_runs: [{ id: 'r1', source_name: 'Hackaday', period_key: '2026-09-08' }] })
     // tsconfig 的 lib 是 ES2020，Array#at 没有类型声明（运行时其实支持）：改用下标取最后一个，跑 tsc 才过

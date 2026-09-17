@@ -38,6 +38,7 @@ class FetchRunTest < ActiveSupport::TestCase
 
     props = FetchRun.manual_run_props(FetchRun.manual_recent)
 
+    assert_equal "2026-09-08", props[:finished].first[:period_key]
     assert_equal [], props[:active]
     assert_equal [ failed.id ], props[:finished].map { |run| run[:id] }
   end

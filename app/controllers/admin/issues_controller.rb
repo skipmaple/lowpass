@@ -8,6 +8,7 @@ class Admin::IssuesController < Admin::BaseController
       runs = FetchRun.manual_run_props(FetchRun.manual_recent)
       render inertia: "Admin/Issues/Index", props: listing.merge(
         kind: kind,
+        today_period_key: PeriodKey.today,
         today_issue_exists: Issue.daily.exists?(period_key: PeriodKey.today),
         active_runs: runs[:active],
         finished_runs: runs[:finished]

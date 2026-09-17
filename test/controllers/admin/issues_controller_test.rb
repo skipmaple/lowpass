@@ -13,6 +13,7 @@ class Admin::IssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "all", page_props["kind"]
     assert page_props["rows"].any? { |r| r["period_key"] == "2026-09-08" && r["state"] == "published" }
     assert page_props["rows"].any? { |r| r["period_key"] == "2026-W36" }
+    assert_equal "2026-09-09", page_props["today_period_key"]
     assert_equal false, page_props["today_issue_exists"]
     assert_equal [], page_props["active_runs"]
   end

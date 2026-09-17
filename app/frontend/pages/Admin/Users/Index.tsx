@@ -10,14 +10,14 @@ import type { AdminUserRow } from '@/types/lowpass'
 export type AdminUsersIndexProps = { users: AdminUserRow[]; summary: string }
 
 const HEADERS = ['显示名', '邮箱', '角色', '登录方式', '最近登录']
-const WIDTHS = ['200px', '240px', '90px', 'minmax(0, 1fr)', '170px']
+const WIDTHS = ['minmax(0, 1fr)', 'minmax(0, 1.5fr)', 'minmax(0, .7fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)']
 
 export default function Index({ users, summary }: AdminUsersIndexProps) {
   const rows = users.map((user) => ({
     key: user.id,
     cells: [
       <Mixed text={user.display_name} font="latin" size="var(--fs-15)" color="var(--ink)" />,
-      user.email ? <span className="data" style={{ color: 'var(--ink)' }}>{user.email}</span> : <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>无</span>,
+      user.email ? <span className="data" style={{ color: 'var(--ink)' }}>{user.email}</span> : null,
       user.role === 'admin' ? <Chip text="管理员" /> : <span className="chip-outline">成员</span>,
       <Mixed text={user.providers_label} font="latin" size="var(--fs-15)" color="var(--ink2)" />,
       user.last_login_label ? <span className="data">{user.last_login_label}</span> : null,
@@ -26,6 +26,7 @@ export default function Index({ users, summary }: AdminUsersIndexProps) {
 
   return (
     <AdminPage section="users" bottom="用户">
+      <p className="cjk admin-readonly-note">用户信息只读。管理员身份由邮箱白名单决定。</p>
       <Table headers={HEADERS} widths={WIDTHS} rows={rows} empty="还没有用户" />
       <div className="admin-summary">
         <Mixed text={summary} />

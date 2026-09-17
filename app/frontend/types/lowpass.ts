@@ -57,7 +57,7 @@ export type TestFetchResult = { ok: boolean; entries: TestFetchEntry[]; warnings
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "timed_out";
 export type AdminRunRow = { id: string; started_label: string | null; duration_label: string | null; status: RunStatus; status_label: string; attempt_label: string; item_count: number | null; dropped_count: number | null; error_summary: string | null; trigger_label: string };
 export type ManualRun = { id: string; source_name: string; period_key: string | null };
-export type FinishedRun = { id: string; source_name: string; status: RunStatus; item_count: number | null; error_summary: string | null };
+export type FinishedRun = { id: string; source_name: string; period_key: string | null; status: RunStatus; item_count: number | null; error_summary: string | null };
 export type LatestIssue = { period_key: string; label: string } | null;
 // reasons 只有日刊行才有值（Issue::Administering#admin_reasons）：未发布 / 生成中 / 缺期是 null；周刊行整个键都不带
 export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[]; reasons?: { label: string; missing: number; ready: boolean } | null };

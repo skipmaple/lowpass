@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react'
+import { Link } from '@inertiajs/react'
 import { useState } from 'react'
 import type * as React from 'react'
 
@@ -9,9 +9,9 @@ import Dialog from '@/components/Dialog'
 import Icon from '@/components/Icon'
 import Mark from '@/components/Mark'
 import Seg from '@/components/Seg'
-import SegButtons from '@/components/SegButtons'
 import Table from '@/components/Table'
 import { ADMIN_TODAY_ISSUE, adminIssueBackfillHref, adminIssueReasonsHref, adminIssueRefetchHref, adminIssuesHref, dailyHref, weeklyHref } from '@/lib/paths'
+import { useAdminOperations } from '@/lib/operations'
 import { useManualRuns } from '@/lib/runs'
 import { Mixed } from '@/lib/typeset'
 import type { AdminIssueRow, ArchiveNav, FinishedRun, ManualRun } from '@/types/lowpass'
@@ -26,12 +26,13 @@ export type AdminIssuesIndexProps = {
   kind: 'all' | 'daily' | 'weekly'
   rows: AdminIssueRow[]
   today_issue_exists: boolean
+  today_period_key: string
   active_runs: ManualRun[]
   finished_runs: FinishedRun[]
 }
 
-const HEADERS = ['刊物', '周期键', '状态', '生成时间', '各源结果', '理由', '操作']
-const WIDTHS = ['70px', '120px', '200px', '120px', 'minmax(0, 1fr)', '150px', '200px']
+const HEADERS = ['刊物', '日期 / 周次', '状态', '生成时间', '各源结果', '理由', '操作']
+const WIDTHS = ['minmax(0, .5fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)']
 
 function markOf(state: AdminIssueRow['state']) {
   if (state === 'published') return 'published'
@@ -40,8 +41,10 @@ function markOf(state: AdminIssueRow['state']) {
   return 'empty'
 }
 
-export default function Index({ month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, active_runs, finished_runs }: AdminIssuesIndexProps) {
-  const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: ['rows', 'active_runs', 'finished_runs', 'summary'] })
+export default function Index({ month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, active_runs, finished_runs }: AdminIssuesIndexProps) {
+  const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: ['rows', 'active_runs', 'finished_runs', 'summary', 'today_issue_exists', 'today_period_key'] })
+  const operations = useAdminOperations()
+  const [pendingOnly, setPendingOnly] = useState(false)
   const [refetching, setRefetching] = useState<AdminIssueRow | null>(null)
   const [sourceId, setSourceId] = useState<string>('')
   const [confirmToday, setConfirmToday] = useState(false)
@@ -51,7 +54,11 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
     setSourceId(row.refetchable_sources[0]?.id ?? '')
   }
 
-  const tableRows = rows.map((row) => ({
+  const visibleRows = pendingOnly ? rows.filter((row) => row.state === 'missing' || (row.reasons?.missing ?? 0) > 0 || row.source_marks?.split(' · ').some((mark) => mark.endsWith(' 失败'))) : rows
+  const todayRunning = manual.running(today_period_key) || rows.some((row) => row.kind === 'daily' && row.period_key === today_period_key && row.state === 'generating')
+  const selectedSource = refetching?.refetchable_sources.find((source) => source.id === sourceId)
+
+  const tableRows = visibleRows.map((row) => ({
     key: `${row.kind}-${row.period_key}`,
     cells: [
       <span className="chip-outline">{row.kind === 'daily' ? '日刊' : '周刊'}</span>,
@@ -72,21 +79,21 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
       ) : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
-          <button type="button" className="btn-primary" onClick={() => router.post(adminIssueBackfillHref(row.period_key))}>
+          <button type="button" className="link-button" disabled={operations.busy(`backfill-${row.period_key}`)} onClick={() => operations.post(`backfill-${row.period_key}`, row.period_key, adminIssueBackfillHref(row.period_key))}>
             <Icon name="refresh-cw" color="currentColor" />
-            <span>补生成</span>
+            <span>{operations.busy(`backfill-${row.period_key}`) ? '正在补生成…' : '补生成'}</span>
           </button>
         ) : (
           <>
             {row.refetchable_sources.length > 0 ? (
-              manual.running(row.period_key) ? (
+              (manual.running(row.period_key) || operations.busy(`refetch-${row.period_key}`)) ? (
                 <button type="button" className="link-button" disabled>进行中</button>
               ) : (
                 <button type="button" className="link-button" onClick={() => openRefetch(row)}>重抓某源</button>
               )
             ) : null}
             {row.kind === 'daily' && row.reasons ? (
-              <button type="button" className="link-button" disabled={!row.reasons.ready} onClick={() => router.post(adminIssueReasonsHref(row.period_key))}>重生成理由</button>
+              <button type="button" className="link-button" disabled={!row.reasons.ready || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.label : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>{operations.busy(`reasons-${row.period_key}`) ? '正在提交理由任务…' : '重生成理由'}</button>
             ) : null}
             <Link className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
           </>
@@ -98,13 +105,13 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
   return (
     <AdminPage
       section="issues"
-      bottom="期"
+      bottom="刊物管理"
       toasts={manual.toasts}
       onDismissToast={manual.dismiss}
       controls={
-        <button type="button" className="btn-primary" onClick={() => (today_issue_exists ? setConfirmToday(true) : router.post(ADMIN_TODAY_ISSUE, {}))}>
+        <button type="button" className="btn-primary" disabled={operations.busy('today') || todayRunning} onClick={() => (today_issue_exists ? setConfirmToday(true) : operations.post('today', '今日日刊', ADMIN_TODAY_ISSUE))}>
           <Icon name="refresh-cw" color="currentColor" />
-          <span>立即生成今日日刊</span>
+          <span>{operations.busy('today') ? '正在提交…' : todayRunning ? '今日日刊处理中…' : today_issue_exists ? '重抓今日日刊' : '生成今日日刊'}</span>
         </button>
       }
     >
@@ -123,7 +130,9 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
           {next_month ? <Ctrl href={adminIssuesHref({ kind, month: next_month.key })} label={next_month.label} icon="chevron-right" side="right" /> : null}
         </div>
       </div>
-      <Table headers={HEADERS} widths={WIDTHS} rows={tableRows} empty="这个月还没有期" />
+      <label className="admin-pending-filter"><input type="checkbox" checked={pendingOnly} onChange={(event) => setPendingOnly(event.target.checked)} />待处理</label>
+      {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
+      <Table headers={HEADERS} widths={WIDTHS} rows={tableRows} empty={pendingOnly ? "没有待处理的刊物" : "这个月还没有期"} />
       <div className="admin-summary">
         <Mixed text={summary} />
       </div>
@@ -132,15 +141,17 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
         open={refetching !== null}
         text={`重抓 ${refetching?.period_key ?? ''} 的哪个来源？`}
         cancel="取消"
-        confirm="重抓"
+        confirm={`重抓 ${selectedSource?.name ?? '来源'}`}
         busy={sourceId === ''}
         onCancel={() => setRefetching(null)}
         onConfirm={() => {
-          if (refetching && sourceId) router.post(adminIssueRefetchHref(refetching.period_key), { source_id: sourceId })
+          if (refetching && selectedSource) operations.post(`refetch-${refetching.period_key}`, `${refetching.period_key} · ${selectedSource.name}`, adminIssueRefetchHref(refetching.period_key), { source_id: sourceId })
           setRefetching(null)
         }}
       >
-        {refetching ? <SegButtons label="来源" options={refetching.refetchable_sources.map((s) => ({ value: s.id, label: s.name }))} value={sourceId} onChange={setSourceId} /> : null}
+        {refetching ? <fieldset className="refetch-sources"><legend>来源</legend>{refetching.refetchable_sources.map((source) => (
+          <label key={source.id}><input type="radio" name="refetch-source" value={source.id} checked={sourceId === source.id} onChange={() => setSourceId(source.id)} /><Mixed text={source.name} font="latin" size="var(--fs-15)" color="var(--ink)" /></label>
+        ))}</fieldset> : null}
       </Dialog>
       <Dialog
         open={confirmToday}
@@ -149,7 +160,7 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
         confirm="重抓全部"
         onCancel={() => setConfirmToday(false)}
         onConfirm={() => {
-          router.post(ADMIN_TODAY_ISSUE, { confirm: '1' })
+          operations.post('today', '今日日刊', ADMIN_TODAY_ISSUE, { confirm: '1' })
           setConfirmToday(false)
         }}
       />

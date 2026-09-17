@@ -1,0 +1,22 @@
+/* Keep Mission Control's utility design and technical tables within the viewport. */
+.queue-panel .container { min-width: 0; }
+.queue-context { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 24px; }
+.queue-context p { overflow-wrap: anywhere; }
+.queue-panel .button, .queue-panel .tabs a, .queue-panel .pagination-previous, .queue-panel .pagination-next { min-height: 44px; height: auto; white-space: normal; }
+.queue-panel .tabs { max-width: 100%; }
+.queue-panel .tabs a { white-space: nowrap; }
+.queue-content { max-width: 100%; overflow-x: auto; padding-bottom: 12px; }
+.queue-content table { min-width: 680px; }
+.queue-content pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.queue-scroll-hint, .queue-tabs-hint { margin: 8px 0; font-size: 0.875rem; }
+.queue-panel .level { flex-wrap: wrap; gap: 12px; }
+.queue-panel .field, .queue-panel .control, .queue-panel .select { max-width: 100%; }
+.queue-panel input:not([type="checkbox"]), .queue-panel select { min-height: 44px; }
+.queue-panel .select { height: auto; }
+.queue-panel .select select { max-width: 100%; }
+.queue-content td > a { display: inline-flex; align-items: center; min-height: 44px; }
+@media (max-width: 768px) {
+  .queue-panel.section { padding: 24px; }
+  .queue-panel .filter input { width: 100%; }
+  .queue-panel .field.is-grouped { flex-wrap: wrap; }
+}

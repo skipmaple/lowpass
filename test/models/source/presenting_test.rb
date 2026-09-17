@@ -69,6 +69,6 @@ class Source::PresentingTest < ActiveSupport::TestCase
     props = FetchRun.manual_run_props(FetchRun.manual_recent)
 
     assert_equal [ { id: running.id, source_name: "Hacker News", period_key: "2026-09-08" } ], props[:active]
-    assert_equal [ { id: done.id, source_name: "GitHub Trending", status: "failed", item_count: nil, error_summary: "连接超时" } ], props[:finished]
+    assert_equal [ { id: done.id, source_name: "GitHub Trending", period_key: "2026-09-08", status: "failed", item_count: nil, error_summary: "连接超时" } ], props[:finished]
   end
 end

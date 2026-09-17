@@ -183,13 +183,15 @@ describe('ItemRow 推荐理由与兴趣标签', () => {
     expect(container.querySelector('.item-tag')).toBeNull()
   })
 
-  it('有值时理由成段、标签成墨色小块', () => {
+  it('有值时理由成段、标签使用低对比度的描边样式', () => {
     const { container } = render(
       <ItemRow item={item({ reason: '与你关注的终端工具相关。', interest_tag: 'AI' })} adapter="hacker_news" rank={1} />,
     )
 
     expect(screen.getByText('与你关注的终端工具相关。')).toHaveClass('item-reason')
+    expect(container.querySelector('.item-heading')).toHaveClass('item-heading--tagged')
     expect(container.querySelector('.item-tag')).toHaveTextContent('AI')
+    expect(container.querySelector('.item-tag .item-interest-chip')).toHaveClass('chip-outline')
   })
 })
 

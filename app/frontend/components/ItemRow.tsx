@@ -9,7 +9,7 @@ import type { Adapter, Item } from '@/types/lowpass'
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
 // 兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
-// 标签跟随标题，始终属于同一阅读组，不再放到页面远端。
+// 标签锚定条目行末端；窄屏自然换行，仍属于同一阅读组。
 // 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
@@ -114,6 +114,7 @@ export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant
 
 export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
   const weekly = variant === 'weekly'
+  const tagged = !weekly && Boolean(item.interest_tag)
 
   return (
     <article className="item-row" id={`item-${item.id}`}>
@@ -121,14 +122,14 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
 
       <div className="item-body">
         {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。 */}
-        <div className="item-heading">
+        <div className={tagged ? 'item-heading item-heading--tagged' : 'item-heading'}>
           <Heading className="item-title">
             <a className="t" href={item.url} target="_blank" rel="noopener noreferrer">
               {item.title}
             </a>
           </Heading>
-          {!weekly && item.interest_tag ? (
-            <div className="item-tag"><Chip text={item.interest_tag} /></div>
+          {tagged ? (
+            <div className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></div>
           ) : null}
         </div>
         {/* 周刊摘要行高 1.7（画布 pages_site.item() 的文楷 15/1.7），日刊摘要是 PRD 6.3 的 Newsreader 15/1.5 */}

@@ -52,7 +52,7 @@ class AdminTest < ApplicationSystemTestCase
     assert_text "2026-09-08 · 已更新 Hacker News（1 条）"
   end
 
-  test "非空队列的翻页箭头至少为 44 像素方形目标" do
+  test "队列分页四个目标至少 44 像素，禁用项不可激活且首尾有名称" do
     adapter = ActiveJob::QueueAdapters::SolidQueueAdapter.new
     adapter.extend(ActiveJob::QueueAdapters::SolidQueueExt)
     job = ActiveJob::JobProxy.new(GenerateReasonsJob.new(issues(:daily_0908), false).serialize)
@@ -66,14 +66,43 @@ class AdminTest < ApplicationSystemTestCase
     applications.add("Lowpass", solid_queue: adapter)
     MissionControl::Jobs.stubs(:applications).returns(applications)
 
-    visit "/admin/jobs/applications/lowpass/scheduled/jobs?server_id=solid_queue"
-
-    assert_selector "h1", text: "Scheduled jobs"
-    [ "↞", "↠" ].each do |label|
-      target = find("nav[aria-label='pagination'] a", text: label, exact_text: true).native.rect
-      assert_operator target.width, :>=, 44
-      assert_operator target.height, :>=, 44
+    labels = [ "First page", "Previous page", "Next page", "Last page" ]
+    assert_pagination = ->(disabled_labels) do
+      within "nav[aria-label='pagination']" do
+        assert_selector ".pagination-previous, .pagination-next", count: 4
+        labels.each do |label|
+          target = find("[aria-label='#{label}']")
+          assert_operator target.native.rect.width, :>=, 44
+          assert_operator target.native.rect.height, :>=, 44
+          if disabled_labels.include?(label)
+            assert_equal "span", target.tag_name
+            assert_equal "true", target["aria-disabled"]
+            assert_nil target["href"]
+            assert_nil target["tabindex"]
+            original_url = page.current_url
+            target.click
+            assert_equal original_url, page.current_url
+          else
+            assert_equal "a", target.tag_name
+            assert target["href"].present?
+            assert_nil target["aria-disabled"]
+          end
+        end
+      end
     end
+
+    visit "/admin/jobs/applications/lowpass/scheduled/jobs?server_id=solid_queue"
+    assert_selector "h1", text: "Scheduled jobs"
+    assert_pagination.call(labels)
+
+    adapter.stubs(:jobs_count).returns(11)
+    visit "/admin/jobs/applications/lowpass/scheduled/jobs?server_id=solid_queue&page=1"
+    assert_pagination.call([ "First page", "Previous page" ])
+    assert_selector "nav[aria-label='pagination'] [aria-current='page']", text: "1", exact_text: true
+
+    visit "/admin/jobs/applications/lowpass/scheduled/jobs?server_id=solid_queue&page=2"
+    assert_pagination.call([ "Next page", "Last page" ])
+    assert_selector "nav[aria-label='pagination'] [aria-current='page']", text: "2", exact_text: true
   end
 
   test "成员看不到后台" do

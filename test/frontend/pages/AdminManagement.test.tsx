@@ -6,7 +6,7 @@ import Runs from '@/pages/Admin/Sources/Runs'
 import { router, setPageProps } from '../support/inertia'
 import { adminIssueRow, adminRunRow } from '../support/props'
 
-const props = { month_label: '2026 年 9 月', prev_month: null, next_month: null, summary: '', kind: 'all' as const, today_issue_exists: true, today_period_key: '2026-09-08', today_issue_state: 'published' as const, active_runs: [], finished_runs: [], rows: [adminIssueRow(), adminIssueRow({ period_key: '2026-09-07', state: 'missing', reasons: null, refetchable_sources: [] })] }
+const props = { month: '2026-09', month_label: '2026 年 9 月', prev_month: null, next_month: null, summary: '', kind: 'all' as const, today_issue_exists: true, today_period_key: '2026-09-08', today_issue_state: 'published' as const, active_runs: [], finished_runs: [], rows: [adminIssueRow(), adminIssueRow({ period_key: '2026-09-07', state: 'missing', reasons: null, refetchable_sources: [] })] }
 afterEach(() => router.post.mockClear())
 function show() { setPageProps({ flash: {} }); return render(<Issues {...props} />) }
 it('uses the actual today state and independently reports the target request error', async () => {
@@ -65,6 +65,6 @@ it('includes failed source outcomes in pending work without treating valid empty
 
 it('keeps today generating unavailable while browsing a different month without manual runs', () => {
   setPageProps({ flash: {} })
-  render(<Issues {...props} today_issue_state="generating" month_label="2026 年 8 月" rows={[adminIssueRow({ period_key: '2026-08-31' })]} />)
+  render(<Issues {...props} today_issue_state="generating" month="2026-08" month_label="2026 年 8 月" rows={[adminIssueRow({ period_key: '2026-08-31' })]} />)
   expect(screen.getByRole('button', { name: '今日日刊处理中…' })).toBeDisabled()
 })

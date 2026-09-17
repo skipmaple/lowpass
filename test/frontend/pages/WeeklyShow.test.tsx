@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import Show, { type WeeklyShowProps } from '@/pages/Weekly/Show'
@@ -314,4 +314,20 @@ it('单条板块与标题重复时只保留一个标题，保留两种深链与�
  expect(container.querySelector('#item-quote')).not.toBeNull()
  const back = screen.getByRole('link', { name: '返回板块目录' })
  expect(document.getElementById(back.getAttribute('href')!.slice(1))).toHaveAttribute('aria-label', '板块')
+})
+
+
+it('手机目录默认收起，返回目录会展开并聚焦导航', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  try {
+    const { container } = show()
+    const directory = container.querySelector('details.weekly-directory') as HTMLDetailsElement
+    expect(directory).not.toBeNull()
+    expect(directory.open).toBe(false)
+    fireEvent.click(screen.getAllByRole('link', { name: '返回板块目录' })[0])
+    expect(directory.open).toBe(true)
+    expect(container.querySelector('.anchors')).toHaveFocus()
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

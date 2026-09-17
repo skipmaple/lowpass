@@ -13,10 +13,24 @@ afterEach(() => {
 })
 
 describe('Icon 状态过渡', () => {
+  it('启用减少动态时立即切换目标形状，名称同步更新', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    const { rerender } = render(<Icon name="user" title="账户" />)
+    const icon = screen.getByRole('img', { name: '账户' })
+
+    rerender(<Icon name="x" title="关闭" />)
+
+    expect(screen.getByRole('img', { name: '关闭' })).toBe(icon)
+    expect(icon.querySelector('path')).toHaveAttribute('d', CLOSE_PATH)
+    act(() => vi.advanceTimersByTime(100))
+    expect(icon.querySelector('path')).toHaveAttribute('d', CLOSE_PATH)
+  })
+
   it('切换名称时原地变形，完成后保持目标图形', () => {
     vi.useFakeTimers()
-    // 产品要求默认展示动效，不因系统偏好将它替换成静态切换。
-    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    // 没有减少动态偏好时保持默认变形。
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
     const { rerender } = render(<Icon name="user" title="账户" />)
     const icon = screen.getByRole('img', { name: '账户' })
     const path = icon.querySelector('path')!

@@ -6,7 +6,7 @@ export type ItemMeta = { score?: number; comments?: number; comments_url?: strin
 export type Item = { id: string; title: string; url: string; summary: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";
 // status 与 time_label 是服务端定稿的期头文案（附录 B）：没有开 SSR，页面上读得到的字符串都得先进 props。
-export type DailyIssue = { period_key: string; date_label: string; weekday: string; state: IssueState | null; time_label: string | null; status: string | null; daily_time: string; published_at: string | null; revised_at: string | null; generated_late: boolean; is_yesterday: boolean; prev_key: string | null; next_key: string | null };
+export type DailyIssue = { period_key: string; year: number; date_label: string; weekday: string; state: IssueState | null; time_label: string | null; status: string | null; daily_time: string; published_at: string | null; revised_at: string | null; generated_late: boolean; is_yesterday: boolean; prev_key: string | null; next_key: string | null };
 
 // 周刊（R-2.5）：期头是「第 36 周 · 2026 · 8月31日 至 9月6日」；那一周没有期时 state 为 null，status 是「本周无内容」。
 export type WeeklyIssue = { period_key: string; year: number; week_label: string; range_label: string; state: IssueState | null; status: string | null; published_at: string | null; prev_key: string | null; next_key: string | null };
@@ -27,7 +27,7 @@ export type FooterData = { daily_time: string; latest_weekly_key: string | null;
 
 // ── 搜索（PRD 5.4、设计 6.2）：props 的形状由 SearchesController#render_search 定 ──
 export type Publication = "daily" | "weekly";
-export type SearchState = "initial" | "results" | "empty" | "limited" | "unavailable";
+export type SearchState = "initial" | "results" | "empty" | "limited" | "unavailable" | "unsupported";
 export type SearchRange = "7d" | "30d" | "all" | "custom";
 export type SearchSort = "relevance" | "date";
 export type SearchFilters = { type: Publication | null; sources: string[]; from: string | null; to: string | null; range: SearchRange; sort: SearchSort };

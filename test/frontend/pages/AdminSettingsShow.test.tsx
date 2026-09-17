@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -33,7 +33,9 @@ function showProps(overrides: ShowOverrides = {}) {
 function show(overrides: ShowOverrides = {}) {
   const props = showProps(overrides)
   setPageProps({ ...props, flash: {}, errors: overrides.errors ?? {} })
-  return render(<Show {...props} />)
+  const view = render(<Show {...props} />)
+  screen.getAllByRole('button', { name: '编辑' }).forEach((button) => fireEvent.click(button))
+  return view
 }
 
 afterEach(() => {
@@ -140,7 +142,7 @@ describe('Admin/Settings/Show', () => {
     // 键是「密钥」，值只放状态（其余 kv-row 也是这个形状）
     expect(within(screen.getByText('密钥').closest('.kv-row')!).getByText('未配置')).toBeInTheDocument()
 
-    await userEvent.type(screen.getByLabelText('接口地址'), 'https://model.example/v1')
+    await userEvent.type(screen.getByLabelText('API 基础地址'), 'https://model.example/v1')
     await userEvent.type(screen.getByLabelText('模型名'), 'gpt-x')
     // .at(-1) 在这个仓库的 tsconfig（lib: ES2020）下没有类型，改用下标取最后一个
     await userEvent.click(screen.getByRole('button', { name: '保存模型设置' }))

@@ -56,6 +56,7 @@ export function item(overrides: Partial<Item> = {}): Item {
 export function dailyIssue(overrides: Partial<DailyIssue> = {}): DailyIssue {
   return {
     period_key: '2026-09-08',
+    year: 2026,
     date_label: '9月8日',
     weekday: '星期二',
     state: 'published',
@@ -149,8 +150,8 @@ export function searchResult(overrides: Partial<SearchResult> = {}): SearchResul
     rank: 1,
     publication: 'daily',
     source_name: 'Hacker News',
-    where: { label: '9月8日', href: '/daily/2026-09-08?source=src-hn#item-itm-hn-1' },
-    published_label: '9月8日',
+    where: { label: '2026年9月8日', href: '/daily/2026-09-08?source=src-hn#item-itm-hn-1' },
+    published_label: '2026年9月8日',
     url: 'https://example.com/k8s-rust',
     title_runs: [
       { text: 'Kuber', hit: true },

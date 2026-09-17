@@ -16,12 +16,13 @@ export type FieldProps = {
   max?: number
   step?: number | 'any'
   readOnly?: boolean
+  disabled?: boolean
   required?: boolean
   width?: number | string
   placeholder?: string
 }
 
-export default function Field({ label, name, value, onChange, note, error, mono = false, type = 'text', required = false, width, placeholder, min, max, step, readOnly }: FieldProps) {
+export default function Field({ label, name, value, onChange, note, error, mono = false, type = 'text', required = false, width, placeholder, min, max, step, readOnly, disabled }: FieldProps) {
   const id = useId()
 
   return (
@@ -41,6 +42,7 @@ export default function Field({ label, name, value, onChange, note, error, mono 
         max={max}
         step={step}
         readOnly={readOnly}
+        disabled={disabled}
         inputMode={type === 'number' ? (step === 'any' ? 'decimal' : 'numeric') : undefined}
         placeholder={placeholder}
         aria-invalid={error ? true : undefined}

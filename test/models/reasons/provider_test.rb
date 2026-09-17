@@ -1,6 +1,14 @@
 require "test_helper"
 
 class Reasons::ProviderTest < ActiveSupport::TestCase
+  test "完整聊天端点及查询片段不作为基础地址" do
+    assert Reasons::Provider.valid_base_url?("https://model.example/v1/")
+    assert_not Reasons::Provider.valid_base_url?("https://model.example/v1/chat/completions")
+    assert_not Reasons::Provider.valid_base_url?("https://model.example/v1/chat/completions/")
+    assert_not Reasons::Provider.valid_base_url?("https://model.example/v1?key=x")
+    assert_not Reasons::Provider.valid_base_url?("https://model.example/v1#chat")
+  end
+
   test "地址、模型名、密钥三样齐了才算配置好" do
     assert_not Reasons::Provider.configured?
     with_model_provider { assert Reasons::Provider.configured? }

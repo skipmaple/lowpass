@@ -36,7 +36,9 @@ class Search::Highlighter
 
   private
     def pattern(term)
-      if term.cjk?
+      if term.technology?
+        /(?:(?<![\p{L}\p{N}\p{M}_+#])|(?<=#{CJK_CHAR}))#{Regexp.escape(term.text)}(?:(?![\p{L}\p{N}\p{M}_+#])|(?=#{CJK_CHAR}))/i
+      elsif term.cjk?
         /#{Regexp.escape(term.text)}/
       else
         # 词首：前面不是字母数字，或者前面是汉字（「用Rust写的」的 Rust 也算词首，与索引副本补空格的规则一致）

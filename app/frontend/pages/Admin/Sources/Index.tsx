@@ -70,7 +70,7 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
         )}
         </div></details>
       </div>,
-      <details className="admin-details"><summary>上次抓取 / 下次计划</summary><div className="admin-cell-stack"><span className="cjk">排序 <span className="data">{row.sort_order}</span></span><span className="cjk">上次抓取</span><Mixed text={row.last_fetch_label || '—'} /><span className="cjk">下次计划</span><Mixed text={row.next_run_label || '—'} /></div></details>,
+      <dl className="admin-run-metrics"><dt>排序</dt><dd className="data">{row.sort_order}</dd><dt>上次抓取</dt><dd><Mixed text={row.last_fetch_label || '—'} /></dd><dt>下次计划</dt><dd><Mixed text={row.next_run_label || '—'} /></dd></dl>,
     ],
   }))
 
@@ -88,7 +88,7 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
       }
     >
       {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
-      <Table className="sources-table" headers={HEADERS} widths={WIDTHS} rows={rows} empty="还没有来源" />
+      <Table className="sources-table" headers={HEADERS} widths={WIDTHS} rows={rows} mobile={{ primary: [0, 1, 2, 3], detailsLabel: '抓取计划' }} empty="还没有来源" />
       <div className="admin-summary">
         <Mixed text={summary} />
       </div>

@@ -178,8 +178,8 @@ describe('Admin/Sources/Form', () => {
     inertia.emitRouterEvent('before', before)
     expect(before.defaultPrevented).toBe(true)
     expect(confirm).toHaveBeenCalledTimes(1)
+    formPatch.mockImplementationOnce(() => inertia.emitRouterEvent('before', new CustomEvent('inertia:before', { cancelable: true })))
     await userEvent.click(screen.getByRole('button', { name: '保存' }))
-    inertia.emitRouterEvent('before', new CustomEvent('inertia:before', { cancelable: true }))
     expect(confirm).toHaveBeenCalledTimes(1)
   })
 

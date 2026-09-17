@@ -94,7 +94,10 @@ class Search::Runner
     # 一个词对一列的命中判定（设计 5.2）
     def hit(term, column)
       col = @records[column]
-      if term.cjk?
+      if term.technology?
+        # C 不能命中 CSS 或 C++，C++ / C# 的符号也属于词边界；词值仍经 Arel 引用。
+        col.matches_regexp("(?<![[:alnum:]_+#])#{Regexp.escape(term.text)}(?![[:alnum:]_+#])", false)
+      elsif term.cjk?
         col.matches("%#{Search::Record.sanitize_sql_like(term.text)}%")                       # ILIKE
       elsif term.length <= 4
         col.matches_regexp("\\m#{Regexp.escape(term.text)}", false)                             # ~* 词首前缀；词只含字母数字，escape 只是保险

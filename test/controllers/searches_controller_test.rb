@@ -17,18 +17,32 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "", page_props["q"]
     assert_equal [], page_props["results"]
     assert_equal "2026-09-08", page_props["latest_daily_key"]
-    assert_equal "9月8日", page_props["latest_daily_label"]
+    assert_equal "2026年9月8日", page_props["latest_daily_label"]
     assert_equal [ "Hacker News", "GitHub Trending", "Hackaday", "阮一峰科技爱好者周刊" ], page_props["source_options"].map { |option| option["name"] }
     assert_equal %w[ 7d 30d ], page_props["date_presets"].keys
     assert_equal "06:00", page_props["daily_time"]
     assert_nil page_props["latest_weekly_key"]
   end
 
-  test "只有标点也不搜索、不写日志" do
+  test "只有标点给出 unsupported 态，不搜索、不写日志" do
     get search_path(q: "，。")
 
-    assert_equal "initial", page_props["state"]
+    assert_equal "unsupported", page_props["state"]
     assert_equal 0, Search::Log.count
+  end
+
+  test "普通单字母词有输入反馈，C 系技术词会执行搜索" do
+    get search_path(q: "a")
+    assert_equal "unsupported", page_props["state"]
+    assert_equal 0, Search::Log.count
+
+    %w[ C C++ C# ].each do |term|
+      index_item("#{term} guide")
+      get search_path(q: term)
+      assert_equal "results", page_props["state"], term
+      assert_equal 1, page_props["total"], term
+    end
+    assert_equal 3, Search::Log.count
   end
 
   test "有结果：条目带高亮 run、所在期链接、原文与刊物" do
@@ -42,9 +56,9 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, entry["rank"]
     assert_equal "daily", entry["publication"]
     assert_equal "Hacker News", entry["source_name"]
-    assert_equal "9月8日", entry["where"]["label"]
+    assert_equal "2026年9月8日", entry["where"]["label"]
     assert_equal daily_issue_path("2026-09-08", source: sources(:hn).id, anchor: "item-#{@item.id}"), entry["where"]["href"]
-    assert_equal "9月8日", entry["published_label"]
+    assert_equal "2026年9月8日", entry["published_label"]
     assert_equal @item.url, entry["url"]
     assert_equal [ [ "Kuber", true ], [ "netes operator in ", false ], [ "Rust", true ] ], entry["title_runs"].map { |run| [ run["text"], run["hit"] ] }
     assert entry["snippet_runs"].any? { |run| run["hit"] }
@@ -58,7 +72,7 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
 
     entry = page_props["results"].sole
     assert_equal weekly.id, entry["item_id"]
-    assert_equal "第 36 周 · 工具", entry["where"]["label"]
+    assert_equal "2026年 · 第 36 周 · 工具", entry["where"]["label"]
     assert_equal weekly_issue_path("2026-W36", anchor: "issue-366-工具"), entry["where"]["href"]
     assert_nil entry["snippet_runs"]
   end
@@ -71,7 +85,7 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
 
     entry = page_props["results"].sole
     assert_equal weekly.id, entry["item_id"]
-    assert_equal "第 36 周", entry["where"]["label"]
+    assert_equal "2026年 · 第 36 周", entry["where"]["label"]
     assert_equal weekly_issue_path("2026-W36", anchor: "source-#{feed.id}"), entry["where"]["href"]
   end
 

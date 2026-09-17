@@ -1,6 +1,11 @@
 require "test_helper"
 
 class Issue::PresentingTest < ActiveSupport::TestCase
+  test "不同年份的同月同日日刊保留年份供期头和标题使用" do
+    assert_equal 2025, Issue.daily_props_for("2025-09-08", issue: nil)[:year]
+    assert_equal 2026, Issue.daily_props_for("2026-09-08", issue: nil)[:year]
+  end
+
   test "最新可读期跳过生成中与无可见条目的期" do
     Issue.create!(kind: "daily", period_key: "2026-09-09", state: "generating", generation_started_at: Time.current)
     assert_equal "2026-09-08", Issue.latest_daily_key
@@ -234,6 +239,18 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "https://w.example/", rss[:original_url]
     assert_nil rss[:issue_label]
     assert_nil rss[:groups].sole[:name]
+  end
+
+  test "周刊保留完整摘要，清理格式后不再截到 200 字" do
+    summary = "摘要" * 150 + "关键结论"
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      Adapters::Entry.new(title: "长摘要", url: "https://r.example/long-summary", rank: 1,
+                         summary: "<p>#{summary}</p>", meta: { issue_no: 366 })
+    ], issue_no: 366)
+
+    row = Issue.weekly_props_for("2026-W36")[:sections].sole[:groups].sole[:items].sole
+    assert_equal summary, row[:summary]
   end
 
   test "周刊条目与日刊用同一套字段" do

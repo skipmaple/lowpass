@@ -1,9 +1,17 @@
 <% unless page.empty? %>
 <nav class="buttons is-right" role="navigation" aria-label="pagination">
-  <span class="mr-3"><%= page.index %> / <%= page.pages_count || "..." %></span>
-  <%= link_to "↞", url_for(page: 1, **filter_param), class: "pagination-previous", disabled: page.first? %>
-  <%= link_to "Previous page", url_for(page: page.previous_index, **filter_param), class: "pagination-previous", disabled: page.first? %>
-  <%= link_to "Next page", url_for(page: page.next_index, **filter_param), class: "pagination-next", disabled: page.last? %>
-  <%= link_to "↠", url_for(page: page.pages_count, **filter_param), class: "pagination-next", disabled: page.last? %>
+  <span class="mr-3"><span aria-current="page" aria-label="Current page"><%= page.index %></span> / <%= page.pages_count || "..." %></span>
+  <% [
+    [ "↞", "First page", 1, page.first?, "pagination-previous" ],
+    [ "Previous page", "Previous page", page.previous_index, page.first?, "pagination-previous" ],
+    [ "Next page", "Next page", page.next_index, page.last?, "pagination-next" ],
+    [ "↠", "Last page", page.pages_count, page.last? || page.pages_count.nil?, "pagination-next" ]
+  ].each do |text, label, index, disabled, css_class| %>
+    <% if disabled %>
+      <span class="<%= css_class %>" role="link" aria-label="<%= label %>" aria-disabled="true"><%= text %></span>
+    <% else %>
+      <%= link_to text, url_for(page: index, **filter_param), class: css_class, aria: { label: label } %>
+    <% end %>
+  <% end %>
 </nav>
 <% end %>

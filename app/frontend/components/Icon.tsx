@@ -2,7 +2,7 @@ import { Archive, ArrowUp, ArrowUpRight, BookOpen, Check, ChevronLeft, ChevronRi
 import { MorphIcon } from 'morphicons/react'
 
 // Lucide 提供图形数据，Morphicons 在同一个 SVG 内衔接状态；只导入实际使用的图标。
-// 沿用纸报的墨色、24 网格和 1.75 描边。产品要求默认启用变形，静态图标不循环播放。
+// 沿用纸报的墨色、24 网格和 1.75 描边。默认启用变形，遵循系统减少动态偏好，静态图标不循环播放。
 const ICONS = {
   'chevron-left': ChevronLeft,
   'chevron-right': ChevronRight,
@@ -45,7 +45,7 @@ export default function Icon({
       color={color}
       strokeWidth={1.75}
       spring="snappy"
-      reducedMotion="never"
+      reducedMotion="user"
       label={title}
       focusable="false"
       style={{ flex: 'none', display: 'block' }}

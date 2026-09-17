@@ -6,7 +6,7 @@ import Show, { type SearchShowProps } from '@/pages/Search/Show'
 import { emitRouterEvent, router } from '../support/inertia'
 import { searchFilters, searchResult } from '../support/props'
 
-// 搜索页（PRD 5.4、6.2，设计 6.2）：六态由服务端 state 决定，文案是附录 B 原句；
+// 搜索页（PRD 5.4、6.2，设计 6.2）：搜索状态由服务端 state 决定，文案是附录 B 原句；
 // 筛选、排序、翻页全是地址；点标题或原文先上报 search_click。
 
 function showProps(overrides: Partial<SearchShowProps> = {}): SearchShowProps {
@@ -25,7 +25,7 @@ function showProps(overrides: Partial<SearchShowProps> = {}): SearchShowProps {
     page: 1,
     pages: 0,
     latest_daily_key: '2026-09-08',
-    latest_daily_label: '9月8日',
+    latest_daily_label: '2026年9月8日',
     daily_time: '06:00',
     latest_weekly_key: '2026-W36',
     ...overrides,
@@ -46,16 +46,16 @@ afterEach(() => {
   window.history.replaceState({}, '', '/')
 })
 
-describe('六态', () => {
+describe('搜索状态', () => {
   it('未搜索：占位句、筛选器、最新日刊入口，没有结果与计数', () => {
     const { container } = show()
 
     // PRD 6.4 标题层级：页面的 h1 是「搜索」（视觉上隐藏，读屏器能读到），结果标题才是 h2
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('搜索')
     expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveAttribute('placeholder', '搜标题、摘要或来源。拼写不准也可以。')
-    // 「最新日刊 · 9月8日」经 Mixed 拆成多个相邻 <span>，jsdom 的可访问名计算会把落在段边界上的
-    // 空格吃掉（最新日刊·9月8日），可见渲染与 textContent 都不受影响；用正则容忍空格差异。
-    expect(screen.getByRole('link', { name: /^最新日刊\s*·\s*9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08')
+    // 「最新日刊 · 2026年9月8日」经 Mixed 拆成多个相邻 <span>，jsdom 的可访问名计算会把落在段边界上的
+    // 空格吃掉（最新日刊·2026年9月8日），可见渲染与 textContent 都不受影响；用正则容忍空格差异。
+    expect(screen.getByRole('link', { name: /^最新日刊\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08')
     expect(screen.getByRole('navigation', { name: '刊物' })).toBeInTheDocument()
     expect(container.querySelectorAll('.search-row')).toHaveLength(0)
     expect(container.querySelector('.search-count')).toBeNull()
@@ -110,11 +110,57 @@ describe('六态', () => {
 
   it('限流与不可用各一句', () => {
     const { unmount } = show({ q: 'kuber', state: 'limited' })
-    expect(screen.getByText('操作过于频繁，请稍后再试。')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('操作过于频繁')
     unmount()
 
     show({ q: 'kuber', state: 'unavailable' })
-    expect(screen.getByText('搜索暂不可用，请稍后重试。')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('搜索暂不可用')
+  })
+
+  it.each([
+    ['empty', '没有找到'],
+    ['limited', '操作过于频繁'],
+    ['unavailable', '搜索暂不可用'],
+    ['unsupported', '请输入至少 2 个字母'],
+  ] as const)('搜索完成为 %s 时给出对应 live 通知', (state, message) => {
+    const { rerender } = show({ q: 'a' })
+    act(() => emitRouterEvent('start'))
+    expect(screen.getByRole('status')).toHaveTextContent('正在搜索')
+
+    rerender(<Show {...showProps({ q: 'a', state })} />)
+    act(() => emitRouterEvent('finish'))
+
+    expect(screen.getByRole('status')).toHaveTextContent(message)
+    expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveFocus()
+  })
+
+  it('不支持的查询说明约束，修改操作聚焦并选中输入', async () => {
+    const user = userEvent.setup()
+    show({ q: 'a', state: 'unsupported' })
+    const input = screen.getByRole('searchbox', { name: '搜索' }) as HTMLInputElement
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription(/至少 2 个字母.*C、C\+\+、C#/)
+    input.blur()
+
+    await user.click(screen.getByRole('button', { name: '修改关键词' }))
+
+    expect(input).toHaveFocus()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(1)
+  })
+
+  it.each(['limited', 'unavailable'] as const)('%s 可以保留筛选与当前页重试', async (state) => {
+    const user = userEvent.setup()
+    show({ q: 'rust', state, filters: searchFilters({ type: 'weekly' }), page: 2 })
+    if (state === 'limited') expect(screen.getByRole('status')).toHaveTextContent('1 分钟')
+
+    await user.click(screen.getByRole('button', { name: '重试' }))
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&type=weekly&page=2')
+
+    act(() => emitRouterEvent('start'))
+    expect(screen.getByRole('button', { name: '重试' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '搜索' })).toBeDisabled()
+    expect(screen.getByRole('status')).not.toHaveClass('sr-only')
   })
 
   it('超长查询提示已截断', () => {
@@ -229,14 +275,14 @@ describe('结果行', () => {
     expect(title).toHaveAttribute('href', 'https://example.com/k8s-rust')
     expect(title).toHaveAttribute('target', '_blank')
     expect(title).toHaveAttribute('rel', 'noopener noreferrer')
-    expect(within(row).getByRole('link', { name: /^所在期\s*·\s*9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
+    expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
     expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
   })
 
-  // 日刊的所在期就是那一天，日期与它相同：眉行只写一次；周刊的所在期是「第 36 周 · 工具」，日期另有信息，两个都写
+  // 日刊的所在期就是那一天，日期与它相同：眉行只写一次；周刊的所在期是「2026年 · 第 36 周 · 工具」，日期另有信息，两个都写
   it('所在期与日期相同时眉行只写一次', () => {
     const daily = results()
-    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News·9月8日')
+    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News·2026年9月8日')
     daily.unmount()
 
     const weekly = results({
@@ -244,12 +290,12 @@ describe('结果行', () => {
         searchResult({
           publication: 'weekly',
           source_name: '阮一峰科技爱好者周刊',
-          where: { label: '第 36 周 · 工具', href: '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7' },
-          published_label: '9月4日',
+          where: { label: '2026年 · 第 36 周 · 工具', href: '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7' },
+          published_label: '2026年9月4日',
         }),
       ],
     })
-    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·第 36 周 · 工具·9月4日')
+    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·2026年 · 第 36 周 · 工具·2026年9月4日')
   })
 
   it('没有摘要就没有片段行', () => {
@@ -287,7 +333,7 @@ describe('结果行', () => {
     results()
 
     // 正则容忍 Mixed run 边界的空格差异（同上「眉行、命中下划线…」一条的注释）
-    const where = screen.getByRole('link', { name: /^所在期\s*·\s*9月8日$/ })
+    const where = screen.getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })
     where.addEventListener('click', (event) => event.preventDefault())
     await user.click(where)
 

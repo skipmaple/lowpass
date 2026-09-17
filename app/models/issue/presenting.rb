@@ -20,6 +20,7 @@ module Issue::Presenting
 
       {
         period_key: period_key,
+        year: date.year,
         date_label: "#{date.month}月#{date.day}日",
         weekday: WEEKDAYS[date.wday],
         state: issue&.state,
@@ -308,13 +309,13 @@ module Issue::Presenting
       end
     end
 
-    # R-1.10 列表显示摘要前 200 字；reason 与 interest_tag 在 P0 是空的，前端不渲染
+    # 阅读页保留完整的已存摘要（上限 500 字），避免标题之外的关键信息再次被裁掉。
     def item_props(item)
       {
         id: item.id,
         title: item.title,
         url: item.url,
-        summary: item.summary && SummaryCleaner.preview(item.summary),
+        summary: SummaryCleaner.clean(item.summary),
         section: item.section,
         author: item.author,
         published_at: item.published_at&.iso8601,

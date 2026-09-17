@@ -1,5 +1,5 @@
 import { router, useForm } from '@inertiajs/react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
@@ -55,6 +55,31 @@ export default function Show({ schedule, whitelist, alerts, reasons, interest_ar
   const [scheduleStatus, setScheduleStatus] = useState('')
   const [modelStatus, setModelStatus] = useState('')
   const [alertStatus, setAlertStatus] = useState('')
+
+  const pendingInterests = useRef(0)
+  const mounted = useRef(true)
+  const interestReload = useRef<{ cancel: () => void } | null>(null)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; interestReload.current?.cancel() }
+  }, [])
+
+  function interestStarted() {
+    pendingInterests.current += 1
+    interestReload.current?.cancel()
+    interestReload.current = null
+  }
+
+  function interestFinished() {
+    if (pendingInterests.current === 0) return
+    pendingInterests.current -= 1
+    if (pendingInterests.current === 0 && mounted.current) {
+      router.reload({
+        only: ['interest_areas'],
+        onCancelToken: (token) => { interestReload.current = token },
+      })
+    }
+  }
 
   const model = useForm<ModelConfig>({ currency: reasons.currency, currency_confirmation: '', base_url: reasons.base_url, model_name: reasons.model_name, input_price: reasons.input_price, output_price: reasons.output_price, monthly_cap: reasons.monthly_cap })
   model.transform((data) => ({ model: data }))
@@ -127,9 +152,8 @@ export default function Show({ schedule, whitelist, alerts, reasons, interest_ar
           <table className="admin-table interest-table" aria-label="兴趣画像">
             <thead><tr>{['名称', '关键词', '排序', '启用', '操作'].map((h) => <th key={h} className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)', textAlign: 'left' }}>{h}</th>)}</tr></thead>
             <tbody>
-              {interest_areas.map((area) => <InterestAreaRow key={area.id} area={area} />)}
-              {/* 空白的新增行按行数取 key：新增成功后 props 回来行数就变了，这一行重新挂载，刚提交过的字自己清掉 */}
-              <InterestAreaRow key={`new-${interest_areas.length}`} />
+              {interest_areas.map((area) => <InterestAreaRow key={area.id} area={area} onStart={interestStarted} onFinish={interestFinished} />)}
+              <InterestAreaRow key="new" onStart={interestStarted} onFinish={interestFinished} />
             </tbody>
           </table>
         </div>

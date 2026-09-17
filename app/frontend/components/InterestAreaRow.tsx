@@ -7,9 +7,9 @@ import Field from '@/components/Field'
 import { ADMIN_INTEREST_AREAS, adminInterestAreaHref } from '@/lib/paths'
 import type { InterestArea } from '@/types/lowpass'
 
-type Props = { area?: InterestArea }
+type Props = { area?: InterestArea; onStart: () => void; onFinish: () => void }
 
-export default function InterestAreaRow({ area }: Props) {
+export default function InterestAreaRow({ area, onStart, onFinish }: Props) {
   const [name, setName] = useState(area?.name ?? '')
   const [keywords, setKeywords] = useState(area?.keywords ?? '')
   const [sortOrder, setSortOrder] = useState(String(area?.sort_order ?? 0))
@@ -17,25 +17,38 @@ export default function InterestAreaRow({ area }: Props) {
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null)
   const [message, setMessage] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [deleted, setDeleted] = useState(false)
 
   function save(remove = false) {
     setBusy(remove ? 'delete' : 'save')
     setMessage('')
+    let started = false
     const options = {
+      async: true,
+      preserveState: true,
+      // Refresh membership once every outstanding mutation has completed. Partial
+      // outcomes cannot resurrect a row from another request's older snapshot.
+      only: ['flash', 'errors'],
+      onStart: () => { started = true; onStart() },
       preserveScroll: true,
       onSuccess: (page: Page) => {
         // Existing endpoint reports validation failures in flash, not Inertia errors.
-        setMessage((page.props.flash as { alert?: string } | undefined)?.alert || (remove ? '已删除' : '已保存'))
+        const alert = (page.props.flash as { alert?: string } | undefined)?.alert
+        setMessage(alert || (remove ? '已删除' : '已保存'))
+        if (!alert && remove) setDeleted(true)
+        if (!alert && !area) { setName(''); setKeywords(''); setSortOrder('0'); setEnabled(true) }
         setConfirming(false)
       },
       onError: () => setMessage('未能保存，请检查输入后重试'),
-      onFinish: () => setBusy(null),
+      onFinish: () => { setBusy(null); if (started) onFinish() },
     }
     const payload = { interest_area: { name, keywords, sort_order: Number(sortOrder) || 0, enabled } }
     if (remove && area) router.delete(adminInterestAreaHref(area.id), options)
     else if (area) router.patch(adminInterestAreaHref(area.id), payload, options)
     else router.post(ADMIN_INTEREST_AREAS, payload, options)
   }
+
+  if (deleted) return null
 
   return (
     <tr className="interest-row">

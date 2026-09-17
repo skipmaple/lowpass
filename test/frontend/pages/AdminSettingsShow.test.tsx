@@ -39,8 +39,9 @@ function show(overrides: ShowOverrides = {}) {
 afterEach(() => {
   formPatch.mockClear()
   router.post.mockClear()
-  router.patch.mockClear()
+  router.patch.mockReset()
   router.delete.mockClear()
+  router.reload.mockReset()
 })
 
 describe('Admin/Settings/Show', () => {
@@ -123,7 +124,9 @@ describe('Admin/Settings/Show', () => {
     await userEvent.type(within(rows()[3]).getByLabelText('名称'), 'Rust')
     expect(within(rows()[3]).getByLabelText('名称')).toHaveValue('Rust')
 
-    // 新增成功后 Inertia 把多一个领域的 props 送回来：空白行要重新挂一遍，刚打的字不能留在里面
+    await userEvent.click(within(rows()[3]).getByRole('button', { name: '新增' }))
+    act(() => { router.post.mock.calls[0][2].onSuccess({ props: { flash: {} } }); router.post.mock.calls[0][2].onFinish() })
+    // 成功回调清空自己的草稿，刷新列表不重挂新增行。
     const grown = [...areas, interestArea({ id: 'ia-3', name: 'Rust', keywords: '所有权', sort_order: 3 })]
     rerender(<Show {...showProps({ interest_areas: grown })} />)
     expect(rows()).toHaveLength(5)
@@ -165,6 +168,100 @@ describe('Admin/Settings/Show', () => {
     expect(router.delete).not.toHaveBeenCalled()
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认删除' }))
     expect(router.delete).toHaveBeenCalledWith('/admin/interest_areas/ia-2', expect.any(Object))
+  })
+
+  it.each([true, false])('重叠保存不会中断另一行，逆序完成=%s，各自行保留错误和草稿', async (reverse) => {
+    type Pending = { async: boolean; canceled: boolean; finish: () => void; complete: (alert?: string) => void }
+    const pending: Pending[] = []
+    // Model the installed Inertia stream contract: a new synchronous visit interrupts
+    // earlier synchronous visits; asynchronous visits retain their completion callbacks.
+    router.patch.mockImplementation((_url, _payload, options) => {
+      if (!options.async) pending.filter((request) => !request.async && !request.canceled).forEach((request) => { request.canceled = true; request.finish() })
+      options.onStart()
+      const request: Pending = {
+        async: options.async === true,
+        canceled: false,
+        finish: options.onFinish,
+        complete: (alert) => {
+          if (!request.canceled) { options.onSuccess({ props: { flash: alert ? { alert } : {} } }); options.onFinish() }
+        },
+      }
+      pending.push(request)
+    })
+    const { rerender } = show()
+    const rows = within(screen.getByRole('table', { name: '兴趣画像' })).getAllByRole('row')
+    await userEvent.type(within(rows[1]).getByLabelText('关键词'), ' draft A')
+    await userEvent.type(within(rows[2]).getByLabelText('关键词'), ' draft B')
+    await userEvent.click(within(rows[1]).getByRole('button', { name: '保存' }))
+    await userEvent.click(within(rows[2]).getByRole('button', { name: '保存' }))
+    expect(pending.every((request) => !request.canceled)).toBe(true)
+    expect(router.reload).not.toHaveBeenCalled()
+    expect(within(rows[1]).getByRole('button', { name: '正在保存…' })).toBeDisabled()
+    expect(within(rows[2]).getByRole('button', { name: '正在保存…' })).toBeDisabled()
+    act(() => {
+      if (reverse) { pending[1].complete(); pending[0].complete('名称已存在') }
+      else { pending[0].complete('名称已存在'); pending[1].complete() }
+    })
+    expect(router.reload).toHaveBeenCalledTimes(1)
+    expect(router.reload).toHaveBeenCalledWith(expect.objectContaining({ only: ['interest_areas'] }))
+    expect(router.patch.mock.calls.every((call) => call[2].only.join(',') === 'flash,errors')).toBe(true)
+    // A response may still contain a prior snapshot of the other row; stable row
+    // identities preserve the local edits and each request's own outcome.
+    rerender(<Show {...showProps()} />)
+    expect(within(rows[1]).getByText('名称已存在')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('已保存')).toBeInTheDocument()
+    expect((within(rows[1]).getByLabelText('关键词') as HTMLInputElement).value).toContain('draft A')
+    expect((within(rows[2]).getByLabelText('关键词') as HTMLInputElement).value).toContain('draft B')
+  })
+
+  it('重叠删除与保存只在全部完成后刷新列表，晚到的保存不恢复已删除行', async () => {
+    const { rerender } = show()
+    const rows = within(screen.getByRole('table', { name: '兴趣画像' })).getAllByRole('row')
+    await userEvent.click(within(rows[1]).getByRole('button', { name: '保存' }))
+    const save = router.patch.mock.calls[0][2]
+    act(() => save.onStart())
+    await userEvent.click(within(rows[2]).getByRole('button', { name: '删除' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认删除' }))
+    const remove = router.delete.mock.calls[0][1]
+    expect(remove).toMatchObject({ async: true, only: ['flash', 'errors'] })
+    act(() => { remove.onStart(); remove.onSuccess({ props: { flash: {} } }); remove.onFinish() })
+    expect(screen.queryByDisplayValue('前端开发')).not.toBeInTheDocument()
+    expect(router.reload).not.toHaveBeenCalled()
+    act(() => { save.onSuccess({ props: { flash: {} } }); save.onFinish() })
+    expect(router.reload).toHaveBeenCalledTimes(1)
+    // Even if the next render carries the earlier snapshot, the completed delete
+    // stays hidden until the authoritative, settled-list response removes it.
+    rerender(<Show {...showProps()} />)
+    expect(screen.queryByDisplayValue('前端开发')).not.toBeInTheDocument()
+    rerender(<Show {...showProps({ interest_areas: [interestArea()] })} />)
+    expect(screen.queryByDisplayValue('前端开发')).not.toBeInTheDocument()
+    expect(within(rows[1]).getByText('已保存')).toBeInTheDocument()
+  })
+
+  it('列表变化保留新增草稿；新写入和离开页面取消过期列表刷新', async () => {
+    let cancellations = 0
+    router.reload.mockImplementation((options) => options.onCancelToken({ cancel: () => { cancellations += 1 } }))
+    const { rerender, unmount } = show()
+    const rows = () => within(screen.getByRole('table', { name: '兴趣画像' })).getAllByRole('row')
+    await userEvent.type(within(rows()[3]).getByLabelText('名称'), '新增草稿')
+    await userEvent.click(within(rows()[1]).getByRole('button', { name: '保存' }))
+    const first = router.patch.mock.calls[0][2]
+    act(() => { first.onStart(); first.onSuccess({ props: { flash: {} } }); first.onFinish() })
+    expect(router.reload).toHaveBeenCalledTimes(1)
+    await userEvent.click(within(rows()[1]).getByRole('button', { name: '保存' }))
+    const second = router.patch.mock.calls[1][2]
+    act(() => second.onStart())
+    expect(cancellations).toBe(1)
+    act(() => { second.onSuccess({ props: { flash: {} } }); second.onFinish() })
+    rerender(<Show {...showProps({ interest_areas: [interestArea()] })} />)
+    expect(within(rows()[2]).getByLabelText('名称')).toHaveValue('新增草稿')
+    await userEvent.click(within(rows()[1]).getByRole('button', { name: '保存' }))
+    const third = router.patch.mock.calls[2][2]
+    act(() => third.onStart())
+    unmount()
+    act(() => third.onFinish())
+    expect(router.reload).toHaveBeenCalledTimes(2)
+    expect(cancellations).toBe(2)
   })
 
   it('选择币种不重标未保存的历史费用，旧账确认随币种变化清除', async () => {

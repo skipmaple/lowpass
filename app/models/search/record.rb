@@ -76,14 +76,14 @@ class Search::Record < ApplicationRecord
 
   def daily? = publication == "daily"
 
-  # 所在期的标签（设计 6.3）：日刊「9月8日」，周刊「第 36 周 · 工具」（板块可空则只写周次）。板块名用 items 原文。
+  # 所在期的标签保留年份：结果可能跨年，日刊与周次脱离归档仍要能辨认。板块名用 items 原文。
   def where_label
     if daily?
-      PeriodKey.date_label(PeriodKey.date_of(period_key))
+      PeriodKey.date_label(PeriodKey.date_of(period_key), year: true)
     else
-      [ "第 #{PeriodKey.week_number(period_key)} 周", item.section.presence ].compact.join(" · ")
+      [ "#{period_key[0, 4]}年", "第 #{PeriodKey.week_number(period_key)} 周", item.section.presence ].compact.join(" · ")
     end
   end
 
-  def published_label = PeriodKey.date_label(published_on)
+  def published_label = PeriodKey.date_label(published_on, year: true)
 end

@@ -20,6 +20,7 @@ import type { AdminIssueRow, ArchiveNav, FinishedRun, IssueState, ManualRun } fr
 // 期（5.6，画布 admin_issues() 与 admin_dialogs()）：一页一个月，日刊逐天（缺期给「补生成」），周刊按周；
 // 「重抓某源」在对话框里选源；「立即生成今日日刊」已有期时先弹附录 B 的确认（R-3.11）
 export type AdminIssuesIndexProps = {
+  month: string
   month_label: string
   prev_month: ArchiveNav
   next_month: ArchiveNav
@@ -34,7 +35,7 @@ export type AdminIssuesIndexProps = {
 }
 
 const REFRESH_PROPS = ['rows', 'active_runs', 'finished_runs', 'summary', 'today_issue_exists', 'today_period_key', 'today_issue_state']
-const HEADERS = ['刊物', '日期 / 周次', '状态', '生成时间', '各源结果', '理由', '操作']
+const HEADERS = ['刊物', '日期 / 周次', '状态', '发布 / 修订', '各源结果', '理由', '操作']
 const WIDTHS = ['minmax(0, .5fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)']
 
 function markOf(state: AdminIssueRow['state']) {
@@ -44,7 +45,7 @@ function markOf(state: AdminIssueRow['state']) {
   return 'empty'
 }
 
-export default function Index({ month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, today_issue_state, active_runs, finished_runs }: AdminIssuesIndexProps) {
+export default function Index({ month, month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, today_issue_state, active_runs, finished_runs }: AdminIssuesIndexProps) {
   const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: REFRESH_PROPS })
   const operations = useAdminOperations(REFRESH_PROPS)
   usePolling(today_issue_state === 'generating' && active_runs.length === 0, REFRESH_PROPS)
@@ -123,9 +124,9 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
         <Seg
           label="刊物"
           options={[
-            { label: '全部', href: adminIssuesHref({ kind: 'all' }), active: kind === 'all' },
-            { label: '日刊', href: adminIssuesHref({ kind: 'daily' }), active: kind === 'daily' },
-            { label: '周刊', href: adminIssuesHref({ kind: 'weekly' }), active: kind === 'weekly' },
+            { label: '全部', href: adminIssuesHref({ kind: 'all', month }), active: kind === 'all' },
+            { label: '日刊', href: adminIssuesHref({ kind: 'daily', month }), active: kind === 'daily' },
+            { label: '周刊', href: adminIssuesHref({ kind: 'weekly', month }), active: kind === 'weekly' },
           ]}
         />
         <div className="admin-actions" style={{ alignItems: 'center' }}>
@@ -136,7 +137,7 @@ export default function Index({ month_label, prev_month, next_month, summary, ki
       </div>
       <label className="admin-pending-filter"><input type="checkbox" checked={pendingOnly} onChange={(event) => setPendingOnly(event.target.checked)} />待处理</label>
       {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
-      <Table headers={HEADERS} widths={WIDTHS} rows={tableRows} empty={pendingOnly ? "没有待处理的刊物" : "这个月还没有期"} />
+      <Table className="issues-table" headers={HEADERS} widths={WIDTHS} rows={tableRows} mobile={{ primary: [1, 0, 2, 6], detailsLabel: '刊物详情' }} empty={pendingOnly ? "没有待处理的刊物" : "这个月还没有期"} />
       <div className="admin-summary">
         <Mixed text={summary} />
       </div>

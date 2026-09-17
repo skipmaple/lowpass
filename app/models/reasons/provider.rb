@@ -22,13 +22,19 @@ module Reasons::Provider
     def key_configured? = api_key.present?
     def configured? = base_url.present? && model_name.present? && key_configured?
 
-    # https；本机的 http 也行（本地 Ollama）
-    def valid_base_url?(url)
+    # 基础地址自动追加 /chat/completions；完整端点、查询或片段会改变拼接语义。
+    # https；本机的 http 也行（本地 Ollama）。
+    def valid_base_url?(url) = base_url_error(url).nil?
+
+    def base_url_error(url)
       uri = URI(url.to_s)
-      return false if uri.host.blank?
-      uri.is_a?(URI::HTTPS) || (uri.is_a?(URI::HTTP) && LOCAL_HOSTS.include?(uri.host))
+      return "地址必须是 https" if uri.host.blank? || !(uri.is_a?(URI::HTTPS) || (uri.is_a?(URI::HTTP) && LOCAL_HOSTS.include?(uri.host)))
+
+      if uri.query || uri.fragment || uri.path.match?(%r{/chat/completions(?:/|\z)}i)
+        "请填写 API 基础地址，例如 https://api.openai.com/v1；不要包含 /chat/completions、查询参数或片段"
+      end
     rescue URI::Error
-      false
+      "地址必须是 https"
     end
 
     def chat(messages, temperature: 0.3, max_tokens: 200)

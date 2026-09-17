@@ -27,7 +27,7 @@ export default function Index({ users, summary }: AdminUsersIndexProps) {
   return (
     <AdminPage section="users" bottom="用户">
       <p className="cjk admin-readonly-note">用户信息只读。管理员身份由邮箱白名单决定。</p>
-      <Table headers={HEADERS} widths={WIDTHS} rows={rows} empty="还没有用户" />
+      <Table className="users-table" headers={HEADERS} widths={WIDTHS} rows={rows} mobile={{ primary: [0, 2, 1], detailsLabel: '登录详情' }} empty="还没有用户" />
       <div className="admin-summary">
         <Mixed text={summary} />
       </div>

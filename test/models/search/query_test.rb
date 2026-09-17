@@ -24,6 +24,13 @@ class Search::QueryTest < ActiveSupport::TestCase
     assert_equal [ [ "b2", :latin ] ], terms("a 1 b2")
   end
 
+  test "C 系技术词保留符号并归一化大小写及全角" do
+    assert_equal [ [ "c", :technology ], [ "c++", :technology ], [ "c#", :technology ] ], terms("C Ｃ＋＋ c#")
+    assert_equal [ [ "用", :cjk ], [ "c++", :technology ], [ "写的", :cjk ] ], terms("用C++写的")
+    assert_equal [ [ "c++", :technology ], [ "rust", :latin ] ], terms("C++/Rust")
+    assert Search::Query.parse(q: "C+++").blank?
+  end
+
   test "空查询、只有空白与标点都是 blank，不搜索" do
     assert Search::Query.parse(q: "").blank?
     assert Search::Query.parse(q: "  ").blank?

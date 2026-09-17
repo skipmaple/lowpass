@@ -20,6 +20,14 @@ class Search::HighlighterTest < ActiveSupport::TestCase
     assert_equal [ [ "用", false ], [ "Rust", true ], [ "写的终端工具", false ] ], pairs(highlighter("rust").runs("用Rust写的终端工具"))
   end
 
+  test "技术词高亮保留符号且不跨完整词边界" do
+    text = "C CSS C++ C# C+++ C++17 _C C##"
+    assert_equal [ [ "C", true ], [ " CSS C++ C# C+++ C++17 _C C##", false ] ], pairs(highlighter("C").runs(text))
+    assert_equal [ [ "C CSS ", false ], [ "C++", true ], [ " C# C+++ C++17 _C C##", false ] ], pairs(highlighter("C++").runs(text))
+    assert_equal [ [ "C CSS C++ ", false ], [ "C#", true ], [ " C+++ C++17 _C C##", false ] ], pairs(highlighter("C#").runs(text))
+    assert_equal [ [ "用", false ], [ "C++", true ], [ "写的", false ] ], pairs(highlighter("C++").runs("用C++写的"))
+  end
+
   test "中文按子串标出，重叠的二元组合并成一段" do
     assert_equal [ [ "一个", false ], [ "终端", true ], [ "下的日志", false ], [ "工具", true ] ],
                  pairs(highlighter("终端 工具").runs("一个终端下的日志工具"))

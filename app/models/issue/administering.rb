@@ -14,6 +14,7 @@ module Issue::Administering
       rows.concat(admin_daily_rows([ month, earliest ].max, [ month.end_of_month, today ].min)) unless kind == "weekly"
       rows.concat(admin_weekly_rows(month)) unless kind == "daily"
       {
+        month: month.strftime("%Y-%m"),
         month_label: "#{month.year} 年 #{month.month} 月",
         prev_month: month_nav(month.prev_month, month, earliest, today),
         next_month: month_nav(month.next_month, month, earliest, today),
@@ -69,7 +70,7 @@ module Issue::Administering
           counts = issue.items.group_by(&:source_id).transform_values(&:size)
           {
             kind: "weekly", period_key: issue.period_key, state: issue.state, state_label: admin_state_label(issue),
-            time_label: issue.published_at && day_stamp(issue.published_at),
+            time_label: admin_time_label(issue),
             source_marks: sources.map { |source| "#{abbr(source)} #{counts[source.id]}" }.join(" · "),
             refetchable_sources: sources.map { |source| { id: source.id, name: source.name } }
           }
@@ -88,8 +89,16 @@ module Issue::Administering
       def admin_time_label(issue)
         return unless issue
 
-        stamp = issue.published_at ? hhmm(issue.published_at) : hhmm(issue.generation_started_at)
-        issue.revised_at ? "#{stamp} / #{hhmm(issue.revised_at)}" : stamp
+        started_at = (issue.published_at || issue.generation_started_at)&.in_time_zone(PeriodKey::ZONE)
+        revised_at = issue.revised_at&.in_time_zone(PeriodKey::ZONE)
+        show_dates = issue.kind == "weekly" ||
+          (started_at && started_at.to_date.iso8601 != issue.period_key) ||
+          (revised_at && revised_at.to_date != started_at&.to_date)
+        format = show_dates ? "%Y-%m-%d %H:%M" : "%H:%M"
+        labels = []
+        labels << "#{issue.published_at ? '发布' : '开始生成'} #{started_at.strftime(format)}" if started_at
+        labels << "修订 #{revised_at.strftime(format)}" if revised_at
+        labels.join(" · ").presence
       end
 
       def admin_summary(month, rows)

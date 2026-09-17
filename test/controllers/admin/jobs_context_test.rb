@@ -56,4 +56,35 @@ class Admin::JobsContextTest < ActionDispatch::IntegrationTest
       end
     end
   end
+
+  test "first and last queue pages expose named navigation without activatable disabled links" do
+    job = ActiveJob::JobProxy.new(GenerateReasonsJob.new(issues(:daily_0908), false).serialize)
+    job.enqueued_at = Time.current
+    job.status = :finished
+    job.finished_at = Time.current
+    @adapter.stubs(:queues).returns([ { name: job.queue_name, size: 11, active: true } ])
+    @adapter.stubs(:jobs_count).returns(11)
+    @adapter.stubs(:fetch_jobs).returns([ job ])
+
+    get "/admin/jobs/applications/lowpass/finished/jobs", params: { server_id: "solid_queue", page: 1 }
+    assert_response :success
+    assert_select "a[aria-current='page']", text: /Finished jobs/
+    assert_select "nav[aria-label='pagination']" do
+      assert_select "span[aria-disabled='true'][aria-label='First page']"
+      assert_select "span[aria-disabled='true'][aria-label='Previous page']"
+      assert_select "[aria-disabled='true'][href]", count: 0
+      assert_select "a[aria-label='Last page']"
+      assert_select "[aria-current='page']", text: "1"
+    end
+
+    get "/admin/jobs/applications/lowpass/finished/jobs", params: { server_id: "solid_queue", page: 2 }
+    assert_response :success
+    assert_select "nav[aria-label='pagination']" do
+      assert_select "a[aria-label='First page']"
+      assert_select "span[aria-disabled='true'][aria-label='Next page']"
+      assert_select "span[aria-disabled='true'][aria-label='Last page']"
+      assert_select "[aria-disabled='true'][href]", count: 0
+      assert_select "[aria-current='page']", text: "2"
+    end
+  end
 end

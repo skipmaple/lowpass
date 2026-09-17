@@ -126,7 +126,7 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://news.ycombinator.com/item?id=41000001", row.dig("meta", "comments_url")
   end
 
-  test "条目按 rank 分到各自的来源，摘要截到 200 字" do
+  test "条目按 rank 分到各自的来源，完整摘要保留在页面 props" do
     long = "x" * 400
     items(:hn_one).update!(summary: long)
 
@@ -134,7 +134,7 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
 
     rows = page_props["items_by_source"].fetch(sources(:hn).id)
     assert_equal [ "Show HN: A terminal log viewer written in Rust" ], rows.map { |r| r["title"] }
-    assert_equal 200, rows.first["summary"].length
+    assert_equal long, rows.first["summary"]
     assert_equal 312, rows.first.dig("meta", "score")
   end
 

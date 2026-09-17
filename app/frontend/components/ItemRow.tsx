@@ -9,7 +9,7 @@ import type { Adapter, Item } from '@/types/lowpass'
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
 // 兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
-// 桌面标签在右列，手机标签与序号组成眉行——同一份 DOM，靠 tokens.css 里的 grid-template-areas 换位。
+// 标签跟随标题，始终属于同一阅读组，不再放到页面远端。
 // 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
@@ -120,25 +120,22 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
       <span className="item-rank">{rank}</span>
 
       <div className="item-body">
-        {/* 标题是标题元素（层级见 heading），字号字重不随层级变；两行截断（PRD 6.3）
-            落在标题这个块级元素上，下划线仍在里面的 a 上，前两行照常显示。
-            R-8.4 原文外链在新标签页打开。 */}
-        <Heading className="item-title">
-          <a className="t" href={item.url} target="_blank" rel="noopener noreferrer">
-            {item.title}
-          </a>
-        </Heading>
+        {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。 */}
+        <div className="item-heading">
+          <Heading className="item-title">
+            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer">
+              {item.title}
+            </a>
+          </Heading>
+          {!weekly && item.interest_tag ? (
+            <div className="item-tag"><Chip text={item.interest_tag} /></div>
+          ) : null}
+        </div>
         {/* 周刊摘要行高 1.7（画布 pages_site.item() 的文楷 15/1.7），日刊摘要是 PRD 6.3 的 Newsreader 15/1.5 */}
         {item.summary ? <span className={weekly ? 'item-summary item-summary--weekly' : 'item-summary'}>{item.summary}</span> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
       </div>
-
-      {!weekly && item.interest_tag ? (
-        <div className="item-tag">
-          <Chip text={item.interest_tag} />
-        </div>
-      ) : null}
     </article>
   )
 }

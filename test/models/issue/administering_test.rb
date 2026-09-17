@@ -6,6 +6,7 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     result = Issue.admin_rows(kind: "all", month: nil, now: Time.utc(2026, 9, 9, 4))   # 上海 9月9日 12:00
 
     assert_equal "2026 年 9 月", result[:month_label]
+    assert_equal "2026-09", result[:month]
     daily = result[:rows].select { |row| row[:kind] == "daily" }
     assert_equal %w[ 2026-09-09 2026-09-08 ], daily.map { |row| row[:period_key] }
     today = daily.first
@@ -15,12 +16,12 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     published = daily.last
     assert_equal "published", published[:state]
     assert_equal "已发布", published[:state_label]
-    assert_equal "06:12", published[:time_label]
+    assert_equal "发布 06:12", published[:time_label]
     assert_equal "HN 1 · GH 失败 · HAD 失败", published[:source_marks]
     assert_equal [ "Hacker News", "GitHub Trending", "Hackaday" ], published[:refetchable_sources].map { |s| s[:name] }
     weekly = result[:rows].select { |row| row[:kind] == "weekly" }
     assert_equal [ "2026-W36" ], weekly.map { |row| row[:period_key] }
-    assert_equal "9月4日 09:03", weekly.first[:time_label]
+    assert_equal "发布 2026-09-04 09:03", weekly.first[:time_label]
     assert_equal "9 月 · 2 期 · 0 空刊 · 1 缺期", result[:summary]
   end
 
@@ -36,7 +37,24 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     row = Issue.admin_rows(kind: "daily", month: nil, now: Time.utc(2026, 9, 9, 4))[:rows].find { |r| r[:period_key] == "2026-09-08" }
 
     assert_equal "已发布 · 延迟 · 已修订", row[:state_label]
-    assert_equal "06:12 / 06:42", row[:time_label]
+    assert_equal "发布 06:12 · 修订 06:42", row[:time_label]
+  end
+
+  test "跨日修订标明发布与修订的上海日期" do
+    issues(:daily_0908).update!(revised_at: Time.utc(2026, 9, 8, 22, 42))
+
+    Time.use_zone("America/Los_Angeles") do
+      row = Issue.admin_rows(kind: "daily", month: "2026-09", now: Time.utc(2026, 9, 9, 4))[:rows].find { |entry| entry[:period_key] == "2026-09-08" }
+      assert_equal "发布 2026-09-08 06:12 · 修订 2026-09-09 06:42", row[:time_label]
+    end
+  end
+
+  test "周刊修订也保留发布与修订日期" do
+    issue = issues(:weekly_w36)
+    issue.update!(revised_at: Time.utc(2026, 9, 5, 1, 3))
+
+    row = Issue.admin_rows(kind: "weekly", month: "2026-09", now: Time.utc(2026, 9, 9, 4))[:rows].find { |entry| entry[:period_key] == issue.period_key }
+    assert_equal "发布 2026-09-04 09:03 · 修订 2026-09-05 09:03", row[:time_label]
   end
 
   test "日刊行带理由状态：未配置 / 兴趣画像为空 / 缺 N 条 / 已生成" do
@@ -63,6 +81,7 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     Issue.daily.create!(period_key: "2026-08-30", state: "published", published_at: Time.utc(2026, 8, 29, 22, 12), generation_started_at: Time.utc(2026, 8, 29, 22))
     august = Issue.admin_rows(kind: "all", month: "2026-08", now: now)
     assert_equal "2026 年 8 月", august[:month_label]
+    assert_equal "2026-08", august[:month]
     assert_nil august[:prev_month]
     assert_equal "9 月", august[:next_month][:label]
     assert_equal %w[ 2026-08-31 2026-08-30 ], august[:rows].select { |r| r[:kind] == "daily" }.map { |r| r[:period_key] }

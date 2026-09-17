@@ -74,7 +74,9 @@ class Admin::SettingsController < Admin::BaseController
     # 数字字段空着是没填，不是填错了
     def model_errors(values)
       errors = values.select { |_, value| value.length > MAX_LENGTH }.transform_values { [ "最多 #{MAX_LENGTH} 字" ] }
-      errors["base_url"] ||= [ "地址必须是 https" ] if values["base_url"].present? && !Reasons::Provider.valid_base_url?(values["base_url"])
+      if values["base_url"].present? && (message = Reasons::Provider.base_url_error(values["base_url"]))
+        errors["base_url"] ||= [ message ]
+      end
       NUMBER_KEYS.each { |key| errors[key] ||= [ values[key].blank? ? "必填" : "不小于 0" ] unless values[key].match?(NUMBER) }
       errors
     end

@@ -32,6 +32,26 @@ class Search::RunnerTest < ActiveSupport::TestCase
     assert_equal 0, search("ube").total
   end
 
+  test "C C++ C# 按独立技术词匹配，不混入前缀或彼此" do
+    index_item("C language")
+    index_item("用C++写的工具")
+    index_item("C# compiler")
+    index_item("CSS and Crystal")
+    index_item("Objective-C++17 and abc++ _C C+++ C##")
+
+    assert_equal [ "C language" ], found_titles(search("C"))
+    assert_equal [ "用C++写的工具" ], found_titles(search("C++"))
+    assert_equal [ "C# compiler" ], found_titles(search("C#"))
+  end
+
+  test "带符号的查询参数仍作为数据处理" do
+    index_item("C++ handbook")
+    index_item("Unrelated handbook")
+
+    assert_equal [ "C++ handbook" ], found_titles(search("C++'"))
+    assert_equal 0, search("' OR 1=1 --").total
+  end
+
   test "中文子串不区分位置；通配符在解析时就当标点去掉，剩下的字照常命中" do
     index_item("一个终端下的日志工具")
 

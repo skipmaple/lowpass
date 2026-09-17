@@ -98,18 +98,28 @@ class Search::RecordTest < ActiveSupport::TestCase
     assert_equal 120, Search::Record.find_by!(item_id: item.id).anchor.length
   end
 
+  test "同月同日和同周结果的年份可以独立辨认" do
+    daily = Search::Record.new(publication: "daily", period_key: "2025-09-08", published_on: Date.new(2025, 9, 8))
+    weekly = Search::Record.new(publication: "weekly", period_key: "2025-W36", published_on: Date.new(2025, 9, 4), item: items(:hn_one))
+
+    assert_equal "2025年9月8日", daily.where_label
+    assert_equal "2025年9月8日", daily.published_label
+    assert_equal "2025年 · 第 36 周", weekly.where_label
+    assert_equal "2025年9月4日", weekly.published_label
+  end
+
   test "所在期标签：日刊是日期，周刊是周次加板块，板块可空" do
     Search::Record.index_items!([ items(:hn_one).id ])
-    assert_equal "9月8日", Search::Record.find_by!(item_id: items(:hn_one).id).where_label
-    assert_equal "9月8日", Search::Record.find_by!(item_id: items(:hn_one).id).published_label
+    assert_equal "2026年9月8日", Search::Record.find_by!(item_id: items(:hn_one).id).where_label
+    assert_equal "2026年9月8日", Search::Record.find_by!(item_id: items(:hn_one).id).published_label
 
     issue = issues(:weekly_w36)
     with_section = create_item(issue, sources(:ruanyf), "a", "https://r.example/1", rank: 1, section: "工具", meta: { "issue_no" => 366, "anchor" => "工具" })
     without = create_item(issue, sources(:ruanyf), "b", "https://r.example/2", rank: 2)
     Search::Record.index_items!([ with_section.id, without.id ])
 
-    assert_equal "第 36 周 · 工具", Search::Record.find_by!(item_id: with_section.id).where_label
-    assert_equal "第 36 周", Search::Record.find_by!(item_id: without.id).where_label
-    assert_equal "8月31日", Search::Record.find_by!(item_id: without.id).published_label
+    assert_equal "2026年 · 第 36 周 · 工具", Search::Record.find_by!(item_id: with_section.id).where_label
+    assert_equal "2026年 · 第 36 周", Search::Record.find_by!(item_id: without.id).where_label
+    assert_equal "2026年8月31日", Search::Record.find_by!(item_id: without.id).published_label
   end
 end

@@ -10,6 +10,7 @@ import { adminIssueRow } from '../support/props'
 
 function show(overrides: Record<string, unknown> = {}) {
   const props = {
+    month: '2026-09',
     month_label: '2026 年 9 月',
     prev_month: { key: '2026-08', label: '8 月' },
     next_month: null,
@@ -42,11 +43,19 @@ afterEach(() => {
 const reasonChip = (row: HTMLElement) => within(row).getAllByRole('cell')[5].querySelector('span[style*="background: var(--ink)"]')
 
 describe('Admin/Issues/Index', () => {
+  it('切换刊物类型保留当前历史月份', () => {
+    show({ month: '2025-12', month_label: '2025 年 12 月', kind: 'daily' })
+
+    expect(screen.getByRole('link', { name: '全部' })).toHaveAttribute('href', '/admin/issues?month=2025-12')
+    expect(screen.getByRole('link', { name: '日刊' })).toHaveAttribute('href', '/admin/issues?kind=daily&month=2025-12')
+    expect(screen.getByRole('link', { name: '周刊' })).toHaveAttribute('href', '/admin/issues?kind=weekly&month=2025-12')
+  })
+
   it('期头、筛选、翻月、行与汇总', () => {
     const { container } = show()
 
     expect(screen.getByRole('link', { name: '刊物管理' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: '日刊' })).toHaveAttribute('href', '/admin/issues?kind=daily')
+    expect(screen.getByRole('link', { name: '日刊' })).toHaveAttribute('href', '/admin/issues?kind=daily&month=2026-09')
     expect(screen.getByRole('link', { name: '8 月' })).toHaveAttribute('href', '/admin/issues?month=2026-08')
     const rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(4)

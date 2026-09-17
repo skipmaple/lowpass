@@ -21,14 +21,14 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
     <article className="search-row">
       <div className="search-eyebrow">
         <Chip text={LABELS[result.publication]} />
-        <Mixed text={result.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" nowrap />
+        <Mixed text={result.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
         {DOT}
-        <Mixed text={result.where.label} size="var(--fs-13)" color="var(--ink2)" nowrap />
-        {/* 日刊的所在期就是那一天，日期与它相同就不写第二遍；周刊的所在期是「第 36 周 · 工具」，日期另有信息 */}
+        <Mixed text={result.where.label} size="var(--fs-13)" color="var(--ink2)" />
+        {/* 日刊的所在期就是那一天，日期与它相同就不写第二遍；周刊的所在期含年份、周次与板块，日期另有信息 */}
         {result.published_label !== result.where.label ? (
           <>
             {DOT}
-            <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" nowrap />
+            <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" />
           </>
         ) : null}
       </div>
@@ -47,7 +47,7 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
 
       <div className="search-links">
         <Link className="t" href={result.where.href}>
-          <Mixed text={`所在期 · ${result.where.label}`} size="var(--fs-13)" color="var(--ink)" nowrap />
+          <Mixed text={`所在期 · ${result.where.label}`} size="var(--fs-13)" color="var(--ink)" />
         </Link>
         <a className="search-original" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report}>
           <span>原文</span>

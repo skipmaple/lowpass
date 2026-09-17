@@ -20,7 +20,7 @@ class SearchingTest < ApplicationSystemTestCase
     visit search_path(q: "终端工具")
 
     assert_text "1 条结果"
-    click_on "所在期 · 第 36 周 · 工具"
+    click_on "所在期 · 2026年 · 第 36 周 · 工具"
 
     assert_current_path weekly_issue_path("2026-W36")
     assert_selector "section[id='issue-366-%E5%B7%A5%E5%85%B7'] h3", text: "工具"
@@ -30,7 +30,7 @@ class SearchingTest < ApplicationSystemTestCase
   test "日刊的所在期落到条目并切到对应来源" do
     visit search_path(q: "terminal")
 
-    click_on "所在期 · 9月8日"
+    click_on "所在期 · 2026年9月8日"
 
     assert_current_path daily_issue_path("2026-09-08", source: sources(:hn).id)
     assert_selector "article#item-#{items(:hn_one).id}", text: "Show HN"

@@ -53,13 +53,13 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
         <Mixed text={run.started_label || '—'} color="var(--ink)" />
       </div>,
       <RunError error={run.error_summary} />,
-      <details className="admin-details"><summary>耗时 / 条目 / 尝试</summary><dl className="admin-run-metrics">
+      <dl className="admin-run-metrics">
         <dt>耗时</dt><dd><Mixed text={run.duration_label || '—'} /></dd>
         <dt>条目</dt><dd className="data">{run.item_count ?? '—'}</dd>
         <dt>丢弃</dt><dd className="data">{run.dropped_count ?? '—'}</dd>
         <dt>尝试</dt><dd className="data">{run.attempt_label}</dd>
         <dt>触发</dt><dd className="cjk">{run.trigger_label}</dd>
-      </dl></details>,
+      </dl>,
     ],
   }))
 
@@ -95,7 +95,7 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
         <Mixed text={`最近 50 次 · 保留 30 天 · ${runs.length} 条`} />
       </div>
       {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
-      <Table headers={HEADERS} widths={WIDTHS} rows={rows} empty="还没有抓取记录" />
+      <Table className="runs-table" headers={HEADERS} widths={WIDTHS} rows={rows} mobile={{ primary: [0, 1], detailsLabel: '抓取详情' }} empty="还没有抓取记录" />
       <Dialog open={confirm} text={`确认重抓最新一期 ${latest_issue?.period_key ?? ''} 的 ${source.name}？`} cancel="取消" confirm="确认重抓" busy={busy} onCancel={() => setConfirm(false)} onConfirm={() => {
         if (latest_issue) operations.post('refetch', `${latest_issue.period_key} · ${source.name}`, adminIssueRefetchHref(latest_issue.period_key), { source_id: source.id })
         setConfirm(false)

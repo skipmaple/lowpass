@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react'
 import type * as React from 'react'
+import { useEffect, useRef } from 'react'
 
 import Icon from '@/components/Icon'
 import IssueNotice from '@/components/IssueNotice'
@@ -55,17 +56,43 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   )
 }
 
-// 板块锚点目录：1px 描边的锚点小块，横向排一行，窄屏可横向滚动
+// 桌面展开目录，手机先显示入口。原生 details 保留键盘操作与展开状态语义。
 function Anchors({ groups, id }: { groups: WeeklyGroup[]; id: string }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const mobile = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches === true
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(max-width: 767px)')
+    if (!media) return
+    const change = (event: MediaQueryListEvent) => {
+      const details = detailsRef.current
+      if (!details) return
+      if (event.matches && details.contains(document.activeElement)) details.querySelector('summary')?.focus()
+      details.open = !event.matches
+    }
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
+
   return (
-    <nav id={id} tabIndex={-1} className="anchors" aria-label="板块">
-      {groups.map((group) => (
-        <a className="anchor-chip" key={group.anchor} href={`#${anchorId(group.anchor)}`}>
-          {group.name}
-        </a>
-      ))}
-    </nav>
+    <details ref={detailsRef} className="weekly-directory" open={!mobile}>
+      <summary>板块目录</summary>
+      <nav id={id} tabIndex={-1} className="anchors" aria-label="板块">
+        {groups.map((group) => (
+          <a className="anchor-chip" key={group.anchor} href={`#${anchorId(group.anchor)}`}>
+            {group.name}
+          </a>
+        ))}
+      </nav>
+    </details>
   )
+}
+
+function openDirectory(id: string) {
+  const nav = document.getElementById(id)
+  const details = nav?.closest('details')
+  if (details) details.open = true
+  nav?.focus({ preventScroll: true })
 }
 
 function Items({ group, section, heading }: { group: WeeklyGroup; section: WeeklySection; heading: 'h3' | 'h4' }) {
@@ -105,7 +132,7 @@ function Group({ group, section, directory }: { group: WeeklyGroup; section: Wee
           <Items group={group} section={section} heading="h4" />
         </>
       )}
-      <a className="source-foot" href={`#${directory}`}>返回板块目录</a>
+      <a className="source-foot" href={`#${directory}`} onClick={() => openDirectory(directory)}>返回板块目录</a>
     </section>
   )
 }

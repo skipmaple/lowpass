@@ -70,6 +70,7 @@ export let lastFormData: Record<string, unknown> | null = null
 export function useForm<T extends Record<string, unknown>>(initialOrKey: T | string, remembered?: T) {
   const initial = typeof initialOrKey === 'string' ? remembered! : initialOrKey
   const [data, setState] = useState<T>(initial)
+  const [defaults, setDefaults] = useState<T>(initial)
   lastFormData = data
   const raw = (pageProps.errors as Record<string, string[] | string> | undefined) ?? {}
   const errors: Record<string, string> = {}
@@ -83,5 +84,5 @@ export function useForm<T extends Record<string, unknown>>(initialOrKey: T | str
     else setState((prev) => ({ ...prev, [keyOrData]: value }))
   }
   // transform 是真 useForm 提交前改一遍 data 的钩子；测试不提交，替身只要能被调用就够（no-op）
-  return { data, setData, post: formPost, patch: formPatch, processing: false, isDirty: JSON.stringify(data) !== JSON.stringify(initial), errors, transform: () => {} }
+  return { data, setData, setDefaults, post: formPost, patch: formPatch, processing: false, isDirty: JSON.stringify(data) !== JSON.stringify(defaults), errors, transform: () => {} }
 }

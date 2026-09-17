@@ -21,6 +21,14 @@ describe('StatusTag', () => {
 })
 
 describe('IssueHead', () => {
+  it('跨年同月同日的页面显示年份，浏览器标题包含完整日期', () => {
+    const { container } = head(dailyIssue({ period_key: '2025-09-08', year: 2025 }))
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('9月8日')
+    expect(container.querySelector('.issue-head-year')).toHaveTextContent('2025 年')
+    expect(document.title).toBe('日刊 · 2025年9月8日 · Lowpass')
+  })
+
   it('日期是 h1，星期与发布时间在右侧', () => {
     const { container } = head()
 

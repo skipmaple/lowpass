@@ -1,4 +1,4 @@
-# 兴趣画像（R-9.5、D18）：设置页里的一张表，行内改；校验句子进 flash（附录 B）
+# 兴趣画像（R-9.5、D18）：设置页里的一张表，按行编辑；校验保留字段名供输入框关联
 class Admin::InterestAreasController < Admin::BaseController
   def create
     area = InterestArea.new(area_params)
@@ -32,7 +32,7 @@ class Admin::InterestAreasController < Admin::BaseController
         Audit.record(action, "InterestArea##{area.id}", area.saved_changes.except("id", "updated_at", "created_at"))
         redirect_to admin_settings_path, notice: notice
       else
-        redirect_to admin_settings_path, alert: area.errors.map(&:message).uniq.join(" · ")
+        redirect_to admin_settings_path, inertia: { errors: area.errors.to_hash }
       end
     end
 end

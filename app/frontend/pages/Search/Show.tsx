@@ -12,8 +12,8 @@ import { dailyHref, latestWeeklyHref, searchHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { DatePresets, FooterData, SearchFilters as Filters, SearchResult, SearchSourceOption, SearchState } from '@/types/lowpass'
 
-// 搜索页（PRD 5.4、6.2，设计 6.2）：期头是查询词与反白「搜索」按钮，筛选栏三组，正文按服务端的 state 六选一
-// （加载中由 Inertia 进度条表达）。筛选、排序、翻页全是地址（AC-4.7）；文案是附录 B 原句，这里只负责选。
+// 搜索页（PRD 5.4、6.2，设计 6.2）：期头是查询词与反白「搜索」按钮，筛选栏三组，正文按服务端的 state 选择状态
+// （加载中另有可见状态提示）。筛选、排序、翻页全是地址（AC-4.7）；文案是附录 B 原句，这里只负责选。
 // 画布：docs/design/src/pages_site.py 的 search()、search_states()。
 
 export type SearchShowProps = FooterData & {
@@ -31,11 +31,12 @@ export type SearchShowProps = FooterData & {
   latest_daily_label: string | null
 }
 
-// 附录 B 的四句加一句「已截断到 100 字」（R-4.1）
+// 结果与错误来自附录 B，输入约束明确说明哪些关键词会执行。
 const COPY = {
   placeholder: '搜标题、摘要或来源。拼写不准也可以。',
   empty: (q: string) => `没有找到「${q}」相关内容。试试更短的关键词，或放宽筛选。`,
-  limited: '操作过于频繁，请稍后再试。',
+  limited: '操作过于频繁，请等待 1 分钟后重试。',
+  unsupported: '请输入至少 2 个字母的关键词，或中文、C、C++、C#。纯符号不会执行搜索。',
   unavailable: '搜索暂不可用，请稍后重试。',
   truncated: '已截断到 100 字',
 }
@@ -47,10 +48,10 @@ function hrefOf(q: string, filters: Filters, page = 1) {
 
 // 期头（画布 search_head()）：搜索图标、文楷 32 的查询词输入框、反白「搜索」按钮；回车与按钮都提交——
 // 由 Inertia 访问 /search（GET），筛选原样带上、页码归 1。草稿由页面持有，让期头和筛选始终使用同一个值。
-function SearchHead({ draft, setDraft, filters, truncated, inputRef }: { draft: string; setDraft: (value: string) => void; filters: Filters; truncated: boolean; inputRef: React.RefObject<HTMLInputElement | null> }) {
+function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, unsupported }: { draft: string; setDraft: (value: string) => void; filters: Filters; truncated: boolean; inputRef: React.RefObject<HTMLInputElement | null>; loading: boolean; unsupported: boolean }) {
   function submit(event: React.FormEvent) {
     event.preventDefault()
-    router.get(hrefOf(draft.trim(), filters))
+    if (!loading) router.get(hrefOf(draft.trim(), filters))
   }
 
   function clear() {
@@ -72,6 +73,8 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef }: { draft: 
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={COPY.placeholder}
+          aria-invalid={unsupported || undefined}
+          aria-describedby={unsupported ? 'search-status' : undefined}
           autoComplete="off"
           autoFocus
         />
@@ -79,7 +82,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef }: { draft: 
           <Icon name="x" size={18} />
         </button>
       </div>
-      <button type="submit" className="btn-primary">
+      <button type="submit" className="btn-primary" disabled={loading}>
         搜索
       </button>
       {truncated ? <span className="search-note">{COPY.truncated}</span> : null}
@@ -117,16 +120,18 @@ function Pager({ q, committedQuery, filters, page, pages }: { q: string; committ
   )
 }
 
-function Notice({ text, children }: React.PropsWithChildren<{ text: string }>) {
-  return (
-    <div className="search-notice">
-      <span className="state-line">{text}</span>
-      {children}
-    </div>
-  )
+function statusText({ state, q, total }: SearchShowProps) {
+  switch (state) {
+    case 'results': return `${total} 条结果`
+    case 'empty': return COPY.empty(q)
+    case 'limited': return COPY.limited
+    case 'unavailable': return COPY.unavailable
+    case 'unsupported': return COPY.unsupported
+    case 'initial': return ''
+  }
 }
 
-function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery: () => void }) {
+function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery: () => void; loading: boolean }) {
   const { state, q, filters, results, total, page, pages, latest_daily_key, latest_daily_label } = props
 
   switch (state) {
@@ -141,20 +146,23 @@ function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery:
       ) : null
     case 'empty':
       return (
-        <Notice text={COPY.empty(q)}>
-          <div>
-            {hasActiveFilters(filters) ? (
-              <Ctrl href={searchHref({ q: props.navigationQuery })} label="清除筛选" icon="x" side="left" />
-            ) : (
-              <button type="button" className="ctrl" onClick={props.onModifyQuery}>修改关键词</button>
-            )}
-          </div>
-        </Notice>
+        <div className="search-notice-action">
+          {hasActiveFilters(filters) ? (
+            <Ctrl href={searchHref({ q: props.navigationQuery })} label="清除筛选" icon="x" side="left" />
+          ) : (
+            <button type="button" className="ctrl" onClick={props.onModifyQuery}>修改关键词</button>
+          )}
+        </div>
       )
+    case 'unsupported':
+      return <div className="search-notice-action"><button type="button" className="ctrl" onClick={props.onModifyQuery}>修改关键词</button></div>
     case 'limited':
-      return <Notice text={COPY.limited} />
     case 'unavailable':
-      return <Notice text={COPY.unavailable} />
+      return (
+        <div className="search-notice-action">
+          <button type="button" className="ctrl" disabled={props.loading} onClick={() => router.get(hrefOf(props.navigationQuery, filters, props.navigationQuery === q ? page : 1))}>重试</button>
+        </div>
+      )
     case 'results':
       return (
         <>
@@ -191,7 +199,9 @@ export default function Show(props: SearchShowProps) {
     inputRef.current?.select()
   }
 
-  const liveText = loading ? '正在搜索…' : props.state === 'results' ? `${props.total} 条结果` : ''
+  const liveText = loading ? '正在搜索…' : statusText(props)
+  const notice = !['initial', 'results'].includes(props.state)
+  const unsupported = props.state === 'unsupported' && draft === props.q && !loading
   const navigationQuery = draft.trim()
 
   return (
@@ -199,10 +209,10 @@ export default function Show(props: SearchShowProps) {
       <Head title={props.q ? `搜索 · ${props.q}` : '搜索'} />
       {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
       <h1 className="sr-only">搜索</h1>
-      <SearchHead draft={draft} setDraft={setDraft} filters={props.filters} truncated={props.truncated} inputRef={inputRef} />
+      <SearchHead draft={draft} setDraft={setDraft} filters={props.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} />
       <SearchFilters q={navigationQuery} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
-      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveText}</span>
-      <Body {...props} navigationQuery={navigationQuery} onModifyQuery={modifyQuery} />
+      <div id="search-status" className={loading ? 'search-loading' : notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
+      <Body {...props} navigationQuery={navigationQuery} onModifyQuery={modifyQuery} loading={loading} />
     </>
   )
 }

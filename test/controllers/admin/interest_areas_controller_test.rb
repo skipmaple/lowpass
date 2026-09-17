@@ -26,20 +26,29 @@ class Admin::InterestAreasControllerTest < ActionDispatch::IntegrationTest
     assert_equal "interest_area.destroy", AuditLog.last.action
   end
 
-  test "校验失败回设置页带句子" do
-    post admin_interest_areas_path, params: { interest_area: { name: "ai / llm", keywords: "" } }
+  test "校验错误保留字段名且不写入审计" do
+    assert_no_difference "AuditLog.count" do
+      post admin_interest_areas_path, params: { interest_area: { name: "ai / llm", keywords: "" } }
+    end
     assert_redirected_to admin_settings_path
-    assert_equal "名称已存在", flash[:alert]
+    follow_redirect!
+    assert_equal [ "名称已存在" ], page_props.dig("errors", "name")
 
     post admin_interest_areas_path, params: { interest_area: { name: "", keywords: "k" * 201 } }
-    assert_equal "必填 · 最多 200 字", flash[:alert]
+    follow_redirect!
+    assert_equal [ "必填" ], page_props.dig("errors", "name")
+    assert_equal [ "最多 200 字" ], page_props.dig("errors", "keywords")
+
+    patch admin_interest_area_path(InterestArea.first), params: { interest_area: { name: "名" * 21 } }
+    follow_redirect!
+    assert_equal [ "最多 20 字" ], page_props.dig("errors", "name")
   end
 
-  # ?interest_area=x 这种形状不能打成 500：permit 认不了标量，按校验错误回设置页
-  test "参数形状不对按校验错误处理" do
+  test "参数形状不对按字段校验错误处理" do
     post admin_interest_areas_path, params: { interest_area: "x" }
     assert_redirected_to admin_settings_path
-    assert_equal "必填", flash[:alert]
+    follow_redirect!
+    assert_equal [ "必填" ], page_props.dig("errors", "name")
   end
 
   test "成员 403" do

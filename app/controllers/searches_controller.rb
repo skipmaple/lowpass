@@ -6,7 +6,7 @@ class SearchesController < ApplicationController
   def show
     query = Search::Query.parse(params)
     if query.blank?
-      render_search(query, state: "initial")
+      render_search(query, state: query.q.empty? ? "initial" : "unsupported")
     else
       result = Search::Runner.call(query)
       Search::Log.record(query, result)
@@ -60,7 +60,7 @@ class SearchesController < ApplicationController
         page: query.page,
         pages: result&.pages || 0,
         latest_daily_key: latest_daily_key,
-        latest_daily_label: latest_daily_key && PeriodKey.date_label(PeriodKey.date_of(latest_daily_key))
+        latest_daily_label: latest_daily_key && PeriodKey.date_label(PeriodKey.date_of(latest_daily_key), year: true)
       }.merge(footer_props), status: status
     end
 

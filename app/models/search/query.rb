@@ -1,5 +1,5 @@
 # 地址参数 → 不可变的查询（设计 5.1）。q 保留读者的原文（去首尾空白、最长 100 字符）给页面回显，
-# 拆词用的是 NFKC 归一化后的文本：全角字母数字标点转半角，标点与符号当空格，拉丁词小写，
+# 拆词用的是 NFKC 归一化后的文本：全角字母数字标点转半角，C / C++ / C# 保留，其他标点当空格，拉丁词小写，
 # 中文串拆二元组（R-4.2「终端工具」与「终端 工具」等价）。筛选参数不合法就当没给，页面不报错。
 class Search::Query
   MAX_LENGTH = 100
@@ -14,11 +14,14 @@ class Search::Query
   CJK = /[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]/
   RUNS = /[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]+|[^\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\s]+/
   # 不是字母、数字、组合记号或空白的字符（标点、符号、控制字符）一律换成空格。
-  # 剩下的词只含字母数字，拼进正则（Runner 的词首前缀）时没有元字符。
+  # C 系技术词先保留 + 与 #，按完整词匹配；其他词继续沿用去标点规则。
   NOISE = /[^\p{L}\p{N}\p{M}\s]/
+  TECH_NOISE = /[^\p{L}\p{N}\p{M}\s+#]/
+  TECHNOLOGY = /\Ac(?:\+\+|#)?\z/i
 
   Term = Data.define(:text, :kind) do
     def cjk? = kind == :cjk
+    def technology? = kind == :technology
     def length = text.length
   end
 
@@ -62,7 +65,19 @@ class Search::Query
     end
 
     def tokenize(text)
-      text.gsub(NOISE, " ").split.flat_map { |piece| piece.scan(RUNS).flat_map { |run| run_terms(run) } }.uniq.first(MAX_TERMS)
+      text.scan(RUNS).flat_map do |run|
+        if run.match?(CJK)
+          run_terms(run)
+        else
+          run.gsub(TECH_NOISE, " ").split.flat_map do |piece|
+            if piece.match?(TECHNOLOGY)
+              [ Term.new(text: piece.downcase, kind: :technology) ]
+            else
+              piece.gsub(NOISE, " ").split.flat_map { |word| run_terms(word) }
+            end
+          end
+        end
+      end.uniq.first(MAX_TERMS)
     end
 
     # 中文串拆二元组（长度 1 的串本身即一个词）；拉丁词小写，不到 2 字符丢弃（R-4.1）

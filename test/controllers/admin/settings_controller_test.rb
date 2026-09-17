@@ -3,6 +3,15 @@ require "test_helper"
 class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as(users(:drew)) }
 
+  test "完整聊天端点按基础地址字段报错，保留原设置" do
+    original = Setting.get("model_base_url")
+    patch admin_settings_path, params: { model: { base_url: "https://model.example/v1/chat/completions", model_name: "gpt-x", input_price: "0", output_price: "0", monthly_cap: "0" } }
+    assert_redirected_to admin_settings_path
+    follow_redirect!
+    assert_equal [ "请填写 API 基础地址，例如 https://api.openai.com/v1；不要包含 /chat/completions、查询参数或片段" ], page_props.dig("errors", "base_url")
+    assert_equal original, Setting.get("model_base_url")
+  end
+
   test "设置页：调度时间与白名单" do
     get admin_settings_path
 

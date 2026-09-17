@@ -1,11 +1,53 @@
 import type * as React from 'react'
+import { useEffect, useState } from 'react'
 
 // 表格（画布 pages_site.py 的 table()）：CSS grid，表头文楷 12 次墨 + 1px 墨线，行间 35% 线；单元格按角色选字体由调用方决定。
-// Same cells become labeled vertical groups on narrow screens; no duplicate actions.
+// Management pages reuse the same cells in a compact list on narrow screens, without mounting duplicate controls.
 export type TableRow = { key: string; cells: React.ReactNode[] }
+type MobileLayout = { primary: number[]; detailsLabel: string }
 
-export default function Table({ headers, widths, rows, empty, className = '' }: { headers: string[]; widths: string[]; rows: TableRow[]; empty?: string; className?: string }) {
+export default function Table({ headers, widths, rows, empty, className = '', mobile }: { headers: string[]; widths: string[]; rows: TableRow[]; empty?: string; className?: string; mobile?: MobileLayout }) {
   const columns = widths.join(' ')
+  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 1024px)').matches === true)
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(max-width: 1024px)')
+    if (!media) return
+    const update = (event: MediaQueryListEvent) => setCompact(event.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  function content(cell: React.ReactNode) {
+    return cell ?? <span className="data">—</span>
+  }
+
+  if (mobile && compact) {
+    return rows.length > 0 ? (
+      <ul className={`management-list ${className}`}>
+        {rows.map((row) => (
+          <li key={row.key} className="management-row">
+            <div className="management-row-primary">
+              {mobile.primary.map((index) => (
+                <div key={index} className="management-primary-field" data-column={index}>{content(row.cells[index])}</div>
+              ))}
+            </div>
+            <details className="management-row-details">
+              <summary>{mobile.detailsLabel}</summary>
+              <dl className="management-secondary-fields">
+                {row.cells.map((cell, index) => mobile.primary.includes(index) ? null : (
+                  <div key={index}>
+                    <dt className="management-field-label">{headers[index]}</dt>
+                    <dd className="management-field-content">{content(cell)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          </li>
+        ))}
+      </ul>
+    ) : <p className="table-empty cjk">{empty}</p>
+  }
 
   return (
     <div className="table-wrap">
@@ -22,7 +64,7 @@ export default function Table({ headers, widths, rows, empty, className = '' }: 
             {row.cells.map((cell, index) => (
               <div key={index} role="cell" className="table-td">
                 <span className="table-cell-label" aria-hidden="true">{headers[index]}</span>
-                <div className="table-cell-content">{cell ?? <span className="data">—</span>}</div>
+                <div className="table-cell-content">{content(cell)}</div>
               </div>
             ))}
           </div>

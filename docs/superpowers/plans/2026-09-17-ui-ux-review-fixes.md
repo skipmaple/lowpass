@@ -56,7 +56,7 @@
 
 ### Task 3: Source and admin settings forms
 
-**Files:** `app/frontend/components/{SourceForm,Field,SegButtons,InterestAreaRow}.tsx`, `app/frontend/pages/Admin/Sources/{New,Edit}.tsx`, `app/frontend/pages/Admin/Settings/Show.tsx`, appropriate styles, model settings props/validation when required, corresponding frontend and Rails tests.
+**Files:** `app/frontend/components/{Field,SegButtons,InterestAreaRow}.tsx`, `app/frontend/pages/Admin/Sources/Form.tsx` (shared new/edit page), `app/frontend/pages/Admin/Settings/Show.tsx`, appropriate styles, model settings props/validation when required, corresponding frontend and Rails tests.
 
 **Interfaces:** Use Task 1 Dialog's safe focus and shell feedback; retain all source config payload shapes and constraints. The root will deliver the user's currency clarification before model-unit work; if not supplied, preserve unknown legacy accounting semantics explicitly and require unit selection before claiming a currency for stored amounts.
 

@@ -280,6 +280,10 @@ a.t:hover { text-decoration-color: var(--ink); }
 .search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .search-input:focus { outline: none; }
 .search-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.search-clear { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+                border: 0; background: transparent; cursor: pointer; }
+.search-clear:disabled { visibility: hidden; }
+.search-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
 .search-note { flex-basis: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 /* 反白按钮（画布 btn(primary=True)）：40px 墨块，纸色文楷 15 */
 .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px;
@@ -289,6 +293,9 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 筛选栏：三组「小标 + 控件」横排，底线 1px */
 .filters { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
+.filter-toggle { display: none; }
+.filter-toggle-icon { transition: transform 120ms ease; }
+.filter-toggle-icon[data-open] { transform: rotate(90deg); }
 .filter-group { display: flex; flex-direction: column; gap: 8px; }
 .filter-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
 .filter-row { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; }
@@ -332,11 +339,18 @@ a.t:hover { text-decoration-color: var(--ink); }
 .search-notice { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 0 8px 0; }
 
 @media (max-width: 480px) {
-  .search-head { gap: 16px; padding: 24px 0 16px 0; }
+  .search-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 24px 0 16px 0; }
+  .search-field { gap: 8px; }
   .search-input { font-size: var(--fs-20); }
   .search-input::placeholder { font-size: var(--fs-15); }
+  .search-note { grid-column: 1 / -1; }
   .btn-primary { height: 44px; }
-  .filters { gap: 20px; }
+  .filter-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 8px 0;
+                   border: 0; border-bottom: 1px solid var(--ink); background: transparent; color: var(--ink); font-family: var(--font-cjk); font-size: var(--fs-15); text-align: left; }
+  .filter-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .filters { gap: 20px; padding: 16px 0; }
+  .filter-group { width: 100%; min-width: 0; }
+  .filter-row, .chips { max-width: 100%; }
   .seg-item { height: 44px; }
   /* 来源小签是这一页主要的多选控件：手机上也要 44px 触控目标（PRD 6.4，与 .anchor-chip 同一处理） */
   .chip-outline { height: 44px; }

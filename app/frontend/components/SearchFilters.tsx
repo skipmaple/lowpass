@@ -1,6 +1,8 @@
 import { router } from '@inertiajs/react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
+import Icon from '@/components/Icon'
 import Seg from '@/components/Seg'
 import { searchHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
@@ -11,6 +13,10 @@ import type { DatePresets, Publication, SearchFilters as Filters, SearchSourceOp
 // 日期预设的首尾由服务端按上海时区算好（date_presets），页面只拿它拼链接。
 
 export type SearchFiltersProps = { q: string; filters: Filters; sourceOptions: SearchSourceOption[]; datePresets: DatePresets }
+
+export function hasActiveFilters(filters: Filters): boolean {
+  return filters.type !== null || filters.sources.length > 0 || filters.from !== null || filters.to !== null
+}
 
 // 当前筛选换掉几项之后的地址（页码归 1）
 export function hrefWith(q: string, filters: Filters, patch: Partial<Filters>): string {
@@ -45,7 +51,7 @@ function SourceChips({ q, filters, sourceOptions }: Omit<SearchFiltersProps, 'da
             type="button"
             className={on ? 'chip-outline chip-on' : 'chip-outline'}
             aria-pressed={on}
-            onClick={() => router.get(hrefWith(q, filters, { sources }))}
+            onClick={() => router.get(hrefWith(q, filters, { sources }), {}, { preserveState: true })}
           >
             <Mixed text={source.name} font="latin" size="var(--fs-12)" color={on ? 'var(--paper)' : 'var(--ink2)'} nowrap />
           </button>
@@ -57,14 +63,14 @@ function SourceChips({ q, filters, sourceOptions }: Omit<SearchFiltersProps, 'da
 
 function DateRange({ q, filters, datePresets }: Omit<SearchFiltersProps, 'sourceOptions'>) {
   const options = [
-    { label: '近 7 天', href: hrefWith(q, filters, { range: '7d', from: datePresets['7d'].from, to: datePresets['7d'].to }), active: filters.range === '7d' },
-    { label: '近 30 天', href: hrefWith(q, filters, { range: '30d', from: datePresets['30d'].from, to: datePresets['30d'].to }), active: filters.range === '30d' },
-    { label: '全部', href: hrefWith(q, filters, { range: 'all', from: null, to: null }), active: filters.range === 'all' },
-    { label: '自定义', href: hrefWith(q, filters, { range: 'custom' }), active: filters.range === 'custom' },
+    { label: '近 7 天', href: hrefWith(q, filters, { range: '7d', from: datePresets['7d'].from, to: datePresets['7d'].to }), active: filters.range === '7d', preserveState: true },
+    { label: '近 30 天', href: hrefWith(q, filters, { range: '30d', from: datePresets['30d'].from, to: datePresets['30d'].to }), active: filters.range === '30d', preserveState: true },
+    { label: '全部', href: hrefWith(q, filters, { range: 'all', from: null, to: null }), active: filters.range === 'all', preserveState: true },
+    { label: '自定义', href: hrefWith(q, filters, { range: 'custom' }), active: filters.range === 'custom', preserveState: true },
   ]
 
   function change(patch: Partial<Filters>) {
-    router.get(hrefWith(q, filters, { range: 'custom', ...patch }))
+    router.get(hrefWith(q, filters, { range: 'custom', ...patch }), {}, { preserveState: true })
   }
 
   return (
@@ -83,20 +89,58 @@ function DateRange({ q, filters, datePresets }: Omit<SearchFiltersProps, 'source
 }
 
 export default function SearchFilters({ q, filters, sourceOptions, datePresets }: SearchFiltersProps) {
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 480px)').matches === true)
+  const [open, setOpen] = useState(false)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(max-width: 480px)')
+    if (!media) return
+    const change = (event: MediaQueryListEvent) => setMobile(event.matches)
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
+
+  const summary = filterSummary(filters, sourceOptions)
+
+  function toggle() {
+    if (open && contentRef.current?.contains(document.activeElement)) toggleRef.current?.focus()
+    setOpen((value) => !value)
+  }
+
   return (
-    <div className="filters">
-      <Group label="刊物">
-        <Seg
-          label="刊物"
-          options={TYPES.map((type) => ({ label: type.label, href: hrefWith(q, filters, { type: type.value }), active: filters.type === type.value }))}
-        />
-      </Group>
-      <Group label="来源">
-        <SourceChips q={q} filters={filters} sourceOptions={sourceOptions} />
-      </Group>
-      <Group label="日期">
-        <DateRange q={q} filters={filters} datePresets={datePresets} />
-      </Group>
+    <div className="filters-shell">
+      {mobile ? (
+        <button ref={toggleRef} type="button" className="filter-toggle" aria-expanded={open} aria-controls="search-advanced-filters" onClick={toggle}>
+          <Mixed text={summary} size="var(--fs-15)" color="var(--ink)" />
+          <span className="filter-toggle-icon" data-open={open || undefined}><Icon name="chevron-right" size={18} /></span>
+        </button>
+      ) : null}
+      <div ref={contentRef} id="search-advanced-filters" className="filters" hidden={mobile && !open}>
+        <Group label="刊物">
+          <Seg
+            label="刊物"
+            options={TYPES.map((type) => ({ label: type.label, href: hrefWith(q, filters, { type: type.value }), active: filters.type === type.value, preserveState: true }))}
+          />
+        </Group>
+        <Group label="来源">
+          <SourceChips q={q} filters={filters} sourceOptions={sourceOptions} />
+        </Group>
+        <Group label="日期">
+          <DateRange q={q} filters={filters} datePresets={datePresets} />
+        </Group>
+      </div>
     </div>
   )
+}
+
+function filterSummary(filters: Filters, sourceOptions: SearchSourceOption[]): string {
+  const parts: string[] = []
+  if (filters.type) parts.push(filters.type === 'daily' ? '日刊' : '周刊')
+  for (const id of filters.sources) parts.push(sourceOptions.find((source) => source.id === id)?.name ?? id)
+  if (filters.range === '7d') parts.push('近 7 天')
+  if (filters.range === '30d') parts.push('近 30 天')
+  if (filters.range === 'custom' && (filters.from || filters.to)) parts.push('自定义日期')
+  return `筛选：${parts.length > 0 ? parts.join(' · ') : '全部'}`
 }

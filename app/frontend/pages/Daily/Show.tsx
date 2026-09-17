@@ -37,12 +37,16 @@ function bodyNotice(issue: DailyIssue, missing: boolean): string | null {
   return missing || (issue.state && NOTICE_STATES.includes(issue.state)) ? issue.status : null
 }
 
-// 深链 ?source=<id>：切换时只改地址栏，不发请求。带上现有的 history.state，
-// 免得把 Inertia 存在那里的页面快照抹掉（前进后退还要用）。
+// 深链 ?source=<id>：切换时只改 Inertia 当前页与地址栏，不发请求。
+// 直接 history.replaceState 只改浏览器地址，不会更新 Inertia 的 page.url；后续滚动记忆会拿旧地址覆盖回来。
 function rememberSource(sourceId: string) {
   const url = new URL(window.location.href)
   url.searchParams.set('source', sourceId)
-  window.history.replaceState(window.history.state, '', url.toString())
+  router.replace({
+    url: `${url.pathname}${url.search}${url.hash}`,
+    preserveState: true,
+    preserveScroll: true,
+  })
 }
 
 function SourceBody({ source, items }: { source: SourceSummary; items: Item[] }) {

@@ -42,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks()
   router.visit.mockClear()
+  router.replace.mockClear()
 })
 
 describe('期级状态选哪一句（bodyNotice）', () => {
@@ -80,21 +81,19 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 })
 
 describe('切来源（本地状态 + ?source= 深链）', () => {
-  it('切一次只改地址栏，不回服务端', async () => {
+  it('切一次通过 Inertia 更新当前页面地址并保留状态与滚动，不回服务端', async () => {
     const user = userEvent.setup()
     const replaceState = vi.spyOn(window.history, 'replaceState')
     show()
 
     await user.click(screen.getAllByRole('tab')[1])
 
-    expect(replaceState).toHaveBeenCalledTimes(1)
-    // 带上现有的 history.state：Inertia 的页面快照存在那里，前进后退还要用
-    expect(replaceState).toHaveBeenCalledWith(
-      { page: 'daily' },
-      '',
-      expect.stringContaining('/daily/2026-09-08?source=src-gh'),
-    )
-    expect(window.location.search).toBe('?source=src-gh')
+    expect(router.replace).toHaveBeenCalledWith({
+      url: '/daily/2026-09-08?source=src-gh',
+      preserveState: true,
+      preserveScroll: true,
+    })
+    expect(replaceState).not.toHaveBeenCalled()
     expect(router.visit).not.toHaveBeenCalled()
   })
 

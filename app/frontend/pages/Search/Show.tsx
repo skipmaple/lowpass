@@ -1,11 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import { Ctrl } from '@/components/Ctrl'
 import Icon from '@/components/Icon'
 import Layout from '@/components/Layout'
-import SearchFilters from '@/components/SearchFilters'
+import SearchFilters, { hasActiveFilters } from '@/components/SearchFilters'
 import SearchResultRow from '@/components/SearchResultRow'
 import Seg from '@/components/Seg'
 import { dailyHref, latestWeeklyHref, searchHref } from '@/lib/paths'
@@ -46,30 +46,39 @@ function hrefOf(q: string, filters: Filters, page = 1) {
 }
 
 // 期头（画布 search_head()）：搜索图标、文楷 32 的查询词输入框、反白「搜索」按钮；回车与按钮都提交——
-// 由 Inertia 访问 /search（GET），筛选原样带上、页码归 1。调用方用 key={q} 拿住它：换一次查询就换一个实例。
-function SearchHead({ q, filters, truncated }: { q: string; filters: Filters; truncated: boolean }) {
-  const [value, setValue] = useState(q)
-
+// 由 Inertia 访问 /search（GET），筛选原样带上、页码归 1。草稿由页面持有，让期头和筛选始终使用同一个值。
+function SearchHead({ draft, setDraft, filters, truncated, inputRef }: { draft: string; setDraft: (value: string) => void; filters: Filters; truncated: boolean; inputRef: React.RefObject<HTMLInputElement | null> }) {
   function submit(event: React.FormEvent) {
     event.preventDefault()
-    router.get(hrefOf(value.trim(), filters))
+    router.get(hrefOf(draft.trim(), filters))
+  }
+
+  function clear() {
+    setDraft('')
+    inputRef.current?.focus()
   }
 
   return (
     <form className="search-head" role="search" onSubmit={submit}>
-      <label className="search-field">
+      <div className="search-field">
         <Icon name="search" size={24} />
+        <label className="sr-only" htmlFor="search-query">搜索</label>
         <input
+          ref={inputRef}
+          id="search-query"
           type="search"
           className="search-input"
           name="q"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
           placeholder={COPY.placeholder}
-          aria-label="搜索"
           autoComplete="off"
+          autoFocus
         />
-      </label>
+        <button type="button" className="search-clear" aria-label="清除搜索词" disabled={draft.length === 0} onClick={clear}>
+          <Icon name="x" size={18} />
+        </button>
+      </div>
       <button type="submit" className="btn-primary">
         搜索
       </button>
@@ -87,7 +96,7 @@ function CountLine({ total, q, filters }: { total: number; q: string; filters: F
 
   return (
     <div className="search-count">
-      <Mixed text={`${total} 条结果`} size="var(--fs-13)" color="var(--ink2)" />
+      <span aria-hidden="true"><Mixed text={`${total} 条结果`} size="var(--fs-13)" color="var(--ink2)" /></span>
       <Seg label="排序" options={options} />
     </div>
   )
@@ -115,7 +124,7 @@ function Notice({ text, children }: React.PropsWithChildren<{ text: string }>) {
   )
 }
 
-function Body(props: SearchShowProps) {
+function Body(props: SearchShowProps & { onModifyQuery: () => void }) {
   const { state, q, filters, results, total, page, pages, latest_daily_key, latest_daily_label } = props
 
   switch (state) {
@@ -129,11 +138,14 @@ function Body(props: SearchShowProps) {
         </div>
       ) : null
     case 'empty':
-      // R-4.9：一句原因 + 一个动作；「清除筛选」只保留 q
       return (
         <Notice text={COPY.empty(q)}>
           <div>
-            <Ctrl href={searchHref({ q })} label="清除筛选" icon="x" side="left" />
+            {hasActiveFilters(filters) ? (
+              <Ctrl href={searchHref({ q })} label="清除筛选" icon="x" side="left" />
+            ) : (
+              <button type="button" className="ctrl" onClick={props.onModifyQuery}>修改关键词</button>
+            )}
           </div>
         </Notice>
       )
@@ -150,21 +162,43 @@ function Body(props: SearchShowProps) {
               <SearchResultRow key={result.item_id} result={result} q={q} />
             ))}
           </div>
-          <Pager q={q} filters={filters} page={page} pages={pages} />
+          {pages > 1 ? <Pager q={q} filters={filters} page={page} pages={pages} /> : null}
         </>
       )
   }
 }
 
 export default function Show(props: SearchShowProps) {
+  const [draft, setDraft] = useState(props.q)
+  const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => setDraft(props.q), [props.q])
+  useEffect(() => {
+    const removeStart = router.on('start', () => setLoading(true))
+    const removeFinish = router.on('finish', () => setLoading(false))
+    return () => {
+      removeStart()
+      removeFinish()
+    }
+  }, [])
+
+  function modifyQuery() {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }
+
+  const liveText = loading ? '正在搜索…' : props.state === 'results' ? `${props.total} 条结果` : ''
+
   return (
     <>
       <Head title={props.q ? `搜索 · ${props.q}` : '搜索'} />
       {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
       <h1 className="sr-only">搜索</h1>
-      <SearchHead key={props.q} q={props.q} filters={props.filters} truncated={props.truncated} />
-      <SearchFilters q={props.q} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
-      <Body {...props} />
+      <SearchHead draft={draft} setDraft={setDraft} filters={props.filters} truncated={props.truncated} inputRef={inputRef} />
+      <SearchFilters q={draft.trim()} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveText}</span>
+      <Body {...props} onModifyQuery={modifyQuery} />
     </>
   )
 }

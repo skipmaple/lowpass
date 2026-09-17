@@ -20,14 +20,36 @@ export function usePage<T = PageProps>() {
 }
 
 // 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」；后台表单提交也走 spy（post/patch）
-export const router = { visit: vi.fn(), get: vi.fn(), reload: vi.fn(), delete: vi.fn(), post: vi.fn(), patch: vi.fn() }
+type RouterEvent = 'start' | 'finish'
+type RouterListener = () => void
+const routerListeners = new Map<RouterEvent, Set<RouterListener>>()
+
+export function emitRouterEvent(event: RouterEvent) {
+  routerListeners.get(event)?.forEach((listener) => listener())
+}
+
+export const router = {
+  visit: vi.fn(),
+  get: vi.fn(),
+  reload: vi.fn(),
+  delete: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+  replace: vi.fn(),
+  on: vi.fn((event: RouterEvent, listener: RouterListener) => {
+    const listeners = routerListeners.get(event) ?? new Set<RouterListener>()
+    listeners.add(listener)
+    routerListeners.set(event, listeners)
+    return () => listeners.delete(listener)
+  }),
+}
 
 export function Head({ title }: { title?: string }) {
   useEffect(() => { if (title) document.title = `${title} · Lowpass` }, [title])
   return null
 }
 
-export function Link({ href, children, ...rest }: React.ComponentProps<'a'>) {
+export function Link({ href, children, preserveState: _preserveState, ...rest }: React.ComponentProps<'a'> & { preserveState?: boolean }) {
   return (
     <a href={href} {...rest}>
       {children}

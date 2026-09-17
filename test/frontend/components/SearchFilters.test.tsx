@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import SearchFilters, { hrefWith } from '@/components/SearchFilters'
 import type { SearchFilters as Filters } from '@/types/lowpass'
@@ -21,6 +21,43 @@ function filters(overrides: Partial<Filters> = {}) {
 
 afterEach(() => {
   router.get.mockClear()
+  vi.unstubAllGlobals()
+})
+
+function mobileViewport() {
+  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+}
+
+describe('手机版筛选', () => {
+  it('收起高级筛选并在摘要中说明生效条件，展开前控件不可访问', async () => {
+    mobileViewport()
+    const user = userEvent.setup()
+    filters({ type: 'daily', sources: ['src-hn'], range: '7d', from: '2026-09-05', to: '2026-09-11' })
+
+    // Mixed 按字体角色拆开中英文与数字，jsdom 可能吃掉 run 边界空格；可见文本仍保留原串。
+    const toggle = screen.getByRole('button', { name: /筛选：日刊\s*·\s*Hacker News\s*·\s*近\s*7\s*天/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('navigation', { name: '刊物' })).toBeNull()
+
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('navigation', { name: '刊物' })).toBeInTheDocument()
+  })
+
+  it('焦点在筛选项内时收起会回到展开按钮', async () => {
+    mobileViewport()
+    const user = userEvent.setup()
+    filters()
+    const toggle = screen.getByRole('button', { name: '筛选：全部' })
+
+    await user.click(toggle)
+    const source = screen.getByRole('button', { name: 'Hacker News' })
+    source.focus()
+    await user.click(toggle)
+
+    expect(toggle).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Hacker News' })).toBeNull()
+  })
 })
 
 describe('刊物', () => {
@@ -43,13 +80,13 @@ describe('来源', () => {
     expect(chip).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: '阮一峰科技爱好者周刊' })).toBeInTheDocument()
     await user.click(chip)
-    expect(router.get).toHaveBeenCalledWith('/search?q=kuber&source=src-hn')
+    expect(router.get).toHaveBeenCalledWith('/search?q=kuber&source=src-hn', {}, { preserveState: true })
     unmount()
 
     filters({ sources: ['src-hn', 'src-ruanyf'] })
     expect(screen.getByRole('button', { name: 'Hacker News' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Hacker News' }))
-    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&source=src-ruanyf')
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&source=src-ruanyf', {}, { preserveState: true })
   })
 })
 
@@ -79,7 +116,7 @@ describe('日期', () => {
 
     fireEvent.change(screen.getByLabelText('结束日期'), { target: { value: '2026-09-08' } })
 
-    expect(router.get).toHaveBeenCalledWith('/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom')
+    expect(router.get).toHaveBeenCalledWith('/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom', {}, { preserveState: true })
   })
 
   // Inertia 前进后退不重挂页面：日期框必须跟着 props 走，不能停在读者上一次输入的值

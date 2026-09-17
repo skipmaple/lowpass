@@ -1,4 +1,5 @@
-import { usePage } from '@inertiajs/react'
+import { Head, usePage } from '@inertiajs/react'
+import { useEffect, useState } from 'react'
 import type * as React from 'react'
 
 import Icon from '@/components/Icon'
@@ -23,9 +24,15 @@ function csrfToken() {
 
 function ProviderForm({ provider, next }: { provider: AuthProvider; next: string | null }) {
   const developer = provider === 'developer'
+  const [pending, setPending] = useState(false)
+  useEffect(() => {
+    const restore = () => setPending(false)
+    window.addEventListener('pageshow', restore)
+    return () => window.removeEventListener('pageshow', restore)
+  }, [])
 
   return (
-    <form method={developer ? 'get' : 'post'} action={developer ? authCallbackHref(provider) : authHref(provider)} className="login-form">
+    <form method={developer ? 'get' : 'post'} action={developer ? authCallbackHref(provider) : authHref(provider)} className="login-form" onSubmit={() => setPending(true)} aria-busy={pending}>
       {developer ? null : <input type="hidden" name="authenticity_token" value={csrfToken()} />}
       {next ? <input type="hidden" name="origin" value={next} /> : null}
       {developer ? (
@@ -40,8 +47,8 @@ function ProviderForm({ provider, next }: { provider: AuthProvider; next: string
           </label>
         </>
       ) : null}
-      <button type="submit" className="login-button">
-        {LABELS[provider]}
+      <button type="submit" className="login-button" disabled={pending}>
+        {pending ? (developer ? '正在登录…' : `正在前往 ${provider === 'github' ? 'GitHub' : 'Google'}…`) : LABELS[provider]}
       </button>
     </form>
   )
@@ -52,6 +59,7 @@ export default function Show({ providers, next }: LoginShowProps) {
 
   return (
     <main className="login-ground">
+      <Head title="登录" />
       <div className="paper login-card">
         <div className="login-band">
           <span className="masthead-brand">lowpass</span>
@@ -61,14 +69,14 @@ export default function Show({ providers, next }: LoginShowProps) {
           <div className="login-art">
             <Sunrise />
           </div>
-          <p className="login-tagline">滤掉噪音，留下信号。</p>
+          <p className="login-tagline">每天一期技术日刊，登录后阅读</p>
           <div className="login-forms">
             {providers.map((provider) => (
               <ProviderForm key={provider} provider={provider} next={next} />
             ))}
           </div>
           {flash?.alert ? (
-            <div className="notice-line" style={{ marginTop: 20 }} role="status">
+            <div className="notice-line" style={{ marginTop: 20 }} role="alert">
               <Icon name="triangle-alert" size={14} color="var(--ink2)" />
               <span>{flash.alert}</span>
             </div>

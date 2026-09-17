@@ -1,10 +1,10 @@
-import { router, usePage } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import { useState } from 'react'
 import type * as React from 'react'
 
 import Chip from '@/components/Chip'
 import Icon from '@/components/Icon'
-import { adminItemReasonHref } from '@/lib/paths'
+import { ADMIN_SETTINGS, adminItemReasonHref } from '@/lib/paths'
 import { absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item, SharedProps } from '@/types/lowpass'
 
@@ -99,18 +99,33 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
 // 周刊页 h1 是周次、h2 是源名、h3 是板块，所以条目按所在位置降一到两级。
 // id 是搜索结果所在期链接的落点（设计 6.3）。
 export type ItemVariant = 'daily' | 'weekly'
-export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4' }
+export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4'; reasonAvailabilityId?: string }
 
-export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
+export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2', reasonAvailabilityId }: ItemRowProps) {
   const weekly = variant === 'weekly'
   // 读者页管理员的单条重生成（R-9.6，设计 C6）：读者页面上唯一的管理控件，周刊条目没有理由，也就没有这个按钮
-  const admin = usePage<SharedProps>().props.current_user?.admin
+  const { current_user, reason_generation } = usePage<SharedProps>().props
+  const admin = current_user?.admin
+  const [feedback, setFeedback] = useState<{ text: string; failed: boolean } | null>(null)
   const [sending, setSending] = useState(false)
 
   // 这一趟是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点排三份账
   function regenerate() {
     setSending(true)
-    router.post(adminItemReasonHref(item.id), {}, { onFinish: () => setSending(false) })
+    setFeedback(null)
+    router.post(adminItemReasonHref(item.id), {}, {
+      preserveScroll: true,
+      onSuccess: (page) => {
+        const flash = page.props.flash as SharedProps['flash'] | undefined
+        const text = flash?.alert || flash?.notice
+        setFeedback({ text: text || '请求已结束，未收到生成结果，请刷新确认', failed: !!flash?.alert || !text })
+      },
+      onNetworkError: () => { setFeedback({ text: '网络连接失败，请刷新确认生成结果后重试', failed: true }); return false },
+      onHttpException: () => { setFeedback({ text: '服务暂时无法处理请求，请刷新确认生成结果后重试', failed: true }); return false },
+      onError: () => setFeedback({ text: '生成失败，请重试', failed: true }),
+      onCancel: () => setFeedback({ text: '请求已取消，请刷新确认生成结果', failed: true }),
+      onFinish: () => setSending(false),
+    })
   }
 
   return (
@@ -131,9 +146,13 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
         {!weekly && admin ? (
-          <button type="button" className="link-button" disabled={sending} onClick={regenerate}>
-            重生成
-          </button>
+          <div className="reason-controls" aria-busy={sending}>
+            <button type="button" className="link-button" aria-describedby={reason_generation?.available === false ? reasonAvailabilityId : undefined} disabled={sending || reason_generation?.available === false} onClick={regenerate}>
+              {sending ? '生成中…' : '重新生成理由'}
+            </button>
+            {reason_generation?.available === false && !reasonAvailabilityId ? <p className="operation-feedback">{reason_generation.unavailable_reason} <Link href={`${ADMIN_SETTINGS}#reasons`} className="t">推荐理由设置</Link></p> : null}
+            {feedback ? <p className="operation-feedback" role={feedback.failed ? 'alert' : 'status'}>{feedback.text}</p> : null}
+          </div>
         ) : null}
       </div>
 

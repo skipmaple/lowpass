@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import Icon from '@/components/Icon'
-import { ADMIN_SOURCES, DAILY_LATEST, SEARCH, SESSION, SETTINGS, WEEKLY_ARCHIVE } from '@/lib/paths'
+import { ADMIN_SOURCES, DAILY_LATEST, SEARCH, SESSION, SETTINGS, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { CurrentUser, SharedProps } from '@/types/lowpass'
 
@@ -50,15 +50,26 @@ function AccountMenu({ user }: { user: CurrentUser }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuId = useId()
+  const focusLast = useRef(false)
 
   useEffect(() => {
     if (!open) return
-    rootRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    const items = rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    if (items?.length) items[focusLast.current ? items.length - 1 : 0].focus()
+    focusLast.current = false
 
     // WAI-ARIA menu button 模式：Escape 关掉的是键盘用户自己进来的菜单，得把焦点还给触发它的按钮，
     // 不然聚焦的菜单项一卸载，焦点就掉回 <body>，键盘用户在页面上的位置就丢了。点卡外关闭不这样——
     // 读者点哪儿是读者的选择，不该抢焦点；选中某一项关闭则是导航/登出接管，也不用管。
     function onKey(event: KeyboardEvent) {
+      const items = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+      const index = items.indexOf(document.activeElement as HTMLElement)
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault()
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+        items[next]?.focus()
+      }
+      if (event.key === 'Tab') setOpen(false)
       if (event.key === 'Escape') {
         setOpen(false)
         buttonRef.current?.focus()
@@ -90,6 +101,13 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((value) => !value)}
+        onKeyDown={(event) => {
+          if (!open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault()
+            focusLast.current = event.key === 'ArrowUp'
+            setOpen(true)
+          }
+        }}
       >
         {/* 头像是 provider 的外链图，referrerPolicy 拦住 Referer：不然每次加载都把读者在看哪一页告诉 Google / GitHub */}
         {user.avatar_url ? (
@@ -105,7 +123,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
             <Mixed text={user.email ?? user.display_name} size="var(--fs-12)" color="var(--ink2)" />
           </div>
           <Link role="menuitem" className="menu-item" href={SETTINGS} onClick={close}>
-            设置
+            账户信息
           </Link>
           {user.admin ? (
             <Link role="menuitem" className="menu-item" href={ADMIN_SOURCES} onClick={close}>
@@ -129,7 +147,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
   )
 }
 
-const SEARCH_STYLE: React.CSSProperties = { display: 'inline-flex' }
+const SEARCH_STYLE: React.CSSProperties = { display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }
 const ACCOUNT_STYLE: React.CSSProperties = {
   width: 32,
   height: 32,
@@ -141,8 +159,9 @@ const ACCOUNT_STYLE: React.CSSProperties = {
   justifyContent: 'center',
 }
 
-export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref = WEEKLY_ARCHIVE, searchHref = SEARCH }: MastheadProps) {
-  const user = usePage<Partial<SharedProps>>().props.current_user ?? null
+export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref, searchHref = SEARCH }: MastheadProps) {
+  const props = usePage<Partial<SharedProps> & { latest_weekly_key?: string | null }>().props
+  const user = props.current_user ?? null
 
   return (
     <header className="masthead">
@@ -152,7 +171,7 @@ export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref 
         </Link>
         <nav className="masthead-nav">
           <Nav href={dailyHref} label="日刊" current={active === 'daily'} />
-          <Nav href={weeklyHref} label="周刊" current={active === 'weekly'} />
+          <Nav href={weeklyHref ?? latestWeeklyHref(props.latest_weekly_key ?? null)} label="周刊" current={active === 'weekly'} />
         </nav>
       </div>
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -213,20 +213,47 @@ describe('ItemRow 管理员的单条重生成（R-9.6）', () => {
   it('管理员看到「重生成」，普通读者看不到；点了 POST 单条重生成', async () => {
     setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin: true }, flash: {}, errors: {} })
     const { unmount } = render(<ItemRow item={item({ id: 'it-1', reason: null })} adapter="hacker_news" rank={1} />)
-    await userEvent.click(screen.getByRole('button', { name: '重生成' }))
+    await userEvent.click(screen.getByRole('button', { name: '重新生成理由' }))
     // 单条重生成是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点
     expect(router.post).toHaveBeenCalledWith('/admin/items/it-1/reason', {}, expect.objectContaining({ onFinish: expect.any(Function) }))
-    expect(screen.getByRole('button', { name: '重生成' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '生成中…' })).toBeDisabled()
     unmount()
 
     setPageProps({ current_user: { display_name: 'G', avatar_url: null, email: null, admin: false }, flash: {}, errors: {} })
     render(<ItemRow item={item({ id: 'it-2', reason: '有理由' })} adapter="hacker_news" rank={2} variant="daily" />)
-    expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '重新生成理由' })).toBeNull()
   })
 
   it('周刊条目永远没有「重生成」', () => {
     setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: null, admin: true }, flash: {}, errors: {} })
     render(<ItemRow item={item({ id: 'it-3' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
-    expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '重新生成理由' })).toBeNull()
   })
+})
+
+it('生成理由显示该条目的忙碌与服务端失败结果', async () => {
+ setPageProps({ current_user: { admin: true } })
+ render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+ await userEvent.click(screen.getByRole('button', { name: '重新生成理由' }))
+ expect(screen.getByRole('button', { name: '生成中…' })).toBeDisabled()
+ const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
+ act(() => { options.onSuccess({ props: { flash: { alert: '重生成失败：输出不合规' } } }); options.onFinish() })
+ expect(screen.getByRole('alert')).toHaveTextContent('重生成失败：输出不合规')
+ expect(screen.getByRole('button', { name: '重新生成理由' })).toBeEnabled()
+})
+it('未配置推荐理由时说明前提并提供设置入口', () => {
+ setPageProps({ current_user: { admin: true }, reason_generation: { available: false, unavailable_reason: '未配置模型供应商' } })
+ render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+ expect(screen.getByRole('button', { name: '重新生成理由' })).toBeDisabled()
+ expect(screen.getByText('未配置模型供应商')).toBeInTheDocument()
+ expect(screen.getByRole('link', { name: '推荐理由设置' })).toHaveAttribute('href', '/admin/settings#reasons')
+})
+
+it('网络故障显示本条目的可重试错误，不宣称服务端成功', async () => {
+ setPageProps({ current_user: { admin: true } })
+ render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+ await userEvent.click(screen.getByRole('button', { name: '重新生成理由' }))
+ const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
+ act(() => { options.onNetworkError?.(new Error('offline')); options.onFinish() })
+ expect(screen.getByRole('alert')).toHaveTextContent('网络连接失败，请刷新确认生成结果后重试')
 })

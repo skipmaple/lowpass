@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/react'
 import type * as React from 'react'
 
 import { Ctrl, Square } from '@/components/Ctrl'
@@ -16,6 +17,8 @@ export type PageHeadNav = {
 
 export type PageHeadProps = {
   big: string
+  context?: string
+  title?: string
   top?: React.ReactNode
   bottom?: string | null
   tag?: React.ReactNode
@@ -23,11 +26,13 @@ export type PageHeadProps = {
   controls?: React.ReactNode
 }
 
-export default function PageHead({ big, top, bottom, tag, nav, controls }: PageHeadProps) {
+export default function PageHead({ big, context, title, top, bottom, tag, nav, controls }: PageHeadProps) {
   return (
     <>
+      <Head title={title ?? (context ? `${context} · ${big}` : big)} />
       <header className="page-head">
         <div className="issue-head-main">
+          {context ? <p className="page-context">{context}</p> : null}
           <div className="issue-head-title">
             <h1 className="issue-head-date">{big}</h1>
             {top || bottom ? (

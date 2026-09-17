@@ -26,12 +26,12 @@
 
 html { background: var(--ground); color-scheme: light; }
 body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: var(--fs-15); }
-/* 纸纹：3px 横纹 3% 墨 + 4px 竖纹 14% 白。颜色与图层必须分开写——
+/* 纸纹：3px 横纹 1.2% 墨 + 4px 竖纹 5% 白。颜色与图层必须分开写——
    background 简写里颜色只能出现在最后一层，写在第一层整条声明会被丢弃。 */
 .paper {
   background-color: var(--paper);
-  background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.03) 0 1px, transparent 1px 3px),
-                    repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 1px, transparent 1px 4px);
+  background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.012) 0 1px, transparent 1px 3px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px);
   box-shadow: 0 30px 80px rgba(0,0,0,0.45);
 }
 .cjk { font-family: var(--font-cjk); }
@@ -98,7 +98,7 @@ a.t:hover { text-decoration-color: var(--ink); }
   .masthead { height: 56px; padding: 0 24px; }
   .masthead-brand { font-size: var(--fs-26); }
   .masthead-left { gap: 20px; }
-  .masthead-nav { gap: 16px; }
+  .masthead-nav { gap: 0; }
   .masthead-actions { gap: 16px; }
 }
 
@@ -450,3 +450,92 @@ a.t:hover { text-decoration-color: var(--ink); }
   .admin-nav-item { font-size: var(--fs-15); height: 48px; }
   .admin-form-row { flex-direction: column; }
 }
+
+/* 2026-09-17 approved reading/accessibility revision. Keep controls reachable at every width. */
+.skip-link { position: absolute; left: 24px; top: -100px; z-index: 100; padding: 12px 16px; background: var(--paper); color: var(--ink); font-family: var(--font-cjk); }
+.skip-link:focus { top: 8px; }
+#main-content:focus { outline: none; }
+.page-context { margin: 0; width: 100%; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
+.issue-head-main { flex-wrap: wrap; min-width: 0; gap: 12px 16px; }
+.issue-head-title { flex-wrap: wrap; gap: 12px 20px; }
+.issue-head-date { line-height: 1.2; overflow-wrap: anywhere; }
+.issue-head-weekday { line-height: 1.4; }
+.page-nav { flex-wrap: wrap; }
+.masthead-brand { min-height: 44px; display: inline-flex; align-items: center; }
+.masthead-nav a { min-width: 44px; justify-content: center; min-height: 44px; display: inline-flex; align-items: center; }
+.masthead-actions { flex: none; gap: 12px; }
+.account-button { width: 44px; height: 44px; border: 0; border-radius: 0; overflow: visible; position: relative; }
+.account-button::before { content: ''; position: absolute; inset: 6px; border: 1px solid var(--paper); border-radius: 50%; }
+.account-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.menu-head { overflow-wrap: anywhere; }
+.ctrl, .btn-primary, .link-button, .anchor-chip, .source-band-link { min-height: 44px; height: auto; }
+.ctrl, .btn-primary, .anchor-chip { box-sizing: border-box; padding-top: 8px; padding-bottom: 8px; }
+.toast-close { min-width: 44px; min-height: 44px; }
+.source-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 0; }
+.source-tab { padding: 14px 16px; gap: 12px; min-height: 80px; }
+.source-tab + .source-tab { margin-left: 0; }
+.source-tab-icon { width: 44px; }
+.source-tab-name { font-size: var(--fs-26); line-height: 1.2; overflow-wrap: anywhere; }
+.source-tab-state { white-space: normal; }
+.item-body { max-width: 780px; }
+.item-title, .item-summary, .item-reason { overflow-wrap: anywhere; }
+.source-foot { min-height: 44px; padding: 8px 0; margin-right: 24px; font-family: var(--font-cjk); font-size: var(--fs-15); }
+.operation-feedback { font-family: var(--font-cjk); font-size: var(--fs-13); line-height: 1.7; color: var(--ink2); margin: 8px 0; overflow-wrap: anywhere; }
+.operation-feedback a { display: inline-flex; min-height: 44px; align-items: center; }
+.state-line { font-weight: 400; margin: 0; }
+.anchors { flex-wrap: wrap; overflow: visible; }
+.anchor-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.source-band { flex-wrap: wrap; padding-top: 14px; padding-bottom: 14px; }
+.source-band-name, .source-band-meta { min-width: 0; max-width: 100%; }
+.source-band-name svg { flex: none; }
+.source-band-title { overflow: visible; line-height: 1.4; overflow-wrap: anywhere; }
+.source-band-meta { flex-wrap: wrap; }
+.source-band-issue { opacity: 1; }
+.archive-daily .archive-row { grid-template-columns: 24px 120px 90px minmax(0, 1fr); grid-template-areas: 'mark key sub label' '. meta meta meta'; row-gap: 10px; }
+.archive-weekly .archive-label { font-size: var(--fs-20); }
+.archive-meta { overflow-wrap: anywhere; }
+.dialog { max-height: calc(100dvh - 48px); overflow-y: auto; }
+@media (max-width: 1023px) {
+  .source-tab { flex-direction: column; align-items: center; padding: 12px 8px; }
+  .source-tab-body { align-items: center; text-align: center; }
+  .source-tab-name { font-size: var(--fs-20); }
+  .archive-weekly .archive-row { grid-template-columns: 24px 130px minmax(0, 1fr); grid-template-areas: 'mark key sub' '. label label' '. meta meta'; gap: 10px 16px; }
+}
+@media (max-width: 767px) {
+  .sheet { margin: 0; }
+  .sheet-body { padding: 0 24px 32px; }
+  .masthead { height: auto; min-height: 72px; padding: 12px 24px; gap: 12px; flex-wrap: wrap; }
+  .masthead-left { gap: 4px; }
+  .masthead-brand { font-size: var(--fs-26); }
+  .masthead-nav { gap: 0; }
+  .masthead-actions { gap: 0; }
+  .issue-head-date { font-size: var(--fs-40); }
+  .issue-nav { display: none; }
+  .issue-nav-mobile { display: flex; }
+  .source-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 16px; }
+  .source-tab-name { font-size: var(--fs-13); }
+  .source-tab-icon { width: 37px; height: 24px; }
+  .source-tab { min-height: 80px; gap: 6px; }
+  .item-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'rank tag' 'body body'; gap: 10px 12px; padding: 24px 0; }
+  .item-summary { -webkit-line-clamp: 3; }
+  .archive-daily .archive-row, .archive-weekly .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); grid-template-areas: 'mark key sub' '. label label' '. meta meta'; }
+  .source-band { flex-direction: column; align-items: flex-start; }
+  .source-band-title { font-size: var(--fs-22); }
+  .source-band-meta { flex-wrap: wrap; }
+}
+@media (max-width: 389px) {
+  .masthead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; padding-top: 8px; padding-bottom: 8px; }
+  .masthead-left { display: contents; }
+  .masthead-brand { grid-column: 1; grid-row: 1; }
+  .masthead-actions { grid-column: 2; grid-row: 1; }
+  .masthead-nav { grid-column: 1 / -1; grid-row: 2; }
+  .source-tab-name { font-size: var(--fs-13); }
+}
+
+@media (max-width: 767px) {
+  .page-head { padding-top: 24px; padding-bottom: 12px; }
+  .issue-nav-mobile { padding-top: 10px; }
+  .source-tabs { padding-top: 12px; }
+}
+
+footer a { display: inline-flex; min-height: 44px; align-items: center; }

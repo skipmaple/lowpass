@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest'
 import Footer from '@/components/Footer'
 import { latestWeeklyHref } from '@/lib/paths'
 
-// 页脚：邮戳、「明早 06:00 · 下一期」、最新周刊、前后期按钮。
+// 页脚：邮戳、「明早 06:00 · 下期日刊」、最新周刊、前后期按钮。
 // 中文走文楷、时间走 Maple，这一行是手写的两种角色，不是 Mixed。
 
 function nextLine() {
   return screen.getByText('明早').parentElement as HTMLElement
 }
 
-describe('Footer 下一期那一行', () => {
+describe('Footer 下期日刊那一行', () => {
   it('中文与时间分成两个字体角色', () => {
     render(<Footer nextAt="06:00" />)
 
@@ -20,7 +20,7 @@ describe('Footer 下一期那一行', () => {
       ['明早 ', 'var(--font-cjk)'],
       ['06:00', 'var(--font-data)'],
       [' · ', 'var(--font-data)'],
-      ['下一期', 'var(--font-cjk)'],
+      ['下期日刊', 'var(--font-cjk)'],
     ])
   })
 
@@ -28,7 +28,7 @@ describe('Footer 下一期那一行', () => {
   it('时间来自 props', () => {
     render(<Footer nextAt="07:30" />)
 
-    expect(nextLine()).toHaveTextContent('明早 07:30 · 下一期')
+    expect(nextLine()).toHaveTextContent('明早 07:30 · 下期日刊')
   })
 })
 

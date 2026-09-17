@@ -7,12 +7,12 @@ import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
 import { SESSION, authHref, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
-import type { FooterData, SettingsIdentity, SharedProps } from '@/types/lowpass'
+import type { FooterData, SettingsIdentity } from '@/types/lowpass'
 
 // 设置页（R-5.10，画布 pages_site.py 的 settings()）：期头「设置」+ 等宽邮箱与显示名，右端「登出」描边按钮；
 // 键值行：头像与显示名、邮箱、角色、每个 provider 一行、本次会话。未绑定的 provider 给一个 POST 表单按钮
 // 「使用 X 登录」（不是「以绑定」：邮箱不同时它会新建账号，走 R-5.3，设计 L2）。
-// 无法合并的提示（AC-5.3）由 flash 带来，放在期头底线之下、键值行之上。
+// 无法合并的提示（AC-5.3）由共享 Layout 的 flash 反馈呈现。
 
 export type SettingsShowProps = FooterData & {
   user: { display_name: string; email: string | null; avatar_url: string | null; role: 'admin' | 'member' }
@@ -64,31 +64,11 @@ function IdentityRow({ identity }: { identity: SettingsIdentity }) {
 }
 
 export default function Show({ user, identities, session }: SettingsShowProps) {
-  const { flash } = usePage<SharedProps>().props
 
   return (
     <>
-      <PageHead
-        big="设置"
-        top={
-          <>
-            {user.email ? <span className="data">{user.email}</span> : null}
-            <Mixed text={user.display_name} font="latin" size="var(--fs-20)" color="var(--ink)" />
-          </>
-        }
-        controls={
-          <button type="button" className="ctrl" onClick={() => router.delete(SESSION)}>
-            <Icon name="log-out" color="currentColor" />
-            <span>登出</span>
-          </button>
-        }
-      />
-      {flash?.alert ? (
-        <div className="notice-line" style={{ paddingTop: 20 }} role="status">
-          <Icon name="triangle-alert" size={14} color="var(--ink2)" />
-          <span>{flash.alert}</span>
-        </div>
-      ) : null}
+      <PageHead big="账户信息" />
+      <p className="operation-feedback">使用另一登录方式时，相同的已验证邮箱会合并到此账户；邮箱不同则切换到另一个账户。</p>
       <div className="settings-rows">
         <Row label="头像与显示名">
           {/* 头像是 provider 的外链图，referrerPolicy 拦住 Referer（与报头同理） */}
@@ -120,7 +100,8 @@ export default function Show({ user, identities, session }: SettingsShowProps) {
           <IdentityRow key={identity.provider} identity={identity} />
         ))}
         <Row label="本次会话">
-          <Mixed text={`${session.logged_in_label} 登录 · 30 天内免登录 · ${session.expires_label} 到期`} size="var(--fs-13)" color="var(--ink2)" />
+          <Mixed text={`${session.logged_in_label} 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · ${session.expires_label} 到期`} size="var(--fs-13)" color="var(--ink2)" />
+          <button type="button" className="link-button" onClick={() => router.delete(SESSION)}>登出</button>
         </Row>
       </div>
     </>

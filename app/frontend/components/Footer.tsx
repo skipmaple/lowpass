@@ -70,7 +70,7 @@ export default function Footer({
             <span style={cjk}>明早 </span>
             <span style={data}>{nextAt}</span>
             <span style={data}> · </span>
-            <span style={cjk}>下一期</span>
+            <span style={cjk}>下期日刊</span>
           </span>
           <Link href={latestWeeklyHref} className="t cjk" style={{ fontSize: 'var(--fs-15)' }}>
             最新周刊

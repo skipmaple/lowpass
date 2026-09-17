@@ -8,7 +8,7 @@ class SigningInTest < ApplicationSystemTestCase
 
     visit daily_issue_path("2026-09-08")
     assert_current_path login_path(next: "/daily/2026-09-08")
-    assert_text "滤掉噪音，留下信号。"
+    assert_text "每天一期技术日刊，登录后阅读"
     # 登录页不套站点布局：报头与页脚在这里都没处可去。Inertia 会先拿 props 试调一次 Show.layout，
     # 恒等函数返回的不是元素，就被当成 props 解析器、照样套上默认 Layout——单元测试看不见这一步
     assert_no_selector ".masthead"

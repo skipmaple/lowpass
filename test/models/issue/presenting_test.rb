@@ -1,6 +1,19 @@
 require "test_helper"
 
 class Issue::PresentingTest < ActiveSupport::TestCase
+  test "最新可读期跳过生成中与无可见条目的期" do
+    Issue.create!(kind: "daily", period_key: "2026-09-09", state: "generating", generation_started_at: Time.current)
+    assert_equal "2026-09-08", Issue.latest_daily_key
+    assert_nil Issue.latest_weekly_key
+    weekly_item = items(:hn_one).dup
+    weekly_item.update!(issue: issues(:weekly_w36), source: sources(:ruanyf))
+    assert_equal "2026-W36", Issue.latest_weekly_key
+    weekly_item.update!(hidden: true)
+    assert_nil Issue.latest_weekly_key
+    items(:hn_one).update!(hidden: true)
+    assert_nil Issue.latest_daily_key
+  end
+
   # 上海 9月9日 05:00（还没到 06:00 的生成时间）与 07:00（过了）
   BEFORE_DAILY_TIME = Time.utc(2026, 9, 8, 21, 0)
   AFTER_DAILY_TIME = Time.utc(2026, 9, 8, 23, 0)
@@ -91,7 +104,7 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
   test "各源结果按排序值给出条数或失败" do
     row = Issue.daily_archive_props(now: NOW)[:days].last
 
-    assert_equal "HN 1 · GH 失败 · HAD 失败", row[:source_marks]
+    assert_equal "Hacker News 1 · GitHub Trending 失败 · Hackaday 失败", row[:source_marks]
     assert_equal "06:12 发布", row[:published_label]
   end
 

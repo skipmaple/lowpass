@@ -304,3 +304,14 @@ describe('按 hash 定位', () => {
     expect(scroll.mock.contexts[0]).toBe(document.getElementById(encodeURIComponent('issue-366-文章')))
   })
 })
+
+it('单条板块与标题重复时只保留一个标题，保留两种深链与返回目录', () => {
+ const group = weeklyGroup({ name: '言论', anchor: 'issue-366-quotes', items: [item({ id: 'quote', title: '言论', published_at: null })] })
+ const { container } = show({ sections: [weeklySection({ groups: [group] })] })
+ expect(screen.getAllByRole('heading', { name: '言论' })).toHaveLength(1)
+ expect(screen.getByRole('heading', { name: '言论', level: 3 })).toBeInTheDocument()
+ expect(container.querySelector('#issue-366-quotes')).not.toBeNull()
+ expect(container.querySelector('#item-quote')).not.toBeNull()
+ const back = screen.getByRole('link', { name: '返回板块目录' })
+ expect(document.getElementById(back.getAttribute('href')!.slice(1))).toHaveAttribute('aria-label', '板块')
+})

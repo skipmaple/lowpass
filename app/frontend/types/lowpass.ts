@@ -23,7 +23,7 @@ export type ArchiveDay = { period_key: string; date_label: string; weekday: stri
 export type ArchiveWeek = { period_key: string; week_label: string; range_label: string; state: ArchiveMark; summary: string; count: number | null };
 
 // 页脚在每个页面都要的两样（R51）
-export type FooterData = { daily_time: string; latest_weekly_key: string | null };
+export type FooterData = { daily_time: string; latest_weekly_key: string | null; latest_daily_key?: string | null };
 
 // ── 搜索（PRD 5.4、设计 6.2）：props 的形状由 SearchesController#render_search 定 ──
 export type Publication = "daily" | "weekly";
@@ -40,8 +40,8 @@ export type SearchResult = { item_id: string; rank: number; publication: Publica
 
 // P2-① 登录（PRD 5.5）：ApplicationController 的 inertia_share 每页都带的两样，加登录页与设置页的字段
 export type CurrentUser = { display_name: string; avatar_url: string | null; email: string | null; admin: boolean };
-export type Flash = { notice?: string; alert?: string };
-export type SharedProps = { current_user: CurrentUser | null; flash: Flash };
+export type Flash = { id?: string; notice?: string; alert?: string };
+export type SharedProps = { current_user: CurrentUser | null; flash: Flash; reason_generation?: { available: boolean; unavailable_reason: string | null } | null };
 export type AuthProvider = "google_oauth2" | "github" | "developer";
 export type SettingsIdentity = { provider: "google" | "github"; strategy: AuthProvider; linked_at_label: string | null };
 

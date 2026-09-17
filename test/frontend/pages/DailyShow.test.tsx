@@ -1,9 +1,9 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import Show, { type DailyShowProps } from '@/pages/Daily/Show'
-import { router } from '../support/inertia'
+import { router, setPageProps } from '../support/inertia'
 import { dailyIssue, item, source } from '../support/props'
 
 // 日刊详情（也是首页 D20）。这里验的是页面自己的三件事：
@@ -179,7 +179,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
   it('栏尾是「来源名 完整榜单」，新标签页打开', () => {
     const { container } = show()
 
-    const foot = container.querySelector('.source-foot')
+    const foot = container.querySelector('.source-foot[target="_blank"]')
     expect(foot).toHaveTextContent('Hacker News 完整榜单')
     expect(foot).toHaveAttribute('href', 'https://news.ycombinator.com/news')
     expect(foot).toHaveAttribute('target', '_blank')
@@ -189,7 +189,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
   it('源站地址算不出来时整条收掉', () => {
     const { container } = show({ sources: [source({ home_url: null })], active_source_id: 'src-hn' })
 
-    expect(container.querySelector('.source-foot')).toBeNull()
+    expect(container.querySelector('.source-foot[target="_blank"]')).toBeNull()
   })
 
   it('条目按 props 里的顺序排，序号用 rank', () => {
@@ -259,4 +259,32 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
 
     expect(scroll).not.toHaveBeenCalled()
   })
+})
+
+it('缺期只说一次事实，并链接最近可读日刊', () => {
+ show({ missing: true, issue: dailyIssue({ state: null, status: '本期未生成' }), latest_daily_key: '2026-09-07' })
+ expect(screen.getAllByText('本期未生成')).toHaveLength(1)
+ expect(screen.getByRole('link', { name: '阅读最新日刊' })).toHaveAttribute('href', '/daily/2026-09-07')
+})
+
+it('不可用推荐理由只解释一次，条目保留带说明的禁用操作', () => {
+ setPageProps({ current_user: { admin: true }, reason_generation: { available: false, unavailable_reason: '未配置模型供应商' } })
+ show({ items_by_source: { 'src-hn': [item(), item({ id: 'second' })] } })
+ expect(screen.getAllByText('未配置模型供应商')).toHaveLength(1)
+ expect(screen.getAllByRole('link', { name: '推荐理由设置' })).toHaveLength(1)
+ for (const button of screen.getAllByRole('button', { name: '重新生成理由' })) {
+   expect(button).toBeDisabled()
+   expect(button).toHaveAccessibleDescription(/未配置模型供应商/)
+ }
+ setPageProps({})
+})
+
+it('管理员补生成保持等待状态并显示实际服务端结果', async () => {
+ show({ missing: true, issue: dailyIssue({ state: null, status: '本期未生成' }), backfill_available: true })
+ await userEvent.click(screen.getByRole('button', { name: '补生成本期' }))
+ expect(screen.getByRole('button', { name: '正在补生成…' })).toBeDisabled()
+ const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
+ act(() => { options.onSuccess({ props: { flash: { alert: '这一天已有期' } } }); options.onFinish() })
+ expect(screen.getByRole('status')).toHaveTextContent('这一天已有期')
+ expect(screen.getByRole('button', { name: '补生成本期' })).toBeEnabled()
 })

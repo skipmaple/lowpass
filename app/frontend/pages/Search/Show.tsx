@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react'
+import { Head, Link, router, usePage } from '@inertiajs/react'
 import { useState } from 'react'
 import type * as React from 'react'
 
@@ -159,6 +159,7 @@ function Body(props: SearchShowProps) {
 export default function Show(props: SearchShowProps) {
   return (
     <>
+      <Head title={props.q ? `搜索 · ${props.q}` : '搜索'} />
       {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
       <h1 className="sr-only">搜索</h1>
       <SearchHead key={props.q} q={props.q} filters={props.filters} truncated={props.truncated} />

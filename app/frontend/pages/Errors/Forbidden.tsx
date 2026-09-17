@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react'
+import { Head, Link, usePage } from '@inertiajs/react'
 import type * as React from 'react'
 
 import Layout from '@/components/Layout'
@@ -13,9 +13,10 @@ export type ForbiddenProps = FooterData
 export default function Forbidden() {
   return (
     <div className="issue-body" style={{ marginTop: 32 }}>
+      <Head title="无权访问" />
       <div className="source-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
-        <span className="state-line">你没有权限访问这个页面。</span>
-        <Link href={DAILY_LATEST} className="t cjk" style={{ fontSize: 'var(--fs-15)' }}>
+        <h1 className="state-line">你没有权限访问这个页面。</h1>
+        <Link href={DAILY_LATEST} className="ctrl cjk" style={{ fontSize: 'var(--fs-15)' }}>
           回到首页
         </Link>
       </div>

@@ -33,7 +33,7 @@ function Row({ week }: { week: ArchiveWeek }) {
       <span className="archive-sub">{week.range_label}</span>
       <span className="archive-label">
         {week.summary ? (
-          <Mixed text={week.summary} font="latin" size="var(--fs-15)" color={published ? 'var(--ink)' : 'var(--ink2)'} />
+          <Mixed text={week.summary} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
         ) : null}
       </span>
       <span className="archive-meta">{week.count ? <Mixed text={`${week.count} 条`} /> : null}</span>
@@ -41,13 +41,15 @@ function Row({ week }: { week: ArchiveWeek }) {
   )
 }
 
-export default function Index({ year_label, prev_year, next_year, weeks }: WeeklyIndexProps) {
+export default function Index({ year_label, prev_year, next_year, weeks, latest_weekly_key }: WeeklyIndexProps) {
   return (
     <>
       <PageHead
         big={year_label}
+        context="周刊归档"
         controls={
           <>
+            {latest_weekly_key ? <Ctrl href={latestWeeklyHref(latest_weekly_key)} label="阅读最新周刊" /> : null}
             {prev_year ? <Ctrl href={yearHref(prev_year.key)} label={prev_year.label} icon="chevron-left" side="left" /> : null}
             {next_year ? <Ctrl href={yearHref(next_year.key)} label={next_year.label} icon="chevron-right" side="right" /> : null}
           </>

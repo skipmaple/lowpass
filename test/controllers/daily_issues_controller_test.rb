@@ -3,6 +3,19 @@ require "test_helper"
 class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as(users(:drew)) }
 
+  test "缺期提供最近可读日刊与推荐理由不可用原因" do
+    get daily_issue_path("2026-09-03")
+    assert_equal "2026-09-08", page_props["latest_daily_key"]
+    assert_equal false, page_props.dig("reason_generation", "available")
+    assert_equal "未配置模型供应商", page_props.dig("reason_generation", "unavailable_reason")
+  end
+
+  test "共享导航在后台也指向最近可读周刊" do
+    items(:hn_one).dup.tap { |item| item.issue = issues(:weekly_w36); item.source = sources(:ruanyf); item.save! }
+    get admin_sources_path
+    assert_equal "2026-W36", page_props["latest_weekly_key"]
+  end
+
   test "首页渲染最新一期" do
     get root_path
     follow_redirect!
@@ -156,7 +169,8 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # 页脚的「最新周刊」在每个页面都指向最新一期周刊（R51）
-  test "props 带最新一期周刊的周期键" do
+  test "props 带最新一期可读周刊的周期键" do
+    items(:hn_one).dup.tap { |item| item.issue = issues(:weekly_w36); item.source = sources(:ruanyf); item.save! }
     get daily_issue_path("2026-09-08")
 
     assert_equal "2026-W36", page_props["latest_weekly_key"]
@@ -189,7 +203,7 @@ class DailyArchiveTest < ActionDispatch::IntegrationTest
       assert_equal "9月8日", row["date_label"]
       assert_equal "星期二", row["weekday"]
       assert_equal "06:12 发布", row["published_label"]
-      assert_equal "HN 1 · GH 失败 · HAD 失败", row["source_marks"]
+      assert_equal "Hacker News 1 · GitHub Trending 失败 · Hackaday 失败", row["source_marks"]
     end
   end
 

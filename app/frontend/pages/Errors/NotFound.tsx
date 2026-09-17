@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react'
+import { Head, Link, usePage } from '@inertiajs/react'
 import type * as React from 'react'
 
 import Layout from '@/components/Layout'
@@ -14,9 +14,10 @@ export type NotFoundProps = FooterData
 export default function NotFound() {
   return (
     <div className="issue-body" style={{ marginTop: 32 }}>
+      <Head title="页面不存在" />
       <div className="source-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
-        <span className="state-line">这一页不存在。</span>
-        <Link href={DAILY_LATEST} className="t cjk" style={{ fontSize: 'var(--fs-15)' }}>
+        <h1 className="state-line">这一页不存在。</h1>
+        <Link href={DAILY_LATEST} className="ctrl cjk" style={{ fontSize: 'var(--fs-15)' }}>
           回到首页
         </Link>
       </div>

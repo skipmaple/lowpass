@@ -6,6 +6,7 @@ void createInertiaApp({
   pages: "../pages",
 
   strictMode: true,
+  title: (title) => `${title} · Lowpass`,
 
   // 持久布局：默认给每个页面套 Layout（报头/页脚），跨页跳转时 Layout 不重新挂载
   // （React 按元素类型在同一位置做 reconciliation，不看是哪个函数生成的 JSX）。

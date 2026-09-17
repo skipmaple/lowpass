@@ -86,6 +86,6 @@ describe('周刊归档的翻年', () => {
   it('越界的方向不摆按钮', () => {
     const { container } = index({ prev_year: null, next_year: null })
 
-    expect(container.querySelector('.page-nav')?.textContent).toBe('')
+    expect(container.querySelector('.page-nav')?.textContent).toBe('阅读最新周刊')
   })
 })

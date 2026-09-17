@@ -41,7 +41,7 @@ export type SearchResult = { item_id: string; rank: number; publication: Publica
 // P2-① 登录（PRD 5.5）：ApplicationController 的 inertia_share 每页都带的两样，加登录页与设置页的字段
 export type CurrentUser = { display_name: string; avatar_url: string | null; email: string | null; admin: boolean };
 export type Flash = { id?: string; notice?: string; alert?: string };
-export type SharedProps = { current_user: CurrentUser | null; flash: Flash; reason_generation?: { available: boolean; unavailable_reason: string | null } | null };
+export type SharedProps = { current_user: CurrentUser | null; flash: Flash };
 export type AuthProvider = "google_oauth2" | "github" | "developer";
 export type SettingsIdentity = { provider: "google" | "github"; strategy: AuthProvider; linked_at_label: string | null };
 

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ItemRow from '@/components/ItemRow'
-import { router, setPageProps } from '../support/inertia'
+import { setPageProps } from '../support/inertia'
 import { item } from '../support/props'
 
 // 条目行（PRD 5.1「条目结构」）：十条格式一致，元数据行按适配器换内容但只有数字与记号。
@@ -17,7 +17,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
-  router.post.mockClear()
 })
 
 const hn = () =>
@@ -81,31 +80,65 @@ describe('ItemRow 元数据（按适配器）', () => {
   it('HN：分数、评论数链到讨论页、相对时间带绝对时间的悬停', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
 
-    expect(screen.getByText('▲ 312')).toBeInTheDocument()
+    expect(screen.getByText('312')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '得分' })).toBeInTheDocument()
 
-    const comments = screen.getByRole('link', { name: '145' })
+    const comments = screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' })
     expect(comments).toHaveAttribute('href', 'https://news.ycombinator.com/item?id=41000001')
     expect(comments).toHaveAttribute('target', '_blank')
     expect(comments.getAttribute('rel')).toContain('noopener')
 
     const age = screen.getByTitle('09-09 01:12')
     expect(age).toHaveTextContent('5h')
+    expect(age).toHaveAttribute('datetime', '2026-09-08T17:12:00Z')
+    expect(screen.getByRole('img', { name: '发布时间' })).toBeInTheDocument()
+  })
+
+  it('评论图标响应悬停与键盘聚焦，离开后恢复，不改变讨论链接', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+    const comments = screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' })
+    const path = comments.querySelector('path')!
+    const initial = path.getAttribute('d')
+
+    await user.hover(comments)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path.getAttribute('d')).not.toBe(initial)
+    await user.unhover(comments)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path).toHaveAttribute('d', initial!)
+
+    await user.tab()
+    await user.tab()
+    expect(comments).toHaveFocus()
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path.getAttribute('d')).not.toBe(initial)
+    await user.hover(comments)
+    await user.unhover(comments)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path.getAttribute('d')).not.toBe(initial)
+    await user.tab()
+    act(() => vi.advanceTimersByTime(2000))
+    expect(path).toHaveAttribute('d', initial!)
+    expect(comments).toHaveAttribute('href', 'https://news.ycombinator.com/item?id=41000001')
   })
 
   it('HN：没有讨论页地址时评论数不是链接', () => {
     render(<ItemRow item={item({ meta: { score: 312, comments: 145 } })} adapter="hacker_news" rank={1} />)
 
     expect(screen.getByText('145')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '145' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /145 条评论/ })).toBeNull()
+    expect(screen.getByRole('img', { name: '评论' })).toBeInTheDocument()
   })
 
   it('GitHub：语言、收成 k 的 star 数、今日新增', () => {
     render(<ItemRow item={gh()} adapter="github_trending" rank={1} />)
 
     expect(screen.getByText('Rust')).toBeInTheDocument()
-    expect(screen.getByText('★ 12.3k')).toBeInTheDocument()
+    expect(screen.getByText('12.3k')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Star' })).toBeInTheDocument()
     expect(screen.getByText('+312')).toBeInTheDocument()
-    expect(screen.queryByText('▲ 312')).toBeNull()
+    expect(screen.queryByRole('img', { name: '得分' })).toBeNull()
   })
 
   it('GitHub：今日新增只有前三名反白成绿徽章', () => {
@@ -128,18 +161,17 @@ describe('ItemRow 元数据（按适配器）', () => {
   it('没有发布时间就不渲染时间那一段', () => {
     render(<ItemRow item={item({ published_at: null, meta: { score: 312 } })} adapter="hacker_news" rank={1} />)
 
-    expect(screen.getByText('▲ 312')).toBeInTheDocument()
+    expect(screen.getByText('312')).toBeInTheDocument()
     expect(screen.queryByTitle('09-09 01:12')).toBeNull()
   })
 
-  it('无法解析的发布时间不显示，也不留下尾部的点', () => {
+  it('无法解析的发布时间不留下图标或占位', () => {
     const { container } = render(<ItemRow item={item({ published_at: 'not a date', meta: { score: 312 } })} adapter="hacker_news" rank={1} />)
 
     expect(screen.queryByText('NaNd')).toBeNull()
-    expect(screen.getByText('▲ 312')).toBeInTheDocument()
-    // 元数据行应该只有分数，没有尾部点
-    const meta = container.querySelector('span[style*="inline-flex"]')
-    expect(meta?.textContent).toBe('▲ 312')
+    expect(screen.getByText('312')).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '发布时间' })).toBeNull()
+    expect(container.querySelector('.item-meta')?.children).toHaveLength(1)
   })
 })
 
@@ -166,8 +198,8 @@ describe('ItemRow 周刊那一版（D19）', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={1} variant="weekly" />)
 
     expect(screen.getByText('09-09 01:12')).toBeInTheDocument()
-    expect(screen.queryByText('▲ 312')).toBeNull()
-    expect(screen.queryByRole('link', { name: '145' })).toBeNull()
+    expect(screen.queryByRole('img', { name: '得分' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /145 条评论/ })).toBeNull()
   })
 
   it('整期同一天发布时（没有 published_at）整行不渲染', () => {
@@ -209,51 +241,19 @@ describe('锚点', () => {
   })
 })
 
-describe('ItemRow 管理员的单条重生成（R-9.6）', () => {
-  it('管理员看到「重生成」，普通读者看不到；点了 POST 单条重生成', async () => {
-    setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin: true }, flash: {}, errors: {} })
-    const { unmount } = render(<ItemRow item={item({ id: 'it-1', reason: null })} adapter="hacker_news" rank={1} />)
-    await userEvent.click(screen.getByRole('button', { name: '重新生成理由' }))
-    // 单条重生成是同步调模型的，最坏 20 秒 × 3：请求回来之前按钮禁着，不让连点
-    expect(router.post).toHaveBeenCalledWith('/admin/items/it-1/reason', {}, expect.objectContaining({ onFinish: expect.any(Function) }))
-    expect(screen.getByRole('button', { name: '生成中…' })).toBeDisabled()
-    unmount()
+describe('ItemRow 阅读页不提供重生成入口', () => {
+  it.each([true, false])('日刊展示已有推荐，管理员或读者都没有「重生成」（admin=%s）', (admin) => {
+    setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin }, flash: {}, errors: {} })
+    render(<ItemRow item={item({ reason: '与你关注的终端工具相关。', interest_tag: 'AI' })} adapter="hacker_news" rank={1} />)
 
-    setPageProps({ current_user: { display_name: 'G', avatar_url: null, email: null, admin: false }, flash: {}, errors: {} })
-    render(<ItemRow item={item({ id: 'it-2', reason: '有理由' })} adapter="hacker_news" rank={2} variant="daily" />)
-    expect(screen.queryByRole('button', { name: '重新生成理由' })).toBeNull()
+    expect(screen.getByText('与你关注的终端工具相关。')).toHaveClass('item-reason')
+    expect(screen.getByText('AI')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
   })
 
   it('周刊条目永远没有「重生成」', () => {
     setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: null, admin: true }, flash: {}, errors: {} })
     render(<ItemRow item={item({ id: 'it-3' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
-    expect(screen.queryByRole('button', { name: '重新生成理由' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
   })
-})
-
-it('生成理由显示该条目的忙碌与服务端失败结果', async () => {
- setPageProps({ current_user: { admin: true } })
- render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
- await userEvent.click(screen.getByRole('button', { name: '重新生成理由' }))
- expect(screen.getByRole('button', { name: '生成中…' })).toBeDisabled()
- const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
- act(() => { options.onSuccess({ props: { flash: { alert: '重生成失败：输出不合规' } } }); options.onFinish() })
- expect(screen.getByRole('alert')).toHaveTextContent('重生成失败：输出不合规')
- expect(screen.getByRole('button', { name: '重新生成理由' })).toBeEnabled()
-})
-it('未配置推荐理由时说明前提并提供设置入口', () => {
- setPageProps({ current_user: { admin: true }, reason_generation: { available: false, unavailable_reason: '未配置模型供应商' } })
- render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
- expect(screen.getByRole('button', { name: '重新生成理由' })).toBeDisabled()
- expect(screen.getByText('未配置模型供应商')).toBeInTheDocument()
- expect(screen.getByRole('link', { name: '推荐理由设置' })).toHaveAttribute('href', '/admin/settings#reasons')
-})
-
-it('网络故障显示本条目的可重试错误，不宣称服务端成功', async () => {
- setPageProps({ current_user: { admin: true } })
- render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
- await userEvent.click(screen.getByRole('button', { name: '重新生成理由' }))
- const options = router.post.mock.calls[router.post.mock.calls.length - 1][2]
- act(() => { options.onNetworkError?.(new Error('offline')); options.onFinish() })
- expect(screen.getByRole('alert')).toHaveTextContent('网络连接失败，请刷新确认生成结果后重试')
 })

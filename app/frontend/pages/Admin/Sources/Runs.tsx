@@ -76,7 +76,7 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
           <Ctrl href={ADMIN_SOURCES} label="返回列表" icon="chevron-left" side="left" />
           {latest_issue ? (
             <button type="button" className="btn-primary" disabled={busy} onClick={() => setConfirm(true)}>
-              <Icon name="refresh-cw" color="currentColor" />
+              <Icon name={busy ? 'clock' : 'refresh-cw'} color="currentColor" />
               <span>{busy ? '进行中' : `重抓最新一期 · ${latest_issue.label}`}</span>
             </button>
           ) : null}

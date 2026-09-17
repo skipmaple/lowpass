@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -23,6 +23,28 @@ afterEach(() => {
 })
 
 describe('Admin/Sources/Form', () => {
+  it('测试抓取时图标显示等待状态，成功后变为确认图形并恢复按钮', async () => {
+    let resolve!: (result: ReturnType<typeof testFetchResult>) => void
+    const response = new Promise<ReturnType<typeof testFetchResult>>((done) => { resolve = done })
+    vi.spyOn(admin, 'testFetch').mockReturnValue(response)
+    show()
+    const button = screen.getByRole('button', { name: '测试抓取' })
+    const path = button.querySelector('path')!
+    const initial = path.getAttribute('d')
+
+    await userEvent.click(button)
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveTextContent('测试中…')
+    await waitFor(() => expect(path.getAttribute('d')).not.toBe(initial))
+
+    await act(async () => resolve(testFetchResult()))
+    expect(button).toBeEnabled()
+    expect(button).toHaveAttribute('aria-busy', 'false')
+    expect(button).toHaveTextContent('测试抓取')
+    await waitFor(() => expect(path).toHaveAttribute('d', 'M20 6C16.3333 9.6667 12.6667 13.3333 9 17C7.3333 15.3333 5.6667 13.6667 4 12'))
+  })
+
   it('新建：适配器分段、RSS 字段、保存 POST', async () => {
     show()
 

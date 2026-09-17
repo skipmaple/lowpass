@@ -10,7 +10,7 @@ import Layout from '@/components/Layout'
 import SourceState from '@/components/SourceState'
 import SourceTabs from '@/components/SourceTabs'
 import { useScrollToHash } from '@/lib/anchors'
-import { ADMIN_SETTINGS, DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
+import { DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SharedProps, SourceSummary } from '@/types/lowpass'
 
@@ -55,7 +55,7 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
     <>
       <div className="issue-body">
         {source.state === 'ok' ? (
-          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} reasonAvailabilityId="reason-availability" />)
+          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} />)
         ) : (
           <SourceState state={source.state} lastOkLabel={source.last_ok_label} />
         )}
@@ -103,7 +103,6 @@ function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProp
 }
 
 export default function Show({ issue, missing, sources, items_by_source, active_source_id, latest_daily_key, backfill_available }: DailyShowProps) {
-  const { current_user, reason_generation } = usePage<SharedProps>().props
   useScrollToHash(issue.period_key)
   const notice = bodyNotice(issue, missing)
   const [backfilling, setBackfilling] = useState(false)
@@ -127,10 +126,6 @@ export default function Show({ issue, missing, sources, items_by_source, active_
   return (
     <>
       <IssueHead issue={issue} archiveHref={DAILY_ARCHIVE} hrefFor={dailyHref} />
-
-      {!missing && current_user?.admin && reason_generation?.available === false ? (
-        <p id="reason-availability" className="operation-feedback">{reason_generation.unavailable_reason} <Link className="t" href={`${ADMIN_SETTINGS}#reasons`}>推荐理由设置</Link></p>
-      ) : null}
 
       {/* R-1.6 缺期没有来源索引条，列表区只有「本期未生成」那一句 */}
       {missing ? (

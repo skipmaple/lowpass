@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -45,6 +45,20 @@ describe('Masthead 导航', () => {
 })
 
 describe('Masthead 搜索与账户', () => {
+  it('账户菜单开合时在原位置变为关闭图标，再恢复人像', async () => {
+    setPageProps({ current_user: currentUser({ avatar_url: null }) })
+    render(<Masthead />)
+    const button = screen.getByRole('button', { name: '账户' })
+    const path = button.querySelector('path')!
+    const initial = path.getAttribute('d')
+
+    await userEvent.click(button)
+    await waitFor(() => expect(path).toHaveAttribute('d', 'M18 6C14 10 10 14 6 18M6 6C10 10 14 14 18 18'))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(path).toHaveAttribute('d', initial!))
+    expect(button).toHaveFocus()
+  })
+
   // D21：搜索入口是链接与图标，搜索框只在搜索页
   it('搜索图标默认指向 /search', () => {
     setPageProps({})

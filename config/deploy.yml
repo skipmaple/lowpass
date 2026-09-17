@@ -1,6 +1,8 @@
 # Kamal 部署（ADR T4、T5、T12）：一台阿里云轻量（香港，x86_64）跑 web 单容器加 PostgreSQL accessory。
 # 这台机器上的 kamal-proxy 已在为另一个应用服务，lowpass 作为第二个应用共用它，按域名分流；
 # 变量的值全部来自 .kamal/secrets 读取的部署机环境，仓库里只有变量名。操作步骤见 docs/development.md「部署」。
+<%# 服务器地址不进仓库：本机从 deploy.env、CI 从 Environment secret 读 DEPLOY_HOST（docs/development.md「部署」） %>
+<% host = ENV["DEPLOY_HOST"].to_s.strip; abort "DEPLOY_HOST is not set: the server address is kept out of the repo, see docs/development.md" if host.empty? %>
 service: lowpass
 
 # 镜像在 Docker Hub：skipmaple/lowpass
@@ -8,12 +10,12 @@ image: skipmaple/lowpass
 
 servers:
   web:
-    - <DEPLOY_HOST>
+    - <%= host %>
   # ADR T4：起步单容器，Solid Queue 以 Puma 插件跑在 web 里（下面 env.clear 的 SOLID_QUEUE_IN_PUMA）。
   # 要拆 job 角色时打开这一段，并去掉 SOLID_QUEUE_IN_PUMA：
   # job:
   #   hosts:
-  #     - <DEPLOY_HOST>
+  #     - <%= host %>
   #   cmd: bin/jobs
 
 # kamal-proxy 做 SSL（Let's Encrypt，HTTP-01）。production.rb 的 force_ssl / assume_ssl 已经打开。
@@ -29,11 +31,18 @@ registry:
   password:
     - KAMAL_REGISTRY_PASSWORD
 
-# 本机是 Apple Silicon，服务器是 x86_64：直接在服务器上构建，省掉 QEMU 模拟的几倍耗时。
-# 想改回本地构建就删掉 remote 一行，保留 arch（Docker Desktop 会用模拟构建 amd64）。
+# 两条构建路：本机是 Apple Silicon，直接在服务器上构建，省掉 QEMU 模拟的几倍耗时；
+# CI（.github/workflows/deploy.yml）设了 KAMAL_BUILD_LOCAL，runner 本身就是 x86_64，就地构建，
+# 层缓存放 GitHub Actions cache。这个文件经 ERB 求值，条件只看这一个环境变量。
 builder:
   arch: amd64
-  remote: ssh://root@<DEPLOY_HOST>
+<% if ENV["KAMAL_BUILD_LOCAL"].to_s.empty? %>
+  remote: ssh://root@<%= host %>
+<% else %>
+  cache:
+    type: gha
+    options: mode=max
+<% end %>
 
 env:
   secret:
@@ -80,7 +89,7 @@ asset_path: /rails/public/vite
 accessories:
   db:
     image: postgres:17
-    host: <DEPLOY_HOST>
+    host: <%= host %>
     # 不发布到宿主机端口：127.0.0.1:5432 已被这台机器上另一个应用的库占用；应用走 docker 网络访问。
     # 要在本机连库用 bin/kamal accessory exec db "psql -U lowpass lowpass_production" 或 dbc。
     env:

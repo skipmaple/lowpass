@@ -3,11 +3,9 @@ require "test_helper"
 class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as(users(:drew)) }
 
-  test "缺期提供最近可读日刊与推荐理由不可用原因" do
+  test "缺期提供最近可读日刊" do
     get daily_issue_path("2026-09-03")
     assert_equal "2026-09-08", page_props["latest_daily_key"]
-    assert_equal false, page_props.dig("reason_generation", "available")
-    assert_equal "未配置模型供应商", page_props.dig("reason_generation", "unavailable_reason")
   end
 
   test "共享导航在后台也指向最近可读周刊" do

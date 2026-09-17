@@ -27,7 +27,6 @@ class DailyIssuesController < ApplicationController
         active_source_id: params[:source].presence_in(sources.pluck(:id)) || sources.dig(0, :id),
         latest_weekly_key: Issue.latest_weekly_key,
         latest_daily_key: Issue.latest_daily_key,
-        reason_generation: Current.user.admin? ? { available: Reasons.ready?, unavailable_reason: (Reasons.unready_label unless Reasons.ready?) } : nil,
         backfill_available: Current.user.admin? && issue.nil? && period_key <= PeriodKey.today
       }
     else

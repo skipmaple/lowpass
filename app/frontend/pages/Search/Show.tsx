@@ -103,14 +103,16 @@ function CountLine({ total, q, filters }: { total: number; q: string; filters: F
 }
 
 // R-4.7 分页「上一页 · n / m · 下一页」（画布 pager()）
-function Pager({ q, filters, page, pages }: { q: string; filters: Filters; page: number; pages: number }) {
+function Pager({ q, committedQuery, filters, page, pages }: { q: string; committedQuery: string; filters: Filters; page: number; pages: number }) {
+  const pageFor = (target: number) => q === committedQuery ? target : 1
+
   return (
     <nav className="search-pager" aria-label="分页">
-      <Ctrl href={page > 1 ? hrefOf(q, filters, page - 1) : null} label="上一页" icon="chevron-left" side="left" />
+      <Ctrl href={page > 1 ? hrefOf(q, filters, pageFor(page - 1)) : null} label="上一页" icon="chevron-left" side="left" />
       <span className="search-page">
         {page} / {pages}
       </span>
-      <Ctrl href={page < pages ? hrefOf(q, filters, page + 1) : null} label="下一页" icon="chevron-right" side="right" />
+      <Ctrl href={page < pages ? hrefOf(q, filters, pageFor(page + 1)) : null} label="下一页" icon="chevron-right" side="right" />
     </nav>
   )
 }
@@ -124,7 +126,7 @@ function Notice({ text, children }: React.PropsWithChildren<{ text: string }>) {
   )
 }
 
-function Body(props: SearchShowProps & { onModifyQuery: () => void }) {
+function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery: () => void }) {
   const { state, q, filters, results, total, page, pages, latest_daily_key, latest_daily_label } = props
 
   switch (state) {
@@ -142,7 +144,7 @@ function Body(props: SearchShowProps & { onModifyQuery: () => void }) {
         <Notice text={COPY.empty(q)}>
           <div>
             {hasActiveFilters(filters) ? (
-              <Ctrl href={searchHref({ q })} label="清除筛选" icon="x" side="left" />
+              <Ctrl href={searchHref({ q: props.navigationQuery })} label="清除筛选" icon="x" side="left" />
             ) : (
               <button type="button" className="ctrl" onClick={props.onModifyQuery}>修改关键词</button>
             )}
@@ -156,24 +158,25 @@ function Body(props: SearchShowProps & { onModifyQuery: () => void }) {
     case 'results':
       return (
         <>
-          <CountLine total={total} q={q} filters={filters} />
+          <CountLine total={total} q={props.navigationQuery} filters={filters} />
           <div className="search-results">
             {results.map((result) => (
               <SearchResultRow key={result.item_id} result={result} q={q} />
             ))}
           </div>
-          {pages > 1 ? <Pager q={q} filters={filters} page={page} pages={pages} /> : null}
+          {pages > 1 ? <Pager q={props.navigationQuery} committedQuery={q} filters={filters} page={page} pages={pages} /> : null}
         </>
       )
   }
 }
 
 export default function Show(props: SearchShowProps) {
+  const { url: navigationUrl } = usePage<SearchShowProps>()
   const [draft, setDraft] = useState(props.q)
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => setDraft(props.q), [props.q])
+  useEffect(() => setDraft(props.q), [navigationUrl, props.q])
   useEffect(() => {
     const removeStart = router.on('start', () => setLoading(true))
     const removeFinish = router.on('finish', () => setLoading(false))
@@ -189,6 +192,7 @@ export default function Show(props: SearchShowProps) {
   }
 
   const liveText = loading ? '正在搜索…' : props.state === 'results' ? `${props.total} 条结果` : ''
+  const navigationQuery = draft.trim()
 
   return (
     <>
@@ -196,9 +200,9 @@ export default function Show(props: SearchShowProps) {
       {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
       <h1 className="sr-only">搜索</h1>
       <SearchHead draft={draft} setDraft={setDraft} filters={props.filters} truncated={props.truncated} inputRef={inputRef} />
-      <SearchFilters q={draft.trim()} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
+      <SearchFilters q={navigationQuery} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveText}</span>
-      <Body {...props} onModifyQuery={modifyQuery} />
+      <Body {...props} navigationQuery={navigationQuery} onModifyQuery={modifyQuery} />
     </>
   )
 }

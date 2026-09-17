@@ -36,20 +36,21 @@ class SearchingTest < ApplicationSystemTestCase
     assert_selector "article#item-#{items(:hn_one).id}", text: "Show HN"
   end
 
-  test "筛选使用未提交的搜索词且浏览器前进后退同步搜索框" do
-    visit search_path(q: "terminal")
-    fill_in "搜索", with: "rust"
+  test "同一查询词的筛选历史同步搜索框并保留筛选焦点" do
+    visit search_path(q: "rust")
 
-    find(".filters").click_on "Hacker News"
-    assert_current_path search_path(q: "rust", source: sources(:hn).id)
-    assert_field "搜索", with: "rust"
+    find(".filters").click_on "日刊"
+    assert_current_path search_path(q: "rust", type: "daily")
+    assert_selector ".filters .seg-item:focus", text: "日刊"
+
+    fill_in "搜索", with: "draft"
 
     page.go_back
-    assert_current_path search_path(q: "terminal")
-    assert_field "搜索", with: "terminal"
+    assert_current_path search_path(q: "rust")
+    assert_field "搜索", with: "rust"
 
     page.go_forward
-    assert_current_path search_path(q: "rust", source: sources(:hn).id)
+    assert_current_path search_path(q: "rust", type: "daily")
     assert_field "搜索", with: "rust"
   end
 

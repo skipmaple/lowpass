@@ -43,6 +43,7 @@ afterEach(() => {
   router.get.mockClear()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+  window.history.replaceState({}, '', '/')
 })
 
 describe('六态', () => {
@@ -80,6 +81,17 @@ describe('六态', () => {
 
     expect(screen.getByText('没有找到「量子 咖啡机」相关内容。试试更短的关键词，或放宽筛选。')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '清除筛选' })).toHaveAttribute('href', '/search?q=%E9%87%8F%E5%AD%90+%E5%92%96%E5%95%A1%E6%9C%BA')
+  })
+
+  it('清除筛选使用未提交的查询词', async () => {
+    const user = userEvent.setup()
+    show({ q: 'old', state: 'empty', filters: searchFilters({ type: 'daily' }) })
+
+    const input = screen.getByRole('searchbox', { name: '搜索' })
+    await user.clear(input)
+    await user.type(input, '  rust  ')
+
+    expect(screen.getByRole('link', { name: '清除筛选' })).toHaveAttribute('href', '/search?q=rust')
   })
 
   it('无结果且没有筛选：修改关键词会聚焦并选中搜索词', async () => {
@@ -174,6 +186,20 @@ describe('搜索框', () => {
 
     rerender(<Show {...showProps({ q: 'history' })} />)
     expect(input).toHaveValue('history')
+  })
+
+  it('同一查询词的导航地址变化也会同步输入框', async () => {
+    const user = userEvent.setup()
+    window.history.replaceState({}, '', '/search?q=first&type=daily')
+    const { rerender } = show({ q: 'first', filters: searchFilters({ type: 'daily' }) })
+    const input = screen.getByRole('searchbox', { name: '搜索' })
+
+    await user.clear(input)
+    await user.type(input, 'draft')
+    window.history.replaceState({}, '', '/search?q=first&type=weekly')
+    rerender(<Show {...showProps({ q: 'first', filters: searchFilters({ type: 'weekly' }) })} />)
+
+    expect(input).toHaveValue('first')
   })
 
   it('Inertia 访问期间通过 live region 宣告加载状态', () => {
@@ -276,6 +302,33 @@ describe('排序与分页', () => {
 
     expect(count.getByRole('link', { name: '相关度' })).toHaveAttribute('aria-current', 'true')
     expect(count.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber+rust&sort=date')
+  })
+
+  it('排序使用未提交的查询词并回到第 1 页', async () => {
+    const user = userEvent.setup()
+    const { container } = results({ page: 2, pages: 3, total: 41 })
+    const input = screen.getByRole('searchbox', { name: '搜索' })
+
+    await user.clear(input)
+    await user.type(input, '  fresh  ')
+
+    const count = within(container.querySelector('.search-count') as HTMLElement)
+    expect(count.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=fresh&sort=date')
+  })
+
+  it('草稿变化时分页先从新查询第 1 页开始，未变化时正常翻页', async () => {
+    const user = userEvent.setup()
+    results({ page: 2, pages: 3, total: 41 })
+    let pager = within(screen.getByRole('navigation', { name: '分页' }))
+    expect(pager.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/search?q=kuber+rust&page=3')
+
+    const input = screen.getByRole('searchbox', { name: '搜索' })
+    await user.clear(input)
+    await user.type(input, 'new query')
+
+    pager = within(screen.getByRole('navigation', { name: '分页' }))
+    expect(pager.getByRole('link', { name: '上一页' })).toHaveAttribute('href', '/search?q=new+query')
+    expect(pager.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/search?q=new+query')
   })
 
   it('第 1 页没有上一页，最后一页没有下一页', () => {

@@ -3,7 +3,7 @@ import PageHead from '@/components/PageHead'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue } from '@/types/lowpass'
 
-// 日刊期头：文楷 56 日期在左，右侧叠放 Maple 13 的发布时间与文楷 20 的星期，
+// 日刊期头：文楷 56 日期在左，右侧用两层区分日期属性与发布时间，
 // 状态标签是 1px 描边的小签（时钟图标 + 文楷 12），右端 40px 描边的前一期 / 归档 / 后一期。
 // 装置本身在 PageHead 里，这里只把一期的 props 摆到位。
 // 画布：docs/design/src/pages_front2.py 的 issue_head()、pages_front3.py 的 head_m()。
@@ -29,12 +29,11 @@ export default function IssueHead({ issue, archiveHref, hrefFor }: IssueHeadProp
     <PageHead
       big={issue.date_label}
       title={`日刊 · ${issue.year}年${issue.date_label}`}
-      /* 字号走 .issue-head-time（桌面 13、手机 12，画布 head_m 是 12）：行内样式盖不住 @media */
+      /* 年份与星期属于日期属性，合成一行；发布时间作为第二层，避免三行窄列的层级混杂。 */
       top={<>
-        <Mixed text={`${issue.year} 年`} className="issue-head-year" size="inherit" nowrap />
+        <Mixed text={`${issue.year} 年 · ${issue.weekday}`} className="issue-head-calendar" size="inherit" nowrap />
         {issue.time_label ? <Mixed text={issue.time_label} className="issue-head-time" size="inherit" nowrap /> : null}
       </>}
-      bottom={issue.weekday}
       tag={issue.status && issue.state === 'published' ? <StatusTag text={issue.status} /> : null}
       nav={{
         prevHref: issue.prev_key ? hrefFor(issue.prev_key) : null,

@@ -5,7 +5,7 @@ import IssueHead, { StatusTag } from '@/components/IssueHead'
 import { DAILY_ARCHIVE, dailyHref } from '@/lib/paths'
 import { dailyIssue } from '../support/props'
 
-// 日刊期头：日期是 h1，右侧叠发布时间与星期，状态标签挂在右上，右端是期导航。
+// 日刊期头：日期是 h1，右侧两层分别是日期属性与发布时间，状态标签挂在右上，右端是期导航。
 // 期导航在桌面与手机各排一次（同一份 DOM，tokens.css 里换位），所以都用 getAllByRole 取。
 
 function head(issue = dailyIssue()) {
@@ -25,16 +25,17 @@ describe('IssueHead', () => {
     const { container } = head(dailyIssue({ period_key: '2025-09-08', year: 2025 }))
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('9月8日')
-    expect(container.querySelector('.issue-head-year')).toHaveTextContent('2025 年')
+    expect(container.querySelector('.issue-head-calendar')).toHaveTextContent('2025 年 · 星期二')
     expect(document.title).toBe('日刊 · 2025年9月8日 · Lowpass')
   })
 
-  it('日期是 h1，星期与发布时间在右侧', () => {
+  it('日期是 h1，年份与星期合成一行，发布时间单独成第二层', () => {
     const { container } = head()
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('9月8日')
-    expect(screen.getByText('星期二')).toBeInTheDocument()
+    expect(container.querySelector('.issue-head-calendar')).toHaveTextContent('2026 年 · 星期二')
     expect(container.querySelector('.issue-head-time')).toHaveTextContent('06:12 发布')
+    expect(container.querySelector('.issue-head-weekday')).toBeNull()
   })
 
   it('有状态才挂标签', () => {

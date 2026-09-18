@@ -4,11 +4,11 @@ require "test_helper"
 class WeeklyIssuesControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as(users(:drew)) }
 
-  def ruanyf_item(title, section:, issue_no: 366, rank: 1, degraded: false, url: nil)
+  def ruanyf_item(title, section:, issue_no: 366, rank: 1, degraded: false, url: nil, image_urls: nil)
     issues(:weekly_w36).items.create!(
       source: sources(:ruanyf), title: title, section: section, rank: rank, fetched_at: Time.current,
       url: url || "https://r.example/#{issue_no}/#{rank}", url_hash: Digest::SHA256.hexdigest("#{issue_no}/#{rank}"),
-      meta: { issue_no: issue_no, issue_title: "慢下来的理由", degraded: degraded }
+      meta: { issue_no: issue_no, issue_title: "慢下来的理由", degraded: degraded, image_urls: image_urls }.compact
     )
   end
 
@@ -22,6 +22,15 @@ class WeeklyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "本周话题"
     assert_includes response.body, "第 366 期"
     assert_equal [ "本周话题", "工具" ], page_props["sections"].sole["groups"].map { |group| group["name"] }
+  end
+
+  test "周刊条目把对应图片地址交给前端" do
+    ruanyf_item("带图片的条目", section: "图片", image_urls: [ "https://cdn.example.com/one.webp", "https://cdn.example.com/two.webp" ])
+
+    get weekly_issue_path("2026-W36")
+
+    item = page_props["sections"].sole["groups"].sole["items"].sole
+    assert_equal [ "https://cdn.example.com/one.webp", "https://cdn.example.com/two.webp" ], item.dig("meta", "image_urls")
   end
 
   test "期头给出周次、年份与日期范围" do

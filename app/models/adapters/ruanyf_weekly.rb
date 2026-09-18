@@ -33,6 +33,10 @@ module Adapters
       end
 
       def entry(item, parsed, number, rank)
+        meta = { issue_no: number, issue_title: parsed[:title], anchor: anchor(item[:section]) }
+        image_urls = item[:image_urls].filter_map { |href| image_url(href, number) }.uniq
+        meta[:image_urls] = image_urls if image_urls.any?
+
         Entry.new(
           title: item[:title],
           url: url_for(item, number, rank),
@@ -40,8 +44,16 @@ module Adapters
           section: item[:section],
           published_at: parsed[:published_on]&.in_time_zone(PeriodKey::ZONE)&.beginning_of_day&.utc,
           rank: rank,
-          meta: { issue_no: number, issue_title: parsed[:title], anchor: anchor(item[:section]) }
+          meta: meta
         )
+      end
+
+      # 图片相对地址以原始 Markdown 文件为基准；只把浏览器能作为图片请求的 HTTP(S) 地址交给前端。
+      def image_url(href, number)
+        uri = URI.join("#{RAW}/docs/issue-#{number}.md", href)
+        uri.to_s if uri.is_a?(URI::HTTP) && uri.host.present?
+      rescue URI::Error
+        nil
       end
 
       # 相对链接以原文地址为基解析成绝对地址；没有链接的条目（言论、图注）回退到原文的板块锚点。

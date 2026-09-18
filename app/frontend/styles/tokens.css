@@ -257,6 +257,17 @@ a.t:hover { text-decoration-color: var(--ink); }
    PRD 6.3 的 Newsreader 15/1.5，两套行高分属不同角色，不能共用一个数。两行截断沿用 .item-summary。 */
 .item-summary--weekly { line-height: 1.7; }
 
+/* 周刊图片属于条目正文：单图占完整阅读列，多图保持原顺序组成双栏图版；全部使用原比例，不裁切。 */
+.item-media { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; width: 100%; max-width: 920px; padding: 8px 0 4px; }
+.item-media--multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.item-media-frame { display: flex; align-items: center; justify-content: center; min-width: 0; margin: 0; border: 1px solid var(--rule); }
+.item-media-image { display: block; width: 100%; height: auto; max-height: 560px; object-fit: contain; }
+
+@media (max-width: 767px) {
+  .item-media--multiple { grid-template-columns: minmax(0, 1fr); }
+  .item-media-image { max-height: none; }
+}
+
 /* 归档：期头底线下面直接是行，行间 35% 墨线；整行可点，日期与周次带 1px 下划线 */
 .archive-list { padding-top: 24px; }
 .archive-row { display: grid; gap: 0 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--rule);

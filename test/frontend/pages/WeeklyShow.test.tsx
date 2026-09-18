@@ -59,11 +59,14 @@ describe('周刊期头', () => {
 })
 
 describe('源节头（反白横带）', () => {
-  it('源名是 h2，右端是该源自己的期号与主题', () => {
+  it('源名是 h2，期号与主题归入源名信息组，右端只保留原文操作', () => {
     const { container } = show()
 
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('阮一峰科技爱好者周刊')
     expect(container.querySelector('.source-band-issue')).toHaveTextContent('第 366 期 · 人生的容错率')
+    expect(container.querySelector('.source-band-copy')).toHaveTextContent('阮一峰科技爱好者周刊第 366 期 · 人生的容错率')
+    expect(container.querySelector('.source-band-meta')).not.toHaveTextContent('第 366 期 · 人生的容错率')
+    expect(container.querySelector('.source-band-meta')).toHaveTextContent('原文')
   })
 
   it('有期号写「原文」，链到那一期的 Markdown，新标签页打开', () => {
@@ -313,6 +316,8 @@ it('单条板块与标题重复时只保留一个标题，保留两种深链与�
  expect(container.querySelector('#issue-366-quotes')).not.toBeNull()
  expect(container.querySelector('#item-quote')).not.toBeNull()
  const back = screen.getByRole('link', { name: '返回板块目录' })
+ expect(back).toHaveClass('directory-return')
+ expect(back).not.toHaveClass('source-foot')
  expect(document.getElementById(back.getAttribute('href')!.slice(1))).toHaveAttribute('aria-label', '板块')
 })
 

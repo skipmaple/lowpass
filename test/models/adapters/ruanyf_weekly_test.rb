@@ -27,7 +27,7 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
       # 样本里有 6 期没有「科技动态」板块，每条动态各自成为一个二级标题
       assert_includes names, "科技动态", path if text.include?("## 科技动态")
       assert_empty %w[ 文章 工具 资源 ] - names, path
-      assert_empty names & %w[ 封面图 往年回顾 ], path
+      assert_empty names & %w[ 往年回顾 ], path
       assert items.size >= 5, "#{path}: #{items.size} 条"
       assert items.all? { |item| item[:title].present? }, path
 
@@ -134,7 +134,57 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert entries.all?(&:valid?)
   end
 
-  test "专题板块整体成为一条，封面图与往年回顾不出条目" do
+  test "图片按条目归属并把相对地址转换为可展示的绝对地址" do
+    stub_request(:get, "#{RAW}/docs/issue-993.md").to_return(body: <<~MARKDOWN)
+      # 科技爱好者周刊（第 993 期）：图片归属
+
+      ## 封面图
+
+      ![](https://cdn.example.com/cover.webp)
+
+      封面图注。
+
+      ## 科技动态
+
+      1、[第一条](https://example.com/1)
+
+      ![第一张](https://cdn.example.com/one.webp)
+
+      ![第二张](../images/two.webp)
+
+      正文一。
+
+      2、[第二条](https://example.com/2)
+
+      ![](javascript:alert(1))
+
+      正文二。
+
+      3、[第三条](https://example.com/3)
+
+      正文三。
+
+      4、[第四条](https://example.com/4)
+
+      正文四。
+
+      5、[第五条](https://example.com/5)
+
+      正文五。
+    MARKDOWN
+
+    entries = Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(993)
+    cover = entries.find { |entry| entry.section == "封面图" }
+    first = entries.find { |entry| entry.title == "第一条" }
+    second = entries.find { |entry| entry.title == "第二条" }
+
+    assert_equal [ "https://cdn.example.com/cover.webp" ], cover.meta[:image_urls]
+    assert_equal [ "https://cdn.example.com/one.webp", "#{RAW}/images/two.webp" ], first.meta[:image_urls]
+    assert_nil second.meta[:image_urls]
+    assert_not_includes first.summary, "!["
+  end
+
+  test "专题与封面板块整体成为一条，往年回顾不出条目" do
     stub_request(:get, "#{RAW}/docs/issue-996.md").to_return(body: <<~MARKDOWN)
       # 科技爱好者周刊（第 996 期）：专题测试
 
@@ -182,9 +232,11 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     MARKDOWN
 
     entries = Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(996)
-    essay = entries.first
+    cover = entries.first
+    essay = entries.second
 
-    assert_equal [ "rsync 的争论", "科技动态" ], entries.map(&:section).uniq
+    assert_equal [ "封面图", "rsync 的争论", "科技动态" ], entries.map(&:section).uniq
+    assert_equal [ "https://cdn.example.com/cover.webp" ], cover.meta[:image_urls]
     assert_equal 1, entries.count { |e| e.section == "rsync 的争论" }
     assert_equal "rsync 的争论", essay.title
     assert_equal "https://example.com/rsync", essay.url

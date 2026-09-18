@@ -2,17 +2,16 @@ module Adapters
   class RuanyfWeekly < Base
     # 把一期周刊的 Markdown 拆成板块与条目（PRD R-2.3）：一级标题给出期号与主题，二级标题是板块。
     # 板块按名字分三类：固定的清单板块按条目符号拆条（顶格的「1、」或列表符号开一条，直到下一条、
-    # 下一个板块或全文结束）；封面图与往年回顾整块不要；其余（本周话题这类专题）整节成为一条（R26）。
+    # 下一个板块或全文结束）；往年回顾整块不要；封面与其余专题整节成为一条（R26）。
     module Markdown
       TITLE = /\A#\s*科技爱好者周刊（第\s*(\d+)\s*期）[：:]\s*(.+?)\s*\z/
       SECTION = /\A##\s+(.+?)\s*\z/
       LIST_SECTIONS = [ "科技动态", "文章", "工具", "资源", "AI 相关", "图片", "文摘", "言论", "一句话消息" ].freeze
-      SKIPPED_SECTIONS = [ "封面图", "往年回顾" ].freeze
+      SKIPPED_SECTIONS = [ "往年回顾" ].freeze
       TRAILING_COLON = /[:：]\s*\z/
       ITEM_START = /\A(?:\d+、\s*|（\d+）\s*|\d+\.\s+|[-*]\s+)/
       NUMBERED = /\A\d+、/
-      IMAGE = /!\[[^\]]*\]\([^)]*\)/
-      IMAGE_LINE = /\A#{IMAGE}\s*\z/
+      IMAGE = /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/
       LINK = %r{(?<!!)\[([^\]]*)\]\(([^)\s]+)\)}
       BOLD = /\*\*([^*]+)\*\*/
       ANNOTATION = /\A[（(][^（()）]*[)）]\z/
@@ -105,13 +104,19 @@ module Adapters
           title: title,
           url: link_in(body),
           summary: summary_of(lines, title),
-          section: section
+          section: section,
+          image_urls: images_in(block)
         }
       end
 
-      # 去掉条目符号与单独成行的图片（图片不下载不展示），首尾空行也不要。
+      # 图片单独存进 meta，摘要只留文字；行内图片也要去掉，避免 Markdown 标记泄进正文。
       def body_of(block)
-        trim([ block.first.sub(ITEM_START, ""), *block.drop(1) ].reject { |line| line.match?(IMAGE_LINE) })
+        lines = [ block.first.sub(ITEM_START, ""), *block.drop(1) ]
+        trim(lines.map { |line| line.gsub(IMAGE, "") })
+      end
+
+      def images_in(lines)
+        lines.flat_map { |line| line.scan(IMAGE).flatten }.uniq
       end
 
       # 标题取首行的加粗文本，其次是块内首个链接的文本，都没有就取首个非空行的纯文本。
@@ -148,9 +153,10 @@ module Adapters
 
       # 专题板块整节就是一条：标题是板块名，摘要是整节正文（嵌套列表原样保留），链接取正文里的第一个。
       def essay_items(lines, section)
-        body = trim(lines.reject { |line| line.match?(IMAGE_LINE) }).join("\n")
-        if body.present?
-          [ { title: section, url: link_in(body), summary: body, section: section } ]
+        image_urls = images_in(lines)
+        body = trim(lines.map { |line| line.gsub(IMAGE, "") }).join("\n")
+        if body.present? || image_urls.any?
+          [ { title: section, url: link_in(body), summary: body.presence, section: section, image_urls: image_urls } ]
         else
           []
         end

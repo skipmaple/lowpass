@@ -105,6 +105,34 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
   )
 }
 
+function WeeklyMedia({ item }: { item: Item }) {
+  const [failed, setFailed] = useState<ReadonlySet<number>>(() => new Set())
+  const imageUrls = Array.isArray(item.meta.image_urls)
+    ? item.meta.image_urls.filter((url): url is string => typeof url === 'string' && /^https?:\/\//i.test(url))
+    : []
+  const visible = imageUrls.map((url, index) => ({ url, index })).filter(({ index }) => !failed.has(index))
+
+  if (visible.length === 0) return null
+
+  return (
+    <div className={visible.length > 1 ? 'item-media item-media--multiple' : 'item-media item-media--single'}>
+      {visible.map(({ url, index }) => (
+        <figure className="item-media-frame" key={`${url}-${index}`}>
+          <img
+            className="item-media-image"
+            src={url}
+            alt={`${item.title}配图${imageUrls.length > 1 ? ` ${index + 1}` : ''}`}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setFailed((current) => new Set(current).add(index))}
+          />
+        </figure>
+      ))}
+    </div>
+  )
+}
+
 // D19：周刊条目不生成推荐理由，也就没有兴趣标签；元数据只剩发布时间。
 // heading 是标题的层级（PRD 6.4「标题层级语义正确」）：日刊页 h1 是日期，条目就是 h2；
 // 周刊页 h1 是周次、h2 是源名、h3 是板块，所以条目按所在位置降一到两级。
@@ -134,6 +162,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         </div>
         {/* 周刊摘要行高 1.7（画布 pages_site.item() 的文楷 15/1.7），日刊摘要是 PRD 6.3 的 Newsreader 15/1.5 */}
         {item.summary ? <span className={weekly ? 'item-summary item-summary--weekly' : 'item-summary'}>{item.summary}</span> : null}
+        {weekly ? <WeeklyMedia item={item} /> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
       </div>

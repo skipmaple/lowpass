@@ -27,23 +27,25 @@ export type WeeklyShowProps = FooterData & {
   sections: WeeklySection[]
 }
 
-// 反白横带：书本图标 + 源名 32（拉丁走 Newsreader 600，中文走文楷），右端期号与原文外链
+// 反白横带：期号是来源的说明信息，跟随源名形成一个阅读组；右端只保留原文操作。
 function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
     <div className="source-band" id={id}>
       <div className="source-band-name">
         <Icon name="book-open" size={28} color="var(--paper)" />
-        <h2 className="source-band-title">
-          <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />
-        </h2>
+        <div className="source-band-copy">
+          <h2 className="source-band-title">
+            <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />
+          </h2>
+          {section.issue_label ? (
+            <span className="source-band-issue">
+              <Mixed text={section.issue_label} font="latin" size="var(--fs-15)" color="var(--paper)" />
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="source-band-meta">
-        {section.issue_label ? (
-          <span className="source-band-issue">
-            <Mixed text={section.issue_label} font="latin" size="var(--fs-15)" color="var(--paper)" />
-          </span>
-        ) : null}
         {/* R-2.5 源节头带原文链接；R-8.4 新标签页打开。feed 地址算不出落点时整条收掉 */}
         {section.original_url ? (
           <a className="source-band-link" href={section.original_url} target="_blank" rel="noopener noreferrer">
@@ -132,7 +134,10 @@ function Group({ group, section, directory }: { group: WeeklyGroup; section: Wee
           <Items group={group} section={section} heading="h4" />
         </>
       )}
-      <a className="source-foot" href={`#${directory}`} onClick={() => openDirectory(directory)}>返回板块目录</a>
+      <a className="directory-return" href={`#${directory}`} onClick={() => openDirectory(directory)}>
+        <span aria-hidden="true">↑</span>
+        <span>返回板块目录</span>
+      </a>
     </section>
   )
 }

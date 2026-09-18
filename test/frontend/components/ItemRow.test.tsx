@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -216,6 +216,63 @@ describe('ItemRow 周刊那一版（D19）', () => {
     render(<ItemRow item={item({ summary: '本周的一条。' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
 
     expect(screen.getByText('本周的一条。')).toHaveClass('item-summary--weekly')
+  })
+
+  it('按原顺序展示条目对应的图片，并为外链图片保护来源页面', () => {
+    const { container } = render(
+      <ItemRow
+        item={item({ title: '美国公路的奇特建筑', meta: { image_urls: ['https://cdn.example.com/one.webp', 'https://cdn.example.com/two.webp'] } })}
+        adapter="ruanyf_weekly"
+        rank={1}
+        variant="weekly"
+      />,
+    )
+
+    const images = screen.getAllByRole('img', { name: /美国公路的奇特建筑配图/ })
+    expect(images.map((image) => image.getAttribute('src'))).toEqual([
+      'https://cdn.example.com/one.webp',
+      'https://cdn.example.com/two.webp',
+    ])
+    expect(images[0]).toHaveAttribute('loading', 'lazy')
+    expect(images[0]).toHaveAttribute('decoding', 'async')
+    expect(images[0]).toHaveAttribute('referrerpolicy', 'no-referrer')
+    expect(container.querySelector('.item-media')).toHaveClass('item-media--multiple')
+  })
+
+  it('单图使用按内容收缩的媒体版式', () => {
+    const { container } = render(
+      <ItemRow
+        item={item({ title: '封面', meta: { image_urls: ['https://cdn.example.com/cover.webp'] } })}
+        adapter="ruanyf_weekly"
+        rank={1}
+        variant="weekly"
+      />,
+    )
+
+    expect(container.querySelector('.item-media')).toHaveClass('item-media--single')
+  })
+
+  it('图片加载失败时移除破图，全部失败后收起媒体区域', () => {
+    const { container } = render(
+      <ItemRow
+        item={item({ title: '封面', meta: { image_urls: ['https://cdn.example.com/broken.webp'] } })}
+        adapter="ruanyf_weekly"
+        rank={1}
+        variant="weekly"
+      />,
+    )
+
+    fireEvent.error(screen.getByRole('img', { name: '封面配图' }))
+
+    expect(container.querySelector('.item-media')).toBeNull()
+  })
+
+  it('日刊条目不渲染周刊图片区域', () => {
+    const { container } = render(
+      <ItemRow item={item({ meta: { image_urls: ['https://cdn.example.com/one.webp'] } })} adapter="hacker_news" rank={1} />,
+    )
+
+    expect(container.querySelector('.item-media')).toBeNull()
   })
 
   it('不生成推荐理由，也就没有兴趣标签', () => {

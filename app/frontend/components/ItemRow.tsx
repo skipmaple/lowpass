@@ -115,7 +115,7 @@ function WeeklyMedia({ item }: { item: Item }) {
   if (visible.length === 0) return null
 
   return (
-    <div className={visible.length > 1 ? 'item-media item-media--multiple' : 'item-media'}>
+    <div className={visible.length > 1 ? 'item-media item-media--multiple' : 'item-media item-media--single'}>
       {visible.map(({ url, index }) => (
         <figure className="item-media-frame" key={`${url}-${index}`}>
           <img

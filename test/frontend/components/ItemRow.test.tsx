@@ -239,6 +239,19 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(container.querySelector('.item-media')).toHaveClass('item-media--multiple')
   })
 
+  it('单图使用按内容收缩的媒体版式', () => {
+    const { container } = render(
+      <ItemRow
+        item={item({ title: '封面', meta: { image_urls: ['https://cdn.example.com/cover.webp'] } })}
+        adapter="ruanyf_weekly"
+        rank={1}
+        variant="weekly"
+      />,
+    )
+
+    expect(container.querySelector('.item-media')).toHaveClass('item-media--single')
+  })
+
   it('图片加载失败时移除破图，全部失败后收起媒体区域', () => {
     const { container } = render(
       <ItemRow

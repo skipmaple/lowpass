@@ -111,7 +111,7 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 
 - 只支持 PostgreSQL，不写双适配器分支。〔不采用 fizzy 的 SQLite / MySQL 双栈〕
 - 借 fizzy 的"列长度显式化"：每个 `string` / `text` 列在迁移里写明 `limit`，值来自 7.2（title 300、url 2048、summary 500、
-  section 100、author 100），并加 CHECK 约束；唯一性放数据库（`(source_id, issue_id, url_hash)`、`(type, period_key)`、
+  content 50000、section 100、author 100），并加 CHECK 约束；唯一性放数据库（`(source_id, issue_id, url_hash)`、`(type, period_key)`、
   `(provider, provider_uid)`）。〔改造自 `table_definition_column_limits.rb`〕
 - 生产不在迁移后 dump schema（`dump_schema_after_migration = false`）；`schema.rb` 随代码提交。
 

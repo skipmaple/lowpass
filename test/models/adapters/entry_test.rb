@@ -16,6 +16,17 @@ class Adapters::EntryTest < ActiveSupport::TestCase
     assert_equal sources(:hn).id, attrs[:source_id]
   end
 
+  test "转成条目属性时保留周刊完整正文，摘要仍限制为 500 字" do
+    text = "正文" * 400
+    entry = Adapters::Entry.new(title: "长文", url: "https://a.b/long", summary: text, content: text)
+
+    attrs = entry.to_item_attributes(source: sources(:ruanyf), issue: issues(:weekly_w36))
+
+    assert_equal 500, attrs[:summary].length
+    assert attrs[:summary].end_with?("…")
+    assert_equal text, attrs[:content]
+  end
+
   test "链接不可解析或没有主机时无效" do
     assert_not Adapters::Entry.new(title: "t", url: "https://exa mple.com/x").valid?
     assert_not Adapters::Entry.new(title: "t", url: "https://").valid?

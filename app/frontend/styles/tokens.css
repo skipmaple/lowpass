@@ -261,9 +261,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 .directory-return:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 .directory-return:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* 周刊条目摘要：画布 pages_site.item() 用文楷 15/1.7；日刊摘要（.item-summary 本体）是
-   PRD 6.3 的 Newsreader 15/1.5，两套行高分属不同角色，不能共用一个数。两行截断沿用 .item-summary。 */
-.item-summary.item-summary--weekly { width: 100%; max-width: 72em; line-height: 1.8; }
+/* 周刊正文完整展开：不继承日刊摘要的两行裁剪。 */
+.item-content--weekly { display: block; width: 100%; max-width: 72em; overflow-wrap: anywhere; }
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
 .item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 1080px; padding: 8px 0 4px; }

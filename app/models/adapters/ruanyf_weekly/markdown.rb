@@ -130,7 +130,8 @@ module Adapters
         body.scan(LINK).map(&:last).find { |href| href.match?(ABSOLUTE) || !href.match?(SCHEME) }
       end
 
-      # 首行只是标题时不重复进摘要；Markdown 标记留着，存储时再由 SummaryCleaner 清洗、截断。
+      # 首行只是标题时不重复进正文；Markdown 标记留着，存储时再清洗。适配器同时从这段正文派生
+      # 500 字摘要与完整 content（D24）。
       def summary_of(lines, title)
         body = title_line?(lines.first.to_s, title) ? lines.drop(1) : lines
         body.drop_while { |line| line.strip.empty? }.join("\n")

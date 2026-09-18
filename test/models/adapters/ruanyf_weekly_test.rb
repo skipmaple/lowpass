@@ -51,6 +51,13 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert_equal entries.size, entries.map { |e| UrlNormalizer.url_hash(e.url) }.uniq.size
   end
 
+  test "长条目的完整正文另行保留，不被摘要上限截断" do
+    entry = Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(411).find { |item| item.title == "OpenClaw 2.0 是一个缩影" }
+
+    assert_operator entry.content.length, :>, SummaryCleaner::STORE_LIMIT
+    assert_includes entry.content, "符合 AI 时代的方向"
+  end
+
   test "条目少于 5 条降级" do
     stub_request(:get, "#{RAW}/docs/issue-999.md").to_return(body: "# 科技爱好者周刊（第 999 期）：坏了\n\n## 科技动态\n\n1、只有一条 [x](https://a.b)\n")
     error = assert_raises(Adapters::RuanyfWeekly::Degraded) { Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(999) }

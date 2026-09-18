@@ -42,6 +42,7 @@ export function item(overrides: Partial<Item> = {}): Item {
     title: 'Show HN: A terminal log viewer written in Rust',
     url: 'https://example.com/termlog',
     summary: null,
+    content: null,
     section: null,
     author: null,
     published_at: '2026-09-08T17:12:00Z',

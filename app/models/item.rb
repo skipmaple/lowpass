@@ -8,6 +8,7 @@ class Item < ApplicationRecord
   validates :url, presence: true, length: { maximum: 2048 }, format: { with: %r{\Ahttps?://\S+\z}i }
   validates :url_hash, presence: true, length: { is: 64 }
   validates :summary, length: { maximum: 500 }, allow_nil: true
+  validates :content, length: { maximum: SummaryCleaner::CONTENT_LIMIT }, allow_nil: true
 
   scope :visible, -> { where(hidden: false) }
   scope :ranked,  -> { order(:rank, :created_at) }

@@ -77,9 +77,11 @@ end
 class Issue::ArchivePresentingTest < ActiveSupport::TestCase
   NOW = Time.utc(2026, 9, 10, 4)
 
-  def entry(title, section: nil, rank: 1, issue_no: nil, issue_title: nil, url: nil)
-    Adapters::Entry.new(title: title, url: url || "https://r.example/#{rank}#{issue_no}", section: section, rank: rank,
-                        meta: { issue_no: issue_no, issue_title: issue_title, anchor: section }.compact)
+  def entry(title, section: nil, rank: 1, issue_no: nil, issue_title: nil, url: nil, summary: nil, content: nil)
+    attributes = { title: title, url: url || "https://r.example/#{rank}#{issue_no}", summary: summary, section: section, rank: rank,
+                   meta: { issue_no: issue_no, issue_title: issue_title, anchor: section }.compact }
+    attributes[:content] = content if content
+    Adapters::Entry.new(**attributes)
   end
 
   def rss_weekly_source
@@ -260,6 +262,18 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     daily = issues(:daily_0908).items_by_source.values.flatten.first
 
     assert_equal daily.keys, weekly.keys
+  end
+
+  test "周刊条目 props 保留完整正文，不把它再次裁成摘要预览" do
+    content = "完整正文" * 150
+    issues(:weekly_w36).replace_section!(sources(:ruanyf), [
+      entry("长文", section: "本周话题", issue_no: 366, summary: content, content: content)
+    ], issue_no: 366)
+
+    item = Issue.weekly_props_for("2026-W36")[:sections].sole[:groups].sole[:items].sole
+
+    assert_equal content, item[:content]
+    assert_equal 500, item[:summary].length
   end
 
   test "没有期的周仍然给出周次与附录 B 的一句" do

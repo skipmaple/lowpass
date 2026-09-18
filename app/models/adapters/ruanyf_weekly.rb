@@ -41,6 +41,7 @@ module Adapters
           title: item[:title],
           url: url_for(item, number, rank),
           summary: item[:summary],
+          content: item[:summary],
           section: item[:section],
           published_at: parsed[:published_on]&.in_time_zone(PeriodKey::ZONE)&.beginning_of_day&.utc,
           rank: rank,

@@ -52,16 +52,17 @@ export type MixedProps = {
   color?: string
   nowrap?: boolean
   className?: string
+  lineHeight?: number
   // 拉丁段的字重：默认按角色取（Maple 400、Newsreader 500），来源名是 600（令牌表）
   weight?: number
 }
 
-export function Mixed({ text, font = 'data', size = 'var(--fs-13)', color = 'var(--ink2)', nowrap = false, className, weight: given }: MixedProps) {
+export function Mixed({ text, font = 'data', size = 'var(--fs-13)', color = 'var(--ink2)', nowrap = false, className, lineHeight = 1.6, weight: given }: MixedProps) {
   const latin = font === 'data' ? 'var(--font-data)' : 'var(--font-latin)'
   const weight = given ?? (font === 'data' ? 400 : 500)
 
   return (
-    <span className={className} style={{ lineHeight: 1.6, whiteSpace: nowrap ? 'nowrap' : undefined }}>
+    <span className={className} style={{ lineHeight, whiteSpace: nowrap ? 'nowrap' : undefined }}>
       {splitRuns(text).map((run, index) =>
         run.cjk ? (
           <span key={index} style={{ fontFamily: 'var(--font-cjk)', fontSize: size, color }}>

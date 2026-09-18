@@ -3,7 +3,7 @@ import { Fragment, useState } from 'react'
 
 import Chip from '@/components/Chip'
 import Icon, { type IconName } from '@/components/Icon'
-import { absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
+import { Mixed, absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
@@ -143,6 +143,7 @@ export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant
 export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
   const weekly = variant === 'weekly'
   const tagged = !weekly && Boolean(item.interest_tag)
+  const copy = weekly ? item.content ?? item.summary : item.summary
 
   return (
     <article className="item-row" id={`item-${item.id}`}>
@@ -160,8 +161,14 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
             <div className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></div>
           ) : null}
         </div>
-        {/* 周刊摘要行高 1.7（画布 pages_site.item() 的文楷 15/1.7），日刊摘要是 PRD 6.3 的 Newsreader 15/1.5 */}
-        {item.summary ? <span className={weekly ? 'item-summary item-summary--weekly' : 'item-summary'}>{item.summary}</span> : null}
+        {/* 周刊正文完整展开并按中西文分配字体；日刊摘要仍是两行预览。 */}
+        {copy ? (
+          weekly ? (
+            <Mixed text={copy} font="latin" size="var(--fs-15)" color="var(--ink2)" lineHeight={1.8} className="item-content item-content--weekly" />
+          ) : (
+            <span className="item-summary">{copy}</span>
+          )
+        ) : null}
         {weekly ? <WeeklyMedia item={item} /> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}

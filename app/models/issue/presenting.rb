@@ -309,13 +309,14 @@ module Issue::Presenting
       end
     end
 
-    # 阅读页保留完整的已存摘要（上限 500 字），避免标题之外的关键信息再次被裁掉。
+    # 阅读页保留完整的已存摘要（上限 500 字）；周刊详情另带完整 content（D24）。
     def item_props(item)
       {
         id: item.id,
         title: item.title,
         url: item.url,
         summary: SummaryCleaner.clean(item.summary),
+        content: item.content,
         section: item.section,
         author: item.author,
         published_at: item.published_at&.iso8601,

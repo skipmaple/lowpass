@@ -1,5 +1,6 @@
 class SummaryCleaner
   STORE_LIMIT = 500
+  CONTENT_LIMIT = 50_000
   PREVIEW_LIMIT = 200
 
   # 强调标记只在成对、且两头都落在词边界上时才算排版：snake_case、some_repo_name 里的下划线
@@ -15,10 +16,11 @@ class SummaryCleaner
 
   class << self
     def clean(text)
-      return nil if text.nil?
-      s = strip_markdown(strip_html(text))
-      s = CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip
-      truncate(s, STORE_LIMIT)
+      truncate(normalize(text), STORE_LIMIT) if text
+    end
+
+    def content(text)
+      truncate(normalize(text), CONTENT_LIMIT) if text
     end
 
     def preview(text)
@@ -26,6 +28,11 @@ class SummaryCleaner
     end
 
     private
+      def normalize(text)
+        s = strip_markdown(strip_html(text))
+        CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip
+      end
+
       def strip_html(text)
         Nokogiri::HTML.fragment(text).text
       end

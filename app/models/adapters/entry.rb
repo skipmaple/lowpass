@@ -1,5 +1,5 @@
 module Adapters
-  Entry = Struct.new(:title, :url, :summary, :section, :author, :published_at, :rank, :meta, keyword_init: true) do
+  Entry = Struct.new(:title, :url, :summary, :content, :section, :author, :published_at, :rank, :meta, keyword_init: true) do
     def valid?
       title.to_s.strip.present? && http_url? && url.to_s.strip.length <= 2048
     end
@@ -12,6 +12,7 @@ module Adapters
         url: url.to_s.strip[0, 2048],
         url_hash: UrlNormalizer.url_hash(url),
         summary: SummaryCleaner.clean(summary),
+        content: SummaryCleaner.content(content),
         section: section&.strip&.slice(0, 100),
         author: author&.strip&.slice(0, 100),
         published_at: published_at,

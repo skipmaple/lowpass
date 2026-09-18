@@ -212,10 +212,20 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(container.querySelector('.item-body')?.textContent).toBe('Show HN: A terminal log viewer written in Rust')
   })
 
-  it('摘要走周刊那一档行高', () => {
-    render(<ItemRow item={item({ summary: '本周的一条。' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+  it('没有独立正文的旧条目仍展示摘要，并使用周刊正文排版', () => {
+    const { container } = render(<ItemRow item={item({ summary: '本周的一条。' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
 
-    expect(screen.getByText('本周的一条。')).toHaveClass('item-summary--weekly')
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('本周的一条。')
+  })
+
+  it('有完整正文时优先展示全文，不回退到截断摘要', () => {
+    const content = '这是完整正文，结尾必须保留。'
+    const weeklyItem = item({ summary: '这是截断摘要…', content })
+
+    const { container } = render(<ItemRow item={weeklyItem} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent(content)
+    expect(screen.queryByText('这是截断摘要…')).toBeNull()
   })
 
   it('按原顺序展示条目对应的图片，并为外链图片保护来源页面', () => {

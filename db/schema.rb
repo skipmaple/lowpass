@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -120,6 +120,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_140000) do
 
   create_table "items", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.string "author", limit: 100
+    t.text "content"
     t.datetime "created_at", null: false
     t.datetime "fetched_at", null: false
     t.boolean "hidden", default: false, null: false
@@ -140,6 +141,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_140000) do
     t.index ["issue_id", "source_id", "rank"], name: "index_items_on_issue_id_and_source_id_and_rank"
     t.index ["source_id", "issue_id", "url_hash"], name: "index_items_on_source_id_and_issue_id_and_url_hash", unique: true
     t.index ["url_hash"], name: "index_items_on_url_hash"
+    t.check_constraint "length(content) <= 50000", name: "items_content_len"
     t.check_constraint "length(summary::text) <= 500", name: "items_summary_len"
     t.check_constraint "length(title::text) <= 300", name: "items_title_len"
     t.check_constraint "length(url::text) <= 2048", name: "items_url_len"

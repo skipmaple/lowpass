@@ -18,7 +18,7 @@
 - 周期键只在一处计算；展示按 Asia/Shanghai，存储 UTC；跨日与非上海时区有测试。
 - 调度是每分钟一次的 tick，读数据库里的生成时间；不是静态 cron；错过要补跑。
 - 某个源失败只告警，不阻塞发布。推荐理由异步生成，只有日刊条目有，周刊没有。
-- 适配器只产出 PRD 7.2 契约的条目，期生成器不认识具体的源。
+- 适配器只产出 PRD 7.2 契约的条目，期生成器不认识具体的源；阮一峰周刊额外产出完整 `content`，摘要仍限 500 字（D24）。
 - `/admin` 只给由白名单邮箱推导出的 admin，其他人 403。后台写操作记审计日志。单租户，没有 Account。
 
 ## 约定
@@ -29,7 +29,7 @@
 - 后台任务：Solid Queue，浅 job 调富模型（`_later` 入队、`_now` 同步）；周期任务写在 `config/recurring.yml`；job 幂等，某期某源同时只允许一个重抓。
 - 认证：OAuth（OmniAuth）。`Session` 记录 + 签名 cookie；`Current` 承载 session、user 与请求属性；登录回调限流在 OmniAuth 之前的 Rack 中间件，搜索用 `rate_limit` 按用户；`next` 只接受站内相对路径；development 有 `developer` 策略的开发登录。
 - 前端：控制器是 CRUD 资源，每个动作渲染一个 Inertia 页面；props 必须有类型；首屏资源不超过 300 KB；颜色、字体、字号只从设计 skill 的令牌取。
-- 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。
+- 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。条目 `content` 上限 50000 字，只给阮一峰周刊正文使用。
 - 测试：Minitest + fixtures；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 快速循环，`bin/ci` 是合并门禁（rubocop、brakeman、bundler-audit、gitleaks、测试、系统测试）。
 - 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite；密钥只从环境读。`main` 分支用 Kamal 部署（CI 全绿后由 GitHub Actions 自动跑 `kamal deploy`）：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。
 - 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。

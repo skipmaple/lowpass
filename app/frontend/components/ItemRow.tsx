@@ -3,7 +3,7 @@ import { Fragment, useState } from 'react'
 
 import Chip from '@/components/Chip'
 import Icon, { type IconName } from '@/components/Icon'
-import { Mixed, absoluteStamp, compactCount, relativeAge } from '@/lib/typeset'
+import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
@@ -153,7 +153,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。 */}
         <div className={tagged ? 'item-heading item-heading--tagged' : 'item-heading'}>
           <Heading className="item-title">
-            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer">
+            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" lang={latinLang(item.title)}>
               {item.title}
             </a>
           </Heading>
@@ -161,12 +161,18 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
             <div className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></div>
           ) : null}
         </div>
-        {/* 周刊正文完整展开并按中西文分配字体；日刊摘要仍是两行预览。 */}
+        {/* 周刊正文完整展开、按原文分段（SummaryCleaner.content 一行一段），并按中西文分配字体；日刊摘要完整显示。 */}
         {copy ? (
           weekly ? (
-            <Mixed text={copy} font="latin" size="var(--fs-15)" color="var(--ink2)" lineHeight={1.8} className="item-content item-content--weekly" />
+            <div className="item-content item-content--weekly">
+              {copy.split('\n').map((paragraph, index) => (
+                <p key={index}>
+                  <Mixed text={paragraph} font="latin" size="var(--fs-15)" color="var(--ink2)" lineHeight={1.8} />
+                </p>
+              ))}
+            </div>
           ) : (
-            <span className="item-summary">{copy}</span>
+            <span className="item-summary" lang={latinLang(copy)}>{copy}</span>
           )
         ) : null}
         {weekly ? <WeeklyMedia item={item} /> : null}

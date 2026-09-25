@@ -228,6 +228,28 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(screen.queryByText('这是截断摘要…')).toBeNull()
   })
 
+  // 页面是 zh-CN：英文标题与摘要要标 lang="en"，读屏才会换英文语音；中文标题不标
+  it('英文标题与摘要标 lang="en"', () => {
+    render(<ItemRow item={item({ summary: 'A fast log viewer.' })} adapter="hacker_news" rank={1} />)
+
+    expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toHaveAttribute('lang', 'en')
+    expect(screen.getByText('A fast log viewer.')).toHaveAttribute('lang', 'en')
+  })
+
+  it('中文标题不标 lang', () => {
+    render(<ItemRow item={item({ title: '人生的容错率' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+
+    expect(screen.getByRole('link', { name: '人生的容错率' })).not.toHaveAttribute('lang')
+  })
+
+  // SummaryCleaner.content 一行一段：详情页一段一个 <p>，不压成一整块
+  it('周刊正文按行分段', () => {
+    const { container } = render(<ItemRow item={item({ content: '第一段。\n第二段 OpenClaw。\n第三段。' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+
+    const paragraphs = Array.from(container.querySelectorAll('.item-content--weekly > p')).map((p) => p.textContent)
+    expect(paragraphs).toEqual(['第一段。', '第二段 OpenClaw。', '第三段。'])
+  })
+
   it('按原顺序展示条目对应的图片，并为外链图片保护来源页面', () => {
     const { container } = render(
       <ItemRow

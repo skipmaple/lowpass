@@ -73,15 +73,15 @@ describe('SourceTabs', () => {
     expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 GitHub Trending')
   })
 
-  it('抓取失败与今日无新内容标在名字下面，正常的源不标', () => {
+  it('抓取失败与本期无新内容标在名字下面，正常的源不标', () => {
     renderTabs()
 
     const tabs = screen.getAllByRole('tab')
     expect(within(tabs[1]).getByText('抓取失败')).toBeInTheDocument()
-    expect(within(tabs[2]).getByText('今日无新内容')).toBeInTheDocument()
+    expect(within(tabs[2]).getByText('本期无新内容')).toBeInTheDocument()
     expect(tabs[0]).toHaveTextContent('Hacker News')
     expect(within(tabs[0]).queryByText('抓取失败')).toBeNull()
-    expect(within(tabs[0]).queryByText('今日无新内容')).toBeNull()
+    expect(within(tabs[0]).queryByText('本期无新内容')).toBeNull()
   })
 
   // R-1.6 补生成的期：不支持回填的源（7.7）在索引条上标短形，长句「该来源无法回填」留给列表区
@@ -105,7 +105,7 @@ describe('SourceTabs', () => {
     const tab = screen.getByRole('tab')
     expect(tab).toHaveTextContent('Hacker News')
     expect(screen.queryByText('抓取失败')).toBeNull()
-    expect(screen.queryByText('今日无新内容')).toBeNull()
+    expect(screen.queryByText('本期无新内容')).toBeNull()
     expect(tab.querySelector('.source-tab-state')).toBeNull()
   })
 
@@ -153,5 +153,21 @@ describe('SourceTabs', () => {
 
     expect(onSelect).toHaveBeenLastCalledWith('src-had')
     expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 Hackaday')
+  })
+
+  // 索引条要在 Tab 序列里：从前面的控件按一次 Tab 就落在当前源上，不是跳过整条去到面板
+  it('Tab 从前面的控件进到当前源', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <button type="button">前一期</button>
+        <Harness onSelect={vi.fn()} />
+      </>,
+    )
+
+    screen.getByRole('button', { name: '前一期' }).focus()
+    await user.tab()
+
+    expect(screen.getAllByRole('tab')[0]).toHaveFocus()
   })
 })

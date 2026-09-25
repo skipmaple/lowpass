@@ -42,7 +42,7 @@ module Issue::Weekly
 
       run
     rescue StandardError => e
-      run.update!(status: e.is_a?(Timeout::Error) ? "timed_out" : "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200],
+      run.update!(status: e.is_a?(Timeout::Error) ? "timed_out" : "failed", error_summary: Adapters::Failure.reason(e),
                   duration_ms: elapsed_ms(run))
       raise
     end
@@ -56,7 +56,7 @@ module Issue::Weekly
         end
         Alerts.recover!(kind: "source_failed", source: source)
       rescue StandardError => e
-        run.update!(status: "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200])
+        run.update!(status: "failed", error_summary: Adapters::Failure.reason(e))
         Alerts.source_failed!(source, nil, e.message)
       end
 

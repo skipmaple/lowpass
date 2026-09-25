@@ -8,7 +8,7 @@ import Icon from '@/components/Icon'
 import Mark from '@/components/Mark'
 import Table from '@/components/Table'
 import { useToasts } from '@/components/Toast'
-import { testFetch } from '@/lib/admin'
+import { TEST_FETCH_FAILED, testFetch } from '@/lib/admin'
 import { useAdminOperations } from '@/lib/operations'
 import { ADMIN_SOURCES_NEW, adminSourceEditHref, adminSourceEnablementHref, adminSourceRunsHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
@@ -44,9 +44,9 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
     try {
       const result = await testFetch({ id: row.id, name: row.name, adapter: row.adapter, publication: row.publication, config: row.config })
       if (result.ok) push('ok', `${row.name} · 解析 ${result.parsed} 条 · 丢弃 ${result.dropped} 条 · 用时 ${(result.duration_ms / 1000).toFixed(1)} 秒`)
-      else push('fail', `${row.name} · ${result.error ?? '抓取失败'}`)
+      else push('fail', `${row.name} · ${result.error ?? TEST_FETCH_FAILED}`)
     } catch (error) {
-      push('fail', `${row.name} · ${error instanceof Error ? error.message : '请求失败'}`)
+      push('fail', `${row.name} · ${error instanceof Error ? error.message : TEST_FETCH_FAILED}`)
     } finally {
       setTestingIds((current) => { const next = new Set(current); next.delete(row.id); return next })
     }

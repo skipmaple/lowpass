@@ -25,11 +25,18 @@ describe('testFetch', () => {
     expect(JSON.parse(init.body).adapter).toBe('rss')
   })
 
-  it('429 抛「操作过于频繁，请稍后再试。」，其他非 2xx 抛「请求失败」', async () => {
+  it('429 抛「操作过于频繁，请稍后再试。」，其他非 2xx 抛「测试抓取没有完成，请稍后重试。」', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429 }))
     await expect(testFetch({ adapter: 'rss', publication: 'daily', name: '', config: {} })).rejects.toThrow('操作过于频繁，请稍后再试。')
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
-    await expect(testFetch({ adapter: 'rss', publication: 'daily', name: '', config: {} })).rejects.toThrow('请求失败')
+    await expect(testFetch({ adapter: 'rss', publication: 'daily', name: '', config: {} })).rejects.toThrow('测试抓取没有完成，请稍后重试。')
+  })
+
+  // 断网时 fetch 自己 reject（Chrome 的原句是英文的「Failed to fetch」），换成一句带下一步的中文
+  it('网络不通抛「网络连接失败，请检查网络后重试。」', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(testFetch({ adapter: 'rss', publication: 'daily', name: '', config: {} })).rejects.toThrow('网络连接失败，请检查网络后重试。')
   })
 })

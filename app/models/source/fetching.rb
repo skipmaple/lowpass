@@ -54,10 +54,10 @@ module Source::Fetching
     run.update!(status: "failed", error_summary: "该来源无法回填", duration_ms: elapsed(run))
     raise
   rescue Timeout::Error => e
-    run.update!(status: "timed_out", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200], duration_ms: elapsed(run))
+    run.update!(status: "timed_out", error_summary: Adapters::Failure.reason(e), duration_ms: elapsed(run))
     raise
   rescue StandardError => e
-    run.update!(status: "failed", error_summary: e.message.to_s.lines.first.to_s.strip[0, 200], duration_ms: elapsed(run))
+    run.update!(status: "failed", error_summary: Adapters::Failure.reason(e), duration_ms: elapsed(run))
     raise
   end
 
@@ -66,9 +66,12 @@ module Source::Fetching
     fetch_runs.create!(issue: issue, trigger: trigger, attempt: attempt, status: "queued")
   end
 
-  # 栏级失败态里的「上次成功 9月7日 06:11」：不限本期，最近一次成功抓取的时间
-  def last_ok_at
-    fetch_runs.where(status: "succeeded").ordered.first&.started_at
+  # 栏级失败态里的「上次成功 9月7日 06:11」：as_of 那一刻为止最近一次成功抓取的时间，不限哪一期。
+  # 往期页面传那一期的定稿时间：9月11日失败的那一栏说的是它之前哪天成功过，不会冒出一个比这一期还晚的日期
+  def last_ok_at(as_of: nil)
+    runs = fetch_runs.where(status: "succeeded")
+    runs = runs.where(started_at: ..as_of) if as_of
+    runs.ordered.first&.started_at
   end
 
   def health

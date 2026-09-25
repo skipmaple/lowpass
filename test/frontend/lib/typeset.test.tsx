@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { Mixed, absoluteStamp, compactCount, relativeAge, splitRuns } from '@/lib/typeset'
+import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge, splitRuns } from '@/lib/typeset'
 
 // 排字规则的出处是 PRD 6.3 与 docs/design/notes/type-audit-2026-09-09.md：
 // 一段文字里中文与数字并存时按字符段切开分别上字体，例外是「含数字的中文短语」
@@ -70,6 +70,27 @@ describe('splitRuns', () => {
     expect(splitRuns('OpenClaw 2.0 是一个缩影')).toEqual([
       { cjk: false, text: 'OpenClaw 2.0' },
       { cjk: true, text: ' 是一个缩影' },
+    ])
+  })
+
+  // 周刊正文里的“”——……挨着汉字，是中文标点，跟文楷走（Newsreader 里的破折号、省略号窄、偏下）
+  it('挨着汉字的引号、破折号、省略号、间隔号并进中文段', () => {
+    expect(splitRuns('他说“这很重要”——其实不然……')).toEqual([{ cjk: true, text: '他说“这很重要”——其实不然……' }])
+    expect(splitRuns('莱恩·卡尼亚托')).toEqual([{ cjk: true, text: '莱恩·卡尼亚托' }])
+    expect(splitRuns('用“Vibe Coding”这个词')).toEqual([
+      { cjk: true, text: '用“' },
+      { cjk: false, text: 'Vibe Coding' },
+      { cjk: true, text: '”这个词' },
+    ])
+  })
+
+  it('不挨汉字的这些记号照旧是非中文段', () => {
+    expect(splitRuns('HN 10 · GH 10')).toEqual([{ cjk: false, text: 'HN 10 · GH 10' }])
+    expect(splitRuns('He said “hello” — twice…')).toEqual([{ cjk: false, text: 'He said “hello” — twice…' }])
+    expect(splitRuns('2026 年 · 星期四')).toEqual([
+      { cjk: true, text: '2026 年' },
+      { cjk: false, text: ' ·' },
+      { cjk: true, text: ' 星期四' },
     ])
   })
 
@@ -174,5 +195,13 @@ describe('compactCount', () => {
     expect(compactCount(1_000_000)).toBe('1M')
     expect(compactCount(1_234_567)).toBe('1.2M')
     expect(compactCount(12_345_678)).toBe('12.3M')
+  })
+})
+
+describe('latinLang', () => {
+  it('源站给的英文标 en，含汉字的不标', () => {
+    expect(latinLang('Tailwind Labs is joining Shopify')).toBe('en')
+    expect(latinLang('OpenClaw 2.0 是一个缩影')).toBeUndefined()
+    expect(latinLang('阮一峰科技爱好者周刊')).toBeUndefined()
   })
 })

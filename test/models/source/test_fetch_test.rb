@@ -92,11 +92,12 @@ class Source::TestFetchTest < ActiveSupport::TestCase
     assert_operator run.duration_ms, :>=, 0
   end
 
-  test "源站拒绝、解析不到公网地址、响应过大、其他错误各有一句" do
-    { Adapters::Http::Blocked.new("403") => "源站拒绝了请求（429 / 403）。",
-      Adapters::Http::Unresolvable.new("x") => "地址解析不到公网 IP。",
-      Adapters::Http::TooLarge.new("x") => "响应超过 2 MB。",
-      Adapters::Http::Error.new("500 Internal Server Error\nmore") => "抓取失败：500 Internal Server Error" }.each do |error, message|
+  test "源站拒绝、解析不到公网地址、响应过大、其他错误各有一句，都带下一步" do
+    { Adapters::Http::Blocked.new("403") => "源站拒绝了请求（429 / 403），请稍后重试。",
+      Adapters::Http::Unresolvable.new("x") => "地址解析不到公网 IP，请检查地址。",
+      Adapters::Http::TooLarge.new("x") => "响应超过 2 MB，请确认地址指向 RSS/Atom feed。",
+      Adapters::Http::Error.new("500 for https://hackaday.com/feed/\nmore") => "抓取失败：源站返回 HTTP 500，请检查地址或稍后重试。",
+      Adapters::Http::Error.new("Failed to open TCP connection to hackaday.com:443") => "抓取失败：连接源站失败，请检查地址或稍后重试。" }.each do |error, message|
       Adapters::Rss.any_instance.stubs(:test_fetch).raises(error)
 
       assert_equal message, Source::TestFetch.call(rss_attrs).error

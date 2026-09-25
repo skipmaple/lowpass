@@ -41,7 +41,7 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert_equal issue, event.issue
   end
 
-  # AC-1.7 适配器返回 0 条是成功，不是失败：记录记 succeeded / 0，栏内说「今日无新内容」
+  # AC-1.7 适配器返回 0 条是成功，不是失败：记录记 succeeded / 0，栏内说「本期无新内容」
   test "源成功但 0 条视为成功，状态是无新内容" do
     stub_all(Adapters::HackerNews => [ Adapters::Entry.new(title: "h", url: "https://h/1") ], Adapters::GithubTrending => [], Adapters::Rss => [])
     issue = Issue.generate_daily!("2026-09-10")
@@ -231,7 +231,7 @@ class Issue::DailyTest < ActiveSupport::TestCase
     assert_equal(issue.source_states.merge(source_a.id => "ok", source_b.id => "ok"), issue.reload.source_states)
   end
 
-  test "重抓拿到 0 条则这一栏是今日无新内容" do
+  test "重抓拿到 0 条则这一栏是本期无新内容" do
     issue = issues(:daily_0908)
     Adapters::HackerNews.any_instance.stubs(:fetch).returns([])
 

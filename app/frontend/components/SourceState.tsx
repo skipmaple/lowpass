@@ -2,7 +2,7 @@ import { Sunrise } from '@/components/Illustration'
 import { Mixed } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
-// 栏级状态：一句事实 + 一个时间（设计 skill「状态」）。
+// 栏级状态：一句事实 + 一个时间（设计 skill「状态」）。说「本期」不说「今日」：往期页面上也是这几句。
 // 抓取失败留一幅 130×69 的低通日出加上次成功时间；无新内容只有一句。
 // 生成中不在这里说话——期头的标签已经写着「生成中，约 1 分钟后刷新」。
 // 画布：docs/design/src/pages_front3.py 的 failure_box() 与 message()。
@@ -18,7 +18,7 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
       <div className="source-state source-state-failed">
         <Sunrise className="source-state-art" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span className="state-line">今日抓取失败，已通知管理员</span>
+          <span className="state-line">本期抓取失败，已通知管理员</span>
           {lastOkLabel ? <Mixed text={`上次成功 ${lastOkLabel}`} /> : null}
         </div>
       </div>
@@ -28,7 +28,7 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
   if (state === 'empty') {
     return (
       <div className="source-state">
-        <span className="state-line">今日无新内容</span>
+        <span className="state-line">本期无新内容</span>
       </div>
     )
   }

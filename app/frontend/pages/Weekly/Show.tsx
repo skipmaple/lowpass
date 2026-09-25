@@ -9,7 +9,7 @@ import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
 import { useScrollToHash } from '@/lib/anchors'
 import { WEEKLY_ARCHIVE, latestWeeklyHref, weeklyHref } from '@/lib/paths'
-import { Mixed } from '@/lib/typeset'
+import { Mixed, latinLang } from '@/lib/typeset'
 import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/types/lowpass'
 
 // 周刊详情（PRD 5.2、R-2.5 到 R-2.7）：期头「第 36 周 · 2026 · 8月31日 至 9月6日」，
@@ -32,9 +32,9 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
     <div className="source-band" id={id}>
       <div className="source-band-name">
-        <Icon name="book-open" size={28} color="var(--paper)" />
+        <Icon name="book-open" size={28} color="currentColor" />
         <div className="source-band-copy">
-          <h2 className="source-band-title">
+          <h2 className="source-band-title" lang={latinLang(section.source.name)}>
             <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />
           </h2>
           {section.issue_label ? (
@@ -50,7 +50,7 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
         {section.original_url ? (
           <a className="source-band-link" href={section.original_url} target="_blank" rel="noopener noreferrer">
             <span>{section.issue_no ? '原文' : '来源'}</span>
-            <Icon name="arrow-up-right" size={13} color="var(--paper)" />
+            <Icon name="arrow-up-right" size={13} color="currentColor" />
           </a>
         ) : null}
       </div>

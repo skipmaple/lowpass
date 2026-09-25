@@ -105,6 +105,18 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_nil summaries[sources(:github).id]["last_ok_label"]
   end
 
+  # 往期失败的那一栏：「上次成功」是那一期定稿之前的成功，不是源现在的最近一次（那可能比这一期还晚）
+  test "往期的上次成功不晚于那一期" do
+    sources(:github).fetch_runs.create!(trigger: "scheduled", attempt: 1, status: "succeeded", started_at: Time.utc(2026, 9, 6, 22, 7))
+    sources(:github).fetch_runs.create!(trigger: "scheduled", attempt: 1, status: "succeeded", started_at: Time.utc(2026, 9, 24, 22, 7))
+
+    get daily_issue_path("2026-09-08")
+
+    summaries = page_props["sources"].index_by { |s| s["id"] }
+    assert_equal "failed", summaries[sources(:github).id]["state"]
+    assert_equal "9月7日 06:07", summaries[sources(:github).id]["last_ok_label"]
+  end
+
   test "期头把附录 B 的状态文案算在服务端" do
     issues(:daily_0908).update!(revised_at: Time.utc(2026, 9, 7, 22, 42))
 

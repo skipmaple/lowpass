@@ -215,7 +215,9 @@ describe('搜索框', () => {
     expect(screen.getByRole('link', { name: '周刊' })).toHaveAttribute('href', '/search?q=rust&type=weekly&range=custom')
     await user.click(screen.getByRole('button', { name: 'Hacker News' }))
     expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&source=src-hn&range=custom', {}, { preserveState: true })
+    // 日期框失焦才提交（打字过程中不发请求）
     await user.type(screen.getByLabelText('起始日期'), '2026-09-01')
+    await user.tab()
     expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&from=2026-09-01&range=custom', {}, { preserveState: true })
     expect(input).toHaveValue('  rust  ')
   })

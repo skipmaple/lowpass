@@ -33,7 +33,6 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
         paddingBottom: 2,
         whiteSpace: 'nowrap',
         opacity: current ? 1 : 0.72,
-        borderBottom: current ? '1px solid var(--paper)' : '1px solid transparent',
       }}
     >
       {label}
@@ -109,7 +108,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           }
         }}
       >
-        <Icon name={open ? 'x' : 'user'} size={15} color="var(--paper)" />
+        <Icon name={open ? 'x' : 'user'} size={15} color="currentColor" />
         {/* 头像覆盖人像占位，展开时淡出以露出关闭图标；SVG 始终挂载，才能连续变形。
             provider 头像用 referrerPolicy 拦住 Referer，避免泄露读者正在看的页面。 */}
         {user.avatar_url ? (
@@ -147,13 +146,15 @@ function AccountMenu({ user }: { user: CurrentUser }) {
   )
 }
 
-const SEARCH_STYLE: React.CSSProperties = { display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }
+// 报头上的图标都用 currentColor、颜色给在外层：SVG 的 stroke 写死纸色的话，高对比模式把墨带换成 Canvas 后图标就看不见了
+const SEARCH_STYLE: React.CSSProperties = { display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center', color: 'var(--paper)' }
 const ACCOUNT_STYLE: React.CSSProperties = {
   width: 32,
   height: 32,
   flex: 'none',
   borderRadius: '50%',
   border: '1px solid var(--paper)',
+  color: 'var(--paper)',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -177,13 +178,13 @@ export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref,
 
       <div className="masthead-actions">
         <Link href={searchHref} aria-label="搜索" style={SEARCH_STYLE}>
-          <Icon name="search" size={20} color="var(--paper)" />
+          <Icon name="search" size={20} color="currentColor" />
         </Link>
         {user ? (
           <AccountMenu user={user} />
         ) : (
           <span aria-disabled="true" style={ACCOUNT_STYLE}>
-            <Icon name="user" size={15} color="var(--paper)" />
+            <Icon name="user" size={15} color="currentColor" />
           </span>
         )}
       </div>

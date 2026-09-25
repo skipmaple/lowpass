@@ -7,7 +7,7 @@ import Field from '@/components/Field'
 import Icon from '@/components/Icon'
 import SegButtons from '@/components/SegButtons'
 import { useDraftAccount, useDraftForm, useUnsavedChanges } from '@/lib/drafts'
-import { testFetch } from '@/lib/admin'
+import { TEST_FETCH_FAILED, testFetch } from '@/lib/admin'
 import { ADMIN_SOURCES, adminSourceHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { Adapter, AdapterOption, AdminSourceForm, Publication, SourceConfig, TestFetchResult } from '@/types/lowpass'
@@ -115,7 +115,7 @@ function SourceFields({ source, adapters }: AdminSourcesFormProps) {
     } catch (error) {
       if (testedRevision !== revision.current) return
       setTestedAt(new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }))
-      setResult({ ok: false, entries: [], warnings: [], parsed: 0, dropped: 0, duration_ms: 0, feed_title: null, error: error instanceof Error ? error.message : '请求失败' })
+      setResult({ ok: false, entries: [], warnings: [], parsed: 0, dropped: 0, duration_ms: 0, feed_title: null, error: error instanceof Error ? error.message : TEST_FETCH_FAILED })
     } finally {
       setTesting(false)
     }

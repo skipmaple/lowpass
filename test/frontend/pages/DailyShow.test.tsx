@@ -65,10 +65,26 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
-  it('空刊说「今日为空刊，管理员已收到通知」', () => {
-    const { container } = show({ issue: dailyIssue({ state: 'empty', status: '今日为空刊，管理员已收到通知' }) })
+  // 「约 1 分钟后刷新」不是空话：生成中每 10 秒部分重载一次，发布了就不再请求
+  it('生成中自己刷新，发布后停', () => {
+    vi.useFakeTimers()
+    const { unmount } = show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新', time_label: '06:00' }) })
 
-    expect(noticeText(container)).toBe('今日为空刊，管理员已收到通知')
+    vi.advanceTimersByTime(10_000)
+    expect(router.reload).toHaveBeenCalledWith({ only: ['issue', 'missing', 'sources', 'items_by_source'] })
+    unmount()
+
+    router.reload.mockClear()
+    show()
+    vi.advanceTimersByTime(30_000)
+    expect(router.reload).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('空刊说「本期为空刊，管理员已收到通知」', () => {
+    const { container } = show({ issue: dailyIssue({ state: 'empty', status: '本期为空刊，管理员已收到通知' }) })
+
+    expect(noticeText(container)).toBe('本期为空刊，管理员已收到通知')
   })
 
   // 已发布的期不在列表区说话，哪怕期头挂着「已于 06:42 修订」这种来历标签
@@ -153,18 +169,18 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
       items_by_source: {},
     })
 
-    expect(panel().getByText('今日抓取失败，已通知管理员')).toBeInTheDocument()
+    expect(panel().getByText('本期抓取失败，已通知管理员')).toBeInTheDocument()
     expect(panel().getByText('上次成功 9月7日').closest('span')?.parentElement).toHaveTextContent('上次成功 9月7日 06:11')
   })
 
   it('没有上次成功时间就只有那一句', () => {
     show({ sources: [source({ state: 'failed', last_ok_label: null })], active_source_id: 'src-hn', items_by_source: {} })
 
-    expect(panel().getByText('今日抓取失败，已通知管理员')).toBeInTheDocument()
+    expect(panel().getByText('本期抓取失败，已通知管理员')).toBeInTheDocument()
     expect(panel().queryByText(/上次成功/)).toBeNull()
   })
 
-  // R-1.6 补生成的期：不支持回填的源（7.7）说自己的那一句，不是「今日抓取失败」
+  // R-1.6 补生成的期：不支持回填的源（7.7）说自己的那一句，不是「本期抓取失败」
   it('无法回填只有一句，没有插图', () => {
     const { container } = show({ sources: [source({ state: 'no_backfill' })], active_source_id: 'src-hn', items_by_source: {} })
 
@@ -172,10 +188,10 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
     expect(container.querySelector('.source-state-failed')).toBeNull()
   })
 
-  it('今日无新内容只有一句，没有插图', () => {
+  it('本期无新内容只有一句，没有插图', () => {
     const { container } = show({ sources: [source({ state: 'empty' })], active_source_id: 'src-hn', items_by_source: {} })
 
-    expect(panel().getByText('今日无新内容')).toBeInTheDocument()
+    expect(panel().getByText('本期无新内容')).toBeInTheDocument()
     expect(container.querySelector('.source-state-failed')).toBeNull()
   })
 

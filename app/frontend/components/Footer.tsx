@@ -3,8 +3,10 @@ import type * as React from 'react'
 
 import { Ctrl } from '@/components/Ctrl'
 
-// 页脚：2px 墨线顶线、LP 邮戳、「明早 06:00 · 下一期」、最新周刊链接、前后期 40px 描边按钮。
+// 页脚：2px 墨线顶线、LP 邮戳、「每天 06:00 · 下期日刊」、最新周刊链接、前后期 40px 描边按钮。
 // 中文走文楷，时间走 Maple；按钮没有圆角、没有阴影。
+// 不写「明早」：零点到生成时间之间下一期就在今天早上（期头这时写着「今日将于 06:00 生成」），页脚每页都在，
+// 只说每天几点出刊，任何时刻都对；哪天出由期头说。
 export type FooterProps = {
   nextAt?: string
   latestWeeklyHref?: string
@@ -67,7 +69,7 @@ export default function Footer({
         <Stamp />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={{ lineHeight: 1.6, whiteSpace: 'nowrap' }}>
-            <span style={cjk}>明早 </span>
+            <span style={cjk}>每天 </span>
             <span style={data}>{nextAt}</span>
             <span style={data}> · </span>
             <span style={cjk}>下期日刊</span>

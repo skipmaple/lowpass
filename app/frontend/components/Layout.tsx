@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react'
-import { Toasts } from '@/components/Toast'
+import { useState } from 'react'
+import { ToastRegion, Toasts } from '@/components/Toast'
 import type { SharedProps } from '@/types/lowpass'
 import type * as React from 'react'
 
@@ -15,17 +16,21 @@ export type LayoutProps = React.PropsWithChildren<{
 
 export default function Layout({ children, masthead, footer }: LayoutProps) {
   const { flash } = usePage<Partial<SharedProps>>().props
+  const [toastRegion, setToastRegion] = useState<HTMLDivElement | null>(null)
   return (
-    <div className="paper sheet">
-      <a className="skip-link" href="#main-content">跳到正文</a>
-      <Masthead {...masthead} />
-      <div className="sheet-body">
-        <main id="main-content" tabIndex={-1}>
-          <Toasts flash={flash} />
-          {children}
-        </main>
-        {footer === false ? null : <Footer {...footer} />}
+    <ToastRegion.Provider value={toastRegion}>
+      <div className="paper sheet">
+        <a className="skip-link" href="#main-content">跳到正文</a>
+        <Masthead {...masthead} />
+        <div className="sheet-body">
+          <div className="toasts" role="status" ref={setToastRegion} />
+          <main id="main-content" tabIndex={-1}>
+            <Toasts flash={flash} />
+            {children}
+          </main>
+          {footer === false ? null : <Footer {...footer} />}
+        </div>
       </div>
-    </div>
+    </ToastRegion.Provider>
   )
 }

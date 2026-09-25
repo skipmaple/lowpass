@@ -17,8 +17,8 @@ class ReadingTest < ApplicationSystemTestCase
     click_on sources(:github).name
 
     assert_no_text HN_TITLE
-    # fixture 里 GitHub Trending 那一栏是 failed：附录 B 的「今日抓取失败，已通知管理员」
-    assert_text "今日抓取失败，已通知管理员"
+    # fixture 里 GitHub Trending 那一栏是 failed：附录 B 的「本期抓取失败，已通知管理员」
+    assert_text "本期抓取失败，已通知管理员"
   end
 
   test "来源地址经过页内锚点与刷新仍保留" do

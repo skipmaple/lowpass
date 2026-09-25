@@ -19,8 +19,10 @@ class SummaryCleaner
       truncate(normalize(text), STORE_LIMIT) if text
     end
 
+    # 完整正文（D24）要留住分段：一行一段，各行自己压空白，段与段之间留一个换行，详情页按行分段渲染。
+    # 摘要（clean）是一行文字，照旧整段压平。
     def content(text)
-      truncate(normalize(text), CONTENT_LIMIT) if text
+      truncate(paragraphs(text), CONTENT_LIMIT) if text
     end
 
     def preview(text)
@@ -31,6 +33,11 @@ class SummaryCleaner
       def normalize(text)
         s = strip_markdown(strip_html(text))
         CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip
+      end
+
+      def paragraphs(text)
+        s = CGI.unescapeHTML(strip_markdown(strip_html(text)))
+        s.split("\n").map { |line| line.gsub(/[[:space:]]+/, " ").strip }.reject(&:empty?).join("\n")
       end
 
       def strip_html(text)

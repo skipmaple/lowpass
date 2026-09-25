@@ -123,8 +123,9 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "延迟生成于 06:12 · 已于 06:42 修订", row[:published_label]
   end
 
-  # 空刊那句「今日为空刊，管理员已收到通知」在归档的一行里太长：只留状态记号
-  test "空刊只留记号，生成中给出刷新提示" do
+  # 空刊那句「本期为空刊，管理员已收到通知」在归档的一行里太长：只留状态记号
+  # 归档页不会自己刷新：生成中只说「生成中」，「约 1 分钟后刷新」留给会轮询的日刊页
+  test "空刊只留记号，生成中只说生成中" do
     Issue.create!(kind: "daily", period_key: "2026-09-09", state: "empty",
                   generation_started_at: Time.utc(2026, 9, 8, 22), published_at: Time.utc(2026, 9, 8, 22, 20))
     Issue.create!(kind: "daily", period_key: "2026-09-10", state: "generating",
@@ -133,7 +134,7 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     rows = Issue.daily_archive_props(now: NOW)[:days].index_by { |day| day[:period_key] }
 
     assert_nil rows["2026-09-09"][:published_label]
-    assert_equal "生成中，约 1 分钟后刷新", rows["2026-09-10"][:published_label]
+    assert_equal "生成中", rows["2026-09-10"][:published_label]
   end
 
   test "翻月只在最早一期与当月之间" do

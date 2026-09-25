@@ -14,7 +14,7 @@ export default function SegButtons({ label, options, value, onChange }: { label:
           disabled={option.disabled}
           onClick={() => onChange(option.value)}
         >
-          <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: option.value === value ? 'var(--paper)' : 'var(--ink)' }}>
+          <span className="cjk" style={{ fontSize: 'var(--fs-15)' }}>
             {option.label}
           </span>
         </button>

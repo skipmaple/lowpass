@@ -17,15 +17,25 @@
 // 说明也在 docs/development.md「测试与 CI」与 docs/engineering-conventions.md「测试」。
 
 const CJK_CHAR = '[\\u2E80-\\u9FFF\\uFF00-\\uFFEF]'
+// 中文排版里常用、码位却落在拉丁区的标点：“ ” ‘ ’ —— …… 与间隔号 ·。挨着汉字时它们是中文标点，
+// 要跟着文楷走（文楷里的破折号、省略号占一个字宽、居中）；不挨汉字时（元数据行的「 · 」、英文引号）照旧留给拉丁段
+const CJK_PUNCT = '[\\u00B7\\u2014\\u2018\\u2019\\u201C\\u201D\\u2026]'
 // 通用相邻规则只认日期与序数字符；「第 36 条」里的「条」由「第」那一支带出来
 const DATE_UNIT = '[年月日周期]'
-// 一个中文段 = 中文字符 ∪「第 N」∪ 贴着日期单位的数字段 ∪ 夹在这些之间的空格
+// 一个中文段 = 中文字符 ∪ 挨着中文字符的中文标点 ∪「第 N」∪ 贴着日期单位的数字段 ∪ 夹在这些之间的空格
 const CJK_PHRASE = new RegExp(
-  `(?:第\\s*\\d+|\\d+(?=\\s*${DATE_UNIT})|${CJK_CHAR}|\\s+(?=${CJK_CHAR}|\\d+\\s*${DATE_UNIT}))+`,
+  `(?:第\\s*\\d+|\\d+(?=\\s*${DATE_UNIT})|${CJK_CHAR}|(?<=${CJK_CHAR})${CJK_PUNCT}+|${CJK_PUNCT}+(?=${CJK_CHAR})|\\s+(?=${CJK_CHAR}|\\d+\\s*${DATE_UNIT}))+`,
   'g',
 )
 
 export type Run = { cjk: boolean; text: string }
+
+// 源站给的英文内容（标题、摘要、来源名）标 lang="en"：页面是 zh-CN，不标的话读屏用中文语音念英文，
+// 断行、连字等按语言走的行为也照中文来。含汉字的仍是中文，不标。
+const HAS_CJK = new RegExp(CJK_CHAR)
+export function latinLang(text: string): 'en' | undefined {
+  return HAS_CJK.test(text) ? undefined : 'en'
+}
 
 // 「上次成功 9月7日 06:11」→ 文楷[上次成功 9月7日] + Maple[ 06:11]
 export function splitRuns(text: string): Run[] {

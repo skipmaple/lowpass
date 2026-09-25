@@ -126,7 +126,7 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_equal 6, Issue.weekly.find_by!(period_key: "2026-W37").items.count
     run = FetchRun.where(source: source).last
     assert_equal "failed", run.status
-    assert_equal "not a feed", run.error_summary
+    assert_equal "不是有效的 RSS/Atom", run.error_summary
   end
 
   test "按排序值依次处理周刊源" do
@@ -314,7 +314,7 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
     assert_nil issues(:weekly_w36).revised_at
     run = sources(:ruanyf).fetch_runs.where(trigger: "manual").sole
     assert_equal "failed", run.status
-    assert_equal "boom", run.error_summary
+    assert_equal "连接源站失败", run.error_summary
   end
 
   # FetchSourceJob 可重试失败时先写一条 queued 占位，重试要复用它，不然那条 queued 永远挂着
@@ -362,7 +362,7 @@ class Issue::WeeklyTest < ActiveSupport::TestCase
 
     run = sources(:ruanyf).fetch_runs.where(trigger: "manual").sole
     assert_equal "failed", run.status
-    assert_equal "boom", run.error_summary
+    assert_equal "连接源站失败", run.error_summary
     assert_equal [ "旧条目" ], issues(:weekly_w36).reload.items.where(source: sources(:ruanyf)).pluck(:title)
   end
 

@@ -2,6 +2,7 @@ import { Tabs } from 'radix-ui'
 import type * as React from 'react'
 
 import { SourceMark } from '@/components/Illustration'
+import { latinLang } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
 // 来源切换：三条并排的纸报式索引条，当前项反白成墨块，其余 1px 描边；
@@ -16,7 +17,7 @@ const STATE_LINES: Record<SourceSummary['state'], string | null> = {
   ok: null,
   pending: null,
   failed: '抓取失败',
-  empty: '今日无新内容',
+  empty: '本期无新内容',
   no_backfill: '无法回填',
 }
 
@@ -30,12 +31,14 @@ export type SourceTabsProps = {
 export default function SourceTabs({ sources, activeId, onSelect, children }: SourceTabsProps) {
   return (
     <Tabs.Root value={activeId} onValueChange={onSelect}>
-      <Tabs.List id="source-directory" tabIndex={-1} className="source-tabs" aria-label="来源">
+      {/* 不覆盖 tabIndex：Radix 的 roving focus 让整条索引占 Tab 序列里的一站（进来落在当前源），
+          「返回来源目录」的锚点也靠这一站能聚焦。写成 -1 会把整条索引踢出 Tab 序列。 */}
+      <Tabs.List id="source-directory" className="source-tabs" aria-label="来源">
         {sources.map((source) => (
           <Tabs.Trigger key={source.id} value={source.id} className="source-tab">
             <SourceMark adapter={source.adapter} hole="var(--tab-hole)" className="source-tab-icon" />
             <span className="source-tab-body">
-              <span className="source-tab-name">{source.name}</span>
+              <span className="source-tab-name" lang={latinLang(source.name)}>{source.name}</span>
               {STATE_LINES[source.state] ? <span className="source-tab-state">{STATE_LINES[source.state]}</span> : null}
             </span>
           </Tabs.Trigger>

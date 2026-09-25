@@ -78,14 +78,54 @@ function DateRange({ q, filters, datePresets }: Omit<SearchFiltersProps, 'source
       <Seg label="日期" options={options} />
       {filters.range === 'custom' ? (
         <div className="filter-row">
-          {/* 用 key 拿住日期框：Inertia 前进后退时页面组件不重挂，props 变了 defaultValue 不会跟着变（与 SearchHead 的 key={q} 同一个道理） */}
-          <input key={`from-${filters.from ?? ''}`} type="date" className="date-field" aria-label="起始日期" defaultValue={filters.from ?? ''} onChange={(e) => change({ from: e.target.value || null })} />
+          <DateField label="起始日期" value={filters.from} onCommit={(from) => change({ from })} />
           <span className="date-sep">至</span>
-          <input key={`to-${filters.to ?? ''}`} type="date" className="date-field" aria-label="结束日期" defaultValue={filters.to ?? ''} onChange={(e) => change({ to: e.target.value || null })} />
+          <DateField label="结束日期" value={filters.to} onCommit={(to) => change({ to })} />
         </div>
       ) : null}
     </div>
   )
+}
+
+// 日期框：本地草稿，停手、失焦或回车才提交。不能每改一次就访问、再按值换 key 重挂——那样键盘按一下
+// 方向键或打一个数字，输入框就被换掉、焦点掉到 body；逐位打年份时还会先把 0002 这样的中间值发出去。
+// 前进后退时页面组件不重挂，草稿跟着 props 走。
+const COMMIT_DELAY_MS = 600
+
+function DateField({ label, value, onCommit }: { label: string; value: string | null; onCommit: (value: string | null) => void }) {
+  const [draft, setDraft] = useState(value ?? '')
+  const timer = useRef<number | undefined>(undefined)
+
+  useEffect(() => setDraft(value ?? ''), [value])
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  function commit(next: string) {
+    window.clearTimeout(timer.current)
+    if (next !== (value ?? '') && complete(next)) onCommit(next || null)
+  }
+
+  function edit(next: string) {
+    setDraft(next)
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => commit(next), COMMIT_DELAY_MS)
+  }
+
+  return (
+    <input
+      type="date"
+      className="date-field"
+      aria-label={label}
+      value={draft}
+      onChange={(event) => edit(event.target.value)}
+      onBlur={() => commit(draft)}
+      onKeyDown={(event) => { if (event.key === 'Enter') commit(draft) }}
+    />
+  )
+}
+
+// 逐位输入年份时日期框会先报出 0002、0020、0202：年份不满四位就还没打完，不提交
+function complete(value: string): boolean {
+  return value === '' || Number(value.slice(0, 4)) >= 1000
 }
 
 export default function SearchFilters({ q, filters, sourceOptions, datePresets }: SearchFiltersProps) {

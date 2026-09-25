@@ -111,12 +111,66 @@ describe('日期', () => {
     expect(screen.queryByLabelText('起始日期')).toBeNull()
   })
 
-  it('改日期框发一次访问', () => {
+  it('改日期框停手后发一次访问', () => {
+    vi.useFakeTimers()
     filters({ range: 'custom', from: '2026-08-01', to: null })
 
     fireEvent.change(screen.getByLabelText('结束日期'), { target: { value: '2026-09-08' } })
+    expect(router.get).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(600)
 
+    expect(router.get).toHaveBeenCalledTimes(1)
     expect(router.get).toHaveBeenCalledWith('/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom', {}, { preserveState: true })
+    vi.useRealTimers()
+  })
+
+  it('失焦或回车立即提交', () => {
+    filters({ range: 'custom', from: '2026-08-01', to: null })
+    const to = screen.getByLabelText('结束日期')
+
+    fireEvent.change(to, { target: { value: '2026-09-08' } })
+    fireEvent.blur(to)
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom', {}, { preserveState: true })
+
+    fireEvent.change(screen.getByLabelText('起始日期'), { target: { value: '2026-08-02' } })
+    fireEvent.keyDown(screen.getByLabelText('起始日期'), { key: 'Enter' })
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&from=2026-08-02&range=custom', {}, { preserveState: true })
+  })
+
+  // 键盘逐位输入年份：2 → 0002、20 → 0020……没打完的年份不发请求
+  it('年份没打完不提交', () => {
+    vi.useFakeTimers()
+    filters({ range: 'custom', from: '2026-08-01', to: null })
+    const from = screen.getByLabelText('起始日期')
+
+    for (const value of ['0002-08-01', '0020-08-01', '0202-08-01']) {
+      fireEvent.change(from, { target: { value } })
+      vi.advanceTimersByTime(600)
+    }
+    expect(router.get).not.toHaveBeenCalled()
+
+    fireEvent.change(from, { target: { value: '2025-08-01' } })
+    vi.advanceTimersByTime(600)
+    expect(router.get).toHaveBeenCalledTimes(1)
+    expect(router.get).toHaveBeenCalledWith('/search?q=kuber&from=2025-08-01&range=custom', {}, { preserveState: true })
+    vi.useRealTimers()
+  })
+
+  // 访问回来 props 变了，输入框还是同一个节点：键盘焦点不丢
+  it('提交后日期框不重挂', () => {
+    const { rerender } = render(
+      <SearchFilters q="kuber" filters={searchFilters({ range: 'custom', from: '2026-08-01', to: null })} sourceOptions={sourceOptions} datePresets={datePresets} />,
+    )
+    const from = screen.getByLabelText('起始日期')
+    from.focus()
+
+    rerender(
+      <SearchFilters q="kuber" filters={searchFilters({ range: 'custom', from: '2026-08-02', to: null })} sourceOptions={sourceOptions} datePresets={datePresets} />,
+    )
+
+    expect(screen.getByLabelText('起始日期')).toBe(from)
+    expect(from).toHaveFocus()
+    expect(from).toHaveValue('2026-08-02')
   })
 
   // Inertia 前进后退不重挂页面：日期框必须跟着 props 走，不能停在读者上一次输入的值

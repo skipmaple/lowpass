@@ -74,12 +74,12 @@ describe('日刊归档', () => {
 
   it('生成中是时钟加那一句', () => {
     const { container } = index({
-      days: [archiveDay({ state: 'generating', published_label: '生成中，约 1 分钟后刷新', source_marks: 'HN 生成中' })],
+      days: [archiveDay({ state: 'generating', published_label: '生成中', source_marks: 'HN 生成中' })],
     })
 
     const row = rows(container)[0]
     expect(within(row).getByRole('img', { name: '生成中' })).toBeInTheDocument()
-    expect(row.querySelector('.archive-label')).toHaveTextContent('生成中，约 1 分钟后刷新')
+    expect(row.querySelector('.archive-label')).toHaveTextContent('生成中')
   })
 
   // 发布了的那天用正文墨色，其余压到次级墨色

@@ -1,6 +1,9 @@
 import { createInertiaApp } from '@inertiajs/react'
 
 import Layout from '@/components/Layout'
+import { focusMainOnNavigate } from '@/lib/navigationFocus'
+
+focusMainOnNavigate()
 
 void createInertiaApp({
   pages: "../pages",

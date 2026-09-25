@@ -19,6 +19,9 @@
     <link rel="icon" href="/icon.svg?v=3" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png?v=3">
 
+    <%# 每页都有的界面字（报头、期头、页脚）在这个文楷子集里：不等 JS 渲染出文字才发现要它（script/subset_fonts） %>
+    <link rel="preload" href="<%= vite_asset_path "fonts/lxgw-wenkai-screen-ui.woff2" %>" as="font" type="font/woff2" crossorigin>
+
     <%= vite_client_tag %>
     <%= vite_react_refresh_tag %>
     <%= vite_stylesheet_tag "application" %>

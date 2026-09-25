@@ -11,6 +11,7 @@ import SourceState from '@/components/SourceState'
 import SourceTabs from '@/components/SourceTabs'
 import { useScrollToHash } from '@/lib/anchors'
 import { DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
+import { usePolling } from '@/lib/polling'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SharedProps, SourceSummary } from '@/types/lowpass'
 
@@ -102,8 +103,14 @@ function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProp
   )
 }
 
+// 「生成中，约 1 分钟后刷新」要说到做到：生成中每 10 秒部分重载这一期，定稿（发布或空刊）了就停。
+// 只重载期与各栏，不动读者选中的来源（那是本地状态）。
+const GENERATING_RELOAD = ['issue', 'missing', 'sources', 'items_by_source']
+const GENERATING_POLL_MS = 10_000
+
 export default function Show({ issue, missing, sources, items_by_source, active_source_id, latest_daily_key, backfill_available }: DailyShowProps) {
   useScrollToHash(issue.period_key)
+  usePolling(issue.state === 'generating', GENERATING_RELOAD, GENERATING_POLL_MS)
   const notice = bodyNotice(issue, missing)
   const [backfilling, setBackfilling] = useState(false)
   const [backfillResult, setBackfillResult] = useState<string | null>(null)

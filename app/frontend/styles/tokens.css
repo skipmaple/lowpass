@@ -54,6 +54,9 @@ a.t:hover { text-decoration-color: var(--ink); }
 .masthead-left { display: flex; align-items: center; gap: 40px; }
 .masthead-brand { font-family: var(--font-brand); font-size: var(--fs-40); font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper); line-height: 1; }
 .masthead-nav { display: flex; gap: 26px; }
+/* 当前刊物：1px 纸色下划线；其余留同宽的透明边，切换时字不跳 */
+.masthead-nav a { border-bottom: 1px solid transparent; }
+.masthead-nav a[aria-current="page"] { border-bottom-color: var(--paper); }
 .masthead-actions { display: flex; align-items: center; gap: 22px; }
 
 /* 账户（P2-①）：报头 32px 头像按钮（报头头像圆是唯一的圆形，令牌表既定例外）与 220px 菜单纸卡
@@ -263,6 +266,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 周刊正文完整展开：不继承日刊摘要的两行裁剪。 */
 .item-content--weekly { display: block; width: 100%; max-width: 72em; overflow-wrap: anywhere; }
+.item-content--weekly > p { margin: 0; }
+.item-content--weekly > p + p { margin-top: 12px; }
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
 .item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 1080px; padding: 8px 0 4px; }
@@ -466,20 +471,28 @@ button.chip-outline { min-height: 44px; }
 .dialog { width: 480px; max-width: 100%; background: var(--paper); border: 1px solid var(--ink); border-top: 2px solid var(--ink); padding: 28px 28px 24px 28px;
           display: flex; flex-direction: column; gap: 24px; }
 .dialog-text { margin: 0; font-family: var(--font-cjk); font-size: var(--fs-20); line-height: 1.6; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* 按钮行可换行、按钮文字可折行：确认按钮带着来源名（重抓 {name}），名字长或屏幕窄时一行放不下；
+   不换行的话 flex-end 把「取消」挤出纸卡左边，滚动容器又滚不到起始边之外，手机上只剩确认可点。 */
+.dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.dialog-actions > .ctrl, .dialog-actions > .btn-primary { max-width: 100%; white-space: normal; text-align: center; }
 
-/* 操作反馈：顶部一行 44px */
-.toasts { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; }
-.toast { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 8px 0 16px; background: var(--paper); border: 1px solid var(--ink); align-self: flex-start; max-width: 100%; }
-.toast-text { font-family: var(--font-cjk); font-size: var(--fs-15); }
+/* 操作反馈：页面顶部一行 44px（报头下面、期头上方）。提示区是一个零高的 sticky 条：提示浮在正文上、不占文档流，
+   出现与自动收起时正文不跳；滚到页面下方操作（后台表格里的测试抓取）时贴在视口顶部，照样看得见。
+   不压在报头上：失败的提示不自动收，压着报头就一直挡着导航。层级在头像菜单（20）之上、对话框遮罩（30）之下。 */
+.toasts { position: sticky; top: 0; height: 0; z-index: 25;
+          display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
+.toasts > .toast:first-child { margin-top: 16px; }
+.toast { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 8px 0 16px; background: var(--paper); border: 1px solid var(--ink); align-self: flex-start; max-width: 100%;
+         pointer-events: auto; }
+.toast-text { font-family: var(--font-cjk); font-size: var(--fs-15); overflow-wrap: anywhere; }
 .toast-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: 4px; padding: 0; border: 0; background: none; cursor: pointer; }
 .toast-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* 表单：字段说明、文楷值的输入框、按钮行、预览块 */
 .field-note { font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 .field-input-cjk { font-family: var(--font-cjk); font-size: var(--fs-15); }
-.seg-button { background: none; cursor: pointer; font: inherit; }
-.seg-button:disabled { cursor: default; color: var(--ink2); }
+.seg-button { background: none; cursor: pointer; font: inherit; color: var(--ink); }
+.seg-button[aria-pressed="true"] { color: var(--paper); }
 .admin-form { display: flex; flex-direction: column; gap: 24px; padding-top: 28px; max-width: 760px; }
 .admin-form-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
 .admin-form-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; }
@@ -512,6 +525,8 @@ button.chip-outline { min-height: 44px; }
 .skip-link { position: absolute; left: 24px; top: -100px; z-index: 100; padding: 12px 16px; background: var(--paper); color: var(--ink); font-family: var(--font-cjk); }
 .skip-link:focus { top: 8px; }
 #main-content:focus { outline: none; }
+/* 换页后焦点移到一级标题（lib/navigationFocus.ts）只为读屏播报与 Tab 起点，标题本身不是控件，不画焦点框 */
+#main-content h1[tabindex="-1"]:focus { outline: none; }
 .page-context { margin: 0; width: 100%; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
 .issue-head-main { flex-wrap: wrap; min-width: 0; gap: 12px 16px; }
 .issue-head-title { flex-wrap: wrap; gap: 12px 20px; }
@@ -604,7 +619,10 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .field-input { min-width: 0; width: 100%; max-width: 100%; min-height: 44px; }
 .seg-buttons { flex-wrap: wrap; gap: 4px; max-width: 100%; }
 .seg-buttons .seg-item { margin-left: 0; min-height: 44px; height: auto; white-space: normal; text-align: left; }
-.seg-button:disabled, .field-input:disabled, button:disabled { opacity: .55; cursor: not-allowed; }
+/* 禁用不用透明度：opacity 把字和底一起淡掉，主按钮上的「正在保存…」只剩 2.14:1（PRD 6.4 要求文字 4.5:1）。
+   与 .ctrl-off 同一种写法：字换次墨、边线换 35% 墨线；主按钮的墨块换成次墨块，纸色字 6.2:1。 */
+.seg-button:disabled, .field-input:disabled, button:disabled { cursor: not-allowed; color: var(--ink2); border-color: var(--rule); }
+.btn-primary:disabled { background: var(--ink2); border-color: var(--ink2); color: var(--paper); }
 .settings-directory { display: flex; flex-wrap: wrap; gap: 0 24px; padding-top: 20px; font-family: var(--font-cjk); font-size: var(--fs-15); }
 .settings-directory a { display: inline-flex; align-items: center; min-height: 44px; }
 .admin-section { scroll-margin-top: 20px; }
@@ -697,6 +715,13 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .admin-form-row { width: 100%; gap: 16px; }
   .admin-form-row > .field { width: 100% !important; }
 }
+/* 高对比（forced-colors）：背景都被换成 Canvas，平时靠墨色底反白的选中态就和其余项一样了，补一圈系统色描边；
+   边框颜色也会被统一改写，透明的占位下划线会显形，这里改成不画边、用等宽的内边距占位。 */
+@media (forced-colors: active) {
+  .source-tab[data-state="active"], .seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"] { outline: 3px solid CanvasText; outline-offset: -5px; }
+  .masthead-nav a:not([aria-current="page"]) { border-bottom-style: none; padding-bottom: 3px !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .account-avatar, .item-comments, .filter-toggle-icon { transition: none; }
 }

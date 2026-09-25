@@ -4,8 +4,8 @@ import Chip from '@/components/Chip'
 import HitText from '@/components/HitText'
 import Icon from '@/components/Icon'
 import { reportClick } from '@/lib/search'
-import { Mixed } from '@/lib/typeset'
-import type { SearchResult } from '@/types/lowpass'
+import { Mixed, latinLang } from '@/lib/typeset'
+import type { HitRun, SearchResult } from '@/types/lowpass'
 
 // 结果行（R-4.6、画布 search_row()）：眉行「刊物反白签 · 来源名 · 所在期 · 日期」，标题与摘要片段带命中下划线，
 // 底行「所在期 · …」与「原文 ↗」。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
@@ -13,6 +13,7 @@ import type { SearchResult } from '@/types/lowpass'
 
 const LABELS: Record<SearchResult['publication'], string> = { daily: '日刊', weekly: '周刊' }
 const DOT = <span className="search-dot">·</span>
+const runText = (runs: HitRun[]) => runs.map((run) => run.text).join('')
 
 export default function SearchResultRow({ result, q }: { result: SearchResult; q: string }) {
   const report = () => reportClick({ item_id: result.item_id, rank: result.rank, q })
@@ -34,13 +35,13 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
       </div>
 
       <h2 className="search-title">
-        <a className="t" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report}>
+        <a className="t" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report} lang={latinLang(runText(result.title_runs))}>
           <HitText runs={result.title_runs} size="var(--fs-20)" color="var(--ink)" />
         </a>
       </h2>
 
       {result.snippet_runs ? (
-        <p className="search-snippet">
+        <p className="search-snippet" lang={latinLang(runText(result.snippet_runs))}>
           <HitText runs={result.snippet_runs} size="var(--fs-15)" color="var(--ink2)" />
         </p>
       ) : null}

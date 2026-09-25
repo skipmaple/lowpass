@@ -7,9 +7,9 @@ class Source::TestFetch
   MESSAGES = {
     Adapters::Rss::ParseError => "不是有效的 RSS/Atom，请检查地址。",
     Timeout::Error => "连接超时（30 秒），请检查地址或稍后重试。",
-    Adapters::Http::Blocked => "源站拒绝了请求（429 / 403）。",
-    Adapters::Http::Unresolvable => "地址解析不到公网 IP。",
-    Adapters::Http::TooLarge => "响应超过 2 MB。"
+    Adapters::Http::Blocked => "源站拒绝了请求（429 / 403），请稍后重试。",
+    Adapters::Http::Unresolvable => "地址解析不到公网 IP，请检查地址。",
+    Adapters::Http::TooLarge => "响应超过 2 MB，请确认地址指向 RSS/Atom feed。"
   }.freeze
   FAILURES = [ *MESSAGES.keys, Adapters::Http::Error, Adapters::GithubTrending::ParseError, Adapters::RuanyfWeekly::Degraded ].freeze
 
@@ -76,7 +76,7 @@ class Source::TestFetch
 
     def message_for(error)
       MESSAGES.each { |klass, message| return message if error.is_a?(klass) }
-      "抓取失败：#{error.message.to_s.lines.first.to_s.strip[0, 120]}"
+      "抓取失败：#{Adapters::Failure.reason(error)}，请检查地址或稍后重试。"
     end
 
     def preview(entry)

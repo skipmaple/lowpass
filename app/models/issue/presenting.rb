@@ -46,7 +46,7 @@ module Issue::Presenting
           adapter: source.adapter,
           state: issue ? issue.source_state(source) : "pending",
           home_url: source.home_url,
-          last_ok_label: day_stamp(source.last_ok_at)
+          last_ok_label: day_stamp(source.last_ok_at(as_of: issue&.published_at))
         }
       end
     end
@@ -148,11 +148,12 @@ module Issue::Presenting
         }
       end
 
-      # 归档一行只放得下一句：空刊那句「今日为空刊，管理员已收到通知」太长，交给状态记号说
+      # 归档一行只放得下一句：空刊那句「本期为空刊，管理员已收到通知」太长，交给状态记号说；
+      # 生成中只说「生成中」——归档页不会自己刷新，「约 1 分钟后刷新」是日刊页上的话（那一页会轮询）
       def archive_label(issue)
         case issue&.state
         when nil then "缺期"
-        when "generating" then "生成中，约 1 分钟后刷新"
+        when "generating" then "生成中"
         when "empty" then nil
         else
           stamp = issue.generated_late ? "延迟生成于 #{hhmm(issue.published_at)}" : "#{hhmm(issue.published_at)} 发布"
@@ -230,7 +231,7 @@ module Issue::Presenting
         elsif issue.generating?
           "生成中，约 1 分钟后刷新"
         elsif issue.empty?
-          "今日为空刊，管理员已收到通知"
+          "本期为空刊，管理员已收到通知"
         elsif is_yesterday
           "昨日日刊，今日将于 #{daily_time} 生成"
         elsif issue.revised_at

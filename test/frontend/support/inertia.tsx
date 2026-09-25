@@ -20,7 +20,7 @@ export function usePage<T = PageProps>() {
 }
 
 // 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」；后台表单提交也走 spy（post/patch）
-type RouterEvent = 'start' | 'finish' | 'before'
+type RouterEvent = 'start' | 'finish' | 'before' | 'navigate'
 type RouterListener = (event: Event) => void
 const routerListeners = new Map<RouterEvent, Set<RouterListener>>()
 

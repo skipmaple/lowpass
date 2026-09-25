@@ -14,7 +14,7 @@ describe('useManualRuns', () => {
     ]
     const { result, rerender } = renderHook(({ f }) => useManualRuns({ active: [], finished: f, only: ['rows'] }), { initialProps: { f: finished } })
 
-    expect(result.current.toasts.map((t) => t.text)).toEqual(['2026-09-08 · 已更新 Hackaday（10 条）', '2026-09-07 · GitHub Trending · 重抓失败：连接超时。已保留原内容。'])
+    expect(result.current.toasts.map((t) => t.text)).toEqual(['2026-09-08 · 已更新 Hackaday（10 条）', '2026-09-07 · GitHub Trending · 重抓失败：连接超时。已保留原内容，可稍后再重抓。'])
     expect(result.current.toasts.map((t) => t.kind)).toEqual(['ok', 'fail'])
 
     rerender({ f: finished })
@@ -22,6 +22,20 @@ describe('useManualRuns', () => {
 
     act(() => result.current.dismiss('r1'))
     expect(result.current.toasts.map((t) => t.id)).toEqual(['r2'])
+  })
+
+  // 没记下原因时也不把状态的英文枚举（failed / timed_out）放进提示
+  it('失败原因缺失时用中文兜底', () => {
+    const finished = [
+      { id: 'r3', source_name: 'Hacker News', period_key: '2026-09-08', status: 'failed' as const, item_count: null, error_summary: null },
+      { id: 'r4', source_name: 'Hackaday', period_key: '2026-09-08', status: 'timed_out' as const, item_count: null, error_summary: null },
+    ]
+    const { result } = renderHook(() => useManualRuns({ active: [], finished, only: ['rows'] }))
+
+    expect(result.current.toasts.map((t) => t.text)).toEqual([
+      '2026-09-08 · Hacker News · 重抓失败：原因未记录。已保留原内容，可稍后再重抓。',
+      '2026-09-08 · Hackaday · 重抓失败：连接超时。已保留原内容，可稍后再重抓。',
+    ])
   })
 
   it('running 按期与源判断', () => {

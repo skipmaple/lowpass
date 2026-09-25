@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""把首屏要用的字体切成小文件，并生成对应的 @font-face（app/frontend/styles/fonts-subset.css）。
+
+为什么：首屏资源不超过 300 KB（PRD N-1）。霞鹜文楷的 npm 包按字频切成 97 片，每片 36 到 73 KB；
+界面上一句「9月25日 · 星期五 · 前一期 · 归档」就要落进七八片，光字体就几百 KB。这里把界面固定文案用到的字
+（从源码里的字符串收集）合成一个小文件，声明在包的 @font-face 之后：unicode-range 重叠时，后声明的先用
+（CSS Fonts 4），界面字从小文件里取，正文与推荐理由这类内容里的字照旧按需下载包里的分片，不会缺字。
+
+  - 文楷 ui：每页都有的报头、页脚、期头，日刊页、登录页、错误页的字，外加可打印 ASCII（中文段里的数字与空格）。
+    布局模板里 preload 这一个。
+  - 文楷 ui-extra：搜索、账户、归档、周刊页多出来的界面字；只有页面用到这些字时才下载。
+  - 文楷 ui-admin：后台页面、后台报错与表单校验多出来的界面字；只有后台页用到。
+  - Maple Mono NL：只留 ASCII、拉丁补充、常用标点、箭头与几何记号（元数据行、时间、序号用得到的）。
+  - Bodoni Moda：只用于报头 LOWPASS 与 LP 邮戳，只留这几个字母，固定成 900 字重的静态字形。
+
+界面文案改了（新加了字）就重跑一次：没收进来的字不会缺，只是回落到包的分片、多下载一片。
+
+用法（需要 Python 3 与 fontTools、brotli：pip install fonttools brotli；先 npm install）：
+  script/subset_fonts          生成字体与 CSS
+  script/subset_fonts --check  只检查界面字是否都已收进子集，缺字时列出并以 1 退出
+"""
+
+import glob
+import os
+import re
+import sys
+import tempfile
+
+from fontTools import subset
+from fontTools.merge import Merger
+from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+FONTS = os.path.join(ROOT, "app/frontend/fonts")
+CSS = os.path.join(ROOT, "app/frontend/styles/fonts-subset.css")
+WENKAI = os.path.join(ROOT, "node_modules/lxgw-wenkai-screen-webfont")
+BODONI = os.path.join(ROOT, "node_modules/@fontsource-variable/bodoni-moda/files/bodoni-moda-latin-wght-normal.woff2")
+MAPLE = os.path.join(ROOT, "vendor/fonts/MapleMonoNL-Regular.woff2")
+
+# 每页都有的外壳（报头、页脚、期头、提示）与日刊页、登录页、错误页：首屏要的字
+PRIMARY = [
+    "app/frontend/components/Layout.tsx",
+    "app/frontend/components/Masthead.tsx",
+    "app/frontend/components/Footer.tsx",
+    "app/frontend/components/Ctrl.tsx",
+    "app/frontend/components/Chip.tsx",
+    "app/frontend/components/Mark.tsx",
+    "app/frontend/components/Toast.tsx",
+    "app/frontend/components/IssueHead.tsx",
+    "app/frontend/components/IssueNotice.tsx",
+    "app/frontend/components/SourceTabs.tsx",
+    "app/frontend/components/SourceState.tsx",
+    "app/frontend/components/ItemRow.tsx",
+    "app/frontend/pages/Daily/Show.tsx",
+    "app/frontend/pages/Login/Show.tsx",
+    "app/frontend/pages/Errors/*.tsx",
+    "app/models/issue/presenting.rb",
+    "app/controllers/sessions_controller.rb",
+]
+# 读者页里其余的界面文案（后台的另收一份）
+EXTRA = ["app/frontend/**/*.ts", "app/frontend/**/*.tsx", "app/models/search/**/*.rb", "app/controllers/*.rb"]
+ADMIN_ONLY = re.compile(r"/Admin/|/admin/|AdminNav|AdminPage|InterestAreaRow|Table\.tsx|Dialog\.tsx|lib/(admin|runs|operations|drafts)\.ts")
+# 后台：页面、后台控制器的 flash，以及模型里写给管理员看的标签、报错与校验文案
+ADMIN = ["app/frontend/**/*.ts", "app/frontend/**/*.tsx", "app/controllers/admin/**/*.rb", "app/models/**/*.rb"]
+
+CJK = re.compile(r"[⺀-鿿＀-￯　-〿]")
+# 挨着汉字时跟文楷走的标点（lib/typeset.tsx 的 CJK_PUNCT）
+CJK_PUNCT = "·—‘’“”…"
+ASCII = {chr(c) for c in range(0x20, 0x7F)}
+MAPLE_RANGES = [(0x20, 0x7E), (0xA0, 0x17F), (0x2010, 0x205E), (0x20AC, 0x20AC), (0x2190, 0x21FF), (0x2212, 0x2212), (0x25A0, 0x25FF), (0x2605, 0x2606)]
+BRAND = "LOWPASlowpas "
+
+
+def main():
+    primary = collect(PRIMARY) | ASCII | set(CJK_PUNCT)
+    extra = collect(EXTRA) - primary
+    admin = collect(ADMIN) - primary - extra
+
+    if "--check" in sys.argv:
+        check(primary | extra | admin)
+    else:
+        slices = wenkai_slices()
+        faces = [
+            wenkai(slices, primary, "lxgw-wenkai-screen-ui.woff2"),
+            wenkai(slices, extra, "lxgw-wenkai-screen-ui-extra.woff2"),
+            wenkai(slices, admin, "lxgw-wenkai-screen-ui-admin.woff2"),
+            maple(),
+            bodoni(),
+        ]
+        write_css(faces)
+
+
+# 源码里会渲染出来的字：去掉注释（// … 与 /* … */、{/* … */}、Ruby 的 # …）再收汉字
+def collect(patterns):
+    files = {path for pattern in patterns for path in glob.glob(os.path.join(ROOT, pattern), recursive=True)}
+    found = set()
+    for path in sorted(files):
+        if ADMIN_ONLY.search(path) and patterns is EXTRA:
+            continue
+        found |= set(CJK.findall(strip_comments(open(path, encoding="utf-8").read(), path.endswith(".rb"))))
+    return found
+
+
+def strip_comments(source, ruby):
+    if ruby:
+        return re.sub(r"(^|\s)#(?!\{).*$", "", source, flags=re.M)
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
+    return re.sub(r"(?<![:\\])//.*$", "", source, flags=re.M)
+
+
+# 包里的 97 片：文件名与各自的 unicode-range
+def wenkai_slices():
+    css = open(os.path.join(WENKAI, "lxgwwenkaiscreen.css"), encoding="utf-8").read()
+    slices = []
+    for block in re.findall(r"@font-face\s*\{(.*?)\}", css, re.S):
+        name = re.search(r"url\('\./files/([^']+)'\)", block).group(1)
+        codepoints = parse_range(re.search(r"unicode-range:\s*([^;}]+)", block).group(1))
+        slices.append((os.path.join(WENKAI, "files", name), codepoints))
+    return slices
+
+
+# 从各分片里各取需要的字，再合成一个文件
+def wenkai(slices, chars, filename):
+    wanted = {ord(c) for c in chars}
+    with tempfile.TemporaryDirectory() as tmp:
+        pieces = []
+        for index, (path, codepoints) in enumerate(slices):
+            if codepoints & wanted:
+                font = TTFont(path)
+                subset_font(font, codepoints & wanted, drop=["morx", "feat", "bsln", "prop", "FFTM", "GSUB", "GPOS", "GDEF"])
+                piece = os.path.join(tmp, f"{index}.ttf")
+                font.flavor = None
+                font.save(piece)
+                pieces.append(piece)
+        merged = Merger().merge(pieces)
+    covered = wanted & set(merged.getBestCmap())
+    return save(merged, filename, "LXGW WenKai Screen", covered, "font-weight: 400;")
+
+
+def maple():
+    font = TTFont(MAPLE)
+    wanted = {c for low, high in MAPLE_RANGES for c in range(low, high + 1)} & set(font.getBestCmap())
+    subset_font(font, wanted, drop=["GSUB"])
+    return save(font, "maple-mono-nl.woff2", "Maple Mono NL", wanted, "font-weight: 400;")
+
+
+def bodoni():
+    font = instancer.instantiateVariableFont(TTFont(BODONI), {"wght": 900})
+    wanted = {ord(c) for c in BRAND}
+    subset_font(font, wanted, drop=["GSUB", "GPOS", "GDEF", "STAT"])
+    return save(font, "bodoni-moda-brand.woff2", "Bodoni Moda Variable", wanted, "font-weight: 900;")
+
+
+def subset_font(font, codepoints, drop):
+    options = subset.Options()
+    options.drop_tables += drop
+    options.layout_features = []
+    options.name_IDs = [0, 1, 2, 3, 4, 5, 6]
+    options.notdef_outline = True
+    subsetter = subset.Subsetter(options)
+    subsetter.populate(unicodes=codepoints)
+    subsetter.subset(font)
+
+
+def save(font, filename, family, codepoints, weight):
+    font.flavor = "woff2"
+    path = os.path.join(FONTS, filename)
+    font.save(path)
+    print(f"{filename}: {len(codepoints)} 字符，{os.path.getsize(path) / 1024:.1f} KB")
+    return family, filename, weight, codepoints
+
+
+def write_css(faces):
+    rules = []
+    for family, filename, weight, codepoints in faces:
+        rules.append(
+            "@font-face {\n"
+            f'  font-family: "{family}";\n'
+            f'  src: url("../fonts/{filename}") format("woff2");\n'
+            f"  {weight}\n"
+            "  font-display: swap;\n"
+            f"  unicode-range: {format_range(codepoints)};\n"
+            "}\n"
+        )
+    header = "/* 由 script/subset_fonts 生成，不要手改：界面文案改了就重跑。说明见那个脚本的开头。 */\n\n"
+    with open(CSS, "w", encoding="utf-8") as css:
+        css.write(header + "\n".join(rules))
+
+
+def check(chars):
+    covered = set()
+    for filename in ["lxgw-wenkai-screen-ui.woff2", "lxgw-wenkai-screen-ui-extra.woff2", "lxgw-wenkai-screen-ui-admin.woff2"]:
+        covered |= {chr(c) for c in TTFont(os.path.join(FONTS, filename)).getBestCmap()}
+    # 分片里本来就没有的字（比如 ‘ ’）子集里也不会有，不算缺
+    available = {chr(c) for path, codepoints in wenkai_slices() for c in codepoints}
+    missing = sorted((chars & available) - covered)
+    if missing:
+        print("子集里缺这些界面字，跑一次 script/subset_fonts：" + "".join(missing))
+        sys.exit(1)
+    print("界面字都在子集里")
+
+
+def parse_range(text):
+    codepoints = set()
+    for part in text.split(","):
+        part = part.strip().lower().removeprefix("u+")
+        if "-" in part:
+            low, high = part.split("-")
+            codepoints.update(range(int(low, 16), int(high, 16) + 1))
+        else:
+            codepoints.add(int(part, 16))
+    return codepoints
+
+
+def format_range(codepoints):
+    ranges, start, previous = [], None, None
+    for c in sorted(codepoints):
+        if start is None:
+            start = previous = c
+        elif c == previous + 1:
+            previous = c
+        else:
+            ranges.append((start, previous))
+            start = previous = c
+    if start is not None:
+        ranges.append((start, previous))
+    return ", ".join(f"U+{low:x}" if low == high else f"U+{low:x}-{high:x}" for low, high in ranges)
+
+
+if __name__ == "__main__":
+    main()

@@ -43,7 +43,7 @@ class Source::FetchingTest < ActiveSupport::TestCase
     assert_equal "boom", error.message
     run = sources(:hn).fetch_runs.ordered.first
     assert_equal "failed", run.status
-    assert_equal "boom", run.error_summary
+    assert_equal "连接源站失败", run.error_summary
   end
 
   test "健康度由最近记录推导" do

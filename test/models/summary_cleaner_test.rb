@@ -19,6 +19,13 @@ class SummaryCleanerTest < ActiveSupport::TestCase
     assert_equal "a*b 与 x_y 也是", SummaryCleaner.clean("a*b 与 x_y 也是")
   end
 
+  # 周刊正文（D24）要分段：原文一行一段（段间空行、图片行都不算段），段内空白照旧压平
+  test "完整正文留住分段" do
+    markdown = "本周，OpenClaw 发布了[2.0版](https://openclaw.ai)。\n\n![](https://cdn.example/a.webp)\n\n是不是很久没听到这个名字了？\n\n- 第一点  很重要\n- **第二点**"
+    assert_equal "本周，OpenClaw 发布了2.0版。\n是不是很久没听到这个名字了？\n第一点 很重要\n第二点", SummaryCleaner.content(markdown)
+    assert_equal "本周，OpenClaw 发布了2.0版。 是不是很久没听到这个名字了？ 第一点 很重要 第二点", SummaryCleaner.clean(markdown)
+  end
+
   test "列表预览 200 字" do
     assert_equal 200, SummaryCleaner.preview("字" * 300).length
   end

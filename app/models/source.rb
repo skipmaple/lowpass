@@ -12,8 +12,9 @@ class Source < ApplicationRecord
     "ruanyf_weekly" => "https://github.com/ruanyf/weekly"
   }.freeze
 
-  # D25 标题附中文译文的源：HN 的标题是英文句子；GitHub Trending 的标题是仓库名，RSS 的语言随 feed 而定，都不译
-  TRANSLATED_TITLES = %w[ hacker_news ].freeze
+  # D25 标题附中文译文的适配器：HN 与 RSS（Hackaday）的标题是句子；GitHub Trending 的标题是仓库名，不译。
+  # 中文 feed 不用在这里排除：标题含汉字的条目本来就不译（Item#translate_title?）
+  TRANSLATED_TITLES = %w[ hacker_news rss ].freeze
 
   has_many :items, dependent: :restrict_with_exception
   has_many :fetch_runs, dependent: :delete_all
@@ -51,8 +52,9 @@ class Source < ApplicationRecord
     HOME_URLS[adapter] || feed_home_url
   end
 
+  # 译文跟推荐理由一次生成，周刊没有理由（D19）也就没有译文：周刊的 RSS 源不算
   def translates_titles?
-    TRANSLATED_TITLES.include?(adapter)
+    publication == "daily" && TRANSLATED_TITLES.include?(adapter)
   end
 
   # `:"config.<field>"` 是挂 config 字段错误用的记号，不是真方法：符号类型的错误（比如 feed_url_unique

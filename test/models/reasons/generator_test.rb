@@ -47,17 +47,23 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_not_nil open.reload.recovered_at
   end
 
-  # D25：译文跟理由同一次调用拿回来，不多花一次；仓库名不译，模型多给了也不写
-  test "HN 条目同一次调用拿回标题译文；GitHub 条目不写译文，输出上限各按各的" do
+  # D25：译文跟理由同一次调用拿回来，不多花一次；HN 与 Hackaday 要译，仓库名不译，模型多给了也不写
+  test "HN 与 Hackaday 同一次调用拿回标题译文；GitHub 条目不写译文，输出上限各按各的" do
+    hackaday = Item.create!(source: sources(:hackaday), issue: @issue, title: "A 3D-Printed Rotary Phone", url: "https://hackaday.com/rotary-phone", url_hash: Digest::SHA256.hexdigest("https://hackaday.com/rotary-phone"), rank: 1, fetched_at: Time.current)
+    translations = { @item.title => "Show HN：一个用 Rust 写的终端日志查看器", hackaday.title => "一部 3D 打印的旋转拨号电话", @other.title => "octo/工具" }
     with_model_provider do
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
-      assert_equal 2, Reasons::Generator.generate!(@issue).generated
-      assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 1) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS_WITH_TITLE }
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
+        title = JSON.parse(request.body)["messages"].last["content"][/^标题：(.+)$/, 1]
+        { status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: translations.fetch(title)) }
+      end
+      assert_equal 3, Reasons::Generator.generate!(@issue).generated
+      assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS_WITH_TITLE }
       assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 1) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS }
     end
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", @item.reload.title_zh
+    assert_equal "一部 3D 打印的旋转拨号电话", hackaday.reload.title_zh
     assert_nil @other.reload.title_zh
-    assert_equal 2, ModelCall.count
+    assert_equal 3, ModelCall.count
   end
 
   # 译文是顺带的：不合规不为它重试、不连累理由；整期重生成这次没译好，也不抹掉上一次的（标题没变，旧译文仍然对得上）
@@ -166,13 +172,14 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_equal "一个用 Rust 写的终端日志查看器", renamed.reload.title_zh
   end
 
+  # HN 帖子链到仓库，第二天仓库上了 Trending：同一个地址，理由照沿用，仓库名不带走帖子标题的译文
   test "不译标题的条目沿用理由，不带走前一条的译文" do
     @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
     later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
-    hackaday = Item.create!(source: sources(:hackaday), issue: later, title: "A Terminal Log Viewer Written In Rust", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    repo = Item.create!(source: sources(:github), issue: later, title: "octo/termlog", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
     with_model_provider { assert_equal 1, Reasons::Generator.generate!(later).reused }
-    assert_equal @item.reason, hackaday.reload.reason
-    assert_nil hackaday.title_zh
+    assert_equal @item.reason, repo.reload.reason
+    assert_nil repo.title_zh
   end
 
   # 沿用只在补缺时算数：整期重生成要能把跨天沿用来的理由也换掉，不然这个按钮对重复条目没有效果

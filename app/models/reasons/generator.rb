@@ -80,7 +80,7 @@ module Reasons::Generator
 
     private
       # R-1.11 同一条目跨天重复：更早的日刊里同 url_hash 且已有理由的那条。要译标题的条目（D25）还得是
-      # 同一个标题、带着译文的那条——前一条早于译文上线，或 HN 后来改了标题，就不沿用，整条重新生成
+      # 同一个标题、带着译文的那条——前一条早于译文上线，或源站后来改了标题，就不沿用，整条重新生成
       def previous_reason(item)
         previous = Item.joins(:issue).where(url_hash: item.url_hash, issues: { kind: "daily" }).where("issues.period_key < ?", item.issue.period_key)
                        .where.not(reason: nil)

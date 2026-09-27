@@ -25,13 +25,17 @@ class ItemTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::StatementInvalid) { item.update_column(:title_zh, "译" * 301) }
   end
 
-  # D25：只有英文标题的源要译；HN 上偶尔出现的中文标题不用译
-  test "只有 HN 的非中文标题要译" do
+  # D25：日刊里 HN 与 RSS 源（Hackaday）的标题要译；仓库名、本来就是中文的标题、周刊都不译
+  test "HN 与 Hackaday 的英文标题要译" do
     assert items(:hn_one).translate_title?
+    assert Item.new(source: sources(:hackaday), title: "A 3D-printed rotary phone").translate_title?
+
     assert_not Item.new(source: sources(:hn), title: "中文互联网正在消失").translate_title?
+    assert_not Item.new(source: sources(:hackaday), title: "用 ESP32 做的旋转拨号电话").translate_title?
     assert_not Item.new(source: sources(:github), title: "octo/tool").translate_title?
-    assert_not Item.new(source: sources(:hackaday), title: "A 3D-printed rotary phone").translate_title?
     assert_not Item.new(source: sources(:ruanyf), title: "Rust 写的终端工具").translate_title?
+    weekly_feed = Source.new(name: "Weekly feed", adapter: "rss", publication: "weekly")
+    assert_not Item.new(source: weekly_feed, title: "This week in Rust").translate_title?
   end
 
   test "url 必须是 http 或 https，且不能带空白" do

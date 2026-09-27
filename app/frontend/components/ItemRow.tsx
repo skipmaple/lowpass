@@ -6,7 +6,7 @@ import Icon, { type IconName } from '@/components/Icon'
 import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
-// 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、标题译文（HN，D25）、说明、元数据、
+// 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、标题译文（HN、Hackaday，D25）、说明、元数据、
 // 兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
 // 标签锚定条目行末端；窄屏自然换行，仍属于同一阅读组。

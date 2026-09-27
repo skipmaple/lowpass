@@ -311,7 +311,7 @@ module Issue::Presenting
     end
 
     # 阅读页保留完整的已存摘要（上限 500 字）；周刊详情另带完整 content（D24）；
-    # title_zh 是 HN 标题的中文译文（D25），跟推荐理由同一次生成，没生成前是 nil。
+    # title_zh 是 HN 与 Hackaday 标题的中文译文（D25），跟推荐理由同一次生成，没生成前是 nil。
     def item_props(item)
       {
         id: item.id,

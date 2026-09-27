@@ -221,6 +221,14 @@ describe('ItemRow 标题译文（D25）', () => {
     expect(runs.find((run) => run.textContent?.includes('Rust'))?.style.fontFamily).toBe('var(--font-latin)')
   })
 
+  it('Hackaday（RSS 日刊源）的译文同样紧跟标题', () => {
+    const { container } = render(<ItemRow item={{ ...rss(), title_zh: '一部 3D 打印的旋转拨号电话' }} adapter="rss" rank={1} />)
+
+    const translation = container.querySelector('.item-translation')
+    expect(translation).toHaveTextContent('一部 3D 打印的旋转拨号电话')
+    expect(container.querySelector('.item-heading')?.nextElementSibling).toBe(translation)
+  })
+
   it('没有译文就没有这一行', () => {
     const { container } = render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
 

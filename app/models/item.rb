@@ -14,7 +14,7 @@ class Item < ApplicationRecord
   scope :visible, -> { where(hidden: false) }
   scope :ranked,  -> { order(:rank, :created_at) }
 
-  # D25：译文只给英文标题的源（Source#translates_titles?）；标题里本来就有汉字的帖子不用译
+  # D25：译文只给标题是句子的日刊源（Source#translates_titles?）；标题里本来就有汉字的（中文帖子、中文 feed）不用译
   def translate_title?
     source.translates_titles? && !title.match?(/\p{Han}/)
   end

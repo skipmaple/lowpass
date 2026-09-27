@@ -5,13 +5,25 @@ class Item < ApplicationRecord
   belongs_to :issue
 
   validates :title, presence: true, length: { maximum: 300 }
+  validates :title_zh, length: { maximum: 300 }, allow_nil: true
   validates :url, presence: true, length: { maximum: 2048 }, format: { with: %r{\Ahttps?://\S+\z}i }
   validates :url_hash, presence: true, length: { is: 64 }
   validates :summary, length: { maximum: 500 }, allow_nil: true
+  validates :summary_zh, length: { maximum: 500 }, allow_nil: true
   validates :content, length: { maximum: SummaryCleaner::CONTENT_LIMIT }, allow_nil: true
 
   scope :visible, -> { where(hidden: false) }
   scope :ranked,  -> { order(:rank, :created_at) }
+
+  # D25：译文只给标题是句子的日刊源（Source#translates_titles?）；标题里本来就有汉字的（中文帖子、中文 feed）不用译
+  def translate_title?
+    source.translates_titles? && !title.match?(/\p{Han}/)
+  end
+
+  # GitHub Trending 译的是仓库简介（Source#translates_summaries?）：没有简介、简介本来就是中文的不译
+  def translate_summary?
+    source.translates_summaries? && summary.present? && !summary.match?(/\p{Han}/)
+  end
 
   # 周刊页板块的落点（R-2.5 目录）也是搜索结果「所在期」链接的 fragment，Issue::Presenting 与 Search::Record
   # 共用这一处。阮一峰的板块 slug 由适配器按 GitHub 的锚点算法算好放在 meta.anchor；同一周两期各占一节

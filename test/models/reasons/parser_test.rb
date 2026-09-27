@@ -25,4 +25,33 @@ class Reasons::ParserTest < ActiveSupport::TestCase
     result = Reasons::Parser.parse({ reason: "长" * 80, interest_tag: "AI / LLM" }.to_json, NAMES)
     assert_equal 60, result.reason.length
   end
+
+  REASON = "这个用 Rust 写的终端日志工具对开发者效率很有帮助，值得一看。".freeze
+
+  test "标题译文去首尾空白、空白收成一个空格" do
+    result = Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", title_zh: "  Show HN：一个用  Rust\n写的终端日志查看器 " }.to_json, NAMES)
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", result.title_zh
+    assert_equal REASON, result.reason
+  end
+
+  # D25：译文是顺带的，不合规只当没有，理由照常通过——不能为了一句译文把理由也重试掉
+  test "译文缺失、不是字符串、不含汉字、超过 300 字都当没有，不判失败" do
+    [ nil, "", "   ", 42, [ "终端日志查看器" ], "A terminal log viewer", "译" * 301 ].each do |value|
+      result = Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", title_zh: value }.to_json, NAMES)
+      assert_nil result.title_zh, value.inspect
+      assert_equal "前端开发", result.interest_tag
+    end
+    assert_equal "译" * 300, Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", title_zh: "译" * 300 }.to_json, NAMES).title_zh
+  end
+
+  test "简介译文同一套规则，上限 500 字" do
+    result = Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", summary_zh: " 一个 Rust 写的\n命令行小工具 " }.to_json, NAMES)
+    assert_equal "一个 Rust 写的 命令行小工具", result.summary_zh
+    assert_nil result.title_zh
+
+    assert_equal "译" * 500, Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", summary_zh: "译" * 500 }.to_json, NAMES).summary_zh
+    [ "A tiny CLI tool", "译" * 501, { "zh" => "小工具" } ].each do |value|
+      assert_nil Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", summary_zh: value }.to_json, NAMES).summary_zh, value.inspect
+    end
+  end
 end

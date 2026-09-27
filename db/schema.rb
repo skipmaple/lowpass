@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -134,7 +134,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_160000) do
     t.string "section", limit: 100
     t.string "source_id", limit: 25, null: false
     t.string "summary", limit: 500
+    t.string "summary_zh", limit: 500
     t.string "title", limit: 300, null: false
+    t.string "title_zh", limit: 300
     t.datetime "updated_at", null: false
     t.string "url", limit: 2048, null: false
     t.string "url_hash", limit: 64, null: false
@@ -143,7 +145,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_160000) do
     t.index ["url_hash"], name: "index_items_on_url_hash"
     t.check_constraint "length(content) <= 50000", name: "items_content_len"
     t.check_constraint "length(summary::text) <= 500", name: "items_summary_len"
+    t.check_constraint "length(summary_zh::text) <= 500", name: "items_summary_zh_len"
     t.check_constraint "length(title::text) <= 300", name: "items_title_len"
+    t.check_constraint "length(title_zh::text) <= 300", name: "items_title_zh_len"
     t.check_constraint "length(url::text) <= 2048", name: "items_url_len"
   end
 

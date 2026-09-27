@@ -1,5 +1,6 @@
 # 给一期日刊生成理由（5.9、设计 §4.3）：一期顺序做，单条重试 2 次；上限到了就停并告警；跨天重复沿用前一期（R-1.11）；
-# 每次调用记一条账本；跑完没有缺理由的条目就收掉「推荐理由缺失」事件
+# 每次调用记一条账本；跑完没有缺理由的条目就收掉「推荐理由缺失」事件。
+# 要译的条目（D25）在同一次调用里拿回译文（HN 与 Hackaday 的标题、GitHub Trending 的简介），跟理由一起写；「缺理由」仍只看理由
 module Reasons::Generator
   RETRIES = 2
   Outcome = Data.define(:generated, :reused, :failed, :skipped)
@@ -23,7 +24,7 @@ module Reasons::Generator
         # 沿用只在补缺时算数：整期重生成（only_missing: false）就是要覆盖旧理由，
         # 跨天重复的那几条也得真的重新生成，不然这个按钮对它们没有效果（R-9.7）
         if only_missing && (previous = previous_reason(item))
-          item.update!(reason: previous.reason, interest_tag: previous.interest_tag, reason_generated_at: Time.current)
+          store(item, previous)
           counts[:reused] += 1
           next
         end
@@ -42,7 +43,7 @@ module Reasons::Generator
       Outcome.new(generated: counts[:generated], reused: counts[:reused], failed: counts[:failed], skipped: false)
     end
 
-    # 单条：最多 1 + RETRIES 次调用，每次都记账；成功写回 items（update!：R-9.7 唯一可补写的字段，走 Searchable 回调无害）
+    # 单条：最多 1 + RETRIES 次调用，每次都记账；成功写回 items（update!：R-9.7 发布后可补写的字段，走 Searchable 回调无害）
     def generate_item!(item, names: InterestArea.enabled_names, profile: InterestArea.profile_text)
       # 两道前提各自成立：读者页的单条重生成不经过 generate! 的循环，同样不能在画像为空
       # 或月上限到了的时候调模型（终审 F1、F2）
@@ -54,10 +55,10 @@ module Reasons::Generator
         started = now_ms
         response = nil
         begin
-          response = Reasons::Provider.chat(messages)
+          response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item))
           result = Reasons::Parser.parse(response.text, names)
           record(item, "ok", response, started)
-          item.update!(reason: result.reason, interest_tag: result.interest_tag, reason_generated_at: Time.current)
+          store(item, result)
           return true
         rescue Reasons::Parser::Invalid => e
           record(item, "invalid", response, started, e.message)
@@ -78,10 +79,25 @@ module Reasons::Generator
     end
 
     private
-      # R-1.11 同一条目跨天重复：更早的日刊里同 url_hash 且已有理由的那条
+      # R-1.11 同一条目跨天重复：更早的日刊里同 url_hash 且已有理由的那条。要译的条目（D25）还得是原文相同、
+      # 带着译文的那条——前一条早于译文上线，或源站后来改了标题、仓库改了简介，就不沿用，整条重新生成。
+      # GitHub 的仓库常常连着几天上榜，简介不变就一直沿用，不重复花钱
       def previous_reason(item)
-        Item.joins(:issue).where(url_hash: item.url_hash, issues: { kind: "daily" }).where("issues.period_key < ?", item.issue.period_key)
-            .where.not(reason: nil).order("issues.period_key DESC").first
+        previous = Item.joins(:issue).where(url_hash: item.url_hash, issues: { kind: "daily" }).where("issues.period_key < ?", item.issue.period_key)
+                       .where.not(reason: nil)
+        previous = previous.where(title: item.title).where.not(title_zh: nil) if item.translate_title?
+        previous = previous.where(summary: item.summary).where.not(summary_zh: nil) if item.translate_summary?
+        previous.order("issues.period_key DESC").first
+      end
+
+      # generated 是模型的解析结果或跨天沿用的前一条，两者都有 reason / interest_tag / title_zh / summary_zh。
+      # 理由与标签每次覆盖（R-9.7）；译文只写这一次真有的：整期重生成时这次没译好，不抹掉上一次的
+      # （原文没变，旧译文仍然对得上）；不要这种译文的条目一律不写，哪怕前一条来自要译的源
+      def store(item, generated)
+        attributes = { reason: generated.reason, interest_tag: generated.interest_tag, reason_generated_at: Time.current }
+        attributes[:title_zh] = generated.title_zh if item.translate_title? && generated.title_zh
+        attributes[:summary_zh] = generated.summary_zh if item.translate_summary? && generated.summary_zh
+        item.update!(attributes)
       end
 
       def record(item, status, response, started, error = nil)

@@ -47,6 +47,41 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_not_nil open.reload.recovered_at
   end
 
+  # D25：译文跟理由同一次调用拿回来，不多花一次。HN 与 Hackaday 译标题，GitHub Trending 的标题是仓库名，译简介；
+  # 各写各的那一种，模型多给了也不写；输出上限按要译的那段放宽
+  test "HN 与 Hackaday 拿回标题译文、GitHub 拿回简介译文，各写各的，输出上限各按各的" do
+    @other.update!(summary: "A tiny CLI tool for octo")
+    hackaday = Item.create!(source: sources(:hackaday), issue: @issue, title: "A 3D-Printed Rotary Phone", summary: "It actually rings.", url: "https://hackaday.com/rotary-phone", url_hash: Digest::SHA256.hexdigest("https://hackaday.com/rotary-phone"), rank: 1, fetched_at: Time.current)
+    titles = { @item.title => "Show HN：一个用 Rust 写的终端日志查看器", hackaday.title => "一部 3D 打印的旋转拨号电话", @other.title => "octo/工具" }
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
+        title = JSON.parse(request.body)["messages"].last["content"][/^标题：(.+)$/, 1]
+        { status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: titles.fetch(title), summary_zh: "#{title} 的简介译文") }
+      end
+      assert_equal 3, Reasons::Generator.generate!(@issue).generated
+      assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::TITLE_TOKENS }
+      assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 1) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::SUMMARY_TOKENS }
+    end
+    assert_equal [ "Show HN：一个用 Rust 写的终端日志查看器", nil ], [ @item.reload.title_zh, @item.summary_zh ]
+    assert_equal [ "一部 3D 打印的旋转拨号电话", nil ], [ hackaday.reload.title_zh, hackaday.summary_zh ]
+    assert_equal [ nil, "octo/tool 的简介译文" ], [ @other.reload.title_zh, @other.summary_zh ]
+    assert_equal 3, ModelCall.count
+  end
+
+  # 译文是顺带的：不合规不为它重试、不连累理由；整期重生成这次没译好，也不抹掉上一次的（标题没变，旧译文仍然对得上）
+  test "译文不合规只当没有：理由照写；重生成没译好不抹掉旧译文" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
+      assert Reasons::Generator.generate_item!(@item)
+      assert_equal [ "AI / LLM", nil ], [ @item.reload.interest_tag, @item.title_zh ]
+      assert_equal [ "ok" ], ModelCall.where(item: @item).pluck(:status)
+
+      @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器")
+      assert Reasons::Generator.generate_item!(@item)
+    end
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", @item.reload.title_zh
+  end
+
   test "输出缺领域名：重试 2 次后留空，账本记 invalid" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "一" * 30, interest_tag: "不存在"))
@@ -106,8 +141,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  test "跨天重复的条目沿用前一期的理由，不调模型（R-1.11）" do
-    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+  test "跨天重复的条目沿用前一期的理由与标题译文，不调模型（R-1.11）" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
     later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
     dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
     with_model_provider do
@@ -116,12 +151,60 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
     assert_equal @item.reason, dup.reload.reason
     assert_equal "AI / LLM", dup.interest_tag
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", dup.title_zh
     assert_equal 0, ModelCall.count
+  end
+
+  # D25：沿用的前一条得带着同一个标题的译文。早于译文上线的理由没有译文，HN 版主改过的标题对不上旧译文，
+  # 这两种都整条重新生成，不然这条就只有理由、永远等不到译文（补缺只看理由）
+  test "前一期没有译文或标题改过：HN 条目不沿用，整条重新生成" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    latest = Issue.create!(kind: "daily", period_key: "2026-09-10", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    renamed = Item.create!(source: sources(:hn), issue: latest, title: "A terminal log viewer in Rust", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
+      assert_equal [ 1, 0 ], Reasons::Generator.generate!(later).then { |outcome| [ outcome.generated, outcome.reused ] }
+
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "一个用 Rust 写的终端日志查看器"))
+      assert_equal [ 1, 0 ], Reasons::Generator.generate!(latest).then { |outcome| [ outcome.generated, outcome.reused ] }
+    end
+    assert_equal [ "前端开发", "Show HN：一个用 Rust 写的终端日志查看器" ], [ dup.reload.interest_tag, dup.title_zh ]
+    assert_equal "一个用 Rust 写的终端日志查看器", renamed.reload.title_zh
+  end
+
+  # GitHub 的仓库常连着几天上榜：简介没变就连理由带简介译文一起沿用；仓库改了简介，旧译文对不上，整条重新生成
+  test "GitHub 条目跨天沿用简介译文；简介改过就重新生成" do
+    @other.update!(summary: "A tiny CLI tool for octo", summary_zh: "给 octo 用的命令行小工具", reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    same = Item.create!(source: sources(:github), issue: later, title: @other.title, summary: @other.summary, url: @other.url, url_hash: @other.url_hash, rank: 1, fetched_at: Time.current)
+    latest = Issue.create!(kind: "daily", period_key: "2026-09-10", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    changed = Item.create!(source: sources(:github), issue: latest, title: @other.title, summary: "A tiny CLI tool for octo, now with plugins", url: @other.url, url_hash: @other.url_hash, rank: 1, fetched_at: Time.current)
+    with_model_provider do
+      assert_equal [ 0, 1 ], Reasons::Generator.generate!(later).then { |outcome| [ outcome.generated, outcome.reused ] }
+
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", summary_zh: "给 octo 用的命令行小工具，现在支持插件"))
+      assert_equal [ 1, 0 ], Reasons::Generator.generate!(latest).then { |outcome| [ outcome.generated, outcome.reused ] }
+    end
+    assert_equal [ @other.reason, "给 octo 用的命令行小工具" ], [ same.reload.reason, same.summary_zh ]
+    assert_equal "给 octo 用的命令行小工具，现在支持插件", changed.reload.summary_zh
+  end
+
+  # HN 帖子链到仓库，第二天仓库上了 Trending（仓库没写简介，没什么可译）：同一个地址，理由照沿用，不带走帖子标题的译文
+  test "不译的条目沿用理由，不带走前一条的译文" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    repo = Item.create!(source: sources(:github), issue: later, title: "octo/termlog", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    with_model_provider { assert_equal 1, Reasons::Generator.generate!(later).reused }
+    assert_equal @item.reason, repo.reload.reason
+    assert_nil repo.title_zh
+    assert_nil repo.summary_zh
   end
 
   # 沿用只在补缺时算数：整期重生成要能把跨天沿用来的理由也换掉，不然这个按钮对重复条目没有效果
   test "整期重生成覆盖跨天沿用来的理由" do
-    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
     later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
     dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
     with_model_provider do

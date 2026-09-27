@@ -13,8 +13,10 @@ module ReasonsTestHelpers
     Reasons::Provider.unstub(:api_key)
   end
 
-  def model_reply(reason:, interest_tag:, prompt_tokens: 100, completion_tokens: 40)
-    { choices: [ { message: { role: "assistant", content: { reason: reason, interest_tag: interest_tag }.to_json } } ],
+  # title_zh / summary_zh 只有要译的条目（D25）才会被要；不给就不出现在回复里，跟不译的回复一个样
+  def model_reply(reason:, interest_tag:, title_zh: nil, summary_zh: nil, prompt_tokens: 100, completion_tokens: 40)
+    content = { reason: reason, interest_tag: interest_tag, title_zh: title_zh, summary_zh: summary_zh }.compact.to_json
+    { choices: [ { message: { role: "assistant", content: content } } ],
       usage: { prompt_tokens: prompt_tokens, completion_tokens: completion_tokens } }.to_json
   end
 end

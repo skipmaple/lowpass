@@ -130,11 +130,12 @@ class AdminTest < ApplicationSystemTestCase
     Alerts::Config.load!({})
   end
 
-  test "AC-9.1 / AC-9.4 配置供应商后整期重生成，读者页看到理由与标签" do
+  # D25：同一次调用顺带拿回 HN 标题译文——已经发布的一期重生成理由，就是给它补上译文的路
+  test "AC-9.1 / AC-9.4 配置供应商后整期重生成，读者页看到理由、标签与 HN 标题译文" do
     Setting.set("model_base_url", "https://model.example/v1")
     Setting.set("model_name", "test-model")
     Reasons::Provider.stubs(:api_key).returns("test-key")
-    stub_request(:post, "https://model.example/v1/chat/completions").to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM"))
+    stub_request(:post, "https://model.example/v1/chat/completions").to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
 
     visit admin_issues_path(month: "2026-09")
     within(:xpath, "//*[@role='row'][.//*[text()='2026-09-08']]") { click_on "重生成理由" }
@@ -144,6 +145,7 @@ class AdminTest < ApplicationSystemTestCase
     visit daily_issue_path("2026-09-08")
     assert_text "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。"
     assert_text "AI / LLM"
+    assert_selector ".item-translation", text: "Show HN：一个用 Rust 写的终端日志查看器"
   ensure
     Setting.set("model_base_url", "")
     Setting.set("model_name", "")

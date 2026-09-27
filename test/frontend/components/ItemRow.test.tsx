@@ -195,6 +195,70 @@ describe('ItemRow 推荐理由与兴趣标签', () => {
   })
 })
 
+describe('ItemRow 标题译文（D25）', () => {
+  const translated = () => ({ ...hn(), title_zh: 'Show HN：一个用 Rust 写的终端日志查看器' })
+
+  it('紧跟标题、在元数据之前；只是文字，不是第二个链接', () => {
+    const { container } = render(<ItemRow item={translated()} adapter="hacker_news" rank={1} />)
+
+    const translation = container.querySelector('.item-translation')
+    expect(translation).toHaveTextContent('Show HN：一个用 Rust 写的终端日志查看器')
+    expect(container.querySelector('.item-heading')?.nextElementSibling).toBe(translation)
+    expect(translation?.nextElementSibling).toHaveClass('item-meta')
+    expect(translation?.querySelector('a')).toBeNull()
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      'https://example.com/termlog',
+      'https://news.ycombinator.com/item?id=41000001',
+    ])
+  })
+
+  // 设计 skill：译文里的中文走文楷，夹着的产品名与项目名跟原标题一样走 Newsreader
+  it('按字符段分配字体：中文段文楷，拉丁段 Newsreader', () => {
+    const { container } = render(<ItemRow item={translated()} adapter="hacker_news" rank={1} />)
+
+    const runs = Array.from(container.querySelectorAll<HTMLElement>('.item-translation span span'))
+    expect(runs.find((run) => run.textContent?.includes('终端日志查看器'))?.style.fontFamily).toBe('var(--font-cjk)')
+    expect(runs.find((run) => run.textContent?.includes('Rust'))?.style.fontFamily).toBe('var(--font-latin)')
+  })
+
+  it('Hackaday（RSS 日刊源）的译文同样紧跟标题', () => {
+    const { container } = render(<ItemRow item={{ ...rss(), title_zh: '一部 3D 打印的旋转拨号电话' }} adapter="rss" rank={1} />)
+
+    const translation = container.querySelector('.item-translation')
+    expect(translation).toHaveTextContent('一部 3D 打印的旋转拨号电话')
+    expect(container.querySelector('.item-heading')?.nextElementSibling).toBe(translation)
+  })
+
+  // GitHub Trending 的标题是仓库名，译的是简介：译文跟在英文简介后面、元数据之前
+  it('GitHub Trending 的简介译文紧跟英文简介', () => {
+    const { container } = render(
+      <ItemRow item={{ ...gh(), summary: 'A tiny CLI tool', summary_zh: '一个用 Rust 写的命令行小工具' }} adapter="github_trending" rank={1} />,
+    )
+
+    const summary = screen.getByText('A tiny CLI tool')
+    const translation = container.querySelector('.item-translation')
+    expect(translation).toHaveTextContent('一个用 Rust 写的命令行小工具')
+    expect(summary.nextElementSibling).toBe(translation)
+    expect(translation?.nextElementSibling).toHaveClass('item-meta')
+    expect(container.querySelectorAll('.item-translation')).toHaveLength(1)
+  })
+
+  it('没有译文就没有这一行', () => {
+    const { container } = render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+
+    expect(container.querySelector('.item-translation')).toBeNull()
+  })
+
+  it('周刊那一版不渲染译文', () => {
+    const { container } = render(
+      <ItemRow item={{ ...translated(), summary: '本周的一条。', summary_zh: '不该出现。' }} adapter="ruanyf_weekly" rank={1} variant="weekly" />,
+    )
+
+    expect(container.querySelector('.item-translation')).toBeNull()
+    expect(screen.queryByText('不该出现。')).toBeNull()
+  })
+})
+
 describe('ItemRow 周刊那一版（D19）', () => {
   it('元数据只剩发布时间，不出现 HN / GitHub 那些数字', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={1} variant="weekly" />)

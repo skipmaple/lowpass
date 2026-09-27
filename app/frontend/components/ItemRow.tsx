@@ -6,7 +6,7 @@ import Icon, { type IconName } from '@/components/Icon'
 import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
-// 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、说明、元数据、
+// 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、标题译文（HN，D25）、说明、元数据、
 // 兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
 // 标签锚定条目行末端；窄屏自然换行，仍属于同一阅读组。
@@ -161,6 +161,13 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
             <div className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></div>
           ) : null}
         </div>
+        {/* D25 标题译文紧跟标题，不是链接（卡片只有标题可点）。中文走文楷，夹在里面的产品名、项目名走 Newsreader，
+            跟上面的原标题同一字体（设计 skill「译文排进 Newsreader」那条偏差的改法）；字号与颜色交给 CSS 按断点走。 */}
+        {!weekly && item.title_zh ? (
+          <p className="item-translation">
+            <Mixed text={item.title_zh} font="latin" size="inherit" color="inherit" weight={400} />
+          </p>
+        ) : null}
         {/* 周刊正文完整展开、按原文分段（SummaryCleaner.content 一行一段），并按中西文分配字体；日刊摘要完整显示。 */}
         {copy ? (
           weekly ? (

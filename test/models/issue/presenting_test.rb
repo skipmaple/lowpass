@@ -256,6 +256,15 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal summary, row[:summary]
   end
 
+  # D25：HN 标题的中文译文跟推荐理由一样补写后才有，没生成前是 nil
+  test "日刊条目带标题译文" do
+    item = items(:hn_one)
+    assert_nil issues(:daily_0908).items_by_source.fetch(item.source_id).sole[:title_zh]
+
+    item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器")
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", issues(:daily_0908).items_by_source.fetch(item.source_id).sole[:title_zh]
+  end
+
   test "周刊条目与日刊用同一套字段" do
     issues(:weekly_w36).replace_section!(sources(:ruanyf), [ entry("慢下来的理由", section: "本周话题", issue_no: 366) ], issue_no: 366)
 

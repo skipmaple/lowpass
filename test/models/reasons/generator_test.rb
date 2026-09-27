@@ -47,6 +47,33 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_not_nil open.reload.recovered_at
   end
 
+  # D25：译文跟理由同一次调用拿回来，不多花一次；仓库名不译，模型多给了也不写
+  test "HN 条目同一次调用拿回标题译文；GitHub 条目不写译文，输出上限各按各的" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
+      assert_equal 2, Reasons::Generator.generate!(@issue).generated
+      assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 1) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS_WITH_TITLE }
+      assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 1) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS }
+    end
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", @item.reload.title_zh
+    assert_nil @other.reload.title_zh
+    assert_equal 2, ModelCall.count
+  end
+
+  # 译文是顺带的：不合规不为它重试、不连累理由；整期重生成这次没译好，也不抹掉上一次的（标题没变，旧译文仍然对得上）
+  test "译文不合规只当没有：理由照写；重生成没译好不抹掉旧译文" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
+      assert Reasons::Generator.generate_item!(@item)
+      assert_equal [ "AI / LLM", nil ], [ @item.reload.interest_tag, @item.title_zh ]
+      assert_equal [ "ok" ], ModelCall.where(item: @item).pluck(:status)
+
+      @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器")
+      assert Reasons::Generator.generate_item!(@item)
+    end
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", @item.reload.title_zh
+  end
+
   test "输出缺领域名：重试 2 次后留空，账本记 invalid" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "一" * 30, interest_tag: "不存在"))
@@ -106,8 +133,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  test "跨天重复的条目沿用前一期的理由，不调模型（R-1.11）" do
-    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+  test "跨天重复的条目沿用前一期的理由与标题译文，不调模型（R-1.11）" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
     later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
     dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
     with_model_provider do
@@ -116,12 +143,41 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
     assert_equal @item.reason, dup.reload.reason
     assert_equal "AI / LLM", dup.interest_tag
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", dup.title_zh
     assert_equal 0, ModelCall.count
+  end
+
+  # D25：沿用的前一条得带着同一个标题的译文。早于译文上线的理由没有译文，HN 版主改过的标题对不上旧译文，
+  # 这两种都整条重新生成，不然这条就只有理由、永远等不到译文（补缺只看理由）
+  test "前一期没有译文或标题改过：HN 条目不沿用，整条重新生成" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    latest = Issue.create!(kind: "daily", period_key: "2026-09-10", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    renamed = Item.create!(source: sources(:hn), issue: latest, title: "A terminal log viewer in Rust", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
+      assert_equal [ 1, 0 ], Reasons::Generator.generate!(later).then { |outcome| [ outcome.generated, outcome.reused ] }
+
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "一个用 Rust 写的终端日志查看器"))
+      assert_equal [ 1, 0 ], Reasons::Generator.generate!(latest).then { |outcome| [ outcome.generated, outcome.reused ] }
+    end
+    assert_equal [ "前端开发", "Show HN：一个用 Rust 写的终端日志查看器" ], [ dup.reload.interest_tag, dup.title_zh ]
+    assert_equal "一个用 Rust 写的终端日志查看器", renamed.reload.title_zh
+  end
+
+  test "不译标题的条目沿用理由，不带走前一条的译文" do
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
+    hackaday = Item.create!(source: sources(:hackaday), issue: later, title: "A Terminal Log Viewer Written In Rust", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
+    with_model_provider { assert_equal 1, Reasons::Generator.generate!(later).reused }
+    assert_equal @item.reason, hackaday.reload.reason
+    assert_nil hackaday.title_zh
   end
 
   # 沿用只在补缺时算数：整期重生成要能把跨天沿用来的理由也换掉，不然这个按钮对重复条目没有效果
   test "整期重生成覆盖跨天沿用来的理由" do
-    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", reason_generated_at: 1.day.ago)
+    @item.update!(reason: "前一天的理由，二十个字以上的中文句子，用来复用。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器", reason_generated_at: 1.day.ago)
     later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", published_at: Time.current, generation_started_at: Time.current)
     dup = Item.create!(source: sources(:hn), issue: later, title: @item.title, url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
     with_model_provider do

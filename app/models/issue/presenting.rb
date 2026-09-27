@@ -310,11 +310,13 @@ module Issue::Presenting
       end
     end
 
-    # 阅读页保留完整的已存摘要（上限 500 字）；周刊详情另带完整 content（D24）。
+    # 阅读页保留完整的已存摘要（上限 500 字）；周刊详情另带完整 content（D24）；
+    # title_zh 是 HN 标题的中文译文（D25），跟推荐理由同一次生成，没生成前是 nil。
     def item_props(item)
       {
         id: item.id,
         title: item.title,
+        title_zh: item.title_zh,
         url: item.url,
         summary: SummaryCleaner.clean(item.summary),
         content: item.content,

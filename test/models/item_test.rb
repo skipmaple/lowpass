@@ -14,6 +14,26 @@ class ItemTest < ActiveSupport::TestCase
     end
   end
 
+  test "标题译文最多 300 字符：模型校验与数据库约束两道" do
+    item = items(:hn_one)
+    item.title_zh = "译" * 300
+    assert item.valid?
+    item.title_zh = "译" * 301
+    assert_not item.valid?
+
+    # 数据库拒绝之后这个事务就废了，放在最后
+    assert_raises(ActiveRecord::StatementInvalid) { item.update_column(:title_zh, "译" * 301) }
+  end
+
+  # D25：只有英文标题的源要译；HN 上偶尔出现的中文标题不用译
+  test "只有 HN 的非中文标题要译" do
+    assert items(:hn_one).translate_title?
+    assert_not Item.new(source: sources(:hn), title: "中文互联网正在消失").translate_title?
+    assert_not Item.new(source: sources(:github), title: "octo/tool").translate_title?
+    assert_not Item.new(source: sources(:hackaday), title: "A 3D-printed rotary phone").translate_title?
+    assert_not Item.new(source: sources(:ruanyf), title: "Rust 写的终端工具").translate_title?
+  end
+
   test "url 必须是 http 或 https，且不能带空白" do
     item = items(:hn_one)
 

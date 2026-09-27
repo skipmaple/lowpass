@@ -30,7 +30,7 @@ Google / GitHub 登录，单租户。
 ## 改动前先看的不变量
 
 - 期不可变（R-1.4）：发布后条目不再变化，地址永久稳定。例外只有两个：管理员对"某期某源"重抓整栏替换并记 `revised_at`（R-1.5）；
-  推荐理由与兴趣标签可在发布后补写（R-9.7）。
+  推荐理由、兴趣标签与 HN 标题译文可在发布后补写（R-9.7、R-9.10）。
 - 一日一期、周期键（3.2）：日刊 `YYYY-MM-DD`，周刊 ISO 周 `YYYY-Www`；展示按 Asia/Shanghai，存储 UTC；
   周期键的计算只在一处，且有跨日（23:59 / 00:00）与服务器时区非上海的测试。
 - 调度是每分钟一次的 tick（ADR T2），读数据库里的生成时间，到点入队、缺期补跑（R-1.1、R-1.7）；不是静态 cron。
@@ -84,7 +84,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   测试抓取是同步的 JSON 端点（30 秒超时）；源配置的模式与中文校验在 `Source::Config`。〔P2-② 设计文档〕
 - 告警（P2-③）：触发点只调 `Alerts.<kind>!`，去重（`alert_events.dedup_key`：kind + 范围 + 上海日）、建记录、`DeliverAlertJob` 入队都在门面里，
   门面从不让业务路径失败；渠道只从环境读（`Alerts::Config`），邮件走 SMTP、webhook 走 HTTPS JSON（四种报文形状）；投递按渠道记已送达，重试不重发。〔P2-③ 设计文档〕
-- 推荐理由（P2-④）：`Reasons::Provider` 只做 OpenAI 兼容协议（地址、模型名、单价、上限在 `settings`，密钥只从环境读）；`Reasons::Generator` 一期顺序生成、单条重试 2 次、补缺时跨天沿用；`GenerateReasonsJob` 按期限并发；账本 `model_calls` 90 天；缺理由由 tick 检查后走告警。
+- 推荐理由（P2-④）：`Reasons::Provider` 只做 OpenAI 兼容协议（地址、模型名、单价、上限在 `settings`，密钥只从环境读）；`Reasons::Generator` 一期顺序生成、单条重试 2 次、补缺时跨天沿用；HN 条目在同一次调用里拿回标题译文（D25，`items.title_zh`，是否要译看 `Source#translates_titles?`），译文不合规只当没有、不触发重试，跨天沿用要求前一条标题相同且带译文；`GenerateReasonsJob` 按期限并发；账本 `model_calls` 90 天；缺理由由 tick 检查后走告警。
   模型端点与 feed 地址不同：它是管理员在后台填的可信地址，只要求 https（本机 http 允许，给本地 Ollama），**不经 surfguard**——这是对上面「出站 HTTP」那条不变量的明示例外，理由是它不是从源站内容里读来的地址，且请求体里带着密钥，不能被重定向到别处。401 / 403 与 429 都不追加重试，本期停止（`Rejected` / `Limited`）；没配供应商或画像为空（`Reasons.ready?`）一律不调模型。〔P2-④ 设计文档〕
 
 ## 认证、会话与请求上下文
@@ -110,7 +110,7 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 ## 数据库与迁移
 
 - 只支持 PostgreSQL，不写双适配器分支。〔不采用 fizzy 的 SQLite / MySQL 双栈〕
-- 借 fizzy 的"列长度显式化"：每个 `string` / `text` 列在迁移里写明 `limit`，值来自 7.2（title 300、url 2048、summary 500、
+- 借 fizzy 的"列长度显式化"：每个 `string` / `text` 列在迁移里写明 `limit`，值来自 7.2（title 300、title_zh 300、url 2048、summary 500、
   content 50000、section 100、author 100），并加 CHECK 约束；唯一性放数据库（`(source_id, issue_id, url_hash)`、`(type, period_key)`、
   `(provider, provider_uid)`）。〔改造自 `table_definition_column_limits.rb`〕
 - 生产不在迁移后 dump schema（`dump_schema_after_migration = false`）；`schema.rb` 随代码提交。

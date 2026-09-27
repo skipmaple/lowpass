@@ -174,6 +174,8 @@ a.t:hover { text-decoration-color: var(--ink); }
               display: block; }
 .item-summary { max-width: 780px; font-family: var(--font-latin); font-size: var(--fs-15); font-weight: 400; line-height: 1.5; color: var(--ink2);
                 display: block; }
+/* D25 标题译文紧跟标题：文楷 15 次墨；夹在中文里的产品名、项目名由 Mixed 切给 Newsreader */
+.item-translation { max-width: 780px; margin: 0; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.6; color: var(--ink2); }
 /* 元数据统一用 14px 线性图标；组内 6px、组间 16px，整组换行，图标与数字不拆散。 */
 .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px;
              font-family: var(--font-data); font-size: var(--fs-13); line-height: 1.5; color: var(--ink2); }
@@ -550,7 +552,7 @@ button.chip-outline { min-height: 44px; }
 .source-tab-name { font-size: var(--fs-26); line-height: 1.2; overflow-wrap: anywhere; }
 .source-tab-state { white-space: normal; }
 .item-body { width: 100%; max-width: none; }
-.item-title, .item-summary, .item-reason { overflow-wrap: anywhere; }
+.item-title, .item-translation, .item-summary, .item-reason { overflow-wrap: anywhere; }
 .source-foot { min-height: 44px; padding: 8px 0; margin-right: 24px; font-family: var(--font-cjk); font-size: var(--fs-15); }
 .operation-feedback { font-family: var(--font-cjk); font-size: var(--fs-13); line-height: 1.7; color: var(--ink2); margin: 8px 0; overflow-wrap: anywhere; }
 .operation-feedback a { display: inline-flex; min-height: 44px; align-items: center; }
@@ -765,6 +767,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .item-heading { max-width: 920px; }
   .item-heading--tagged { grid-template-columns: minmax(0, 920px) minmax(24px, 1fr) max-content; max-width: none; }
   .item-title { font-size: var(--fs-22); }
+  .item-translation { max-width: 920px; font-size: var(--fs-16); }
   .item-summary { max-width: 920px; font-size: var(--fs-16); line-height: 1.6; }
   .item-reason { max-width: 920px; font-size: var(--fs-16); line-height: 1.75; }
 }

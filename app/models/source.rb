@@ -12,6 +12,9 @@ class Source < ApplicationRecord
     "ruanyf_weekly" => "https://github.com/ruanyf/weekly"
   }.freeze
 
+  # D25 标题附中文译文的源：HN 的标题是英文句子；GitHub Trending 的标题是仓库名，RSS 的语言随 feed 而定，都不译
+  TRANSLATED_TITLES = %w[ hacker_news ].freeze
+
   has_many :items, dependent: :restrict_with_exception
   has_many :fetch_runs, dependent: :delete_all
 
@@ -46,6 +49,10 @@ class Source < ApplicationRecord
 
   def home_url
     HOME_URLS[adapter] || feed_home_url
+  end
+
+  def translates_titles?
+    TRANSLATED_TITLES.include?(adapter)
   end
 
   # `:"config.<field>"` 是挂 config 字段错误用的记号，不是真方法：符号类型的错误（比如 feed_url_unique

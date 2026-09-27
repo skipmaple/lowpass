@@ -265,6 +265,14 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", issues(:daily_0908).items_by_source.fetch(item.source_id).sole[:title_zh]
   end
 
+  test "日刊条目带简介译文（GitHub Trending）" do
+    repo = Item.create!(source: sources(:github), issue: issues(:daily_0908), title: "octo/tool", summary: "A tiny CLI tool", summary_zh: "一个命令行小工具",
+                        url: "https://github.com/octo/tool", url_hash: Digest::SHA256.hexdigest("https://github.com/octo/tool"), rank: 1, fetched_at: Time.current)
+
+    row = issues(:daily_0908).items_by_source.fetch(repo.source_id).sole
+    assert_equal [ "A tiny CLI tool", "一个命令行小工具" ], [ row[:summary], row[:summary_zh] ]
+  end
+
   test "周刊条目与日刊用同一套字段" do
     issues(:weekly_w36).replace_section!(sources(:ruanyf), [ entry("慢下来的理由", section: "本周话题", issue_no: 366) ], issue_no: 366)
 

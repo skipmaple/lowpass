@@ -174,7 +174,7 @@ a.t:hover { text-decoration-color: var(--ink); }
               display: block; }
 .item-summary { max-width: 780px; font-family: var(--font-latin); font-size: var(--fs-15); font-weight: 400; line-height: 1.5; color: var(--ink2);
                 display: block; }
-/* D25 标题译文紧跟标题：文楷 15 次墨；夹在中文里的产品名、项目名由 Mixed 切给 Newsreader */
+/* D25 译文紧跟它译的原文（HN、Hackaday 的标题，GitHub Trending 的简介）：文楷 15 次墨；夹在中文里的产品名、项目名由 Mixed 切给 Newsreader */
 .item-translation { max-width: 780px; margin: 0; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.6; color: var(--ink2); }
 /* 元数据统一用 14px 线性图标；组内 6px、组间 16px，整组换行，图标与数字不拆散。 */
 .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px;

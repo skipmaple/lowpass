@@ -10,7 +10,7 @@
 
 > 2026-09-17 后续产品决策：读者页移除单条重生成入口，避免误触产生模型费用；后台期页的整期重生成和受保护的单条后端接口保留。下文关于读者页入口与 C6 的记录由此决策取代。
 
-> 2026-09-27 后续产品决策（PRD D25，取代 D17）：Hacker News 与 Hackaday 的条目在同一次调用里加产标题的简体中文译文，存 `items.title_zh`（string(300) + CHECK），读者页排在标题下方。要不要译看 `Source#translates_titles?`（日刊的 `hacker_news` 与 `rss`；GitHub Trending 是仓库名，不译）且标题本身不含汉字（`Item#translate_title?`）；这类条目的系统提示多一句翻译要求、输出多一个 `title_zh`，`max_tokens` 从 200 放宽到 320。译文不合规（缺、不是字符串、不含汉字、超过 300 字）只当没有，不判 `invalid`、不重试，理由照写；「缺理由」的计数、告警与 `only_missing` 仍只看 `reason`。跨天沿用要求前一条标题相同且带译文，否则整条重新生成；重生成时这一次没译出来就保留旧译文。下文「不做：标题译文（D17）」由此取代。
+> 2026-09-27 后续产品决策（PRD D25，取代 D17）：日刊条目在同一次调用里加产简体中文译文，原文保留、译文排在它译的原文下方。Hacker News 与 Hackaday 译标题，存 `items.title_zh`（string(300) + CHECK），要不要译看 `Source#translates_titles?`（日刊的 `hacker_news` 与 `rss`）且标题不含汉字（`Item#translate_title?`）；GitHub Trending 的标题是仓库名，译说明也就是仓库简介，存 `items.summary_zh`（string(500) + CHECK），看 `Source#translates_summaries?`（日刊的 `github_trending`）且简介非空、不含汉字（`Item#translate_summary?`）。系统提示按要译的那几段拼上翻译要求，输出多出 `title_zh` / `summary_zh`；`max_tokens` 在 200 之上按段放宽（标题 +120、简介 +400），不译的条目提示词与上限逐字不变。译文不合规（缺、不是字符串、不含汉字、超过上限）只当没有，不判 `invalid`、不重试，理由照写；「缺理由」的计数、告警与 `only_missing` 仍只看 `reason`。跨天沿用要求前一条原文（标题或简介）相同且带译文，否则整条重新生成；重生成时这一次没译出来就保留旧译文。下文「不做：标题译文（D17）」由此取代。
 
 不做：标题译文（D17）、每用户画像（P1 的 D2）、自托管模型（T8 的 C）、周刊条目（D19）、理由的人工编辑界面（PRD 没要）、流式输出、按条目缓存到跨天以外的范围（R-1.11 的「跨天重复沿用前一日理由」按同 `url_hash` 查上一期即可）。
 

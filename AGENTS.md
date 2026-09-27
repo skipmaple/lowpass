@@ -14,7 +14,7 @@
 
 ## 不变量
 
-- 期发布后不可变。例外只有两个：管理员按「某期某源」重抓整栏替换并记 `revised_at`；推荐理由（连同同一次调用产出的 HN 与 Hackaday 标题译文 `title_zh`，D25）可在发布后补写。
+- 期发布后不可变。例外只有两个：管理员按「某期某源」重抓整栏替换并记 `revised_at`；推荐理由（连同同一次调用产出的译文 `title_zh` / `summary_zh`，D25）可在发布后补写。
 - 周期键只在一处计算；展示按 Asia/Shanghai，存储 UTC；跨日与非上海时区有测试。
 - 调度是每分钟一次的 tick，读数据库里的生成时间；不是静态 cron；错过要补跑。
 - 某个源失败只告警，不阻塞发布。推荐理由异步生成，只有日刊条目有，周刊没有。
@@ -32,7 +32,7 @@
 - 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。条目 `content` 上限 50000 字，只给阮一峰周刊正文使用。
 - 测试：Minitest + fixtures；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 快速循环，`bin/ci` 是合并门禁（rubocop、brakeman、bundler-audit、gitleaks、测试、系统测试）。
 - 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite；密钥只从环境读。`main` 分支用 Kamal 部署（CI 全绿后由 GitHub Actions 自动跑 `kamal deploy`）：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。
-- 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。标题译文（D25，日刊的 HN 与 RSS 源）搭同一次调用，不合规只当没有，「缺理由」只看理由。
+- 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。译文（D25：HN 与 RSS 源译标题，GitHub Trending 译简介）搭同一次调用，不合规只当没有，「缺理由」只看理由。
 
 ## 不要做
 

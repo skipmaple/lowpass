@@ -43,4 +43,15 @@ class Reasons::ParserTest < ActiveSupport::TestCase
     end
     assert_equal "译" * 300, Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", title_zh: "译" * 300 }.to_json, NAMES).title_zh
   end
+
+  test "简介译文同一套规则，上限 500 字" do
+    result = Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", summary_zh: " 一个 Rust 写的\n命令行小工具 " }.to_json, NAMES)
+    assert_equal "一个 Rust 写的 命令行小工具", result.summary_zh
+    assert_nil result.title_zh
+
+    assert_equal "译" * 500, Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", summary_zh: "译" * 500 }.to_json, NAMES).summary_zh
+    [ "A tiny CLI tool", "译" * 501, { "zh" => "小工具" } ].each do |value|
+      assert_nil Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", summary_zh: value }.to_json, NAMES).summary_zh, value.inspect
+    end
+  end
 end

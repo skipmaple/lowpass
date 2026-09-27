@@ -38,6 +38,28 @@ class ItemTest < ActiveSupport::TestCase
     assert_not Item.new(source: weekly_feed, title: "This week in Rust").translate_title?
   end
 
+  # D25：GitHub Trending 的标题是仓库名，译的是仓库简介；没有简介、简介本来就是中文的不译，别的源的摘要也不译
+  test "GitHub Trending 的英文简介要译" do
+    assert Item.new(source: sources(:github), title: "octo/tool", summary: "A tiny CLI tool").translate_summary?
+
+    assert_not Item.new(source: sources(:github), title: "octo/tool", summary: nil).translate_summary?
+    assert_not Item.new(source: sources(:github), title: "octo/tool", summary: "").translate_summary?
+    assert_not Item.new(source: sources(:github), title: "octo/tool", summary: "一个命令行小工具").translate_summary?
+    assert_not Item.new(source: sources(:hackaday), title: "A 3D-printed rotary phone", summary: "It works.").translate_summary?
+    assert_not items(:hn_one).translate_summary?
+  end
+
+  test "简介译文最多 500 字符：模型校验与数据库约束两道" do
+    item = items(:hn_one)
+    item.summary_zh = "译" * 500
+    assert item.valid?
+    item.summary_zh = "译" * 501
+    assert_not item.valid?
+
+    # 数据库拒绝之后这个事务就废了，放在最后
+    assert_raises(ActiveRecord::StatementInvalid) { item.update_column(:summary_zh, "译" * 501) }
+  end
+
   test "url 必须是 http 或 https，且不能带空白" do
     item = items(:hn_one)
 

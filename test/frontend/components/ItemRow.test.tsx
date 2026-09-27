@@ -229,6 +229,20 @@ describe('ItemRow 标题译文（D25）', () => {
     expect(container.querySelector('.item-heading')?.nextElementSibling).toBe(translation)
   })
 
+  // GitHub Trending 的标题是仓库名，译的是简介：译文跟在英文简介后面、元数据之前
+  it('GitHub Trending 的简介译文紧跟英文简介', () => {
+    const { container } = render(
+      <ItemRow item={{ ...gh(), summary: 'A tiny CLI tool', summary_zh: '一个用 Rust 写的命令行小工具' }} adapter="github_trending" rank={1} />,
+    )
+
+    const summary = screen.getByText('A tiny CLI tool')
+    const translation = container.querySelector('.item-translation')
+    expect(translation).toHaveTextContent('一个用 Rust 写的命令行小工具')
+    expect(summary.nextElementSibling).toBe(translation)
+    expect(translation?.nextElementSibling).toHaveClass('item-meta')
+    expect(container.querySelectorAll('.item-translation')).toHaveLength(1)
+  })
+
   it('没有译文就没有这一行', () => {
     const { container } = render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
 
@@ -236,9 +250,12 @@ describe('ItemRow 标题译文（D25）', () => {
   })
 
   it('周刊那一版不渲染译文', () => {
-    const { container } = render(<ItemRow item={translated()} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const { container } = render(
+      <ItemRow item={{ ...translated(), summary: '本周的一条。', summary_zh: '不该出现。' }} adapter="ruanyf_weekly" rank={1} variant="weekly" />,
+    )
 
     expect(container.querySelector('.item-translation')).toBeNull()
+    expect(screen.queryByText('不该出现。')).toBeNull()
   })
 })
 

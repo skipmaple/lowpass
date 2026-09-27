@@ -43,6 +43,7 @@ export function item(overrides: Partial<Item> = {}): Item {
     title_zh: null,
     url: 'https://example.com/termlog',
     summary: null,
+    summary_zh: null,
     content: null,
     section: null,
     author: null,

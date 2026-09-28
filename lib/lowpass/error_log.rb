@@ -3,8 +3,8 @@
 # Search::Runner 带上的原始搜索词都不写，两样落在同一行就把搜索和人连起来了（D12）；控制器、job 对象也不整个倒出来
 module Lowpass
   class ErrorLog
-    # 值都是自己生成的（步骤名、true、周期键），原样写
-    CONTEXT_KEYS = %i[ step alerts issue ].freeze
+    # 值都是自己生成的（步骤名、true、周期键、健康检查的项名、备份记录的 id），原样写
+    CONTEXT_KEYS = %i[ step alerts issue health backup_run ].freeze
 
     # 订阅者不能抛异常：development 与 test 没给 Rails.error 配 logger，这里一抛就穿过调用方的 rescue 冒出去
     # （production 只记一行 fatal）

@@ -9,8 +9,13 @@ class Search::Runner
   # <% 只认这个 GUC 阈值：取两档里低的那个让 GIN 索引先粗筛，精确阈值由 word_similarity() 复核
   SIMILARITY_FLOOR = 0.45
   WEIGHTS = { title: 4, section: 2, source_name: 2, summary: 1 }.freeze
+  # 健康检查的探测词：拉丁词走 trigram、中文走子串，两条 SQL 路径都跑到；有没有结果无所谓
+  PROBE = "lowpass 日刊".freeze
 
   def self.call(query, timeout_ms: STATEMENT_TIMEOUT_MS) = new(query, timeout_ms).call
+
+  # 健康检查（N-5，设计 §3）：跑一条固定查询，结果不计入搜索连续失败的告警计数——B5 只看读者真实的搜索
+  def self.probe(timeout_ms: STATEMENT_TIMEOUT_MS) = new(Search::Query.parse({ q: PROBE }), timeout_ms).probe
 
   def initialize(query, timeout_ms)
     @query = query
@@ -26,6 +31,8 @@ class Search::Runner
     Alerts.search_status(result.status)   # 5.7 连续三次不可用告警（B5）
     result
   end
+
+  def probe = search
 
   private
     def search

@@ -6,7 +6,7 @@
 
 **Architecture:** Rails 8.1 单体，vanilla Rails（STYLE.md）：适配器在模型层输出统一的条目契约，期生成器只装订条目；Solid Queue 跑抓取任务与每分钟一次的调度 tick；Inertia + React + TypeScript 渲染四个阅读页面；PostgreSQL 单库，主键是 UUIDv7 的 25 字符 base36 字符串。
 
-**Tech Stack:** Ruby 3.4.8、Rails 8.1（`rails new` 自带 Solid Queue / Cache / Cable、Kamal、Thruster、bin/ci）、PostgreSQL 16（开发用 Docker 容器）、inertia_rails + vite_rails + React 19 + TypeScript + Tailwind v4 + shadcn/ui、Minitest + fixtures + WebMock、rubocop-rails-omakase、brakeman、bundler-audit、mise 管 Ruby 与 Node、surfguard 做出站 SSRF 检查、rss 与 nokogiri 做解析。
+**Tech Stack:** Ruby 3.4.8、Rails 8.1（`rails new` 自带 Solid Queue / Cache / Cable、Kamal、Thruster、bin/ci）、PostgreSQL 18（开发用 Docker 容器，与 CI、生产同一个大版本）、inertia_rails + vite_rails + React 19 + TypeScript + Tailwind v4 + shadcn/ui、Minitest + fixtures + WebMock、rubocop-rails-omakase、brakeman、bundler-audit、mise 管 Ruby 与 Node、surfguard 做出站 SSRF 检查、rss 与 nokogiri 做解析。
 
 **Spec:** `docs/superpowers/specs/2026-09-08-mvp-prd.md`（v0.3.6，P0 范围见 10.1 与 10.2）；决议 `docs/adr/0001-mvp-tech-stack.md`（T1 到 T12）；默认值 `AGENTS.md`；风格 `STYLE.md`；界面令牌 `.claude/skills/lowpass-design-taste/reference/lowpass-tokens.md`。
 
@@ -160,7 +160,7 @@ if ! nc -z 127.0.0.1 5432 2>/dev/null; then
     step "Starting PostgreSQL" docker start lowpass-postgres
   else
     step "Creating PostgreSQL container" docker run -d --name lowpass-postgres \
-      -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
+      -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:18
   fi
   sleep 3
 fi

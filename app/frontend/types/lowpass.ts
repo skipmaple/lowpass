@@ -72,3 +72,8 @@ export type AlertChannels = { email: AlertChannel; webhook: AlertChannel };
 export type ReasonsStatus = { currency: string; has_nonzero_costs: boolean; configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
 export type InterestArea = { id: string; name: string; keywords: string; sort_order: number; enabled: boolean };
 export type ModelConfig = { currency: string; currency_confirmation: string; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };
+
+// P3 备份（设计 docs/superpowers/specs/2026-09-28-p3-backup-health-design.md §2.6）：设置页「备份」一节（Backup::Status#props）。
+// 没有任何密钥：存储只给主机与路径，加密密钥只给指纹；summary 是拼好的一句
+export type BackupRunState = "queued" | "running" | "succeeded" | "failed" | "stalled";
+export type BackupStatus = { configured: boolean; problems: string[]; storage: string | null; key_fingerprint: string | null; last: { status: BackupRunState; summary: string } | null; last_succeeded: string | null; active: boolean };

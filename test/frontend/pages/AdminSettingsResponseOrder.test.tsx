@@ -6,12 +6,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import Show from '@/pages/Admin/Settings/Show'
 import { formPatch, router, setPageProps } from '../support/inertia'
-import { interestArea, reasonsStatus } from '../support/props'
+import { backupStatus, interestArea, reasonsStatus } from '../support/props'
 
 const props = {
   schedule: { daily_time: '06:00', weekly_time: '09:00' }, whitelist: [],
   alerts: { email: { configured: true, label: 'mail' }, webhook: { configured: false, label: '未配置' } },
-  reasons: reasonsStatus(), interest_areas: [interestArea(), interestArea({ id: 'ia-2', name: '前端开发' })],
+  reasons: reasonsStatus(), interest_areas: [interestArea(), interestArea({ id: 'ia-2', name: '前端开发' })], backup: backupStatus(),
 }
 const settings = (data: Record<string, unknown>): Page => ({
   component: 'Admin/Settings/Show', url: '/admin/settings', version: null,

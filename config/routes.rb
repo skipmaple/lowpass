@@ -41,6 +41,8 @@ Rails.application.routes.draw do
     resource :settings, only: [ :show, :update ]
     resources :interest_areas, only: [ :create, :update, :destroy ]
     resource :test_alert, only: :create
+    # P3 备份（设计 docs/superpowers/specs/2026-09-28-p3-backup-health-design.md §2.6）：设置页的「立即备份」
+    resource :backup, only: :create
   end
 
   # 队列面板（ADR T12）：三个环境都挂在 /admin/jobs，认证由 Admin::BaseController 做（config/application.rb）。
@@ -52,6 +54,10 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
+
+  # N-5 给外部拨测的健康检查（设计 §3）：数据库、搜索、调度、日刊、备份五项，200 / 503。
+  # /up 只回答「应用起来没有」，留给 kamal-proxy 切流量，日刊迟到不该让部署失败（E11）
+  resource :health, only: :show, controller: "health"
 
   # 兜底：站内没有的地址也给附录 B 的 404 页（带报头与页脚），不是 public/404.html 那张静态页。
   # 必须排在最后，前面每条路由都先匹配。静态资源由 ActionDispatch::Static 在路由之前接走。

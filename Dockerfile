@@ -13,9 +13,13 @@ FROM docker.io/library/ruby:${RUBY_VERSION}-slim-bookworm AS base
 
 WORKDIR /rails
 
-# 运行时只要 libpq（postgresql-client 带上，方便 db:prepare 与排查）、jemalloc、curl（健康检查与排查）
+# 运行时只要 PostgreSQL 客户端（libpq；db:prepare、排查与每日备份的 pg_dump）、jemalloc、curl（排查）。
+# 客户端与数据库同为 18，从 PostgreSQL 官方 APT 源（PGDG）装：bookworm 自带的是 15，pg_dump 遇到比自己新的服务端会拒绝导出。
+# 源的签名密钥用 Debian 的 postgresql-common 包里带的那一份（它的 apt.postgresql.org.sh 写好源、跑 apt-get update），构建时不另外下载密钥
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 postgresql-client && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 postgresql-common && \
+    /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
+    apt-get install --no-install-recommends -y postgresql-client-18 && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 

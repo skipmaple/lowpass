@@ -4,6 +4,9 @@ cd "$(dirname "$0")/.."
 
 step() { echo "▸ $1"; shift; "$@"; echo; }
 
+# 开发容器、CI 的 postgres service 与生产 accessory 同一个大版本（docs/development.md「数据库」）
+POSTGRES_IMAGE=postgres:18
+
 # 第一次建容器要初始化数据目录：固定 sleep 有时不够（db:prepare 连不上就整条 setup 失败），
 # 多数时候又白等。改成轮询容器自己的 pg_isready，最多等 30 秒。
 wait_for_postgres() {
@@ -36,9 +39,18 @@ elif ! nc -z 127.0.0.1 5432 2>/dev/null; then
   else
     # 只绑回环地址：容器里的 postgres 用的是默认口令，不该跟着局域网走
     step "Creating PostgreSQL container" docker run -d --name lowpass-postgres \
-      -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5432:5432 postgres:16
+      -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5432:5432 "$POSTGRES_IMAGE"
   fi
   step "Waiting for PostgreSQL" wait_for_postgres
+fi
+
+# 以前按旧大版本建的容器照样能用，只是跟 CI、生产对不上：提醒一句，不替人删（换法见 docs/development.md「数据库」）
+if [[ "$*" != *--skip-server* ]] && command -v docker >/dev/null 2>&1 && docker ps -aq -f name=lowpass-postgres 2>/dev/null | grep -q .; then
+  image=$(docker inspect -f '{{.Config.Image}}' lowpass-postgres)
+  if [[ "$image" != "$POSTGRES_IMAGE" ]]; then
+    echo "⚠ lowpass-postgres 是用 $image 建的，开发、CI 与生产都已是 $POSTGRES_IMAGE；换容器见 docs/development.md「数据库」" >&2
+    echo
+  fi
 fi
 
 if [[ "$*" == *--reset* ]]; then

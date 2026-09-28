@@ -16,7 +16,7 @@ Google / GitHub 登录，单租户。
 
 - 需求唯一来源：`docs/superpowers/specs/2026-09-08-mvp-prd.md`（编号 F 功能、R 规则、AC 验收、D 决策、N 非功能）。
 - 技术决议：`docs/adr/0001-mvp-tech-stack.md`——Rails 8 + Inertia.js + React + shadcn/ui + TypeScript，
-  PostgreSQL，Solid Queue / Cache / Cable，Kamal 部署到香港 VPS（2 vCPU 4 GiB）。T8（推荐理由的模型服务）已定：
+  PostgreSQL 18，Solid Queue / Cache / Cable，Kamal 部署到香港 VPS（2 vCPU 4 GiB）。T8（推荐理由的模型服务）已定：
   2026-09-11 定为延后到 P2、在后台配置（PRD D23），P2-④ 按 OpenAI 兼容协议实现，见 ADR 的 T8 一节。
 - 代码风格：`STYLE.md`（37signals 风格：vanilla Rails、CRUD 资源、thin controller + rich model、`_later` / `_now`）。
 - 界面：`.claude/skills/lowpass-design-taste/`（设计口味与令牌）、`docs/design/`（画板源码与每轮决定）。
@@ -24,8 +24,10 @@ Google / GitHub 登录，单租户。
 ## 部署
 
 默认分支 `main`。Kamal 按 `config/deploy.yml` 部署：起步是 `web` 单容器，Solid Queue 以 Puma 插件跑在里面（ADR T4 的 A），
-拆 `job` 角色是配置级变更；PostgreSQL 作为 Kamal accessory；镜像仓库 Docker Hub（T5）；kamal-proxy 做 Let's Encrypt，
-与同一台机器上的另一个 Kamal 应用共用，按域名分流。每日 `pg_dump` 推到对象存储（T3）还没做。main 合并且 CI 全绿后由 GitHub Actions（`.github/workflows/deploy.yml`，Environment「production」）自动 `kamal deploy`，本机手动部署仍可用。操作步骤见 `docs/development.md`「部署」。
+拆 `job` 角色是配置级变更；PostgreSQL 18 作为 Kamal accessory（开发容器与 CI 的 postgres service 同一个大版本，要升一起升；
+`kamal deploy` 不重启 accessory，升大版本照 `docs/development.md` 的步骤做）；镜像仓库 Docker Hub（T5）；kamal-proxy 做 Let's Encrypt，
+与同一台机器上的另一个 Kamal 应用共用，按域名分流。每日备份（T3）在应用进程里做，不另起备份容器（见「后台任务」）；
+`/health` 给外部拨测（N-5），`/up` 只给 kamal-proxy 切流量。main 合并且 CI 全绿后由 GitHub Actions（`.github/workflows/deploy.yml`，Environment「production」）自动 `kamal deploy`，本机手动部署仍可用。操作步骤见 `docs/development.md`「部署」。
 内存预算写在 ADR 里，新增常驻进程前先改预算。〔改造自 fizzy 的 Kamal 部署与 `docs/kamal-deployment.md`〕
 
 ## 改动前先看的不变量
@@ -87,6 +89,14 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   测试抓取是同步的 JSON 端点（30 秒超时）；源配置的模式与中文校验在 `Source::Config`。〔P2-② 设计文档〕
 - 告警（P2-③）：触发点只调 `Alerts.<kind>!`，去重（`alert_events.dedup_key`：kind + 范围 + 上海日）、建记录、`DeliverAlertJob` 入队都在门面里，
   门面从不让业务路径失败；渠道只从环境读（`Alerts::Config`），邮件走 SMTP、webhook 走 HTTPS JSON（四种报文形状）；投递按渠道记已送达，重试不重发。〔P2-③ 设计文档〕
+- 备份（P3，设计 `docs/superpowers/specs/2026-09-28-p3-backup-health-design.md`）：tick 03:00 之后当天一次 `BackupRun.create_later`，
+  `BackupJob` 调 `BackupRun#perform_now`：主库 `pg_dump -Fc` → `Lowpass::BackupCipher`（AES-256-GCM，只依赖标准库，`script/decrypt_backup`
+  不启动应用也能解）→ `Backup::Storage`（S3 兼容 PutObject，`aws-sigv4` 签名）；配置只从环境读（`Backup::Config`，五个 `BACKUP_*`）。
+  存储地址与告警 webhook、模型端点一样是运维配的可信地址，只要求 https，不经 surfguard。上传的 5xx 与网络错误重试 2 次，其余立即失败，
+  失败走 `Alerts.backup_failed!`；production 没配也记失败并告警。应用只写不读不删，7 天保留交给存储桶的生命周期规则；记录 `backup_runs` 30 天。
+  测试不跑真的 `pg_dump`（CI 的 runner 与 postgres service 大版本对不上），用假脚本代替。
+- 健康检查（N-5）：`Health` 查数据库、搜索探测（`Search::Runner.probe`，不计入 B5 的失败计数）、tick 心跳（`Setting` 的 `ticked_at`，
+  每次 tick 第一步写）、日刊是否按时、备份是否新鲜；`HealthController` 继承 `ActionController::Base`，不登录，限流计数放进程内存。
 - 推荐理由（P2-④）：`Reasons::Provider` 只做 OpenAI 兼容协议（地址、模型名、单价、上限在 `settings`，密钥只从环境读）；`Reasons::Generator` 一期顺序生成、单条重试 2 次、补缺时跨天沿用；日刊条目在同一次调用里拿回译文（D25）：HN 与 RSS 源（Hackaday）译标题（`items.title_zh`，看 `Source#translates_titles?`），GitHub Trending 译简介（`items.summary_zh`，看 `Source#translates_summaries?`）；译文不合规只当没有、不触发重试，跨天沿用要求前一条原文相同且带译文；`GenerateReasonsJob` 按期限并发；账本 `model_calls` 90 天；缺理由由 tick 检查后走告警。
   模型端点与 feed 地址不同：它是管理员在后台填的可信地址，只要求 https（本机 http 允许，给本地 Ollama），**不经 surfguard**——这是对上面「出站 HTTP」那条不变量的明示例外，理由是它不是从源站内容里读来的地址，且请求体里带着密钥，不能被重定向到别处。401 / 403 与 429 都不追加重试，本期停止（`Rejected` / `Limited`）；没配供应商或画像为空（`Reasons.ready?`）一律不调模型。〔P2-④ 设计文档〕
 
@@ -115,7 +125,7 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 
 ## 数据库与迁移
 
-- 只支持 PostgreSQL，不写双适配器分支。〔不采用 fizzy 的 SQLite / MySQL 双栈〕
+- 只支持 PostgreSQL（开发容器、CI 与生产都是 18），不写双适配器分支。〔不采用 fizzy 的 SQLite / MySQL 双栈〕
 - 借 fizzy 的"列长度显式化"：每个 `string` / `text` 列在迁移里写明 `limit`，值来自 7.2（title 300、title_zh 300、url 2048、summary 500、summary_zh 500、
   content 50000、section 100、author 100），并加 CHECK 约束；唯一性放数据库（`(source_id, issue_id, url_hash)`、`(type, period_key)`、
   `(provider, provider_uid)`）。〔改造自 `table_definition_column_limits.rb`〕
@@ -143,8 +153,8 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 ## 生产配置
 
 - `config/environments/production.rb` 从环境变量读：`BASE_URL`（推导 `default_url_options`）、`SMTP_*`、`FORCE_SSL` / `ASSUME_SSL`、
-  `RAILS_LOG_LEVEL`；日志到 STDOUT，带 `request_id` 标签；`solid_cache_store`；Solid Queue 用独立的 `queue` 数据库配置。〔采用〕
-- Dockerfile：`ruby:*-slim` + jemalloc + bootsnap 预编译 + `SECRET_KEY_BASE_DUMMY=1 assets:precompile` + 非 root 用户 + thruster；
+  `RAILS_LOG_LEVEL`（备份的 `BACKUP_*` 由 `Backup::Config` 读，启动时 `config/initializers/backup.rb` 把配置问题写进日志）；日志到 STDOUT，带 `request_id` 标签；`solid_cache_store`；Solid Queue 用独立的 `queue` 数据库配置。〔采用〕
+- Dockerfile：`ruby:*-slim` + PGDG 的 `postgresql-client-18`（与数据库同一个大版本，备份的 `pg_dump` 要它）+ jemalloc + bootsnap 预编译 + `SECRET_KEY_BASE_DUMMY=1 assets:precompile` + 非 root 用户 + thruster；
   `bin/docker-entrypoint` 在 `web` 启动时跑 `db:prepare`。〔采用〕
 - Kamal 别名 `console` / `shell` / `logs` / `dbc`；密钥只经 `.kamal/secrets` 从环境读取，仓库里没有任何密钥。〔采用〕
 - Solid Queue 的 supervisor 每个环境只起一份：开发环境是 `Procfile.dev` 里独立的 `jobs: bin/jobs` 进程；生产按 ADR T4 的 A

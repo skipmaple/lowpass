@@ -62,6 +62,7 @@ class SchedulerTest < ActiveSupport::TestCase
   test "过了 04:00 清理一次抓取记录、搜索日志与点击" do
     alert_event(created_at: 91.days.ago)
     ModelCall.create!(status: "ok", created_at: 91.days.ago)
+    BackupRun.create!(trigger: "scheduled", status: "succeeded", created_at: 31.days.ago)
     FetchRun.expects(:cleanup).once
     Search::Log.expects(:cleanup).once
     Search::Click.expects(:cleanup).once
@@ -71,6 +72,7 @@ class SchedulerTest < ActiveSupport::TestCase
     assert_equal "2026-09-10", Setting.get("cleaned_on")
     assert_equal 0, AlertEvent.count
     assert_equal 0, ModelCall.count
+    assert_equal 0, BackupRun.count
   end
 
   test "未到 04:00 不清理" do
@@ -192,5 +194,60 @@ class SchedulerTest < ActiveSupport::TestCase
       Scheduler.tick(now: sh("2026-09-08 06:43"))
       assert_nil AlertEvent.find_by(kind: "reasons_missing")
     end
+  end
+
+  # 健康检查（设计 §3）读这个时间判断调度还活着
+  test "每一次 tick 先写心跳" do
+    Scheduler.tick(now: sh("2026-09-10 05:00:00"))
+    assert_equal "2026-09-10T05:00:00+08:00", Setting.get("ticked_at")
+  end
+
+  test "心跳不受后面哪一步出错影响" do
+    Issue.unstub(:generate_daily!)
+    Issue.stubs(:generate_daily!).raises(ActiveRecord::RecordNotUnique, "dup")
+    Scheduler.tick(now: sh("2026-09-12 09:30:00"))
+    assert_equal "2026-09-12T09:30:00+08:00", Setting.get("ticked_at")
+  end
+
+  test "F-26 过了 03:00 备份一次，当天不再备份" do
+    with_backup_config do
+      assert_no_enqueued_jobs(only: BackupJob) { Scheduler.tick(now: sh("2026-09-10 02:59:00")) }
+
+      assert_enqueued_with(job: BackupJob) { Scheduler.tick(now: sh("2026-09-10 03:00:30")) }
+      assert_equal "2026-09-10", Setting.get("backed_up_on")
+      assert_equal [ "scheduled", "queued" ], BackupRun.sole.then { |run| [ run.trigger, run.status ] }
+
+      assert_no_enqueued_jobs(only: BackupJob) { Scheduler.tick(now: sh("2026-09-10 03:01:30")) }
+    end
+  end
+
+  # 03:00 那一分钟的 tick 错过了（服务停过、机器睡过）也要补上
+  test "错过备份那一分钟后当天补跑，次日再来" do
+    with_backup_config do
+      assert_enqueued_with(job: BackupJob) { Scheduler.tick(now: sh("2026-09-10 10:15:00")) }
+      clear_enqueued_jobs
+      assert_enqueued_with(job: BackupJob) { Scheduler.tick(now: sh("2026-09-11 03:00:30")) }
+      assert_equal 2, BackupRun.count
+    end
+  end
+
+  test "入队失败不记账，下一分钟重来" do
+    with_backup_config do
+      BackupJob.stubs(:perform_later).returns(false)
+      Scheduler.tick(now: sh("2026-09-10 03:00:30"))
+      assert_equal "", Setting.get("backed_up_on")
+      assert_equal 0, BackupRun.count
+    end
+  end
+
+  test "开发机上一个 BACKUP_* 都没配：不备份" do
+    assert_no_enqueued_jobs(only: BackupJob) { Scheduler.tick(now: sh("2026-09-10 03:00:30")) }
+    assert_equal 0, BackupRun.count
+  end
+
+  # 设计 E8：production 没配就是 N-6 不达标，照样入队，由 job 记失败并告警
+  test "production 没配也入队" do
+    Rails.env.stubs(:production?).returns(true)
+    assert_enqueued_with(job: BackupJob) { Scheduler.tick(now: sh("2026-09-10 03:00:30")) }
   end
 end

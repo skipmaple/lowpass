@@ -63,7 +63,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        # 与开发容器（bin/setup）、生产 accessory（config/deploy.yml）同一个大版本，不跟着 latest 漂
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -135,7 +136,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        # 同上：与开发、生产同为 18
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

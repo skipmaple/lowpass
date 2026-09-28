@@ -97,3 +97,8 @@ jobs:
           SMTP_AUTHENTICATION: ${{ secrets.SMTP_AUTHENTICATION }}
           SMTP_STARTTLS: ${{ secrets.SMTP_STARTTLS }}
           MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+          BACKUP_BUCKET_URL: ${{ secrets.BACKUP_BUCKET_URL }}
+          BACKUP_REGION: ${{ secrets.BACKUP_REGION }}
+          BACKUP_ACCESS_KEY_ID: ${{ secrets.BACKUP_ACCESS_KEY_ID }}
+          BACKUP_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}

@@ -72,6 +72,10 @@ gem "omniauth-google-oauth2", "~> 1.2"
 gem "omniauth-github", "~> 2.0"
 gem "omniauth-rails_csrf_protection", "~> 2.0"
 
+# 每日备份（P3，设计 docs/superpowers/specs/2026-09-28-p3-backup-health-design.md）：上传到 S3 兼容的对象存储
+# 要 AWS Signature V4。只要这个签名库，不引入 SDK
+gem "aws-sigv4", "~> 1.12"
+
 group :development, :test do
   gem "webmock"
   gem "mocha"

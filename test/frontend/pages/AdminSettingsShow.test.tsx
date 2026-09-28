@@ -1,11 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import Show from '@/pages/Admin/Settings/Show'
-import type { AlertChannels, InterestArea, ReasonsStatus } from '@/types/lowpass'
+import type { AlertChannels, BackupStatus, InterestArea, ReasonsStatus } from '@/types/lowpass'
 import { formPatch, router, setPageProps } from '../support/inertia'
-import { interestArea, reasonsStatus } from '../support/props'
+import { backupStatus, interestArea, reasonsStatus } from '../support/props'
 
 // 设置（5.6，画布 admin_settings()）：调度时间可改，白名单只读；告警渠道状态与「发送测试告警」（P2-③）；
 // 兴趣画像与推荐理由（④）往这一页加节（Task 5）
@@ -16,6 +16,7 @@ type ShowOverrides = {
   alerts?: AlertChannels
   reasons?: ReasonsStatus
   interest_areas?: InterestArea[]
+  backup?: BackupStatus
 }
 
 function showProps(overrides: ShowOverrides = {}) {
@@ -25,6 +26,7 @@ function showProps(overrides: ShowOverrides = {}) {
     alerts: overrides.alerts ?? { email: { configured: false, label: '未配置' }, webhook: { configured: false, label: '未配置' } },
     reasons: overrides.reasons ?? reasonsStatus(),
     interest_areas: overrides.interest_areas ?? [interestArea(), interestArea({ id: 'ia-2', name: '前端开发', keywords: 'React', sort_order: 2, enabled: false })],
+    backup: overrides.backup ?? backupStatus(),
     daily_time: '06:00',
     latest_weekly_key: null,
   }
@@ -92,6 +94,61 @@ describe('Admin/Settings/Show', () => {
 
     expect(screen.getByRole('button', { name: '发送测试告警' })).toBeDisabled()
     expect(screen.getByText('未配置告警渠道，无法发送测试。')).toBeInTheDocument()
+  })
+
+  it('备份：没配时三行都写明，按钮禁用并指向配置帮助', () => {
+    show()
+
+    const section = screen.getByRole('heading', { level: 2, name: '备份' }).parentElement!
+    expect(within(section).getAllByText('未配置')).toHaveLength(2)
+    expect(within(section).getByText('还没有备份')).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: '立即备份' })).toBeDisabled()
+    expect(within(section).getByText('未配置备份存储，无法立即备份。')).toBeInTheDocument()
+    expect(within(section).getByRole('link', { name: '查看部署配置帮助' })).toHaveAttribute('href', '#deployment')
+    expect(screen.getByRole('link', { name: '备份' })).toHaveAttribute('href', '#backup')
+  })
+
+  it('备份：配好后显示存储、密钥指纹与最近一次；立即备份 POST，请求回来前禁用', async () => {
+    show({ backup: backupStatus({ configured: true, storage: 'lowpass-backup.storage.example/daily', key_fingerprint: 'abcdabcdabcdabcd', last: { status: 'succeeded', summary: '9月28日 03:00 · 成功 · 12.3 MB · 用时 8 秒' }, last_succeeded: '9月28日 03:00' }) })
+
+    const section = screen.getByRole('heading', { level: 2, name: '备份' }).parentElement!
+    expect(section).toHaveTextContent('lowpass-backup.storage.example/daily')
+    expect(section).toHaveTextContent('指纹 abcdabcdabcdabcd')
+    expect(section).toHaveTextContent('9月28日 03:00 · 成功 · 12.3 MB · 用时 8 秒')
+    // 最近一次就是成功的那次，不再重复一行「最近成功」
+    expect(within(section).queryByText('最近成功')).not.toBeInTheDocument()
+    expect(section).toHaveTextContent('每天 03:00 自动备份；保留天数由存储桶的生命周期规则决定。')
+
+    const button = within(section).getByRole('button', { name: '立即备份' })
+    await userEvent.click(button)
+    expect(router.post).toHaveBeenCalledWith('/admin/backup', {}, expect.objectContaining({ only: ['backup', 'flash', 'errors'] }))
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent('备份中…')
+    act(() => { router.post.mock.calls[0][2].onSuccess({ props: { flash: { notice: '已开始备份' } } }); router.post.mock.calls[0][2].onFinish() })
+    expect(within(section).getByRole('status')).toHaveTextContent('已开始备份')
+  })
+
+  it('备份：失败时另起一行最近成功；配置问题逐条列出', () => {
+    show({ backup: backupStatus({ problems: ['缺 BACKUP_REGION', 'BACKUP_BUCKET_URL 必须是 https 地址'], last: { status: 'failed', summary: '9月28日 03:00 · 失败：上传失败（403）：AccessDenied' }, last_succeeded: '9月27日 03:00' }) })
+
+    const section = screen.getByRole('heading', { level: 2, name: '备份' }).parentElement!
+    expect(section).toHaveTextContent('失败：上传失败（403）：AccessDenied')
+    expect(within(section).getByText('最近成功')).toBeInTheDocument()
+    expect(section).toHaveTextContent('9月27日 03:00')
+    expect(section).toHaveTextContent('配置不完整：缺 BACKUP_REGION；BACKUP_BUCKET_URL 必须是 https 地址')
+  })
+
+  it('备份：有备份在进行时按钮禁用，每 5 秒刷新这一节', () => {
+    vi.useFakeTimers()
+    try {
+      show({ backup: backupStatus({ configured: true, storage: 'x.example', key_fingerprint: 'abcdabcdabcdabcd', last: { status: 'running', summary: '9月28日 10:05 · 进行中' }, active: true }) })
+
+      expect(screen.getByRole('button', { name: '备份中…' })).toBeDisabled()
+      act(() => { vi.advanceTimersByTime(5000) })
+      expect(router.reload).toHaveBeenCalledWith({ only: ['backup'] })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('兴趣画像：每行可改、可删，末行新增', async () => {

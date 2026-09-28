@@ -151,7 +151,7 @@ Hacker News 与 Hackaday（RSS 日刊源）的标题、GitHub Trending 的仓库
 |---|---|
 | `BACKUP_BUCKET_URL` | 对象的上一级地址，可带前缀。虚拟主机式如 `https://lowpass-backup.oss-cn-hongkong.aliyuncs.com/daily`，路径式如 `https://<account>.r2.cloudflarestorage.com/lowpass-backup/daily`。只接受 https；`localhost` / `127.0.0.1` 的 http 也行（本机演练用） |
 | `BACKUP_REGION` | 签名用的区域：R2 填 `auto`，AWS 填桶所在区域，阿里云 OSS 按其 S3 兼容文档填（形如 `oss-cn-hongkong`） |
-| `BACKUP_ACCESS_KEY_ID` / `BACKUP_SECRET_ACCESS_KEY` | 只给这个桶（或前缀）`PutObject` 权限的密钥：应用只写不读不删 |
+| `BACKUP_ACCESS_KEY_ID` / `BACKUP_SECRET_ACCESS_KEY` | 只给这个桶（或前缀）`PutObject` 权限的密钥：应用只写不读不删。R2 没有只写的一档，见下文 |
 | `BACKUP_ENCRYPTION_KEY` | `openssl rand -hex 32` 生成的 64 位十六进制。除了服务器环境，还要在密码管理器里另存一份：丢了它，备份就解不开 |
 
 production 下没配（或配不全）就是 N-6 不达标：每天 03:00 照样记一次失败并告警，启动日志里也会写一句。开发机上一个 `BACKUP_*`
@@ -159,6 +159,12 @@ production 下没配（或配不全）就是 N-6 不达标：每天 03:00 照样
 
 存储端要做的三件事：桶保持私有；加一条生命周期规则「前缀下的对象 7 天后删除」（PRD 7.8 的保留期就在这里，应用不删文件）；
 建一把只有 `PutObject` 权限的密钥。对象名是 `<库名>-<UTC 时间戳>.dump.enc`，在控制台里按名字排就是按时间排。
+
+Cloudflare R2 的令牌没有只写这一档，最小是「Object Read & Write」并限定到这个桶，读、写、列、删都能做。只写要防的是服务器被攻破后
+历史备份跟着被删，R2 上改用桶锁来防：桶的 Settings →「Bucket lock rules」加一条，前缀与生命周期规则相同（如 `daily/`），保留 7 天。
+期限内的对象谁都删不掉、改不了；锁优先于生命周期规则，满 7 天照常删；令牌只能动对象，改不了桶的规则。保留期别选 Indefinite，
+那样生命周期规则就永远删不掉了。令牌建成 Account API token，不随个人账号失效。
+
 换加密密钥：换上新密钥之后的备份用新密钥，旧密钥至少再留 7 天，等旧备份过期。设置页与解密报错里显示的指纹，就是用来对上用的是哪一把。
 
 手动备份（数据库升级等高风险操作之前）：`bundle exec kamal app exec --reuse "bin/rails backup:now"`，或者后台「立即备份」。
@@ -190,6 +196,8 @@ BACKUP_ACCESS_KEY_ID=drillkey BACKUP_SECRET_ACCESS_KEY=drillsecret BACKUP_ENCRYP
    ```
    bundle exec kamal server bootstrap      # 新服务器才需要：装 Docker
    bundle exec kamal accessory boot db
+   # 等 initdb 跑完再导，否则会连不上，或者导到一半被停掉（见「升级数据库大版本」第 4 步）
+   ssh root@$DEPLOY_HOST 'for i in $(seq 120); do docker logs lowpass-db 2>&1 | grep -qE "init process complete|Skipping initialization" && docker exec lowpass-db pg_isready -q -U lowpass -d lowpass_production && { echo ready; exit 0; }; sleep 1; done; docker logs --tail 20 lowpass-db; exit 1'
    ssh root@$DEPLOY_HOST 'mkdir -p /root/lowpass-backups'
    scp lowpass.dump root@$DEPLOY_HOST:/root/lowpass-backups/
    ssh root@$DEPLOY_HOST 'docker exec -i lowpass-db pg_restore -U lowpass -d lowpass_production --no-owner --exit-on-error < /root/lowpass-backups/lowpass.dump'
@@ -433,7 +441,7 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
 
 - 发布：`bundle exec kamal deploy`（构建、推送、零停机切换）；回滚 `bundle exec kamal rollback <版本>`，版本是 git sha，`kamal app containers` 能看。
 - 日志 `bundle exec kamal app logs -f`；控制台 `bundle exec kamal console`；数据库 `bundle exec kamal dbc`；代理 `bundle exec kamal proxy details`。
-- 服务器上的落点：数据 `/root/lowpass-db/data`，Kamal 记录 `/root/.kamal/apps/lowpass`。证书由 kamal-proxy 自动续。
+- 服务器上的落点：数据 `/root/lowpass-db/postgresql`（18；升级之前的 17 在 `/root/lowpass-db/data`，升级后留作回滚，确认无误再删），Kamal 记录 `/root/.kamal/apps/lowpass`。证书由 kamal-proxy 自动续。
 - 备份：每天 03:00 自动加密上传到对象存储，状态看设置页「备份」一节，恢复步骤见「备份」。马上要一份：后台「立即备份」或
   `bundle exec kamal app exec --reuse "bin/rails backup:now"`。
 - 服务器上的 accessory 永远别用 `kamal accessory remove`：它连数据目录一起删。换镜像、换挂载用 `kamal accessory reboot db`（只重建容器，宿主机目录不动）。
@@ -467,6 +475,10 @@ ssh root@$DEPLOY_HOST "docker exec lowpass-db psql -U lowpass lowpass_production
 # 4. 换成 18：删掉旧容器、按新配置起一个，新目录里 initdb，并按 POSTGRES_DB 建好空的 lowpass_production；
 #    /root/lowpass-db/data（17）原样不动
 bundle exec kamal accessory reboot db
+#    reboot 一返回容器就在跑，但头几秒是 initdb 和建库用的临时实例（只听 unix socket，pg_isready 这时也说就绪）：
+#    这时导入会连不上、找不到库，或者导到一半被停掉。等日志里出现 init process complete 再连；打出 ready 再往下，
+#    两分钟还不行就打出最后 20 行日志
+ssh root@$DEPLOY_HOST 'for i in $(seq 120); do docker logs lowpass-db 2>&1 | grep -qE "init process complete|Skipping initialization" && docker exec lowpass-db pg_isready -q -U lowpass -d lowpass_production && { echo ready; exit 0; }; sleep 1; done; docker logs --tail 20 lowpass-db; exit 1'
 
 # 5. 导回 18
 ssh root@$DEPLOY_HOST 'docker exec -i lowpass-db pg_restore -U lowpass -d lowpass_production --no-owner --exit-on-error < /root/lowpass-backups/pg17-lowpass_production.dump'

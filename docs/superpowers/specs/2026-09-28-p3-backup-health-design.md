@@ -62,7 +62,7 @@ AES-256-GCM，按 1 MB 分块流式加解密。文件依次是：`LPBK`（4 字�
 - 地址：`BACKUP_BUCKET_URL` 是对象的上一级，可以带前缀路径。虚拟主机式写 `https://<桶>.<endpoint>/<前缀>`，路径式写 `https://<endpoint>/<桶>/<前缀>`。对象地址就是它后面接 `/<对象名>`，所以两种写法不用再加一个开关。只接受 https；`localhost` / `127.0.0.1` 的 http 也行（本机演练用，同模型端点的规则）。
 - 请求：`Content-MD5` 与 `x-amz-content-sha256` 都按文件实际内容算，由存储端校验上传的完整性；请求体从文件流式读取；连接 10 秒、写 300 秒、读 60 秒超时；`max_retries = 0`（Net::HTTP 默认会对 PUT 自动重试一次）；不跟重定向。
 - 地址由运维在环境里配，是可信输入，不经 surfguard，与告警 webhook、模型端点同一类（AGENTS.md 的明示例外）。
-- 应用只需要这个桶（或前缀）的 `PutObject` 权限。
+- 应用只需要这个桶（或前缀）的 `PutObject` 权限。Cloudflare R2 的令牌没有只写的一档（最小是限定到桶的读写），E4 的「删不掉历史备份」在 R2 上改由桶锁保证，做法见 `docs/development.md`「备份」。
 
 ### 2.5 配置（只从环境读，`Backup::Config`）
 

@@ -35,7 +35,7 @@ bin/dev
 （3000 端口，`http://localhost:3000`）、Vite dev server，以及 `bin/jobs`（Solid Queue worker，带
 `config/recurring.yml` 里每分钟一次的 `SchedulerTickJob`）。日刊到点生成、错过补跑、超时收尾、
 每天检查一次周刊都靠这个 tick（`Scheduler#tick` 依次跑 `generate_daily_if_due`、
-`finalize_stale_issues`、`check_weekly_if_due`、`cleanup_if_due`），本地想看效果就得让 jobs 进程
+`finalize_stale_issues`、`check_weekly_if_due`、`check_reasons_if_due`、`cleanup_if_due`），本地想看效果就得让 jobs 进程
 跑着，`log/development.log` 里每分钟一条。日刊生成、周刊检查的时间点读 `Setting`（键
 `daily_time`、`weekly_time`），不是写死在代码里。
 

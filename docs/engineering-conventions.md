@@ -16,7 +16,8 @@ Google / GitHub 登录，单租户。
 
 - 需求唯一来源：`docs/superpowers/specs/2026-09-08-mvp-prd.md`（编号 F 功能、R 规则、AC 验收、D 决策、N 非功能）。
 - 技术决议：`docs/adr/0001-mvp-tech-stack.md`——Rails 8 + Inertia.js + React + shadcn/ui + TypeScript，
-  PostgreSQL，Solid Queue / Cache / Cable，Kamal 部署到香港 VPS（2 vCPU 4 GiB）。T8（推荐理由的模型服务）待定。
+  PostgreSQL，Solid Queue / Cache / Cable，Kamal 部署到香港 VPS（2 vCPU 4 GiB）。T8（推荐理由的模型服务）已定：
+  2026-09-11 定为延后到 P2、在后台配置（PRD D23），P2-④ 按 OpenAI 兼容协议实现，见 ADR 的 T8 一节。
 - 代码风格：`STYLE.md`（37signals 风格：vanilla Rails、CRUD 资源、thin controller + rich model、`_later` / `_now`）。
 - 界面：`.claude/skills/lowpass-design-taste/`（设计口味与令牌）、`docs/design/`（画板源码与每轮决定）。
 
@@ -74,9 +75,11 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 ## 后台任务
 
 - Solid Queue。Job 类保持"浅"，逻辑放模型；`_later` 入队、`_now` 同步（STYLE.md）。〔采用〕
-- 周期任务写在 `config/recurring.yml`：每分钟一次的调度 tick；周刊 09:00 检查（R-2.1）；清理任务作为模型类方法
-  `Model.cleanup`，分批 `delete_all`（抓取记录 30 天、搜索日志 30 天、审计日志 90 天、`SolidQueue::Job.clear_finished_in_batches`）。
-  〔改造自 fizzy `config/recurring.yml` 与 `Webhook::Delivery.cleanup`〕
+- 周期任务写在 `config/recurring.yml`，只有两条：每分钟一次的调度 tick（`SchedulerTickJob`），与 production 里每小时一次的
+  `SolidQueue::Job.clear_finished_in_batches`。其余到点的事都由 tick 读库判断（ADR T2），不另加静态条目：`Scheduler#tick` 依次
+  生成日刊与补跑、给超时的期收尾、按 `weekly_time`（默认 09:00，R-2.1）每天检查一次周刊、检查推荐理由缺失、每天 04:00 清理。
+  清理是模型类方法 `Model.cleanup`，分批 `delete_all`：抓取记录 30 天、搜索日志 30 天、结果点击 90 天、过期会话、审计日志 90 天、
+  告警事件 90 天、模型调用账本 90 天。〔改造自 fizzy `config/recurring.yml` 与 `Webhook::Delivery.cleanup`〕
 - Job 必须幂等：tick 可能重复触发；"某期 + 某源"同时只允许一个重抓任务（R-3.10）。
 - 推荐理由生成是独立 job，失败不影响发布；单条重试 2 次，缺失在后台可见（R-9.6）。
 - 后台（P2-②）：`Admin::` 控制器是 CRUD 资源（启停是 `enablement`，重抓 / 补生成 / 立即生成各是一个资源，STYLE.md），
@@ -118,8 +121,9 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 ## 测试
 
 - Minitest + fixtures（`fixtures :all`，并行 worker），`bin/rails test` 做快速循环。〔采用〕
-- `bin/ci` 是完整门禁，用 `ActiveSupport::ContinuousIntegration` 按步骤跑：setup、agent 说明文件校验、rubocop（rubocop-rails-omakase）、
-  bundler-audit、brakeman、前端依赖审计、gitleaks、单元与集成测试、系统测试（`PARALLEL_WORKERS=1`）。全绿才能合并与部署。〔采用〕
+- `bin/ci` 是完整门禁，用 `ActiveSupport::ContinuousIntegration` 按 `config/ci.rb` 依次跑：setup、rubocop（rubocop-rails-omakase）、
+  前端类型检查、前端单元测试、前端依赖审计、前端构建、bundler-audit、brakeman、gitleaks、test 模式的 Vite 构建、Rails 测试、
+  系统测试、种子数据（`db:seed:replant`）。全绿才能合并与部署；每步的命令见 `docs/development.md`「测试与 CI」。〔采用〕
 - 测试辅助放 `test/test_helpers/`，例如 `sign_in_as`；时间敏感的测试用 `travel_to` 卡在 05:59 / 06:00 / 06:20 边界；不碰网络。
 - 前端单元测试（Vitest + Testing Library，jsdom）里，`getByRole` 的 `name` 落在 `Mixed` / `HitText` 拆出的多段 `<span>` 上时
   用容忍空格的正则（`/^近\s*7\s*天$/`），不用字面串：jsdom 算可访问名会吃掉段边界上的空格（「近 7 天」算成「近7天」），
@@ -127,7 +131,7 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 
 ## 开发环境与脚本
 
-- `bin/setup` 幂等：装依赖、`db:prepare`、库空时 `db:seed`、清日志。`bin/dev` 用 foreman 起 `Procfile.dev`（rails + vite）。〔采用〕
+- `bin/setup` 幂等：装依赖、`db:prepare`、库空时 `db:seed`、清日志。`bin/dev` 用 foreman 起 `Procfile.dev`（rails + vite + jobs）。〔采用〕
 - 工具版本由 mise 管理（ADR T11）：`.mise.toml` 钉 Ruby 与 Node 版本，`bin/setup` 先确保 mise 再 `mise install`。〔采用自 fizzy〕
 - `.githooks/pre-commit` 对暂存的 Ruby 文件跑 rubocop（`git config core.hooksPath .githooks`，由 `bin/setup` 设置）。〔采用；fizzy 的 prek 不引入，钩子用普通 shell 脚本〕
 - `db/seeds.rb` 只在 development 生效，按主题拆到 `db/seeds/*.rb`；一次性运维脚本放 `script/`（补生成、导入样本），不进 `bin/`。〔采用〕
@@ -140,8 +144,9 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 - Dockerfile：`ruby:*-slim` + jemalloc + bootsnap 预编译 + `SECRET_KEY_BASE_DUMMY=1 assets:precompile` + 非 root 用户 + thruster；
   `bin/docker-entrypoint` 在 `web` 启动时跑 `db:prepare`。〔采用〕
 - Kamal 别名 `console` / `shell` / `logs` / `dbc`；密钥只经 `.kamal/secrets` 从环境读取，仓库里没有任何密钥。〔采用〕
-- 开发环境把队列跑成 `Procfile.dev` 里独立的 `jobs: bin/jobs` 进程，与生产 ADR T4 的独立 `job` 角色同形；
-  不再用 `SOLID_QUEUE_IN_PUMA` 把 supervisor 塞进 Puma，两处都开会多出一份 supervisor 与一份周期调度器。
+- Solid Queue 的 supervisor 每个环境只起一份：开发环境是 `Procfile.dev` 里独立的 `jobs: bin/jobs` 进程；生产按 ADR T4 的 A
+  跑成 Puma 插件（`config/deploy.yml` 设 `SOLID_QUEUE_IN_PUMA`，`config/puma.rb` 见到它才加载 `plugin :solid_queue`），
+  拆出 `job` 角色时一并去掉这个变量。同一环境两处都开会多出一份 supervisor 与一份周期调度器，所以本地不设 `SOLID_QUEUE_IN_PUMA`。
 - 队列面板用 `mission_control-jobs`（ADR T12），挂在 `/admin/jobs`，只对 admin 开放，与 5.6 的后台同一套鉴权。〔采用自 fizzy〕
 
 ## 代理说明文件本身

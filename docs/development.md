@@ -3,7 +3,7 @@
 ## 前置要求
 
 - [mise](https://mise.jdx.dev/)：钉住 Ruby 与 Node 版本，见 `.mise.toml`。
-- Docker：本地 PostgreSQL 以容器运行，见下文；不需要本机装 PostgreSQL 或 `psql`。
+- Docker：本地 PostgreSQL 18 以容器运行，见下文；不需要本机装 PostgreSQL 或 `psql`。
 - Google Chrome：系统测试（`bin/rails test:system`，`bin/ci` 的一步）用无头 Chrome 跑真浏览器。
   chromedriver 不用手装，selenium-webdriver 自己下（Selenium Manager）。
 
@@ -19,9 +19,11 @@ bin/setup
 2. 把 Git 的 `core.hooksPath` 指到 `.githooks`（见下文「提交前检查」）。
 3. `bundle install`、`npm install`。
 4. 若本机 5432 端口没有服务在监听，启动（不存在则新建）名为 `lowpass-postgres` 的
-   `postgres:17` 容器，用户名与密码均为 `postgres`，只发布到 `127.0.0.1:5432`（默认口令不该
-   跟着局域网走），然后轮询容器里的 `pg_isready`，最多等 30 秒。加 `--skip-server` 参数就整段
-   跳过（`config/ci.rb` 的 Setup 步骤与 CI 里的 postgres service 自己管数据库）。
+   `postgres:18` 容器（与 CI 的 postgres service、生产 accessory 同一个大版本），用户名与密码均为
+   `postgres`，只发布到 `127.0.0.1:5432`（默认口令不该跟着局域网走），然后轮询容器里的
+   `pg_isready`，最多等 30 秒。已有的 `lowpass-postgres` 若是用别的镜像建的（以前是 `postgres:16`），
+   照样启动，但会提醒一句，换法见下文「数据库」。加 `--skip-server` 参数就整段跳过（`config/ci.rb`
+   的 Setup 步骤与 CI 里的 postgres service 自己管数据库）。
 5. `bin/rails db:prepare`（加 `--reset` 参数则改为 `bin/rails db:reset`）。
 6. 清理 `log/`、`tmp/`。
 
@@ -34,8 +36,9 @@ bin/dev
 用 [Foreman](https://github.com/ddollar/foreman) 按 `Procfile.dev` 同时起三个进程：Rails server
 （3000 端口，`http://localhost:3000`）、Vite dev server，以及 `bin/jobs`（Solid Queue worker，带
 `config/recurring.yml` 里每分钟一次的 `SchedulerTickJob`）。日刊到点生成、错过补跑、超时收尾、
-每天检查一次周刊都靠这个 tick（`Scheduler#tick` 依次跑 `generate_daily_if_due`、
-`finalize_stale_issues`、`check_weekly_if_due`、`check_reasons_if_due`、`cleanup_if_due`），本地想看效果就得让 jobs 进程
+每天检查一次周刊都靠这个 tick（`Scheduler#tick` 先写心跳，即 `Setting` 的 `ticked_at`，健康检查靠它；再依次跑
+`generate_daily_if_due`、`finalize_stale_issues`、`check_weekly_if_due`、`check_reasons_if_due`、`cleanup_if_due`
+与 `backup_if_due`，开发机上一个 `BACKUP_*` 都没配时最后这步什么都不做，见「备份」），本地想看效果就得让 jobs 进程
 跑着，`log/development.log` 里每分钟一条。日刊生成、周刊检查的时间点读 `Setting`（键
 `daily_time`、`weekly_time`），不是写死在代码里。
 
@@ -86,7 +89,8 @@ http://localhost:3000/admin
 ```
 
 白名单邮箱登录后，报头头像菜单的「管理」进 `/admin/sources`。四个分页：信息源（新建 / 编辑 / 启停 / 测试抓取 / 抓取记录）、
-期（某期某源重抓、补生成缺期、立即生成今日日刊）、用户（只读）、设置（日刊生成时间、周刊检查时间；白名单只读）。
+期（某期某源重抓、补生成缺期、立即生成今日日刊）、用户（只读）、设置（日刊生成时间、周刊检查时间；白名单只读；告警渠道；
+备份状态与「立即备份」；兴趣画像与推荐理由）。
 写操作都记进 `audit_logs`（谁、何时、对什么、改了什么），保留 90 天，没有界面，要看用 `bin/rails console`：
 `AuditLog.order(created_at: :desc).limit(20)`。
 
@@ -113,7 +117,8 @@ Hacker News 经 Algolia（`hn.algolia.com`），RSS 看 feed 里还有没有那�
 事件记在 `alert_events`（`AlertEvent.order(created_at: :desc).limit(20)`），同源同日同类只发一条，恢复后发一条「已恢复」；
 事件保留 90 天，由每天 04:00 的清理一并删。
 投递失败最多重试 3 次，耗尽写日志并留在 `delivery_error`。触发点：源抓取终态失败、解析退化（丢弃过半、阮一峰降级）、空刊、
-日刊晚于生成时间 30 分钟以上才补跑、搜索连续 3 次不可用；备份失败只有调用口（还没有备份任务）；推荐理由缺失由 ④ 接。
+日刊晚于生成时间 30 分钟以上才补跑、搜索连续 3 次不可用、每日备份失败（见「备份」）、推荐理由在发布 30 分钟后仍有缺失。
+这些告警都从应用进程里发出：进程本身停了就一条也发不出来，那种情况靠「健康检查」接的外部拨测。
 
 ## 推荐理由
 
@@ -131,6 +136,97 @@ Hacker News 与 Hackaday（RSS 日刊源）的标题、GitHub Trending 的仓库
 **已经存在的数据库要手动跑一次 `bin/rails db:seed`**：`bin/setup` 与 Kamal 的 `db:prepare` 只在新建数据库时播种，
 老库里的 `interest_areas` 是空的。画像里没有启用的领域就不生成（不调模型、不记费用），
 后台期页那一格与两个「重生成」都会写「兴趣画像为空」。
+
+## 备份
+
+设计见 `docs/superpowers/specs/2026-09-28-p3-backup-health-design.md`。每天 03:00（上海）tick 入队一次 `BackupJob`，
+当天错过就补跑：主库 `pg_dump --format=custom`（`solid_cache_entries`、`solid_cable_messages` 只留表结构），AES-256-GCM
+加密，再以 S3 兼容协议（SigV4 PutObject）上传。队列库不备份，恢复后由入口的 `db:prepare` 重建。每一次备份记在 `backup_runs`，
+保留 30 天。上传遇到 5xx 或网络错误时重试 2 次（间隔 2 分钟、10 分钟）；其余错误和重试耗尽都发一条「备份失败」（严重，一天一条）。
+`/admin/settings` 的「备份」一节显示存储地址、密钥指纹、最近一次与最近成功，也可以「立即备份」。
+
+配置只从环境读，五项都齐才算配好：
+
+| 变量 | 说明 |
+|---|---|
+| `BACKUP_BUCKET_URL` | 对象的上一级地址，可带前缀。虚拟主机式如 `https://lowpass-backup.oss-cn-hongkong.aliyuncs.com/daily`，路径式如 `https://<account>.r2.cloudflarestorage.com/lowpass-backup/daily`。只接受 https；`localhost` / `127.0.0.1` 的 http 也行（本机演练用） |
+| `BACKUP_REGION` | 签名用的区域：R2 填 `auto`，AWS 填桶所在区域，阿里云 OSS 按其 S3 兼容文档填（形如 `oss-cn-hongkong`） |
+| `BACKUP_ACCESS_KEY_ID` / `BACKUP_SECRET_ACCESS_KEY` | 只给这个桶（或前缀）`PutObject` 权限的密钥：应用只写不读不删 |
+| `BACKUP_ENCRYPTION_KEY` | `openssl rand -hex 32` 生成的 64 位十六进制。除了服务器环境，还要在密码管理器里另存一份：丢了它，备份就解不开 |
+
+production 下没配（或配不全）就是 N-6 不达标：每天 03:00 照样记一次失败并告警，启动日志里也会写一句。开发机上一个 `BACKUP_*`
+都不配就不备份。
+
+存储端要做的三件事：桶保持私有；加一条生命周期规则「前缀下的对象 7 天后删除」（PRD 7.8 的保留期就在这里，应用不删文件）；
+建一把只有 `PutObject` 权限的密钥。对象名是 `<库名>-<UTC 时间戳>.dump.enc`，在控制台里按名字排就是按时间排。
+换加密密钥：换上新密钥之后的备份用新密钥，旧密钥至少再留 7 天，等旧备份过期。设置页与解密报错里显示的指纹，就是用来对上用的是哪一把。
+
+手动备份（数据库升级等高风险操作之前）：`bundle exec kamal app exec --reuse "bin/rails backup:now"`，或者后台「立即备份」。
+
+本机试上传，可以用 rclone 起一个会校验签名的 S3 服务端：
+
+```
+rclone serve s3 --auth-key drillkey,drillsecret --addr 127.0.0.1:9000 /tmp/s3root   # 先建好 /tmp/s3root/lowpass-backup
+BACKUP_BUCKET_URL=http://127.0.0.1:9000/lowpass-backup/daily BACKUP_REGION=us-east-1 \
+BACKUP_ACCESS_KEY_ID=drillkey BACKUP_SECRET_ACCESS_KEY=drillsecret BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32) \
+  bin/rails backup:now
+```
+
+### 恢复
+
+1. 从存储的控制台（或任意 S3 客户端）下载要恢复的那个对象。
+2. 解密：`BACKUP_ENCRYPTION_KEY=… ruby script/decrypt_backup lowpass_production-20260928T190000Z.dump.enc lowpass.dump`。
+   脚本只用 Ruby 标准库，不启动应用、不连数据库，任何一台装了 Ruby 的机器都行。认证标签校验不过（文件损坏、被改、密钥不对）就不留输出。
+3. 恢复到一个新库，核对主要表的行数：
+
+   ```
+   createdb lowpass_restore
+   pg_restore --no-owner --no-privileges --exit-on-error -d lowpass_restore lowpass.dump
+   psql -d lowpass_restore -c "select (select count(*) from issues) issues, (select count(*) from items) items, (select count(*) from sources) sources, (select count(*) from users) users"
+   ```
+
+4. 生产的库整个没了（新服务器、数据卷丢了）：先只起数据库，恢复完再起应用。应用先起来的话，入口的 `db:prepare` 会建一个空库，调度紧接着往里写新的一期：
+
+   ```
+   bundle exec kamal server bootstrap      # 新服务器才需要：装 Docker
+   bundle exec kamal accessory boot db
+   ssh root@$DEPLOY_HOST 'mkdir -p /root/lowpass-backups'
+   scp lowpass.dump root@$DEPLOY_HOST:/root/lowpass-backups/
+   ssh root@$DEPLOY_HOST 'docker exec -i lowpass-db pg_restore -U lowpass -d lowpass_production --no-owner --exit-on-error < /root/lowpass-backups/lowpass.dump'
+   bundle exec kamal setup                 # 已在跑的 accessory 它会跳过；入口的 db:prepare 重建空的队列库
+   ```
+
+   库还在但数据坏了：`bundle exec kamal app stop`，在 accessory 里 `dropdb` / `createdb lowpass_production` 之后照上面恢复，再 `bundle exec kamal app start`。
+   恢复完打开 `/health`，再到后台看一眼期与源。
+
+### 演练记录（N-6）
+
+- 2026-09-28，本机（PostgreSQL 18.6，rclone 1.75.1 的 `serve s3`，会校验 SigV4）：开发库灌入样本数据（4 个源、3 期、88 条）后
+  `bin/rails backup:now` 上传 84.1 KB；换一把错的 secret 再传，存储端回 403 `SignatureDoesNotMatch`，说明签名确实被校验过。
+  取回对象，用 `ruby --disable-gems script/decrypt_backup` 解密，`pg_restore --no-owner --no-privileges --exit-on-error` 恢复到新库，
+  各表行数一致，`pg_trgm` 在；应用连上恢复出来的库，搜索正常返回。
+- 生产：存储与密钥配好之后，照上面的步骤从真实的桶里取一份、在本机恢复一次，把日期与结果记在这里（上线清单「备份」一行）。
+
+## 健康检查
+
+`GET /health` 给外部拨测（PRD N-5，设计 §3）：不用登录，只返回状态、不含内容；全部正常时 200，任一项失败时 503。
+按 IP 每分钟 30 次，计数放在进程内存里。`/up` 不变，仍只回答「应用起来没有」，给 kamal-proxy 切流量用。
+
+| 检查 | 失败条件 |
+|---|---|
+| `database` | `SELECT 1` 出错 |
+| `search` | 固定探测查询 1 秒内没跑完或出错（不计入「搜索不可用」告警的连续失败计数） |
+| `scheduler` | tick 心跳（`Setting` 的 `ticked_at`）超过 5 分钟没更新。返回里另附 Solid Queue 的进程心跳：tick 停了而进程心跳还在，是 tick 本身出错；两个都停，是 Solid Queue 停了 |
+| `daily_issue` | 过了生成时间 30 分钟，当日期还不存在（此前只要求昨日期存在）。返回里附最近一期的发布时间与距今分钟数 |
+| `backup` | 需要备份时（production，或者配了 `BACKUP_*`），最近一次成功超过 50 小时；一次都没成功过则从第一条记录算起。一条记录都没有时不判 |
+
+```
+curl -s https://lowpass.tech/health
+{"status":"ok","checked_at":"2026-09-28T10:00:00+08:00","checks":{"database":"ok","search":"ok","scheduler":"ok","daily_issue":"ok","backup":"ok"},"search":{"latency_ms":12},"scheduler":{"ticked_at":"…","queue_heartbeat_at":"…"},"daily_issue":{"latest":"2026-09-28","expected":"2026-09-28","published_at":"2026-09-28T06:12:04+08:00","age_minutes":227},"backup":{"last_succeeded_at":"2026-09-28T03:00:21+08:00"}}
+```
+
+外部拨测：在 UptimeRobot、Better Stack 这类服务上建一个 HTTP(S) 监控，地址填 `https://lowpass.tech/health`，间隔 1 到 5 分钟，非 200 就通知。
+它的通知走拨测服务自己的渠道，和应用的告警互相独立，这正是它的用处：应用进程或 Solid Queue 停了的时候，应用自己一条告警也发不出来。
 
 ## 开发数据
 
@@ -195,12 +291,25 @@ mise exec -- ruby script/capture_samples ruanyf 400 420   # FROM TO：阮一峰�
 见各自环境文件里的 `config.solid_queue.connects_to`），`bin/rails db:prepare` 会一并建好；测试环境只有一个库。
 Solid Cache 与 Solid Cable 的表与业务表同库。
 
+开发容器、CI 的 postgres service（`.github/workflows/ci.yml`）与生产 accessory（`config/deploy.yml`）都是 PostgreSQL 18，
+三处一起升级；生产的做法见「部署」的「升级数据库大版本」。
+
 手动操作容器：
 
 ```
 docker start lowpass-postgres   # 启动
 docker stop lowpass-postgres    # 停止
 docker rm lowpass-postgres      # 删除，数据一并丢失
+```
+
+以前建的 `lowpass-postgres` 是 `postgres:16`，`bin/setup` 会提醒。换成 18：开发库的数据用不着的话，直接删容器重来，再按「开发数据」
+灌样本；想留着就先导出、建好新容器再导回：
+
+```
+docker exec lowpass-postgres pg_dump -U postgres -Fc lowpass_development > tmp/lowpass_development.dump   # 想留数据才需要
+docker rm -f lowpass-postgres
+bin/setup                                                                                                  # 建 postgres:18 的新容器并 db:prepare
+docker exec -i lowpass-postgres pg_restore -U postgres -d lowpass_development --clean --if-exists --no-owner < tmp/lowpass_development.dump
 ```
 
 ## 搜索
@@ -292,7 +401,7 @@ PostgreSQL 连接池压出间歇性失败）。`config/database.yml` 里的 `gss
 
 ## 部署
 
-底座（ADR T4、T5）：阿里云轻量（香港，x86_64；地址不进仓库，本机放在 deploy.env 的 `DEPLOY_HOST`，`config/deploy.yml` 经 ERB 读它）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 17 accessory；
+底座（ADR T4、T5）：阿里云轻量（香港，x86_64；地址不进仓库，本机放在 deploy.env 的 `DEPLOY_HOST`，`config/deploy.yml` 经 ERB 读它）跑 `web` 单容器（Solid Queue 作 Puma 插件）加 PostgreSQL 18 accessory；
 镜像在 Docker Hub `skipmaple/lowpass`；kamal-proxy 做 Let's Encrypt，域名 `lowpass.tech`。同一台机器上还有另一个 Kamal 应用与 lowpass
 共用 kamal-proxy，按域名分流；它的库占着宿主机的 `127.0.0.1:5432`，所以 lowpass 的库不发布端口，应用走 docker 网络里的 `lowpass-db`。
 配置在 `config/deploy.yml`，变量名在 `.kamal/secrets`，值只从跑 kamal 的那个 shell 读。本机手动部署时镜像在服务器上构建（`builder.remote`），不用模拟 x86；
@@ -304,7 +413,7 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
 2. 数据库口令：`openssl rand -hex 24`，作 `POSTGRES_PASSWORD`（应用侧的 `PGPASSWORD` 取同一个值，`.kamal/secrets` 已写好）。
 3. 变量放进仓库外的一个文件（例如 `~/.config/lowpass/deploy.env`），跑 kamal 前 `set -a; source ~/.config/lowpass/deploy.env; set +a`：
    `DEPLOY_HOST`（服务器 IP，`config/deploy.yml` 经 ERB 读它）、`KAMAL_REGISTRY_PASSWORD`、`POSTGRES_PASSWORD`、`BASE_URL=https://lowpass.tech`、`GOOGLE_CLIENT_ID/SECRET`、`GITHUB_CLIENT_ID/SECRET`、
-   `ADMIN_EMAILS`，以及「告警」「推荐理由」两节列的变量；没用到的留空。
+   `ADMIN_EMAILS`，以及「告警」「推荐理由」「备份」三节列的变量；没用到的留空（备份在 production 下是必需的，没配会每天告警）。
 4. Cloudflare：SSL/TLS 加密模式设「完全」；首次签证书前关掉「始终使用 HTTPS」，签完再开。橙云代理开着也行，
    Let's Encrypt 的 HTTP-01 校验会经 Cloudflare 转到源站的 80。
 5. `bundle exec kamal setup`：服务器已有 Docker 与 kamal-proxy，这一步实际做的是起 accessory、在服务器上构建镜像并推到 Docker Hub、
@@ -316,15 +425,64 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
    bundle exec kamal app exec --reuse "bin/rails search:rebuild"
    ```
 
-7. 验证：登录页有两家按钮；白名单邮箱登录后报头有「管理」；设置页「发送测试告警」一分钟内收到；填好模型配置后期页「重生成理由」。
+7. 验证：登录页有两家按钮；白名单邮箱登录后报头有「管理」；设置页「发送测试告警」一分钟内收到；「立即备份」之后对象出现在桶里；
+   填好模型配置后期页「重生成理由」；`curl https://lowpass.tech/health` 是 200。
+8. 在外部拨测服务上监控 `https://lowpass.tech/health`（见「健康检查」）。
 
 ### 日常
 
 - 发布：`bundle exec kamal deploy`（构建、推送、零停机切换）；回滚 `bundle exec kamal rollback <版本>`，版本是 git sha，`kamal app containers` 能看。
 - 日志 `bundle exec kamal app logs -f`；控制台 `bundle exec kamal console`；数据库 `bundle exec kamal dbc`；代理 `bundle exec kamal proxy details`。
 - 服务器上的落点：数据 `/root/lowpass-db/data`，Kamal 记录 `/root/.kamal/apps/lowpass`。证书由 kamal-proxy 自动续。
-- 备份：还没有备份任务（T3）。手动：`bundle exec kamal accessory exec db "pg_dump -U lowpass lowpass_production" > lowpass-$(date +%F).sql`。
-- 升大版本（2026-09-15 从 16 升到 17 的做法）：先在服务器上 `pg_dumpall` 两个库到 `/root/lowpass-backups/`，`kamal app stop`，把 `/root/lowpass-db/data` 改名留着，改 `deploy.yml` 的镜像后 `kamal accessory reboot db`（新目录 initdb），`psql` 灌回 dump，核对各表行数，`kamal app start`。数据目录不跨大版本复用。
+- 备份：每天 03:00 自动加密上传到对象存储，状态看设置页「备份」一节，恢复步骤见「备份」。马上要一份：后台「立即备份」或
+  `bundle exec kamal app exec --reuse "bin/rails backup:now"`。
+- 服务器上的 accessory 永远别用 `kamal accessory remove`：它连数据目录一起删。换镜像、换挂载用 `kamal accessory reboot db`（只重建容器，宿主机目录不动）。
+
+### 升级数据库大版本（17 → 18）
+
+`config/deploy.yml` 的 accessory 已经是 `postgres:18`，但 `kamal deploy`（包括 CI 自动部署）不重启 accessory：合并之后线上仍是 17，
+直到有人照下面的步骤做一次。应用镜像里的客户端已是 18，对 17 的服务端照样能导出（备份不受影响）。停机几分钟，
+避开 03:00 备份、06:00 到 06:20 的日刊生成与 09:00 的周刊检查。数据目录不跨大版本复用：18 用新目录，17 的旧目录原样留着回滚用。
+2026-09-15 从 16 升到 17 用的是同一套「导出 → 新目录重建 → 导回」。
+
+18 起官方镜像换了数据布局：`PGDATA` 是 `/var/lib/postgresql/18/docker`，卷挂整个 `/var/lib/postgresql`
+（`config/deploy.yml` 里是 `postgresql:/var/lib/postgresql`，宿主机上是 `/root/lowpass-db/postgresql`）。
+以后再升大版本，新旧目录可以并排放在同一个挂载里。
+
+在本机跑，checkout 已是合并后的 main，`set -a; source ~/.config/lowpass/deploy.env; set +a`：
+
+```
+# 0. 先要一份备份（配好了备份的话）
+bundle exec kamal app exec --reuse "bin/rails backup:now"
+
+# 1. 停应用，停机从这里开始，之后不会再有写入
+bundle exec kamal app stop
+
+# 2. 在 17 里导出主库，文件留在服务器上；队列库不用导，应用起来时 db:prepare 会重建
+ssh root@$DEPLOY_HOST 'mkdir -p /root/lowpass-backups && docker exec lowpass-db pg_dump -U lowpass -Fc lowpass_production > /root/lowpass-backups/pg17-lowpass_production.dump && ls -lh /root/lowpass-backups'
+
+# 3. 记下行数，恢复后对照
+ssh root@$DEPLOY_HOST "docker exec lowpass-db psql -U lowpass lowpass_production -Atc \"select 'issues', count(*) from issues union all select 'items', count(*) from items union all select 'sources', count(*) from sources union all select 'users', count(*) from users\""
+
+# 4. 换成 18：删掉旧容器、按新配置起一个，新目录里 initdb，并按 POSTGRES_DB 建好空的 lowpass_production；
+#    /root/lowpass-db/data（17）原样不动
+bundle exec kamal accessory reboot db
+
+# 5. 导回 18
+ssh root@$DEPLOY_HOST 'docker exec -i lowpass-db pg_restore -U lowpass -d lowpass_production --no-owner --exit-on-error < /root/lowpass-backups/pg17-lowpass_production.dump'
+
+# 6. 行数对照第 3 步，版本应是 18
+ssh root@$DEPLOY_HOST "docker exec lowpass-db psql -U lowpass lowpass_production -Atc 'select version()'"
+
+# 7. 起应用：入口的 db:prepare 在 18 上重建空的队列库；看日志、打开 /health
+bundle exec kamal app start
+bundle exec kamal app logs --lines 100
+curl -s https://lowpass.tech/health
+```
+
+回滚（第 7 步之前发现问题）：把 `config/deploy.yml` 的 accessory 改回 `postgres:17` 与 `data:/var/lib/postgresql/data`，
+`bundle exec kamal accessory reboot db`（17 起在原来的目录上），再 `bundle exec kamal app start`。第 7 步之后才回滚的话，
+这期间写进 18 的内容会丢，先在 18 里 `pg_dump` 一份再退。确认一周无误，再删 `/root/lowpass-db/data` 与导出文件。
 
 ### CI 自动部署
 
@@ -335,7 +493,7 @@ Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Enviro
 镜像在 runner 上构建（`deploy.yml` 看 `KAMAL_BUILD_LOCAL` 这个变量），层缓存在 GitHub Actions cache，服务器只拉镜像。
 服务器地址与 host key 都不进仓库：Environment 里另有 `DEPLOY_HOST`（IP）与 `DEPLOY_KNOWN_HOSTS`（本机 `ssh-keyscan -t ed25519 $DEPLOY_HOST` 输出的那一行），服务器重装或换 key 时更新它们。
 
-- 填或改 secrets（值不进仓库，本机的 env 文件整份导入）：
+- 填或改 secrets（值不进仓库，本机的 env 文件整份导入；备份的五个 `BACKUP_*` 也在这份文件里）：
   `gh secret set -f ~/.config/lowpass/deploy.env --env production`（GitHub 拒绝以 `GITHUB_` 开头的 secret 名，
   所以 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 两项要另外以 `OAUTH_GITHUB_CLIENT_ID` / `OAUTH_GITHUB_CLIENT_SECRET` 的名字设，工作流里再映射回原名）；
   `gh secret set RAILS_MASTER_KEY --env production < config/master.key`；

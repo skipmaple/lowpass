@@ -6,12 +6,12 @@ import Show from '@/pages/Admin/Settings/Show'
 import SourceForm from '@/pages/Admin/Sources/Form'
 import Dialog from '@/components/Dialog'
 import { emitRouterEvent, formPatch, router, setPageProps } from '../support/inertia'
-import { ADAPTER_OPTIONS, adminSourceForm, interestArea, reasonsStatus } from '../support/props'
+import { ADAPTER_OPTIONS, adminSourceForm, backupStatus, interestArea, reasonsStatus } from '../support/props'
 
 const props = {
   schedule: { daily_time: '06:00', weekly_time: '09:00' }, whitelist: [],
   alerts: { email: { configured: true, label: 'mail' }, webhook: { configured: false, label: '未配置' } },
-  reasons: reasonsStatus(), interest_areas: [interestArea(), interestArea({ id: 'ia-2', name: '前端开发' })],
+  reasons: reasonsStatus(), interest_areas: [interestArea(), interestArea({ id: 'ia-2', name: '前端开发' })], backup: backupStatus(),
 }
 function settings(email = 'one@example.com') {
   setPageProps({ current_user: { email }, errors: {}, flash: {} })

@@ -2,6 +2,7 @@
 class Scheduler
   LATE_AFTER = 1.minute
   CLEANUP_TIME = "04:00".freeze
+  BACKUP_TIME = "03:00".freeze
 
   def self.tick(now: Time.current)
     new(now).tick
@@ -12,14 +13,21 @@ class Scheduler
   end
 
   def tick
+    step(:heartbeat)
     step(:generate_daily_if_due)
     step(:finalize_stale_issues)
     step(:check_weekly_if_due)
     step(:check_reasons_if_due)
     step(:cleanup_if_due)
+    step(:backup_if_due)
   end
 
   private
+    # 健康检查（N-5，设计 §3）靠它判断调度还活着：每一次 tick 先写这一笔，后面哪一步出错都不影响
+    def heartbeat
+      Setting.set("ticked_at", @now.iso8601)
+    end
+
     # R-1.6 每个自然日最多一期；R-1.7 当日内补跑的期标注延迟生成
     def generate_daily_if_due
       due_at = today_at(Setting.get("daily_time"))
@@ -62,7 +70,7 @@ class Scheduler
     end
 
     # F-26 抓取记录保留 30 天，搜索日志 30 天（D12）、结果点击 90 天（9.1）；会话过期即删（附录 A）；
-    # 审计日志 90 天（7.8）；告警事件 90 天；模型调用账本 90 天（R-9.8）。跟周刊检查一样按上海时区的自然日记账：
+    # 审计日志 90 天（7.8）；告警事件 90 天；模型调用账本 90 天（R-9.8）；备份记录 30 天。跟周刊检查一样按上海时区的自然日记账：
     # 只认「今天清过没有」，不认「现在是不是 04:02」——那一分钟的 tick 错过了（服务停过、机器睡过）就整天不清了
     def cleanup_if_due
       today = PeriodKey.daily(@now)
@@ -75,7 +83,18 @@ class Scheduler
       AuditLog.cleanup
       AlertEvent.cleanup
       ModelCall.cleanup
+      BackupRun.cleanup
       Setting.set("cleaned_on", today)
+    end
+
+    # F-26 每日备份（设计 §2.1、E5、E8）：03:00 之后当天一次，同样按上海时区的自然日记账，错过那一分钟当天补跑；
+    # 先入队再记账，入队失败（create_later 抛出）就不记，下一分钟重来。不需要备份的环境（开发机上一个 BACKUP_* 都没配）什么都不做
+    def backup_if_due
+      today = PeriodKey.daily(@now)
+      return if !Backup.expected? || @now < today_at(BACKUP_TIME) || Setting.get("backed_up_on") == today
+
+      BackupRun.create_later(trigger: "scheduled")
+      Setting.set("backed_up_on", today)
     end
 
     def today_at(hhmm)

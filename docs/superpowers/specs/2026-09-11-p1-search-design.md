@@ -16,7 +16,7 @@
 
 - 方案 A：PostgreSQL 内建，`pg_trgm` 做拉丁前缀与拼写容错，`ILIKE` 做中文子串，打分在 SQL 里求和后由数据库排序分页；高亮在应用层。与 ADR T7 的措辞差一点：ADR 写「应用层做权重」，本设计把权重求和放进 SQL，因为分页必须在数据库里按分数排序，否则第 2 页起结果不正确。ADR 在实现计划合并时补一句。
 - 不引入 tsvector / 词干、不引入搜索引擎、不引入 `zhparser` 之类的分词扩展。
-- 启用扩展只有 `pg_trgm`（PostgreSQL 自带的 contrib，16 与 17 都有）。`unaccent` 不启用：源站内容里的重音字母极少，PRD 没要求。
+- 启用扩展只有 `pg_trgm`（PostgreSQL 自带的 contrib，18 里就有）。`unaccent` 不启用：源站内容里的重音字母极少，PRD 没要求。
 
 ## 3. 数据模型
 

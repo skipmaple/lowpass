@@ -6,13 +6,15 @@ import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import Field from '@/components/Field'
 import InterestAreaRow from '@/components/InterestAreaRow'
 import { useDraftAccount, useDraftForm, useUnsavedChanges } from '@/lib/drafts'
-import { ADMIN_SETTINGS, ADMIN_TEST_ALERT } from '@/lib/paths'
+import { ADMIN_BACKUP, ADMIN_SETTINGS, ADMIN_TEST_ALERT } from '@/lib/paths'
+import { usePolling } from '@/lib/polling'
 import { Mixed } from '@/lib/typeset'
-import type { AlertChannel, AlertChannels, InterestArea, ModelConfig, ReasonsStatus, Schedule } from '@/types/lowpass'
+import type { AlertChannel, AlertChannels, BackupStatus, InterestArea, ModelConfig, ReasonsStatus, Schedule } from '@/types/lowpass'
 
 // 设置（5.6，画布 admin_settings()）：调度时间可改（R-1.1 精确到分）；白名单只读（R-5.5 由环境配置）。
-// 告警渠道状态与测试告警（③）在这一页；兴趣画像与推荐理由（④，R-9.5、R-9.9、D18、D23）往这一页加了两节。
-export type AdminSettingsShowProps = { schedule: Schedule; whitelist: string[]; alerts: AlertChannels; reasons: ReasonsStatus; interest_areas: InterestArea[] }
+// 告警渠道状态与测试告警（③）在这一页；兴趣画像与推荐理由（④，R-9.5、R-9.9、D18、D23）往这一页加了两节；
+// 备份状态与「立即备份」（P3，F-26）也在这一页。
+export type AdminSettingsShowProps = { schedule: Schedule; whitelist: string[]; alerts: AlertChannels; reasons: ReasonsStatus; interest_areas: InterestArea[]; backup: BackupStatus }
 
 function Section({ title, id, children }: React.PropsWithChildren<{ title: string; id: string }>) {
   return (
@@ -47,12 +49,24 @@ function ChannelRow({ label, channel }: { label: string; channel: AlertChannel }
   )
 }
 
+// 备份一行：有值是数据（Maple），没值是一句中文
+function BackupRow({ label, value, empty }: { label: string; value: string | null; empty: string }) {
+  return (
+    <div className="kv-row">
+      <span className="kv-key">{label}</span>
+      <div className="kv-value">
+        {value ? <Mixed text={value} color="var(--ink)" /> : <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: 'var(--ink2)' }}>{empty}</span>}
+      </div>
+    </div>
+  )
+}
+
 export default function Show(props: AdminSettingsShowProps) {
   const account = useDraftAccount()
   return <Settings key={account ?? 'anonymous'} {...props} />
 }
 
-function Settings({ schedule, whitelist, alerts, reasons, interest_areas }: AdminSettingsShowProps) {
+function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup }: AdminSettingsShowProps) {
   const form = useDraftForm<Schedule>('settings:schedule', schedule)
   form.transform((data) => ({ schedule: data }))
   const errors = form.errors as unknown as Record<string, string | string[] | undefined>
@@ -61,6 +75,10 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas }: Admi
   const [scheduleStatus, setScheduleStatus] = useState('')
   const [modelStatus, setModelStatus] = useState('')
   const [alertStatus, setAlertStatus] = useState('')
+  const [backingUp, setBackingUp] = useState(false)
+  const [backupStatus, setBackupStatus] = useState('')
+  // 有排队或在跑的备份时每 5 秒部分刷新这一节，结束了就停（同后台期页的手动重抓）
+  usePolling(backup.active, ['backup'])
   const [scheduleBusy, setScheduleBusy] = useState(false)
   const [modelBusy, setModelBusy] = useState(false)
   const [interestDrafts, setInterestDrafts] = useState<Record<string, boolean>>({})
@@ -156,10 +174,17 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas }: Admi
     internalVisit(() => router.post(ADMIN_TEST_ALERT, {}, { only: ['alerts', 'flash', 'errors'], preserveScroll: true, onSuccess: (page) => { const flash = page.props.flash as { alert?: string; notice?: string } | undefined; setAlertStatus(flash?.alert || flash?.notice || '') }, onError: () => setAlertStatus('测试告警未能发送，请重试'), onFinish: () => setSending(false) }))
   }
 
+  // 一次点击一份：请求回来之前按钮禁着；已有备份在跑时服务端也会拒绝（每分钟 5 次的限流是后一道门）
+  function startBackup() {
+    setBackingUp(true)
+    setBackupStatus('')
+    internalVisit(() => router.post(ADMIN_BACKUP, {}, { only: ['backup', 'flash', 'errors'], preserveScroll: true, onSuccess: (page) => { const flash = page.props.flash as { alert?: string; notice?: string } | undefined; setBackupStatus(flash?.alert || flash?.notice || '') }, onError: () => setBackupStatus('备份未能开始，请重试'), onFinish: () => setBackingUp(false) }))
+  }
+
   return (
     <AdminPage section="settings" bottom="设置">
       <nav className="settings-directory" aria-label="设置目录">
-        <a href="#schedule">调度</a><a href="#whitelist">管理员白名单</a><a href="#alerts">告警</a><a href="#interests">兴趣画像</a><a href="#reasons">推荐理由</a><a href="#deployment">部署配置帮助</a>
+        <a href="#schedule">调度</a><a href="#whitelist">管理员白名单</a><a href="#alerts">告警</a><a href="#backup">备份</a><a href="#interests">兴趣画像</a><a href="#reasons">推荐理由</a><a href="#deployment">部署配置帮助</a>
       </nav>
       <Section title="调度" id="schedule">
         <form ref={scheduleRef} onSubmit={submit}>
@@ -200,6 +225,22 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas }: Admi
           {configured ? null : <span className="field-note">未配置告警渠道，无法发送测试。<a href="#deployment">查看部署配置帮助</a></span>}
         </div>
         <span role="status" className="field-note">{alertStatus}</span>
+      </Section>
+
+      <Section title="备份" id="backup">
+        <BackupRow label="存储" value={backup.storage} empty="未配置" />
+        <BackupRow label="加密密钥" value={backup.key_fingerprint && `指纹 ${backup.key_fingerprint}`} empty="未配置" />
+        <BackupRow label="最近一次" value={backup.last?.summary ?? null} empty="还没有备份" />
+        {backup.last_succeeded && backup.last?.status !== 'succeeded' ? <BackupRow label="最近成功" value={backup.last_succeeded} empty="" /> : null}
+        {backup.problems.length > 0 ? <span className="field-note"><Mixed text={`配置不完整：${backup.problems.join('；')}`} /></span> : null}
+        <div className="admin-actions" style={{ alignItems: 'center' }}>
+          <button type="button" className="btn-primary" disabled={!backup.configured || backup.active || backingUp} onClick={startBackup}>
+            {backup.active || backingUp ? '备份中…' : '立即备份'}
+          </button>
+          {backup.configured ? null : <span className="field-note">未配置备份存储，无法立即备份。<a href="#deployment">查看部署配置帮助</a></span>}
+        </div>
+        <span className="field-note"><Mixed text="每天 03:00 自动备份；保留天数由存储桶的生命周期规则决定。" /></span>
+        <span role="status" className="field-note">{backupStatus}</span>
       </Section>
 
       <Section title="兴趣画像" id="interests">
@@ -255,6 +296,8 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas }: Admi
             <p>模型密钥：<code>MODEL_API_KEY</code>。接口地址、模型名和价格在上方保存。</p>
             <p>邮件渠道需要 <code>ALERT_EMAIL_TO</code> 和 <code>SMTP_ADDRESS</code>；发件地址为 <code>ALERT_EMAIL_FROM</code>。SMTP 可配置 <code>SMTP_PORT</code>、<code>SMTP_USERNAME</code>、<code>SMTP_PASSWORD</code>、<code>SMTP_DOMAIN</code>、<code>SMTP_AUTHENTICATION</code>、<code>SMTP_STARTTLS</code>。</p>
             <p>Webhook 渠道：<code>ALERT_WEBHOOK_URL</code>（HTTPS）和 <code>ALERT_WEBHOOK_FORMAT</code>（generic / feishu / wecom / dingtalk）。</p>
+            <p>每日备份：<code>BACKUP_BUCKET_URL</code>（S3 兼容存储的桶地址，可带前缀）、<code>BACKUP_REGION</code>、<code>BACKUP_ACCESS_KEY_ID</code> 与 <code>BACKUP_SECRET_ACCESS_KEY</code>（只需写入权限），以及 <code>BACKUP_ENCRYPTION_KEY</code>（<code>openssl rand -hex 32</code>，另在密码管理器里存一份）。</p>
+            <p>健康检查：<code>/health</code>，供外部拨测；全部正常返回 200，否则返回 503。</p>
           </div>
         </details>
       </Section>

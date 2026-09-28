@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# 解开一份备份（docs/development.md「备份」，设计 §2.3、E14）：只用 Ruby 标准库，不启动应用、不连数据库——
+# 服务器整个没了，也能在任何一台装了 Ruby 的机器上把备份还原成 pg_restore 认的文件。认证标签校验不过就不留输出。
+#
+#   BACKUP_ENCRYPTION_KEY=… ruby script/decrypt_backup lowpass_production-20260928T190000Z.dump.enc lowpass.dump
+
+require_relative "../lib/lowpass/backup_cipher"
+
+source, target = ARGV
+abort "用法：BACKUP_ENCRYPTION_KEY=… ruby script/decrypt_backup 备份.dump.enc 输出.dump" unless source && target
+abort "#{target} 已经存在，换一个输出路径" if File.exist?(target)
+
+begin
+  Lowpass::BackupCipher.decrypt(source, target, key: Lowpass::BackupCipher.key(ENV["BACKUP_ENCRYPTION_KEY"]))
+  puts "已解密到 #{target}（认证标签校验通过），接着用 pg_restore 恢复"
+rescue Lowpass::BackupCipher::Error, SystemCallError => e
+  abort "解密失败：#{e.message}"
+end

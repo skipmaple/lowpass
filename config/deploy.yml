@@ -70,6 +70,12 @@ env:
     - SMTP_STARTTLS
     # 推荐理由（P2-④）
     - MODEL_API_KEY
+    # 每日备份（P3）：S3 兼容的对象存储与加密密钥，见 docs/development.md「备份」
+    - BACKUP_BUCKET_URL
+    - BACKUP_REGION
+    - BACKUP_ACCESS_KEY_ID
+    - BACKUP_SECRET_ACCESS_KEY
+    - BACKUP_ENCRYPTION_KEY
   clear:
     # Solid Queue 的 supervisor 跑在 Puma 进程里（config/puma.rb 的插件），调度 tick 与所有 job 都在这里
     SOLID_QUEUE_IN_PUMA: true
@@ -88,7 +94,9 @@ asset_path: /rails/public/vite
 
 accessories:
   db:
-    image: postgres:17
+    # 与开发容器（bin/setup）、CI 的 postgres service 同为 18。改这里的镜像不会动正在跑的库：kamal deploy 不重启 accessory，
+    # 升大版本要按 docs/development.md「升级数据库大版本」导出、reboot、导回
+    image: postgres:18
     host: <%= host %>
     # 不发布到宿主机端口：127.0.0.1:5432 已被这台机器上另一个应用的库占用；应用走 docker 网络访问。
     # 要在本机连库用 bin/kamal accessory exec db "psql -U lowpass lowpass_production" 或 dbc。
@@ -99,5 +107,7 @@ accessories:
       secret:
         - POSTGRES_PASSWORD
     directories:
-      # 数据在宿主机 /root/lowpass-db/data；备份任务是 P3 的事，先别指望它
-      - data:/var/lib/postgresql/data
+      # 18 起官方镜像的数据在 /var/lib/postgresql/18/docker（PGDATA），卷挂整个 /var/lib/postgresql：以后再升大版本，
+      # 新旧数据目录并排放在这一个挂载里。宿主机上是 /root/lowpass-db/postgresql；17 时代的 /root/lowpass-db/data
+      # 升级后原样留着回滚用，确认无误再删。每日加密备份见 docs/development.md「备份」
+      - postgresql:/var/lib/postgresql

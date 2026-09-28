@@ -8,7 +8,7 @@
 ## 先读什么
 
 - 需求：`docs/superpowers/specs/2026-09-08-mvp-prd.md`，F / R / AC / D / N 编号是唯一依据。
-- 选型与决议：`docs/adr/0001-mvp-tech-stack.md`（Rails 8 + Inertia / React / TypeScript / shadcn，PostgreSQL，Solid Queue / Cache / Cable，Kamal；T1 到 T12）。
+- 选型与决议：`docs/adr/0001-mvp-tech-stack.md`（Rails 8 + Inertia / React / TypeScript / shadcn，PostgreSQL 18，Solid Queue / Cache / Cable，Kamal；T1 到 T12）。
 - 代码风格：`STYLE.md`，改代码或评审前先读。界面：`.claude/skills/lowpass-design-taste/`。
 - 每条约定的出处与取舍：`docs/engineering-conventions.md`。
 
@@ -25,13 +25,13 @@
 
 - 主键：UUIDv7 编成 25 字符 base36 字符串列，不用 PostgreSQL 的 uuid 类型。fixture 的 id 比运行时记录都老，别用插入顺序去修正排序。
 - 搜索：PostgreSQL 内建。`Searchable` concern 用 `after_*_commit` 维护独立的 `Search::Record` 表，不为搜索改条目表。
-- 出站 HTTP：超时、有限重试、标明 lowpass 的 User-Agent、响应体上限；429 / 403 不追加重试；feed 地址先经 `surfguard` 解析成公网 IP 再连。模型端点是明示例外：管理员在后台填的可信地址，只要求 https（本机 http 可），不经 surfguard。
+- 出站 HTTP：超时、有限重试、标明 lowpass 的 User-Agent、响应体上限；429 / 403 不追加重试；feed 地址先经 `surfguard` 解析成公网 IP 再连。模型端点（管理员在后台填）与备份存储地址（`BACKUP_BUCKET_URL`，环境配置）是明示例外：可信地址，只要求 https（本机 http 可），不经 surfguard。
 - 后台任务：Solid Queue，浅 job 调富模型（`_later` 入队、`_now` 同步）；周期任务写在 `config/recurring.yml`；job 幂等，某期某源同时只允许一个重抓。
 - 认证：OAuth（OmniAuth）。`Session` 记录 + 签名 cookie；`Current` 承载 session、user 与请求属性；登录回调限流在 OmniAuth 之前的 Rack 中间件，搜索用 `rate_limit` 按用户；`next` 只接受站内相对路径；development 有 `developer` 策略的开发登录。
 - 前端：控制器是 CRUD 资源，每个动作渲染一个 Inertia 页面；props 必须有类型；首屏资源不超过 300 KB；颜色、字体、字号只从设计 skill 的令牌取。
-- 数据库：只支持 PostgreSQL。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。条目 `content` 上限 50000 字，只给阮一峰周刊正文使用。
+- 数据库：只支持 PostgreSQL 18，开发容器、CI 与生产同一个大版本，要升一起升。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。条目 `content` 上限 50000 字，只给阮一峰周刊正文使用。
 - 测试：Minitest + fixtures；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 快速循环，`bin/ci` 是合并门禁（rubocop、brakeman、bundler-audit、gitleaks、测试、系统测试）。
-- 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite + jobs；密钥只从环境读。`main` 分支用 Kamal 部署（CI 全绿后由 GitHub Actions 自动跑 `kamal deploy`）：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。
+- 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite + jobs；密钥只从环境读。`main` 分支用 Kamal 部署（CI 全绿后由 GitHub Actions 自动跑 `kamal deploy`）：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL 18 accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。主库每天 03:00 加密备份到 S3 兼容存储（`BACKUP_*`，恢复与演练见 `docs/development.md`「备份」），`/health` 给外部拨测，`/up` 只给 kamal-proxy。
 - 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。译文（D25：HN 与 RSS 源译标题，GitHub Trending 译简介）搭同一次调用，不合规只当没有，「缺理由」只看理由。
 
 ## 不要做

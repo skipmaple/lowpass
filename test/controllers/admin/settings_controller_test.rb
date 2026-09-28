@@ -21,6 +21,34 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "email" => { "configured" => false, "label" => "未配置" }, "webhook" => { "configured" => false, "label" => "未配置" } }, page_props["alerts"])
   end
 
+  # 设计 §2.6：配置状态里没有任何密钥；最近一次与最近成功是拼好的句子
+  test "设置页带备份状态" do
+    get admin_settings_path
+    assert_equal({ "configured" => false, "problems" => [], "storage" => nil, "key_fingerprint" => nil, "last" => nil, "last_succeeded" => nil, "active" => false }, page_props["backup"])
+
+    with_backup_config do
+      BackupRun.create!(trigger: "scheduled", status: "succeeded", started_at: Time.find_zone("Asia/Shanghai").parse("2026-09-27 03:00"),
+                        finished_at: Time.find_zone("Asia/Shanghai").parse("2026-09-27 03:00:09"), size_bytes: 12_900_000, duration_ms: 8_200)
+      BackupRun.create!(trigger: "manual", status: "failed", started_at: Time.find_zone("Asia/Shanghai").parse("2026-09-28 10:05"), error_summary: "上传失败（403）：AccessDenied")
+      get admin_settings_path
+    end
+
+    backup = page_props["backup"]
+    assert_equal true, backup["configured"]
+    assert_equal "lowpass-backup.storage.example/daily", backup["storage"]
+    assert_match(/\A\h{16}\z/, backup["key_fingerprint"])
+    assert_equal({ "status" => "failed", "summary" => "9月28日 10:05 · 失败：上传失败（403）：AccessDenied" }, backup["last"])
+    assert_equal "9月27日 03:00", backup["last_succeeded"]
+    assert_not_includes response.body, "test-secret-key"
+  end
+
+  test "备份配置不完整：逐条列出问题" do
+    with_backup_config("BACKUP_REGION" => "auto") do
+      get admin_settings_path
+    end
+    assert_includes page_props.dig("backup", "problems"), "缺 BACKUP_BUCKET_URL"
+  end
+
   test "改调度时间，审计记旧值新值" do
     patch admin_settings_path, params: { schedule: { daily_time: "06:30", weekly_time: "09:00" } }
 

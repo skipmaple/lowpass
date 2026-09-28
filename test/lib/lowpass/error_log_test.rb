@@ -19,6 +19,15 @@ class Lowpass::ErrorLogTest < ActiveSupport::TestCase
     assert_equal [ %(WARN 错误上报：RuntimeError "第一行" severity=warning handled=true source=application step=generate_daily_if_due) ], logged_lines
   end
 
+  # 健康检查某一项出错、备份记失败本身出错（Health#run、BackupRun#record_failure）：写出是哪一项、哪一条
+  test "健康检查的项名与备份记录的 id 也写上" do
+    Rails.error.report(PG::ConnectionBad.new("could not connect"), handled: true, context: { health: :database })
+    Rails.error.report(ActiveRecord::ConnectionNotEstablished.new("gone"), handled: true, context: { backup_run: "run-1" })
+
+    assert_match(/ health=database\z/, logged_lines.first)
+    assert_match(/ backup_run=run-1\z/, logged_lines.last)
+  end
+
   test "日志级别跟着 severity 走" do
     Rails.error.report(RuntimeError.new("没接住"), handled: false)
     Rails.error.report(RuntimeError.new("只是提示"), handled: true, severity: :info)

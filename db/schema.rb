@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -69,6 +69,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_100000) do
     t.check_constraint "length(email::text) <= 254", name: "auth_identities_email_len"
     t.check_constraint "length(provider_uid::text) <= 255", name: "auth_identities_provider_uid_len"
     t.check_constraint "provider::text = ANY (ARRAY['google'::character varying::text, 'github'::character varying::text, 'developer'::character varying::text])", name: "auth_identities_provider"
+  end
+
+  create_table "backup_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.integer "attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.integer "duration_ms"
+    t.string "error_summary", limit: 200
+    t.datetime "finished_at"
+    t.string "object_key", limit: 255
+    t.bigint "size_bytes"
+    t.datetime "started_at"
+    t.string "status", limit: 10, null: false
+    t.string "trigger", limit: 10, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_backup_runs_on_created_at"
+    t.check_constraint "length(error_summary::text) <= 200", name: "backup_runs_error_summary_len"
+    t.check_constraint "length(object_key::text) <= 255", name: "backup_runs_object_key_len"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'running'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text])", name: "backup_runs_status"
+    t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying::text, 'manual'::character varying::text])", name: "backup_runs_trigger"
   end
 
   create_table "fetch_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|

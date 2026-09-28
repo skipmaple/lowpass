@@ -74,6 +74,8 @@ export const ADMIN_TODAY_ISSUE = '/admin/today_issue'
 export const ADMIN_USERS = '/admin/users'
 export const ADMIN_SETTINGS = '/admin/settings'
 export const ADMIN_TEST_ALERT = '/admin/test_alert'
+// P3 设置页「立即备份」（config/routes.rb 的 admin/backup）
+export const ADMIN_BACKUP = '/admin/backup'
 
 // ④ 推荐理由：兴趣画像 CRUD（namespace :admin 的 interest_areas）、整期重生成理由端点
 export const ADMIN_INTEREST_AREAS = '/admin/interest_areas'

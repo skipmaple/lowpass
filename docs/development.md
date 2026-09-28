@@ -213,7 +213,9 @@ BACKUP_ACCESS_KEY_ID=drillkey BACKUP_SECRET_ACCESS_KEY=drillsecret BACKUP_ENCRYP
   `bin/rails backup:now` 上传 84.1 KB；换一把错的 secret 再传，存储端回 403 `SignatureDoesNotMatch`，说明签名确实被校验过。
   取回对象，用 `ruby --disable-gems script/decrypt_backup` 解密，`pg_restore --no-owner --no-privileges --exit-on-error` 恢复到新库，
   各表行数一致，`pg_trgm` 在；应用连上恢复出来的库，搜索正常返回。
-- 生产：存储与密钥配好之后，照上面的步骤从真实的桶里取一份、在本机恢复一次，把日期与结果记在这里（上线清单「备份」一行）。
+- 2026-09-28，生产（Cloudflare R2；同一天线上从 PostgreSQL 17 升到 18）：后台「立即备份」三次都成功，15:18 与 15:28 在 17 上
+  （各 246 KB），15:46 在 18 上。从 R2 取回当天的备份，在本机用密码管理器里另存的那份密钥解密，恢复到 PostgreSQL 18 的新库：
+  issues 16、items 467、sources 4、users 1，与线上一致。
 
 ## 健康检查
 
@@ -448,10 +450,10 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
 
 ### 升级数据库大版本（17 → 18）
 
-`config/deploy.yml` 的 accessory 已经是 `postgres:18`，但 `kamal deploy`（包括 CI 自动部署）不重启 accessory：合并之后线上仍是 17，
-直到有人照下面的步骤做一次。应用镜像里的客户端已是 18，对 17 的服务端照样能导出（备份不受影响）。停机几分钟，
+`config/deploy.yml` 的 accessory 已经是 `postgres:18`，但 `kamal deploy`（包括 CI 自动部署）不重启 accessory：升大版本要照下面的步骤
+手动做一次。应用镜像里的客户端已是 18，对 17 的服务端照样能导出（备份不受影响）。停机几分钟，
 避开 03:00 备份、06:00 到 06:20 的日刊生成与 09:00 的周刊检查。数据目录不跨大版本复用：18 用新目录，17 的旧目录原样留着回滚用。
-2026-09-15 从 16 升到 17 用的是同一套「导出 → 新目录重建 → 导回」。
+2026-09-15（16 → 17）与 2026-09-28（17 → 18）用的都是这一套「导出 → 新目录重建 → 导回」。
 
 18 起官方镜像换了数据布局：`PGDATA` 是 `/var/lib/postgresql/18/docker`，卷挂整个 `/var/lib/postgresql`
 （`config/deploy.yml` 里是 `postgresql:/var/lib/postgresql`，宿主机上是 `/root/lowpass-db/postgresql`）。

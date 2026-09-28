@@ -96,6 +96,9 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 - 搜索与点击上报用 Rails 8 的 `rate_limit`（每用户每分钟 60 次，R-4.10）；登录回调不是——它在 OmniAuth 之前的 Rack 中间件里（见下条）。〔采用〕
 - `Rails.error.set_context(user_id:)` 往错误上下文里加 user id（`Authentication#find_session_by_cookie` 续上会话时调）；`allow_browser versions: :modern`；
   CSP 用 nonce（Inertia 的 script 需要 nonce），来源列表可由环境变量覆盖。〔采用自 fizzy `error_context.rb`、`content_security_policy.rb`〕
+- 错误上报不接外部追踪服务：`config/initializers/error_reporting.rb` 给 `Rails.error` 挂 `Lowpass::ErrorLog`，每次报告写一行日志
+  （类名、消息首行、severity、handled、source，加上下文白名单 `step` / `alerts` / `issue`）。`user_id` 与搜索词（`search`）不写：
+  两样落在同一行就把搜索和人关联起来了（D12），往白名单里加键之前先过这一条。
 - OAuth 客户端用 OmniAuth（`omniauth`、`omniauth-google-oauth2`、`omniauth-github`、`omniauth-rails_csrf_protection`），
   只负责从 provider 拿资料；匹配与合并在 `Identity::Resolution`。回调限流（R-5.9）是 OmniAuth 之前的一层 Rack 中间件
   `Auth::CallbackRateLimit`（`lib/middleware/`，不在自动加载路径里）：换 token 发生在 OmniAuth 的中间件里，控制器上的

@@ -59,6 +59,15 @@ describe('Login/Show', () => {
     expect(screen.getByText('已取消登录。')).toBeInTheDocument()
   })
 
+  // 注销之后回到这里（R-5.11、AC-5.8）：不是出错，走 status，不是 alert
+  it('notice 也显示：已注销账号。', () => {
+    setPageProps({ flash: { notice: '已注销账号。' } })
+    render(<Show providers={['github']} next={null} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('已注销账号。')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   // 布局函数要经得起 Inertia 3.7 的两道关：先用 props 试调一次（返回元素才算布局函数，
   // 否则套默认 Layout），再用页面元素正式调一次——出来的东西里不能有报头
   it('不套持久布局：props 试调返回元素，页面外只有登录卡、没有报头', () => {

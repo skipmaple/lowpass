@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
@@ -78,6 +78,77 @@ describe('Settings/Show', () => {
     await userEvent.click(screen.getByRole('button', { name: '登出' }))
 
     expect(router.delete).toHaveBeenCalledWith('/session')
+  })
+
+  // 注销（R-5.11、AC-5.8、AC-5.9、D26）：一行说删什么；「注销」只开确认框，确认才发 DELETE /user
+  describe('注销账号', () => {
+    it('一行说删什么，「注销」打开确认框，框里是要注销的账号', async () => {
+      show()
+
+      expect(screen.getByText('删除账号、登录方式与全部会话，期与条目不受影响')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: '注销' }))
+
+      const dialog = screen.getByRole('dialog', { name: '注销后无法恢复。确认注销这个账号？' })
+      expect(dialog).toHaveTextContent('drew@example.com')
+      expect(router.delete).not.toHaveBeenCalled()
+    })
+
+    it('没有邮箱的账号在框里写显示名', async () => {
+      show({ user: { display_name: 'octocat', email: null, avatar_url: null, role: 'member' } })
+
+      await userEvent.click(screen.getByRole('button', { name: '注销' }))
+
+      expect(screen.getByRole('dialog')).toHaveTextContent('octocat')
+    })
+
+    it('AC-5.9 取消或 Esc：框关上，什么都不发，焦点回到「注销」', async () => {
+      show()
+      const button = screen.getByRole('button', { name: '注销' })
+
+      await userEvent.click(button)
+      await userEvent.click(screen.getByRole('button', { name: '取消' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(button).toHaveFocus()
+
+      await userEvent.click(button)
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(router.delete).not.toHaveBeenCalled()
+    })
+
+    it('确认才发 DELETE /user；进行中按钮说「正在注销…」', async () => {
+      show()
+
+      await userEvent.click(screen.getByRole('button', { name: '注销' }))
+      await userEvent.click(screen.getByRole('button', { name: '确认注销' }))
+
+      expect(router.delete).toHaveBeenCalledWith('/user', expect.any(Object))
+      expect(screen.getByRole('button', { name: '正在注销…' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: '取消' })).toBeDisabled()
+    })
+
+    it('没跳走就是没删成：框留着，说一句，可以再试', async () => {
+      show()
+
+      await userEvent.click(screen.getByRole('button', { name: '注销' }))
+      await userEvent.click(screen.getByRole('button', { name: '确认注销' }))
+      const options = router.delete.mock.calls[0][1] as { onFinish: () => void }
+      act(() => options.onFinish())
+
+      expect(screen.getByRole('alert')).toHaveTextContent('注销没有完成，请重试。')
+      expect(screen.getByRole('button', { name: '确认注销' })).toBeEnabled()
+    })
+
+    it('访问成功了就不说失败', async () => {
+      show()
+
+      await userEvent.click(screen.getByRole('button', { name: '注销' }))
+      await userEvent.click(screen.getByRole('button', { name: '确认注销' }))
+      const options = router.delete.mock.calls[0][1] as { onSuccess: () => void; onFinish: () => void }
+      act(() => { options.onSuccess(); options.onFinish() })
+
+      expect(screen.queryByRole('alert')).toBeNull()
+    })
   })
 
   it('flash 的提示句由共享布局显示一次', () => {

@@ -3,6 +3,7 @@ class User < ApplicationRecord
   ROLES = %w[admin member].freeze
   PROVIDER_LABELS = { "google" => "Google", "github" => "GitHub", "developer" => "开发登录" }.freeze
 
+  # 注销（R-5.11、D26）就是 destroy：登录身份与会话跟着删（外键也是 cascade），审计记录的操作者由外键置空
   has_many :auth_identities, dependent: :destroy
   has_many :sessions, dependent: :destroy
 

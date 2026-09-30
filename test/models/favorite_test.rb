@@ -101,9 +101,14 @@ class FavoriteTest < ActiveSupport::TestCase
     assert_equal [ newer, older ], @user.favorites.newest_first.to_a
   end
 
-  # R-10.7 取消是真删；凭凭据把同一条原样插回去，id 与收藏时间不变
+  # R-10.7 取消是真删；凭凭据把同一条原样插回去，id 与收藏时间不变。
+  # 用每一列都有值的中文周刊条目：可空的列与汉字都要在凭据里走一遍
   test "取消后凭凭据原样恢复" do
-    favorite = travel_to(3.days.ago) { Favorite.keep(@user, @item) }
+    item = index_item("Zed：一个用 Rust 写的代码编辑器", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
+                      title_zh: "Zed：用 Rust 写的编辑器", summary: "Zed 是一个用 Rust 写的代码编辑器，主打多人协作。",
+                      summary_zh: "一个主打多人协作的代码编辑器。", meta: { "issue_no" => 366, "anchor" => "工具" })
+    favorite = travel_to(3.days.ago) { Favorite.keep(@user, item) }
+    assert_empty favorite.attributes.filter_map { |name, value| name if value.nil? }
     token = favorite.undo_token
     favorite.destroy!
 
@@ -112,6 +117,14 @@ class FavoriteTest < ActiveSupport::TestCase
     assert_equal favorite.id, restored.id
     assert_equal favorite.created_at, restored.created_at
     assert_equal favorite.attributes, restored.reload.attributes
+  end
+
+  # 凭据带的是表里除 user_id（另外核对）与 created_at（另外带）之外的每一列：
+  # 以后加了列却忘了加进 UNDO_COLUMNS，恢复出来的那一条会悄悄少了这一列
+  test "恢复凭据带的列与表对得上" do
+    columns = Favorite.column_names - %w[ user_id created_at ]
+
+    assert_equal columns.sort, Favorite::Undoing::UNDO_COLUMNS.sort
   end
 
   test "条目已经被重抓换掉也能恢复" do

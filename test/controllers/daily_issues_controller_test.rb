@@ -193,6 +193,8 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], page_props["favorites"]
 
     Favorite.keep(users(:drew), items(:hn_one))
+    # 不在这一期的收藏不算：favorites 只列这一页上的链接（设计 K6）
+    Favorite.keep(users(:drew), index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf)))
     get daily_issue_path("2026-09-08")
     assert_equal [ items(:hn_one).url_hash ], page_props["favorites"]
   end

@@ -75,16 +75,18 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
 
   test "收藏之后才生成的译文也显示" do
     Favorite.keep(users(:drew), @item)
-    @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器")
+    @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器", summary_zh: "一个用 Rust 写的终端日志查看器。")
 
     get favorites_path
 
-    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", page_props["entries"].sole["title_zh"]
+    entry = page_props["entries"].sole
+    assert_equal "Show HN：一个用 Rust 写的终端日志查看器", entry["title_zh"]
+    assert_equal "一个用 Rust 写的终端日志查看器。", entry["summary_zh"]
   end
 
   # AC-10.3 重抓把条目行换掉、新内容不含这条链接：收藏仍在，用收藏时的快照；所在期打开那一栏，不带条目锚点
   test "条目被重抓换掉后，收藏行用快照" do
-    @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器")
+    @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器", summary_zh: "一个用 Rust 写的终端日志查看器。")
     Favorite.keep(users(:drew), @item)
     replace_hn_column
 
@@ -93,6 +95,7 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     entry = page_props["entries"].sole
     assert_equal TITLE, entry["title"]
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", entry["title_zh"]
+    assert_equal "一个用 Rust 写的终端日志查看器。", entry["summary_zh"]
     assert_equal "Hacker News", entry["source_name"]
     assert_equal "2026年9月8日", entry.dig("where", "label")
     assert_equal daily_issue_path("2026-09-08", source: sources(:hn).id), entry.dig("where", "href")
@@ -138,13 +141,20 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to favorites_path(page: 2)
   end
 
-  test "不是数字的页码当第 1 页" do
+  test "不是正整数的页码当第 1 页" do
     Favorite.keep(users(:drew), @item)
 
     get favorites_path(page: "abc")
     assert_equal 1, page_props["page"]
 
     get favorites_path, params: { page: [ "2" ] }
+    assert_equal 1, page_props["page"]
+
+    # 下限也夹住：0 与负数带进 OFFSET 是负的偏移，会炸成 500
+    get favorites_path(page: 0)
+    assert_equal 1, page_props["page"]
+
+    get favorites_path(page: -3)
     assert_equal 1, page_props["page"]
   end
 

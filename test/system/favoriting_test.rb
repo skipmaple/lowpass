@@ -118,7 +118,8 @@ class FavoritingTest < ApplicationSystemTestCase
       width, height = evaluate_script("(() => { const box = document.querySelector('.favorite-button').getBoundingClientRect(); return [box.width, box.height] })()")
       assert_operator width, :>=, 44
       assert_operator height, :>=, 44
-      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, 375
+      # 跟可见宽度比，不跟 375 比：有常驻滚动条的系统上，375 里还含着滚动条那一条
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, evaluate_script("document.documentElement.clientWidth")
     end
   end
 

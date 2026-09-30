@@ -350,8 +350,8 @@ mise exec -- ruby script/search_eval queries.txt
 ```
 bin/rails test          # 快速循环，不连网络
 npm test                # 前端单元测试（Vitest，jsdom），npm run test:watch 是监视模式
-bin/rails test:system   # 无头 Chrome 里读一期日刊、搜一条并回到所在期、走一遍登录与登出
-                         # （test/system/reading_test.rb、searching_test.rb、signing_in_test.rb）
+bin/rails test:system   # 无头 Chrome 里读一期日刊、搜一条并回到所在期、走一遍登录与登出、收藏一条再取消与恢复
+                         # （test/system/reading_test.rb、searching_test.rb、signing_in_test.rb、favoriting_test.rb）
 bin/ci                  # 合并门禁，见 config/ci.rb
 ```
 
@@ -373,7 +373,8 @@ bin/ci                  # 合并门禁，见 config/ci.rb
 
 `bin/ci` 依次跑：Setup（`bin/setup --skip-server`）、Style: Ruby（`bin/rubocop`）、Frontend: typecheck
 （`npm run check`）、Frontend: unit tests（`npm test`）、Frontend: audit（`npm audit --audit-level=high`）、
-Frontend: build（`npm run build`）、Security: Gem audit（`bin/bundler-audit`）、
+Frontend: build（`npm run build`）、Frontend: first screen budget（`script/first_screen_size`：读上一步的构建产物，
+日刊页首屏的 JS、CSS 与界面字体合计超过 300 KB 就失败，PRD N-1；GitHub Actions 的 `test` job 在 Build frontend 之后跑同一步）、Security: Gem audit（`bin/bundler-audit`）、
 Security: Brakeman code analysis、Security: Secrets
 （`gitleaks detect --source . --no-banner --redact`，规则继承自 gitleaks 内置集，豁免的误报与理由见
 仓库根目录的 `.gitleaks.toml`）、Frontend: build for tests（`env RAILS_ENV=test bin/vite build --mode

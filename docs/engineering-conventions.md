@@ -64,6 +64,19 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 停用源的历史条目保留可搜（R-4.8）。
 不要为了搜索改条目表本身。〔改造自 fizzy `app/models/concerns/searchable.rb` 与 `app/models/search/`〕
 
+## 收藏
+
+留存夹，不是稍后读队列（PRD 5.10、D26）。设计见 `docs/superpowers/specs/2026-09-30-favorites-design.md`。
+
+- 一条收藏按链接的 `url_hash` 认，`(user_id, url_hash)` 唯一（D27）。收藏时把条目抄成快照，**不引用条目行**：管理员重抓是整栏先删后插，
+  条目 id 全换。收藏页渲染时按（刊物、周期键、来源、`url_hash`）现查条目还在不在（`Favorite.live_items`），在就用它现在的译文与条目锚点。
+- 取消是真删，服务端不留「已取消」的行。删的同时回一张签名凭据（`Favorite::Undoing`，`MessageVerifier`，一天有效，只认本人），
+  收藏页的「恢复」凭它把同一条原样插回去；凭据参数 `undo` 在 `filter_parameters` 里，不进请求日志。
+- 书签的两个动作（`POST /favorites`、`DELETE /favorites/:url_hash`）是 fetch + JSON，不是 Inertia 访问；未登录回 401 而不是 302。
+  页面 props 里每个条目带 `url_hash`，页面级的 `favorites` 是这一页里已收藏的 `url_hash` 列表；前端的状态、回滚与提示都在
+  `lib/favorites.tsx` 的 `FavoritesProvider` 里，成功后用 `router.replaceProp` 写回 Inertia 当前页。
+- 只有本人可见：读写都从 `Current.user.favorites` 进来，后台、审计日志、错误上报里都没有收藏；用户删除时外键级联。
+
 ## 抓取与出站 HTTP
 
 - 适配器放在模型层（`app/models/<source>/…`），输出 7.2 契约的规范化条目；网络 I/O 与解析分开，解析可以拿固定样本单测。
@@ -121,7 +134,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 
 Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hotwire / importmap。〔不采用其前端〕
 仍然适用的：控制器是 CRUD 资源、动作只做一件事并渲染一个 Inertia 页面；props 是前后端唯一契约，必须有类型；
-首屏资源不超过 300 KB（N-1）；颜色、字体、字号只从设计 skill 的令牌取。字体是首屏的大头：霞鹜文楷的 npm 包按字频切成 97 片，界面固定文案的字另外按读者首屏、读者其余页、后台合成三个小子集（`script/subset_fonts` 生成字体与 `app/frontend/styles/fonts-subset.css`，声明在包之后，unicode-range 重叠时先用子集），Maple Mono 与 Bodoni 也只留用得到的字形。界面文案新加了汉字就重跑一次（`--check` 列出没收进来的字）；漏收不会缺字，只是回落到包的分片、首屏多下载一片。
+首屏资源不超过 300 KB（N-1，`script/first_screen_size` 读生产构建的清单来量，`bin/ci` 里有一步守着）；颜色、字体、字号只从设计 skill 的令牌取。字体是首屏的大头：霞鹜文楷的 npm 包按字频切成 97 片，界面固定文案的字另外按读者首屏、读者其余页、后台合成三个小子集（`script/subset_fonts` 生成字体与 `app/frontend/styles/fonts-subset.css`，声明在包之后，unicode-range 重叠时先用子集），Maple Mono 与 Bodoni 也只留用得到的字形。界面文案新加了汉字就重跑一次（`--check` 列出没收进来的字）；漏收不会缺字，只是回落到包的分片、首屏多下载一片。
 
 ## 数据库与迁移
 
@@ -135,7 +148,7 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 
 - Minitest + fixtures（`fixtures :all`，并行 worker），`bin/rails test` 做快速循环。〔采用〕
 - `bin/ci` 是完整门禁，用 `ActiveSupport::ContinuousIntegration` 按 `config/ci.rb` 依次跑：setup、rubocop（rubocop-rails-omakase）、
-  前端类型检查、前端单元测试、前端依赖审计、前端构建、bundler-audit、brakeman、gitleaks、test 模式的 Vite 构建、Rails 测试、
+  前端类型检查、前端单元测试、前端依赖审计、前端构建、首屏预算、bundler-audit、brakeman、gitleaks、test 模式的 Vite 构建、Rails 测试、
   系统测试、种子数据（`db:seed:replant`）。全绿才能合并与部署；每步的命令见 `docs/development.md`「测试与 CI」。〔采用〕
 - 测试辅助放 `test/test_helpers/`，例如 `sign_in_as`；时间敏感的测试用 `travel_to` 卡在 05:59 / 06:00 / 06:20 边界；不碰网络。
 - 前端单元测试（Vitest + Testing Library，jsdom）里，`getByRole` 的 `name` 落在 `Mixed` / `HitText` 拆出的多段 `<span>` 上时

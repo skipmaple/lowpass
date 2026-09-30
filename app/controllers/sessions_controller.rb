@@ -8,8 +8,10 @@ class SessionsController < ApplicationController
   CANCELLED = "已取消登录。"
   FAILED = "登录失败，请重试。"
 
+  # 到了登录页就没有人登录着（登出、会话过期、撞登录墙都落在这里）：clear_history 清掉 Inertia 加密历史的密钥，
+  # 共用的电脑上按后退拿不回上一个人的页面（收藏页的列表就在 props 里，R-10.8）
   def new
-    render inertia: "Login/Show", props: { providers: Rails.configuration.x.auth_providers, next: safe_next(params[:next]) }
+    render inertia: "Login/Show", props: { providers: Rails.configuration.x.auth_providers, next: safe_next(params[:next]) }, clear_history: true
   end
 
   def create

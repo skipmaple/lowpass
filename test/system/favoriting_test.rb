@@ -92,6 +92,22 @@ class FavoritingTest < ApplicationSystemTestCase
     assert_selector "button[aria-label='取消收藏：#{TITLE}'][data-on]"
   end
 
+  # R-10.8 只有本人可见：共用一台电脑时，登出之后按后退，拿不回浏览器历史里的收藏页（登录页清掉了 Inertia 的加密历史）
+  test "登出之后按后退，看不到刚才的收藏页" do
+    Favorite.keep(users(:drew), items(:hn_one))
+    visit favorites_path
+    assert_selector ".search-row", text: TITLE
+
+    find("button[aria-label='账户']").click
+    within(".menu-card") { click_on "登出" }
+    assert_current_path login_path
+
+    page.go_back
+    assert_current_path login_path(next: "/favorites")
+    assert_no_selector ".search-row"
+    assert_no_text TITLE
+  end
+
   # AC-10.14：手机宽度下书签仍是 44 见方的目标，页面不横向溢出
   test "手机宽度下书签是 44 见方，页面不横向溢出" do
     with_viewport(375, 812) do

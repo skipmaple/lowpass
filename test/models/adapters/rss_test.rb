@@ -40,6 +40,24 @@ class Adapters::RssTest < ActiveSupport::TestCase
     assert_raises(Adapters::Rss::ParseError) { Adapters::Rss.new(source).fetch }
   end
 
+  # rss 的 Parser.parse 见到不含 < 的字符串，就当成地址（open-uri）或本地文件路径去读：源站只回一行地址，
+  # 服务器就会绕过 surfguard 再请求一次，内网、云元数据地址都够得着
+  test "正文是一个地址时报解析失败，不去请求它" do
+    stub_request(:get, "https://example.com/atom").to_return(body: "http://internal.test/feed")
+    internal = stub_request(:get, "http://internal.test/feed").to_return(body: file_fixture("rss/atom_sample.xml").read)
+    source = Source.new(name: "x", adapter: "rss", publication: "daily", config: { feed_url: "https://example.com/atom", count: 10, window_hours: 24 * 365 * 10 })
+
+    assert_raises(Adapters::Rss::ParseError) { Adapters::Rss.new(source).fetch }
+    assert_not_requested internal
+  end
+
+  test "正文是一个本地文件路径时报解析失败，不去读它" do
+    stub_request(:get, "https://example.com/atom").to_return(body: file_fixture("rss/atom_sample.xml").to_s)
+    source = Source.new(name: "x", adapter: "rss", publication: "daily", config: { feed_url: "https://example.com/atom", count: 10, window_hours: 24 * 365 * 10 })
+
+    assert_raises(Adapters::Rss::ParseError) { Adapters::Rss.new(source).fetch }
+  end
+
   test "feed 标题给新建表单默认名称用" do
     adapter = Adapters::Rss.new(sources(:hackaday))
     assert_nil adapter.feed_title

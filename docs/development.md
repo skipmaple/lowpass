@@ -428,7 +428,9 @@ CI 在 runner 上构建，见下面「CI 自动部署」。
    `DEPLOY_HOST`（服务器 IP，`config/deploy.yml` 经 ERB 读它）、`KAMAL_REGISTRY_PASSWORD`、`POSTGRES_PASSWORD`、`BASE_URL=https://lowpass.tech`、`GOOGLE_CLIENT_ID/SECRET`、`GITHUB_CLIENT_ID/SECRET`、
    `ADMIN_EMAILS`，以及「告警」「推荐理由」「备份」三节列的变量；没用到的留空（备份在 production 下是必需的，没配会每天告警）。
 4. Cloudflare：SSL/TLS 加密模式设「完全」；首次签证书前关掉「始终使用 HTTPS」，签完再开。橙云代理开着也行，
-   Let's Encrypt 的 HTTP-01 校验会经 Cloudflare 转到源站的 80。
+   Let's Encrypt 的 HTTP-01 校验会经 Cloudflare 转到源站的 80。橙云开着时应用看到的对端是 Cloudflare 节点，
+   `lib/middleware/cloudflare/client_ip.rb` 据 Cloudflare 网段改认 `CF-Connecting-IP`（限流按真实访客算）；
+   Cloudflare 公布的网段（cloudflare.com/ips）有增减时同步改那张表。
 5. `bundle exec kamal setup`：服务器已有 Docker 与 kamal-proxy，这一步实际做的是起 accessory、在服务器上构建镜像并推到 Docker Hub、
    起 web 容器（入口先 `db:prepare` 建主库与队列库）、向 kamal-proxy 注册 `lowpass.tech` 并签证书。
 6. 播种与索引：
@@ -504,7 +506,8 @@ curl -s https://lowpass.tech/health
 ### CI 自动部署
 
 `.github/workflows/deploy.yml`：main 上名为 CI 的工作流跑完且成功后自动 `kamal deploy`，部署的是那次 CI 测过的 sha；
-Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Environment「production」，密钥都在这个 Environment 的 secrets 里，
+Actions 页面的「Run workflow」可以手动重发。只认本仓库 main 上 push 触发的 CI（job 的 `if:` 查 `workflow_run.event` 与
+`head_repository`）：仓库是公开的，`workflow_run` 的 branches 过滤只比分支名，fork 里叫 main 的分支提 PR 也能触发它。job 绑定 GitHub Environment「production」，密钥都在这个 Environment 的 secrets 里，
 名字与 `.kamal/secrets` 一致，外加四项：`DEPLOY_HOST`、`DEPLOY_KNOWN_HOSTS`（见下）、`RAILS_MASTER_KEY`（job 把它写成 `config/master.key`）与 `SSH_PRIVATE_KEY`
 （专用 deploy key，公钥在服务器 root 的 `authorized_keys`，注释 `lowpass-ci-deploy`）。
 镜像在 runner 上构建（`deploy.yml` 看 `KAMAL_BUILD_LOCAL` 这个变量），层缓存在 GitHub Actions cache，服务器只拉镜像。
@@ -518,4 +521,5 @@ Actions 页面的「Run workflow」可以手动重发。job 绑定 GitHub Enviro
 - 换 deploy key：本机 `ssh-keygen -t ed25519 -C lowpass-ci-deploy -f ~/.config/lowpass/deploy_key`，
   公钥追加到服务器 `/root/.ssh/authorized_keys` 并删掉旧的那行，再 `gh secret set SSH_PRIVATE_KEY`。
 - 要「部署前本人批准」：仓库 Settings → Environments → production 勾 Required reviewers，工作流不用改。
+  只加「Deployment branches: main」挡不住上面那种 fork PR：`workflow_run` 触发的 job 本来就跑在默认分支上。
 - 与本机手动 `kamal deploy` 互不冲突：Kamal 的锁保证同一时间只有一次部署；CI 里排队的部署不取消。

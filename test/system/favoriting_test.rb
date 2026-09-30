@@ -73,29 +73,25 @@ class FavoritingTest < ApplicationSystemTestCase
 
   # AC-10.14：手机宽度下书签仍是 44 见方的目标，页面不横向溢出
   test "手机宽度下书签是 44 见方，页面不横向溢出" do
-    page.current_window.resize_to(375, 812)
-    visit daily_issue_path("2026-09-08")
+    with_viewport(375, 812) do
+      visit daily_issue_path("2026-09-08")
 
-    assert_selector ".favorite-button"
-    width, height = evaluate_script("(() => { const box = document.querySelector('.favorite-button').getBoundingClientRect(); return [box.width, box.height] })()")
-    assert_operator width, :>=, 44
-    assert_operator height, :>=, 44
-    assert evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
-  ensure
-    page.current_window.resize_to(1400, 1400)
+      assert_selector ".favorite-button"
+      assert_equal 375, evaluate_script("window.innerWidth")
+      width, height = evaluate_script("(() => { const box = document.querySelector('.favorite-button').getBoundingClientRect(); return [box.width, box.height] })()")
+      assert_operator width, :>=, 44
+      assert_operator height, :>=, 44
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, 375
+    end
   end
 
   private
-    def wait_until
-      Timeout.timeout(5) { sleep 0.1 until yield }
-    end
-
-    # test 环境默认关掉 CSRF 校验（config/environments/test.rb）：打开它，fetch 带的 X-CSRF-Token 才真的被校验
-    def with_forgery_protection
-      was = ActionController::Base.allow_forgery_protection
-      ActionController::Base.allow_forgery_protection = true
+    # 无头 Chrome 的窗口宽度收不到 500px 以下（resize_to(375, 812) 实际得到 500）：
+    # 要在手机宽度的视口里量，用 CDP 把设备尺寸定住，量完清掉
+    def with_viewport(width, height)
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
       yield
     ensure
-      ActionController::Base.allow_forgery_protection = was
+      page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
     end
 end

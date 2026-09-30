@@ -58,4 +58,22 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "GitHub", nomail[:providers_label]
     assert_nil nomail[:last_login_label]
   end
+
+  # 注销（R-5.11、D33）就是 destroy：登录身份与全部会话跟着删；写过的审计记录留着、操作者置空；期与条目不碰
+  test "destroy 连带登录身份与会话，审计记录留着、操作者置空" do
+    drew = users(:drew)
+    drew.auth_identities.create!(provider: "github", provider_uid: "github-drew", email: "drew@example.com", email_verified: true, linked_at: Time.current)
+    2.times { drew.sessions.create! }
+    log = AuditLog.create!(user: drew, action: "source.update", target: "Source#x")
+
+    assert_no_difference [ "Issue.count", "Item.count", "AuditLog.count" ] do
+      drew.destroy!
+    end
+
+    assert_not User.exists?(drew.id)
+    assert_empty AuthIdentity.where(user_id: drew.id)
+    assert_empty Session.where(user_id: drew.id)
+    assert_nil log.reload.user_id
+    assert users(:guest).auth_identities.exists?, "别人的身份不受影响"
+  end
 end

@@ -1,16 +1,18 @@
 import { router, usePage } from '@inertiajs/react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import Chip from '@/components/Chip'
+import Dialog from '@/components/Dialog'
 import Icon from '@/components/Icon'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
-import { SESSION, authHref, latestWeeklyHref } from '@/lib/paths'
+import { SESSION, USER, authHref, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { FooterData, SettingsIdentity } from '@/types/lowpass'
 
 // 设置页（R-5.10，画布 pages_site.py 的 settings()）：期头「设置」+ 等宽邮箱与显示名，右端「登出」描边按钮；
-// 键值行：头像与显示名、邮箱、角色、每个 provider 一行、本次会话。未绑定的 provider 给一个 POST 表单按钮
+// 键值行：头像与显示名、邮箱、角色、每个 provider 一行、本次会话、注销账号。未绑定的 provider 给一个 POST 表单按钮
 // 「使用 X 登录」（不是「以绑定」：邮箱不同时它会新建账号，走 R-5.3，设计 L2）。
 // 无法合并的提示（AC-5.3）由共享 Layout 的 flash 反馈呈现。
 
@@ -63,6 +65,61 @@ function IdentityRow({ identity }: { identity: SettingsIdentity }) {
   )
 }
 
+// 注销（R-5.11、D33，附录 B）：一行说删什么，「注销」打开确认框，确认才发 DELETE /user。确认框里给出要注销的
+// 是哪个账号（邮箱，没有就是显示名）：邮箱不同的登录方式会是两个账号（R-5.3）。成功时服务端跳到登录页，
+// 这一页随之卸下；没跳走就是没删成，确认框留着并说一句
+function DeleteAccountRow({ user }: { user: SettingsShowProps['user'] }) {
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const mounted = useRef(true)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
+
+  function destroy() {
+    if (busy) return
+    let succeeded = false
+    setBusy(true)
+    setFailed(false)
+    router.delete(USER, {
+      onSuccess: () => { succeeded = true },
+      onFinish: () => {
+        if (!mounted.current) return
+        setBusy(false)
+        if (!succeeded) setFailed(true)
+      },
+    })
+  }
+
+  return (
+    <Row label="注销账号">
+      <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>
+        删除账号、登录方式与全部会话，期与条目不受影响
+      </span>
+      <button type="button" className="link-button" onClick={() => { setFailed(false); setConfirming(true) }}>
+        注销
+      </button>
+      <Dialog open={confirming} text="注销后无法恢复。确认注销这个账号？" cancel="取消" confirm={busy ? '正在注销…' : '确认注销'} busy={busy} onCancel={() => setConfirming(false)} onConfirm={destroy}>
+        {user.email ? (
+          <p className="data" style={{ margin: 0, color: 'var(--ink)' }}>
+            {user.email}
+          </p>
+        ) : (
+          <Mixed text={user.display_name} font="latin" size="var(--fs-15)" color="var(--ink)" />
+        )}
+        {failed ? (
+          <p role="alert" className="field-note" style={{ margin: 0 }}>
+            注销没有完成，请重试。
+          </p>
+        ) : null}
+      </Dialog>
+    </Row>
+  )
+}
+
 export default function Show({ user, identities, session }: SettingsShowProps) {
 
   return (
@@ -103,6 +160,7 @@ export default function Show({ user, identities, session }: SettingsShowProps) {
           <Mixed text={`${session.logged_in_label} 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · ${session.expires_label} 到期`} size="var(--fs-13)" color="var(--ink2)" />
           <button type="button" className="link-button" onClick={() => router.delete(SESSION)}>登出</button>
         </Row>
+        <DeleteAccountRow user={user} />
       </div>
     </>
   )

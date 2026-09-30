@@ -79,6 +79,9 @@ GITHUB_CLIENT_SECRET=…
 哪家的两个变量都配了，登录页就多出那家的按钮（`config/initializers/omniauth.rb`）。会话 30 天滑动、最长 90 天，
 存在 `sessions` 表，cookie 里只有签名过的 token；登出即删。登录回调按 IP 每分钟 10 次（`lib/middleware/auth/callback_rate_limit.rb`）。
 
+设置页最后一行是注销（PRD R-5.11、D33）：确认框里确认后 `DELETE /user`，删掉用户、登录身份与全部会话（别的设备随之退出），
+审计记录留着、操作者置空，回到登录页；用同一方式再登录是一个新用户。本地试的话用开发登录随便建一个账号再注销。
+
 测试不连 provider：`OmniAuth.config.test_mode`，`test/test_helpers/authentication_test_helpers.rb` 的 `sign_in_as` 按 fixture 里的
 身份伪造一次登录；系统测试用 `sign_in_with_browser`，真的在浏览器里点登录按钮。
 

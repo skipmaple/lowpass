@@ -36,6 +36,8 @@ export const router = {
   post: vi.fn(),
   patch: vi.fn(),
   replace: vi.fn(),
+  // 收藏把最新的列表写回当前页的 props（lib/favorites.tsx）；单测里只看它被叫到没有
+  replaceProp: vi.fn(),
   on: vi.fn((event: RouterEvent, listener: RouterListener) => {
     const listeners = routerListeners.get(event) ?? new Set<RouterListener>()
     listeners.add(listener)

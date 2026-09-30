@@ -51,4 +51,46 @@ class Adapters::HttpTest < ActiveSupport::TestCase
   test "地址格式非法映射为 Error" do
     assert_raises(Adapters::Http::Error) { Adapters::Http.get("http://exa mple.com/feed") }
   end
+
+  # 响应头不归 max_bytes 管：恶意源站回一个没完没了的头，进程就会被撑爆
+  test "一行响应头超长时失败" do
+    serve_once("HTTP/1.1 200 OK\r\nX-Pad: #{"a" * 1.megabyte}\r\nContent-Length: 2\r\n\r\nok") do |url|
+      assert_raises(Adapters::Http::TooLarge) { Adapters::Http.get(url, timeout: 5) }
+    end
+  end
+
+  test "响应头行数过多时失败" do
+    headers = Array.new(20_000) { |i| "X-Pad-#{i}: #{"a" * 32}\r\n" }.join
+    serve_once("HTTP/1.1 200 OK\r\n#{headers}Content-Length: 2\r\n\r\nok") do |url|
+      assert_raises(Adapters::Http::TooLarge) { Adapters::Http.get(url, timeout: 5) }
+    end
+  end
+
+  test "真实连接照常读回 chunked 正文" do
+    serve_once("HTTP/1.1 200 OK\r\nContent-Type: application/rss+xml\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n") do |url|
+      response = Adapters::Http.get(url, timeout: 5)
+      assert_equal "hello world", response.body
+      assert_equal "application/rss+xml", response.content_type
+    end
+  end
+
+  private
+    # 读响应头那一层在 WebMock 之下，只能拿真连接测：本机起一个只答一次的服务，回写死的原始响应
+    def serve_once(raw_response)
+      Surfguard.stubs(:resolve_public_ips).returns([ "127.0.0.1" ])
+      server = TCPServer.new("127.0.0.1", 0)
+      thread = Thread.new do
+        client = server.accept
+        client.readpartial(4096)
+        client.write(raw_response)
+      rescue IOError, SystemCallError
+        nil # 客户端读到上限就断开，这边写不完是预期的
+      ensure
+        client&.close
+      end
+      yield "http://127.0.0.1:#{server.addr[1]}/feed"
+    ensure
+      thread&.kill
+      server&.close
+    end
 end

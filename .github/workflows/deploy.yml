@@ -20,7 +20,13 @@ concurrency:
 jobs:
   deploy:
     # 手动触发直接跑；CI 触发只在成功时跑（失败或取消的 CI 也会发 completed 事件）。
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # 还得是本仓库 main 上 push 触发的那次 CI：上面 branches 过滤比的只是分支名，fork 里也能开一个叫 main 的分支，
+    # 它的 PR 一跑绿 CI（PR 里连 ci.yml 都能改），这里就会签出 fork 的代码、带着生产环境的全部 secret 去部署。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production

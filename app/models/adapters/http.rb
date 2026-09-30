@@ -35,6 +35,7 @@ module Adapters
       http.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http.verify_hostname = true
       http.ipaddr = ip
+      http.extend(CappedLines)
 
       http.start do |conn|
         request = Net::HTTP::Get.new(uri, "User-Agent" => USER_AGENT, "Accept" => "*/*")
@@ -46,6 +47,8 @@ module Adapters
           return Response.new(res.code.to_i, body, res["Content-Type"])
         end
       end
+    rescue Net::ReadLimitExceeded => e
+      raise TooLarge, e.message
     rescue Timeout::Error, IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError, URI::Error, Zlib::Error => e
       raise Error, e.message
     end

@@ -169,6 +169,37 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_alert_flash "操作过于频繁，请稍后再试。"
   end
 
+  # 线上开着 Cloudflare 代理：kamal-proxy 报上来的对端是 Cloudflare 节点，真实访客只在 CF-Connecting-IP 里。
+  # 按节点计数的话，同一节点背后的访客共用这 10 次，一个人刷满，别人就登不上
+  test "R-5.9 经 Cloudflare 转发时按真实访客计数，换节点也躲不过" do
+    mock_omniauth(:github, :invalid_credentials)
+    10.times do
+      get "/auth/github/callback", headers: { "X-Forwarded-For" => "173.245.48.1", "CF-Connecting-IP" => "203.0.113.7" }
+      assert_redirected_to login_path
+    end
+
+    get "/auth/github/callback", headers: { "X-Forwarded-For" => "173.245.48.1", "CF-Connecting-IP" => "203.0.113.8" }
+    follow_redirect!
+    assert_alert_flash "登录失败，请重试。"
+
+    get "/auth/github/callback", headers: { "X-Forwarded-For" => "2606:4700::6810:85e5", "CF-Connecting-IP" => "203.0.113.7" }
+    follow_redirect!
+    assert_alert_flash "操作过于频繁，请稍后再试。"
+  end
+
+  # 源站 IP 不是秘密：直连源站的人自己带一个 CF-Connecting-IP，不能每次换个值就绕过限流
+  test "R-5.9 不是 Cloudflare 节点转来的 CF-Connecting-IP 不认" do
+    mock_omniauth(:github, :invalid_credentials)
+    10.times do |i|
+      get "/auth/github/callback", headers: { "X-Forwarded-For" => "198.51.100.9", "CF-Connecting-IP" => "203.0.113.#{i}" }
+      assert_redirected_to login_path
+    end
+
+    get "/auth/github/callback", headers: { "X-Forwarded-For" => "198.51.100.9", "CF-Connecting-IP" => "203.0.113.99" }
+    follow_redirect!
+    assert_alert_flash "操作过于频繁，请稍后再试。"
+  end
+
   # OmniAuth 比对回调路径前先把结尾的 / 去掉、再 downcase（strategy.rb 的 current_path），
   # 这两种变形都照样走完换 token 那一步：限流的正则认不出来就等于加一个 / 或换个大小写就绕过去了
   test "R-5.9 回调带尾斜杠一样计数" do

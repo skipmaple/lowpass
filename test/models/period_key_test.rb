@@ -1,6 +1,14 @@
 require "test_helper"
 
 class PeriodKeyTest < ActiveSupport::TestCase
+  # 搜索结果与收藏页共用的所在期标签：保留年份，周刊带板块名（可空）
+  test "所在期标签" do
+    assert_equal "2026年9月8日", PeriodKey.issue_label("daily", "2026-09-08")
+    assert_equal "2026年 · 第 36 周 · 工具", PeriodKey.issue_label("weekly", "2026-W36", section: "工具")
+    assert_equal "2026年 · 第 36 周", PeriodKey.issue_label("weekly", "2026-W36", section: "")
+    assert_equal "2026年 · 第 36 周", PeriodKey.issue_label("weekly", "2026-W36")
+  end
+
   test "日刊按上海时区的自然日" do
     assert_equal "2026-09-08", PeriodKey.daily(Time.utc(2026, 9, 8, 15, 59))   # 上海 23:59
     assert_equal "2026-09-09", PeriodKey.daily(Time.utc(2026, 9, 8, 16, 0))    # 上海 00:00

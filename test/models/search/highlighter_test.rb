@@ -6,6 +6,18 @@ class Search::HighlighterTest < ActiveSupport::TestCase
   def pairs(runs) = runs.map { |run| [ run[:text], run[:hit] ] }
   def joined(runs) = runs.map { |run| run[:text] }.join
 
+  # 收藏页的摘要片段（R-10.6）：没有查询词，同一套 160 字与不切词的规则
+  test "excerpt 是不带命中的片段：取开头，不超过 160 字，空文本没有片段" do
+    assert_nil Search::Highlighter.excerpt(nil)
+    assert_nil Search::Highlighter.excerpt("")
+    assert_equal "A fast viewer.", Search::Highlighter.excerpt("A fast viewer.")
+
+    long = Search::Highlighter.excerpt("word " * 100)
+    assert long.start_with?("word word")
+    assert long.end_with?("word…")
+    assert_operator long.length, :<=, 160
+  end
+
   test "拉丁词按词首前缀标出，不分大小写，只标前缀相同的部分" do
     assert_equal [ [ "Kuber", true ], [ "netes operator in ", false ], [ "Rust", true ] ],
                  pairs(highlighter("kuber rust").runs("Kubernetes operator in Rust"))

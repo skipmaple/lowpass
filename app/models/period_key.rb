@@ -35,6 +35,16 @@ class PeriodKey
     # 期头、归档与搜索结果里的中文日期短语（PRD 6.3：「9月8日」按中文处理，整体用文楷）
     def date_label(date, year: false) = "#{"#{date.year}年" if year}#{date.month}月#{date.day}日"
 
+    # 所在期的标签，搜索结果与收藏页共用：保留年份（列表会跨年），日刊「2026年9月8日」，
+    # 周刊「2026年 · 第 36 周 · 工具」，板块名可空
+    def issue_label(kind, key, section: nil)
+      if kind == "daily"
+        date_label(date_of(key), year: true)
+      else
+        [ "#{key[0, 4]}年", "第 #{week_number(key)} 周", section.presence ].compact.join(" · ")
+      end
+    end
+
     # 归档一页一年（PRD 6.2）：这一年全部的 ISO 周键。12月28日 总落在这一年的最后一个 ISO 周里，
     # 所以 2026 有 53 周而 2025 只有 52 周——2025-W53 不存在，week_range 会抛错，控制器据此 404。
     def weeks_in(year)

@@ -19,6 +19,10 @@ Rails.application.routes.draw do
     resources :clicks, only: :create
   end
 
+  # 收藏（PRD 5.10）：GET /favorites 是收藏页；POST /favorites 与 DELETE /favorites/:url_hash 是条目上那颗书签的
+  # 两个动作。资源的键是链接的 url_hash（一人一链接一条，D27），不是行 id
+  resources :favorites, only: [ :index, :create, :destroy ], param: :url_hash, constraints: { url_hash: /\h{64}/ }
+
   # P2-② 管理后台（PRD 5.3、5.6）：CRUD 资源（STYLE.md），全部继承 Admin::BaseController。
   # 启停是 enablement 资源（POST 启用 / DELETE 停用）；某期某源重抓、补生成、立即生成今日日刊各是一个资源
   namespace :admin do

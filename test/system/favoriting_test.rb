@@ -62,6 +62,7 @@ class FavoritingTest < ApplicationSystemTestCase
 
     find("button[aria-label='收藏：#{TITLE}']").click
     wait_until { users(:drew).favorites.count == 1 }
+    wait_for_favorite_requests(1)
 
     find("a[aria-label='搜索']").click
     assert_current_path search_path

@@ -34,4 +34,15 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   def wait_until
     Timeout.timeout(5) { sleep 0.1 until yield }
   end
+
+  # 浏览器里发往 /favorites 的 fetch 有几个（书签的请求；Inertia 自己的访问走 XHR，不算）
+  FAVORITE_FETCHES = "performance.getEntriesByType('resource').filter((entry) => entry.initiatorType === 'fetch' && new URL(entry.name).pathname.startsWith('/favorites')).length".freeze
+
+  # 书签的请求回来之后，前端还要把最新的列表写回当前页（lib/favorites.tsx）；换页的访问还在路上时，
+  # 这一步按设计跳过、不补。紧接着要离开这一页的测试先等这几个请求都有了结果，再让出一轮事件循环，
+  # 让请求的回调跑完；光等数据库不够，库里有了，浏览器那头的回调可能还没跑
+  def wait_for_favorite_requests(count)
+    wait_until { evaluate_script(FAVORITE_FETCHES) >= count }
+    evaluate_async_script("setTimeout(arguments[0], 0)")
+  end
 end

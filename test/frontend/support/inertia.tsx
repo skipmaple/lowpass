@@ -24,7 +24,8 @@ type RouterEvent = 'start' | 'finish' | 'before' | 'navigate'
 type RouterListener = (event: Event) => void
 const routerListeners = new Map<RouterEvent, Set<RouterListener>>()
 
-export function emitRouterEvent(event: RouterEvent, detail = new Event(event)) {
+// 真的 Inertia 发 start / finish 时 detail.visit 是这一次访问；不给就当一次普通的（同步、换页的）访问
+export function emitRouterEvent(event: RouterEvent, detail: Event = new CustomEvent(event, { detail: { visit: { async: false } } })) {
   routerListeners.get(event)?.forEach((listener) => listener(detail))
 }
 

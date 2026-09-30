@@ -148,6 +148,15 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, page_props["page"]
   end
 
+  # 空列表也算一页：越界的页码一律跳走，不带进 OFFSET（超出 bigint 会炸成 500）
+  test "没有收藏时页码越界跳回第 1 页" do
+    get favorites_path(page: "99999999999999999999")
+    assert_redirected_to favorites_path(page: 1)
+
+    get favorites_path(page: 5)
+    assert_redirected_to favorites_path(page: 1)
+  end
+
   # ── 书签的两个动作 ──
 
   test "POST 收藏一条条目（AC-10.1）" do

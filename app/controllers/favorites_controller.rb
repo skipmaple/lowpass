@@ -4,13 +4,15 @@
 class FavoritesController < ApplicationController
   rate_limit to: 60, within: 1.minute, by: -> { Current.user.id }, with: -> { head :too_many_requests }, only: [ :create, :destroy ]
 
-  # R-10.6 按收藏时间倒序，每页 20 条；页码超过最后一页（取消后页数变少、手改地址）跳到最后一页
+  # R-10.6 按收藏时间倒序，每页 20 条；页码超过最后一页（取消后页数变少、手改地址）跳到最后一页。
+  # 空列表也算一页：越界的页码不会被带进 OFFSET
   def index
     scope = Current.user.favorites.listed
     pages = (scope.count.to_f / Favorite::PER_PAGE).ceil
+    last_page = [ pages, 1 ].max
 
-    if pages.positive? && page_number > pages
-      redirect_to favorites_path(page: pages)
+    if page_number > last_page
+      redirect_to favorites_path(page: last_page)
     else
       favorites = scope.newest_first.includes(:source).offset((page_number - 1) * Favorite::PER_PAGE).limit(Favorite::PER_PAGE).to_a
       live = Favorite.live_items(favorites)

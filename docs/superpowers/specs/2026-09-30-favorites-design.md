@@ -2,7 +2,7 @@
 
 | 状态 | 日期 | 依据 |
 |---|---|---|
-| PRD v0.4 的 5.10 节与 D26 至 D32 已由产品负责人批准（2026-09-30）；本文与界面稿待审 | 2026-09-30 | PRD v0.4.1 第 5.10 节（F-23、R-10.1 到 R-10.13、AC-10.1 到 AC-10.14）、6.1 到 6.3、7.8、7.9、N-1、N-4、9.3、附录 A 与 B；AGENTS.md 与 `docs/engineering-conventions.md`；设计 skill `.claude/skills/lowpass-design-taste/`；界面稿 `docs/design/notes/2026-09-30-favorites-mock.html` |
+| PRD v0.4 的 5.10 节与 D26 至 D32 已由产品负责人批准（2026-09-30）；本文与界面稿已由产品负责人审过（2026-09-30），K14 同日批准进合并门禁 | 2026-09-30 | PRD v0.4.1 第 5.10 节（F-23、R-10.1 到 R-10.13、AC-10.1 到 AC-10.14）、6.1 到 6.3、7.8、7.9、N-1、N-4、9.3、附录 A 与 B；AGENTS.md 与 `docs/engineering-conventions.md`；设计 skill `.claude/skills/lowpass-design-taste/`；界面稿 `docs/design/notes/2026-09-30-favorites-mock.html` |
 
 需求以 PRD 5.10 为准，本文只写实现设计：数据怎么放、接口怎么定、页面怎么组、怎么验。第 2 节的 K1 到 K15 是写设计时不得不做的默认决定，均可推翻。
 
@@ -21,11 +21,11 @@
 | K1 | 一条收藏用什么认 | 链接的 `url_hash`。路由是 `DELETE /favorites/:url_hash`，页面 props 与前端状态里都只有 `url_hash`，不出现收藏行的 id。理由：D27 定了一人一链接一条，`(user_id, url_hash)` 就是自然键，前端少管一样东西。 |
 | K2 | 收藏要不要引用条目行 | 不引用，表里没有 `item_id`。收藏时抄一份快照；渲染收藏页时按（刊物、周期键、来源、`url_hash`）现查条目还在不在，在就用它现在的译文与条目锚点。理由：重抓是整栏先删后插，条目 id 全换；引用了要么丢收藏，要么重抓后所有收藏都失去锚点与后补的译文，现查则自动对上新行。PRD 附录 A 初稿写了 `item_id（可空）`，随本文改成不引用（v0.4.1）。 |
 | K3 | 取消后怎么恢复（R-10.7） | 取消是真删。删的同时回一张签名凭据（`MessageVerifier`，用途 `undo`，一天有效，只认签发给的那个用户），里面是这条收藏的全部字段；「恢复」凭它把同一条原样插回去，id 与收藏时间都不变。服务端不留「已取消」的行，7.8「收藏到用户取消为止」不用加例外。凭据参数 `undo` 进 `filter_parameters`，不写进请求日志。没有选软删除：要多一列、所有读路径都得带过滤、还要定时清理。 |
-| K4 | 书签的请求怎么发 | `fetch` + JSON，与 `search/clicks`、测试抓取同一种写法，不走 Inertia 访问。点一下先改本地状态，失败回滚并提示；请求结束后用 `router.replaceProp('favorites', …)` 把最新列表写回 Inertia 当前页（只改历史里的 props，不发请求），离开再后退时页面与服务端一致。读者已经离开这一页就不写。 |
+| K4 | 书签的请求怎么发 | `fetch` + JSON，与 `search/clicks`、测试抓取同一种写法，不走 Inertia 访问。点一下先改本地状态，失败回滚并提示；请求结束后用 `router.replaceProp('favorites', …)` 把最新列表写回 Inertia 当前页（只改历史里的 props，不发请求），离开再后退时页面与服务端一致。读者已经离开这一页就不写；换页的访问还在路上（Inertia 的 `start` 到 `finish`，轮询与部分重载这种 async 的访问不算）也不写，那时写回会顶掉那次访问；没写上的不补（第 13 节第一条）。页面带来新的 `favorites`（生成中的轮询、搜索页的筛选）就以它为准，请求还在路上的链接留着本地的状态。 |
 | K5 | 会话过期时点书签 | `create` / `destroy` 对未登录请求回 401，不回 302（fetch 会跟着跳，拿回登录页的 HTML 当成功）。前端收到 401 用 `router.visit` 去 `/login?next=<当前地址>`。收藏页本身（GET）照常 302。 |
 | K6 | 页面怎么知道哪些已收藏 | 每个条目与搜索结果的 props 多一个 `url_hash`；日刊、周刊、搜索、收藏四个页面多一个页面级的 `favorites: string[]`（这一页里当前读者收藏过的 `url_hash`）。日刊页生成中的轮询把 `favorites` 一起重载。 |
 | K7 | 书签长什么样、放在哪 | Lucide 的 `bookmark`，未收藏描线、已收藏实心（CSS `fill`）；44 × 44 的独立目标。条目行里在行末另占一列，手机上与序号同一行、靠右；搜索结果与收藏页的行里在底行右端。图标右缘与正文右缘对齐。见界面稿。 |
-| K8 | 收藏页的行 | 沿用搜索结果行的装置与样式类，标题不带命中下划线，译文用日刊页那一行的样式。取消后标题转次墨，底行右端换成「已取消收藏」与「恢复」，焦点跟到「恢复」；恢复后焦点回到书签。取消的请求还没回来就点了「恢复」，凭据到手后接着恢复，不丢这一下。 |
+| K8 | 收藏页的行 | 沿用搜索结果行的装置与样式类，标题不带命中下划线，译文用日刊页那一行的样式。取消后标题转次墨，底行右端换成「已取消收藏」与「恢复」，焦点跟到「恢复」；恢复后焦点回到书签。请求失败回滚时，读者还在这一行（焦点在行里，或随换掉的控件落回了 body）焦点才跟回去，已经去了别处就不拽回来。取消的请求还没回来就点了「恢复」，凭据到手后接着恢复，不丢这一下。这一页一行不剩（取消了唯一的一条再后退回来，或者服务端说本来就没有）时显示空态；别的页上还有收藏时不显示空态，只留分页。 |
 | K9 | 与搜索共用的东西 | 所在期标签抽成 `PeriodKey.issue_label`，搜索与收藏共用；摘要片段用 `Search::Highlighter.excerpt`（同一套 160 字与不切词规则）；分页抽成 `Pager` 组件，搜索页改用它。 |
 | K10 | 两个动作的状态码 | 收藏成功与重复收藏都是 201；条目不存在、已下架、凭据无效都是 404；取消成功 200 带凭据；取消一条不存在的收藏 204。前端只分 2xx、401、429、其他。 |
 | K11 | 限流范围 | 每用户每分钟 60 次只管 `create` 与 `destroy`（合计）；收藏页本身不限。 |
@@ -91,7 +91,7 @@ resources :favorites, only: [ :index, :create, :destroy ], param: :url_hash, con
 
 - `types/lowpass.ts`：`Item` 与 `SearchResult` 加 `url_hash`；新增 `FavoriteEntry`。
 - `lib/paths.ts`：`FAVORITES`、`favoritesHref(page)`、`favoriteHref(urlHash)`、`loginHref(next)`。
-- `lib/favorites.tsx`：`FavoritesProvider`（入参是页面的 `favorites`）与 `useFavorites()`。Provider 持有这一页的收藏集合与这一次停留里的恢复凭据，暴露 `has`、`removed`、`toggle`、`restore`；请求、回滚、提示、写回 Inertia 都在这里。服务端给了内容不同的新列表（换期、轮询、历史恢复）就以它为准。没有提示时不画提示区。
+- `lib/favorites.tsx`：`FavoritesProvider`（入参是页面的 `favorites`）与 `useFavorites()`。Provider 持有这一页的收藏集合与这一次停留里的恢复凭据，暴露 `has`、`removed`、`toggle`、`restore`；请求、回滚、提示、写回 Inertia 都在这里。服务端给了内容不同的新列表（换期、轮询、历史恢复）就以它为准，请求还在路上的链接除外（K4）。没有提示时不画提示区。
 - `components/FavoriteButton.tsx`：书签按钮。没有套 Provider 时不渲染，所以单独渲染条目行的旧测试不受影响。可读名称「收藏：{标题}」/「取消收藏：{标题}」。
 - `components/Pager.tsx`：从搜索页抽出的分页。
 - `components/ItemRow.tsx`、`SearchResultRow.tsx`：各加一颗书签。条目行里书签在 DOM 中排在正文后面，Tab 先到标题再到书签。

@@ -32,7 +32,8 @@ class ApplicationController < ActionController::Base
     end
 
     # 这一页的条目里，当前读者收藏过哪些链接（R-10.2）：只给 url_hash，书签的开合由前端对着它画。
-    # 按链接认，所以同一链接在另一期、另一个来源再出现也算
+    # 按链接认，所以同一链接在另一期、另一个来源再出现也算。传关系进来时它得 select(:url_hash)：
+    # 不然 Rails 拼成 IN (SELECT id …)，拿条目 id 去比链接，永远是空列表
     def favorite_hashes(url_hashes)
       Current.user.favorites.where(url_hash: url_hashes).pluck(:url_hash)
     end

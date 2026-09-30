@@ -74,7 +74,8 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   收藏页的「恢复」凭它把同一条原样插回去；凭据参数 `undo` 在 `filter_parameters` 里，不进请求日志。
 - 书签的两个动作（`POST /favorites`、`DELETE /favorites/:url_hash`）是 fetch + JSON，不是 Inertia 访问；未登录回 401 而不是 302。
   页面 props 里每个条目带 `url_hash`，页面级的 `favorites` 是这一页里已收藏的 `url_hash` 列表；前端的状态、回滚与提示都在
-  `lib/favorites.tsx` 的 `FavoritesProvider` 里，成功后用 `router.replaceProp` 写回 Inertia 当前页。
+  `lib/favorites.tsx` 的 `FavoritesProvider` 里，请求结束后用 `router.replaceProp` 写回 Inertia 当前页。读者已经离开、
+  或者换页的访问还在路上时不写（那时写回会顶掉那次访问），没写上的不补。
 - 只有本人可见：读写都从 `Current.user.favorites` 进来，后台、审计日志、错误上报里都没有收藏；用户删除时外键级联。
 
 ## 抓取与出站 HTTP
@@ -119,6 +120,8 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 - 形状借 fizzy：`Session` 记录 + 签名 cookie `session_token`；`Current` 保存 session、user 与请求属性（request_id、ip、user_agent）；
   `Authentication` concern 只提供 `allow_unauthenticated_access` 一个类方法（反向那条没有：已登录访问登录页跳首页，
   是 `SessionsController` 自己的 `before_action :redirect_signed_in`）；未登录跳 `/login?next=`，`next` 只接受站内相对路径（R-5.7）。〔改造〕
+- Inertia 的历史是加密的（`config.encrypt_history`，密钥在 sessionStorage）。登录页带 `clear_history: true` 渲染：到了登录页就没有人登录着，
+  密钥一清，登出、会话过期被带到登录页之后按后退，拿不回上一个人的页面（收藏页的列表就在 props 里，R-10.8）。
 - 搜索与点击上报用 Rails 8 的 `rate_limit`（每用户每分钟 60 次，R-4.10）；登录回调不是——它在 OmniAuth 之前的 Rack 中间件里（见下条）。〔采用〕
 - `Rails.error.set_context(user_id:)` 往错误上下文里加 user id（`Authentication#find_session_by_cookie` 续上会话时调）；`allow_browser versions: :modern`；
   CSP 用 nonce（Inertia 的 script 需要 nonce），来源列表可由环境变量覆盖。〔采用自 fizzy `error_context.rb`、`content_security_policy.rb`〕

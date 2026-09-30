@@ -2,6 +2,7 @@ import type * as React from 'react'
 import { Fragment, useState } from 'react'
 
 import Chip from '@/components/Chip'
+import FavoriteButton from '@/components/FavoriteButton'
 import Icon, { type IconName } from '@/components/Icon'
 import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
@@ -10,6 +11,7 @@ import type { Adapter, Item } from '@/types/lowpass'
 // 说明译文（GitHub Trending，D25）、元数据、兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
 // 标签锚定条目行末端；窄屏自然换行，仍属于同一阅读组。
+// 书签（PRD 5.10）在条目行末另占一格，手机上与序号同一行、靠右；DOM 里排在正文后面，Tab 先到标题再到书签。
 // 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
@@ -107,8 +109,8 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
 
 // D25 译文紧跟它译的那段原文：HN 与 Hackaday 在标题下，GitHub Trending 在简介下。不是链接（卡片只有标题可点）。
 // 中文走文楷，夹在里面的产品名、项目名走 Newsreader，跟原文同一字体（设计 skill「译文排进 Newsreader」那条偏差的改法）；
-// 字号与颜色交给 CSS 按断点走。
-function Translation({ text }: { text: string }) {
+// 字号与颜色交给 CSS 按断点走。收藏页的行也用它。
+export function Translation({ text }: { text: string }) {
   return (
     <p className="item-translation">
       <Mixed text={text} font="latin" size="inherit" color="inherit" weight={400} />
@@ -192,6 +194,8 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
       </div>
+
+      <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} />
     </article>
   )
 }

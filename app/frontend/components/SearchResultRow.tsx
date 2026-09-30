@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react'
 
 import Chip from '@/components/Chip'
+import FavoriteButton from '@/components/FavoriteButton'
 import HitText from '@/components/HitText'
 import Icon from '@/components/Icon'
 import { reportClick } from '@/lib/search'
@@ -8,7 +9,7 @@ import { Mixed, latinLang } from '@/lib/typeset'
 import type { HitRun, SearchResult } from '@/types/lowpass'
 
 // 结果行（R-4.6、画布 search_row()）：眉行「刊物反白签 · 来源名 · 所在期 · 日期」，标题与摘要片段带命中下划线，
-// 底行「所在期 · …」与「原文 ↗」。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
+// 底行「所在期 · …」与「原文 ↗」，右端是书签（PRD 5.10）。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
 // 所在期是站内直链，不计。
 
 const LABELS: Record<SearchResult['publication'], string> = { daily: '日刊', weekly: '周刊' }
@@ -54,6 +55,7 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
           <span>原文</span>
           <Icon name="arrow-up-right" size={12} />
         </a>
+        <FavoriteButton className="search-mark" itemId={result.item_id} urlHash={result.url_hash} title={runText(result.title_runs)} />
       </div>
     </article>
   )

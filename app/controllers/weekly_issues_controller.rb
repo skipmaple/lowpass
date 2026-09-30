@@ -13,7 +13,10 @@ class WeeklyIssuesController < ApplicationController
   # R-2.7 那一周没有期不是 404：期头照常显示周次与日期范围，正文只有「本周无内容」
   def show
     if period_key = valid_period_key
-      render inertia: "Weekly/Show", props: Issue.weekly_props_for(period_key).merge(footer_props)
+      issue = Issue.weekly.find_by(period_key: period_key)
+      favorites = issue ? favorite_hashes(issue.items.visible.select(:url_hash)) : []
+
+      render inertia: "Weekly/Show", props: Issue.weekly_props_for(period_key, issue: issue).merge(favorites: favorites, **footer_props)
     else
       render_not_found
     end

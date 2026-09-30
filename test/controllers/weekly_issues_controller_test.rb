@@ -106,6 +106,25 @@ class WeeklyIssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2026-W35", page_props.dig("issue", "prev_key")
     assert_nil page_props.dig("issue", "next_key")
   end
+
+  # PRD 5.10：周刊条目同样带 url_hash，页面带这一期里收藏过的链接
+  test "条目带 url_hash，favorites 列出这一期里收藏过的链接" do
+    item = ruanyf_item("一个终端下的日志工具", section: "工具")
+
+    get weekly_issue_path("2026-W36")
+    assert_equal item.url_hash, page_props["sections"].sole["groups"].sole["items"].sole["url_hash"]
+    assert_equal [], page_props["favorites"]
+
+    Favorite.keep(users(:drew), item)
+    get weekly_issue_path("2026-W36")
+    assert_equal [ item.url_hash ], page_props["favorites"]
+  end
+
+  test "那一周没有期时 favorites 是空列表" do
+    get weekly_issue_path("2026-W30")
+
+    assert_equal [], page_props["favorites"]
+  end
 end
 
 # 周刊归档：按年一页，每周一行（PRD 6.2、R-2.7）。上海 2026-09-10 12:00 时本周是 2026-W37。

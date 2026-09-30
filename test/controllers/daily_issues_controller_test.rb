@@ -185,6 +185,40 @@ class DailyIssuesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "2026-W36", page_props["latest_weekly_key"]
   end
+
+  # PRD 5.10：条目带 url_hash，页面带这一期里当前读者收藏过的链接（书签的开合由前端对着它画）
+  test "条目带 url_hash，favorites 列出这一期里收藏过的链接" do
+    get daily_issue_path("2026-09-08")
+    assert_equal items(:hn_one).url_hash, page_props.dig("items_by_source", sources(:hn).id).sole["url_hash"]
+    assert_equal [], page_props["favorites"]
+
+    Favorite.keep(users(:drew), items(:hn_one))
+    get daily_issue_path("2026-09-08")
+    assert_equal [ items(:hn_one).url_hash ], page_props["favorites"]
+  end
+
+  # AC-10.2 收藏按链接认：同一链接在另一期再出现也显示已收藏；别人的收藏不算（AC-10.6）
+  test "同一链接在另一期也算已收藏，别人的收藏不算" do
+    Favorite.keep(users(:drew), items(:hn_one))
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", generation_started_at: Time.current,
+                          published_at: Time.current, source_states: { sources(:hn).id => "ok" })
+    later.items.create!(source: sources(:hn), title: "Same link again", url: items(:hn_one).url, url_hash: items(:hn_one).url_hash,
+                        fetched_at: Time.current, rank: 1)
+
+    get daily_issue_path("2026-09-09")
+    assert_equal [ items(:hn_one).url_hash ], page_props["favorites"]
+
+    delete session_path
+    sign_in_as(users(:guest))
+    get daily_issue_path("2026-09-09")
+    assert_equal [], page_props["favorites"]
+  end
+
+  test "缺期的 favorites 是空列表" do
+    get daily_issue_path("2026-09-03")
+
+    assert_equal [], page_props["favorites"]
+  end
 end
 
 # 日刊归档：按月一页，每天一行（PRD 6.2）。上海 2026-09-10 12:00，fixture 最早一期是 2026-09-08。

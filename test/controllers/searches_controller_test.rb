@@ -178,4 +178,18 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unavailable", page_props["state"]
     assert_nil Search::Log.sole.result_count
   end
+
+  # PRD 5.10：结果带 url_hash，页面带这一页结果里收藏过的链接
+  test "结果带 url_hash，favorites 列出这一页里收藏过的链接" do
+    get search_path
+    assert_equal [], page_props["favorites"]
+
+    get search_path(q: "kuber rust")
+    assert_equal @item.url_hash, page_props["results"].sole["url_hash"]
+    assert_equal [], page_props["favorites"]
+
+    Favorite.keep(users(:drew), @item)
+    get search_path(q: "kuber rust")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+  end
 end

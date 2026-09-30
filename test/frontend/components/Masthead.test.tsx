@@ -75,7 +75,7 @@ describe('Masthead 搜索与账户', () => {
     expect(screen.queryByRole('button', { name: '账户' })).toBeNull()
   })
 
-  it('有当前用户时账户位是按钮，点开菜单：邮箱、设置、登出；成员没有管理', async () => {
+  it('有当前用户时账户位是按钮，点开菜单：邮箱、账户信息、收藏、登出；成员没有管理', async () => {
     setPageProps({ current_user: currentUser() })
     render(<Masthead />)
 
@@ -89,6 +89,8 @@ describe('Masthead 搜索与账户', () => {
     const menu = screen.getByRole('menu')
     expect(within(menu).getByText('drew@example.com')).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: '账户信息' })).toHaveAttribute('href', '/settings')
+    // D29：收藏页的唯一入口在头像菜单里，报头其余部分不变（AC-10.12）
+    expect(within(menu).getByRole('menuitem', { name: '收藏' })).toHaveAttribute('href', '/favorites')
     expect(within(menu).queryByRole('menuitem', { name: '管理' })).toBeNull()
     expect(within(menu).getByRole('menuitem', { name: '登出' })).toBeInTheDocument()
   })
@@ -159,7 +161,7 @@ describe('Masthead 搜索与账户', () => {
     const menu = screen.getByRole('menu')
 
     expect(menu.querySelector('.menu-head')).toHaveAttribute('role', 'none')
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['账户信息', '登出'])
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['账户信息', '收藏', '登出'])
   })
 
   it('菜单卡没有阴影（设计 L1）', async () => {
@@ -177,6 +179,8 @@ describe('Masthead 搜索与账户', () => {
    render(<Masthead />)
    const button = screen.getByRole('button', { name: '账户' })
    await userEvent.click(button)
+   await userEvent.keyboard('{ArrowDown}')
+   expect(screen.getByRole('menuitem', { name: '收藏' })).toHaveFocus()
    await userEvent.keyboard('{ArrowDown}')
    expect(screen.getByRole('menuitem', { name: '管理' })).toHaveFocus()
    await userEvent.keyboard('{End}')

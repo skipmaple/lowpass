@@ -47,6 +47,8 @@ export function searchHref(params: SearchParams = {}): string {
 export const LOGIN = '/login'
 export const SESSION = '/session'
 export const SETTINGS = '/settings'
+// P1 注销（R-5.11，config/routes.rb 的 resource :user）：DELETE /user 删掉当前用户
+export const USER = '/user'
 export const ADMIN_JOBS = '/admin/jobs'
 export const authHref = (provider: string) => `/auth/${provider}`
 export const authCallbackHref = (provider: string) => `/auth/${provider}/callback`

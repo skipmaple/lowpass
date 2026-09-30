@@ -9,6 +9,8 @@ Rails.application.routes.draw do
   get "auth/failure" => "sessions#failure"
   delete "session" => "sessions#destroy", as: :session
   get "settings" => "settings#show", as: :settings
+  # P1 注销（R-5.11、D26）：DELETE /user 删掉当前用户，设置页的确认框确认之后发起
+  resource :user, only: :destroy
 
   resources :daily_issues, path: "daily", only: [ :index, :show ], param: :period_key
   resources :weekly_issues, path: "weekly", only: [ :index, :show ], param: :period_key

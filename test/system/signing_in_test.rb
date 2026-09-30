@@ -30,6 +30,25 @@ class SigningInTest < ApplicationSystemTestCase
     assert_current_path login_path(next: "/daily/2026-09-08")
   end
 
+  # R-5.11、AC-5.8：确认框是挂在 body 上的 Dialog；删成之后从套着 Layout 的设置页换到不套布局的登录页，提示走 notice
+  test "设置页注销：确认之后回到登录页" do
+    guest = users(:guest)
+    sign_in_with_browser(guest)
+
+    visit settings_path
+    click_on "注销"
+    within("[role='dialog']") do
+      assert_text "注销后无法恢复。确认注销这个账号？"
+      assert_text "guest@example.com"
+      click_on "确认注销"
+    end
+
+    assert_selector ".login-card [role='status']", text: "已注销账号。"
+    assert_current_path login_path
+    assert_no_selector ".masthead"
+    assert_not User.exists?(guest.id)
+  end
+
   test "取消授权回到登录卡" do
     mock_omniauth(:github, :access_denied)
 

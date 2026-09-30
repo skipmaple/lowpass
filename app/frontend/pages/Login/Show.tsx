@@ -81,6 +81,13 @@ export default function Show({ providers, next }: LoginShowProps) {
               <span>{flash.alert}</span>
             </div>
           ) : null}
+          {/* 不是出错的提示（注销之后的「已注销账号。」，R-5.11）：对勾，status 不打断读屏 */}
+          {flash?.notice ? (
+            <div className="notice-line" style={{ marginTop: 20 }} role="status">
+              <Icon name="check" size={14} color="var(--ink2)" />
+              <span>{flash.notice}</span>
+            </div>
+          ) : null}
         </div>
       </div>
     </main>

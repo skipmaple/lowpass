@@ -94,11 +94,23 @@ describe('收藏页的行', () => {
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toHaveAttribute('href', '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7')
   })
 
-  // 离开再回来时，历史恢复出来的旧列表里可能还带着已经取消的那一行（R-10.7：离开后不再出现）
-  it('不在 favorites 里、这一次停留里也没取消过的行不画', () => {
+  // 离开再回来时，历史恢复出来的旧列表里可能还带着已经取消的那一行（R-10.7：离开后不再出现）；
+  // 一行都不剩就是空态（AC-10.10），不是一页空白
+  it('不在 favorites 里、这一次停留里也没取消过的行不画；一行不剩就是空态', () => {
     const { container } = show({ favorites: [] })
 
     expect(container.querySelectorAll('.search-row')).toHaveLength(0)
+    expect(container.querySelector('.state-line')).toHaveTextContent('还没有收藏。')
+    expect(screen.getByRole('link', { name: '阅读最新日刊' })).toHaveAttribute('href', '/daily/2026-09-08')
+  })
+
+  // 别的页上还有收藏：不说「还没有收藏」，分页留着
+  it('这一页一行不剩、但不止一页：没有空态，分页还在', () => {
+    const { container } = show({ favorites: [], page: 2, pages: 2 })
+
+    expect(container.querySelectorAll('.search-row')).toHaveLength(0)
+    expect(screen.queryByText('还没有收藏。')).toBeNull()
+    expect(screen.getByRole('navigation', { name: '分页' })).toHaveTextContent('2 / 2')
   })
 })
 
@@ -166,6 +178,56 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  // 请求失败时回滚会把控件换回来：读者还在这一行才让焦点跟过去，已经去了别处就不拽回来（PRD 6.4）
+  it('取消没保存上时读者已经去了别的行：焦点留在那里', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(new Promise((resolve) => { settle = resolve })))
+    show({
+      entries: [favoriteEntry(), favoriteEntry({ url_hash: 'hash-ruff', title: 'astral-sh/ruff', url: 'https://github.com/astral-sh/ruff' })],
+      favorites: ['hash-termlog', 'hash-ruff'],
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
+    expect(screen.getByRole('button', { name: '恢复' })).toHaveFocus()
+    const elsewhere = screen.getByRole('link', { name: 'astral-sh/ruff' })
+    elsewhere.focus()
+    settle({ ok: false, status: 500, json: async () => ({}) })
+
+    expect(await screen.findByText('取消收藏没有保存，请重试。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveAttribute('data-on')
+    expect(elsewhere).toHaveFocus()
+  })
+
+  it('取消没保存上、读者还在这一行：焦点回到书签', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(new Promise((resolve) => { settle = resolve })))
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
+    expect(screen.getByRole('button', { name: '恢复' })).toHaveFocus()
+    settle({ ok: false, status: 500, json: async () => ({}) })
+
+    expect(await screen.findByText('取消收藏没有保存，请重试。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveFocus()
+  })
+
+  it('恢复没保存上、读者还在这一行：焦点回到「恢复」', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(ok({ undo: 'signed-token' }, 200))
+      .mockReturnValueOnce(new Promise((resolve) => { settle = resolve })))
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
+    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledTimes(1))
+    await userEvent.click(screen.getByRole('button', { name: '恢复' }))
+    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveFocus()
+    settle({ ok: false, status: 500, json: async () => ({}) })
+
+    expect(await screen.findByText('收藏没有保存，请重试。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '恢复' })).toHaveFocus()
+  })
+
   // 网慢的时候，读者可能在取消的请求回来之前就点了「恢复」：不丢这一下
   it('取消的请求还没回来就点「恢复」：凭据到手后接着恢复', async () => {
     let settle: (value: unknown) => void = () => undefined
@@ -188,14 +250,16 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ undo: 'signed-token' }))
   })
 
-  // 服务端说这条本来就不在了（204，没有凭据）：没什么可恢复的，这一行直接消失
-  it('取消时服务端已经没有这条收藏：行消失', async () => {
+  // 服务端说这条本来就不在了（204，没有凭据）：没什么可恢复的，这一行直接消失；它是唯一的一行，就是空态
+  it('取消时服务端已经没有这条收藏：行消失，一行不剩就是空态', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) }))
     const { container } = show()
 
     await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
 
     await waitFor(() => expect(container.querySelectorAll('.search-row')).toHaveLength(0))
+    expect(await screen.findByText('还没有收藏。')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '阅读最新日刊' })).toHaveAttribute('href', '/daily/2026-09-08')
   })
 })
 

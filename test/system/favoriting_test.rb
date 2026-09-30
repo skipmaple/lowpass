@@ -56,6 +56,26 @@ class FavoritingTest < ApplicationSystemTestCase
     assert_no_selector "button[aria-label='取消收藏：#{TITLE}']"
   end
 
+  # AC-10.10：取消了唯一的一条再离开，后退回来的收藏页是空态，不是只剩页名的一页空白
+  test "取消唯一的一条后离开再后退，收藏页是空态" do
+    Favorite.keep(users(:drew), items(:hn_one))
+    visit favorites_path
+
+    find("button[aria-label='取消收藏：#{TITLE}']").click
+    assert_text "已取消收藏"
+    wait_until { users(:drew).favorites.count.zero? }
+    wait_for_favorite_requests(1)
+
+    find("a[aria-label='搜索']").click
+    assert_current_path search_path
+
+    page.go_back
+    assert_current_path favorites_path
+    assert_text "还没有收藏。"
+    assert_link "阅读最新日刊"
+    assert_no_selector ".search-row"
+  end
+
   # 离开再按后退：恢复出来的页面与服务端一致（书签的状态写回了 Inertia 当前页）
   test "收藏后离开再后退，书签仍是已收藏" do
     visit daily_issue_path("2026-09-08")

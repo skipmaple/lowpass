@@ -29,26 +29,27 @@ export type FavoritesIndexProps = FooterData & {
 const LABELS: Record<Publication, string> = { daily: '日刊', weekly: '周刊' }
 const DOT = <span className="search-dot">·</span>
 
+// 只画在收藏里的、这一次停留里取消过的（List 已经筛过）：不在收藏里的就是取消过、等着「恢复」的那一行
 function Row({ entry }: { entry: FavoriteEntry }) {
   const favorites = useFavorites()
   const kept = favorites?.has(entry.url_hash) ?? false
-  const removed = favorites?.removed(entry.url_hash) ?? false
+  const rowRef = useRef<HTMLElement>(null)
   const markRef = useRef<HTMLButtonElement>(null)
   const restoreRef = useRef<HTMLButtonElement>(null)
   const was = useRef(kept)
   const statusId = useId()
 
-  // 取消与恢复会把读者刚按的那个控件换掉：焦点跟到换上来的那个，不掉回 body（PRD 6.4）
+  // 取消与恢复会把读者刚按的那个控件换掉：焦点跟到换上来的那个，不掉回 body（PRD 6.4）。
+  // 只在读者还在这一行时跟（焦点在行里，或者随换掉的控件掉回了 body）：请求失败回滚时读者可能已经去了别处，不拽回来
   useEffect(() => {
-    if (was.current !== kept) (kept ? markRef : restoreRef).current?.focus()
+    const active = document.activeElement
+    const stayed = !active || active === document.body || rowRef.current?.contains(active)
+    if (was.current !== kept && stayed) (kept ? markRef : restoreRef).current?.focus()
     was.current = kept
   }, [kept])
 
-  // 既不在收藏里、这一次停留里也没取消过：是历史恢复出来的旧列表里已经不在的那一行（R-10.7 离开后不再出现）
-  if (!kept && !removed) return null
-
   return (
-    <article className="search-row">
+    <article ref={rowRef} className="search-row">
       <div className="search-eyebrow">
         <Chip text={LABELS[entry.publication]} />
         <Mixed text={entry.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
@@ -93,29 +94,43 @@ function Row({ entry }: { entry: FavoriteEntry }) {
   )
 }
 
+// 列表放在 FavoritesProvider 里面：哪几行画出来要看收藏状态
+function List({ entries, page, pages, latest_daily_key }: Pick<FavoritesIndexProps, 'entries' | 'page' | 'pages' | 'latest_daily_key'>) {
+  const favorites = useFavorites()
+  // 既不在收藏里、这一次停留里也没取消过的行不画：历史恢复出来的旧列表里已经不在的那几条（R-10.7 离开后不再出现），
+  // 或者取消时服务端说本来就没有（204）
+  const shown = entries.filter((entry) => favorites?.has(entry.url_hash) || favorites?.removed(entry.url_hash))
+
+  // 一行都不剩就是空态（AC-10.10），不是一页空白；别的页上还有收藏时不这么说，只留分页
+  if (shown.length === 0 && pages <= 1) {
+    return (
+      <IssueNotice text="还没有收藏。">
+        <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_LATEST}>
+          阅读最新日刊
+        </Link>
+      </IssueNotice>
+    )
+  }
+
+  return (
+    <>
+      <div className="search-results">
+        {shown.map((entry) => (
+          <Row key={entry.url_hash} entry={entry} />
+        ))}
+      </div>
+      {pages > 1 ? (
+        <Pager prevHref={page > 1 ? favoritesHref(page - 1) : null} nextHref={page < pages ? favoritesHref(page + 1) : null} page={page} pages={pages} />
+      ) : null}
+    </>
+  )
+}
+
 export default function Index({ entries, favorites, page, pages, latest_daily_key }: FavoritesIndexProps) {
   return (
     <FavoritesProvider favorites={favorites}>
       <PageHead big="收藏" />
-
-      {entries.length === 0 ? (
-        <IssueNotice text="还没有收藏。">
-          <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_LATEST}>
-            阅读最新日刊
-          </Link>
-        </IssueNotice>
-      ) : (
-        <>
-          <div className="search-results">
-            {entries.map((entry) => (
-              <Row key={entry.url_hash} entry={entry} />
-            ))}
-          </div>
-          {pages > 1 ? (
-            <Pager prevHref={page > 1 ? favoritesHref(page - 1) : null} nextHref={page < pages ? favoritesHref(page + 1) : null} page={page} pages={pages} />
-          ) : null}
-        </>
-      )}
+      <List entries={entries} page={page} pages={pages} latest_daily_key={latest_daily_key} />
     </FavoritesProvider>
   )
 }

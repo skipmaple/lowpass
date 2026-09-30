@@ -5,9 +5,11 @@ import type * as React from 'react'
 import { Ctrl } from '@/components/Ctrl'
 import Icon from '@/components/Icon'
 import Layout from '@/components/Layout'
+import Pager from '@/components/Pager'
 import SearchFilters, { hasActiveFilters } from '@/components/SearchFilters'
 import SearchResultRow from '@/components/SearchResultRow'
 import Seg from '@/components/Seg'
+import { FavoritesProvider } from '@/lib/favorites'
 import { dailyHref, latestWeeklyHref, searchHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { DatePresets, FooterData, SearchFilters as Filters, SearchResult, SearchSourceOption, SearchState } from '@/types/lowpass'
@@ -24,6 +26,8 @@ export type SearchShowProps = FooterData & {
   date_presets: DatePresets
   state: SearchState
   results: SearchResult[]
+  // 这一页结果里当前读者收藏过的链接（url_hash），书签对着它画（PRD 5.10）
+  favorites: string[]
   total: number
   page: number
   pages: number
@@ -105,18 +109,17 @@ function CountLine({ total, q, filters }: { total: number; q: string; filters: F
   )
 }
 
-// R-4.7 分页「上一页 · n / m · 下一页」（画布 pager()）
-function Pager({ q, committedQuery, filters, page, pages }: { q: string; committedQuery: string; filters: Filters; page: number; pages: number }) {
+// R-4.7 分页：草稿里的查询词变了，翻页就从新查询的第 1 页开始
+function SearchPager({ q, committedQuery, filters, page, pages }: { q: string; committedQuery: string; filters: Filters; page: number; pages: number }) {
   const pageFor = (target: number) => q === committedQuery ? target : 1
 
   return (
-    <nav className="search-pager" aria-label="分页">
-      <Ctrl href={page > 1 ? hrefOf(q, filters, pageFor(page - 1)) : null} label="上一页" icon="chevron-left" side="left" />
-      <span className="search-page">
-        {page} / {pages}
-      </span>
-      <Ctrl href={page < pages ? hrefOf(q, filters, pageFor(page + 1)) : null} label="下一页" icon="chevron-right" side="right" />
-    </nav>
+    <Pager
+      prevHref={page > 1 ? hrefOf(q, filters, pageFor(page - 1)) : null}
+      nextHref={page < pages ? hrefOf(q, filters, pageFor(page + 1)) : null}
+      page={page}
+      pages={pages}
+    />
   )
 }
 
@@ -172,7 +175,7 @@ function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery:
               <SearchResultRow key={result.item_id} result={result} q={q} />
             ))}
           </div>
-          {pages > 1 ? <Pager q={props.navigationQuery} committedQuery={q} filters={filters} page={page} pages={pages} /> : null}
+          {pages > 1 ? <SearchPager q={props.navigationQuery} committedQuery={q} filters={filters} page={page} pages={pages} /> : null}
         </>
       )
   }
@@ -205,7 +208,7 @@ export default function Show(props: SearchShowProps) {
   const navigationQuery = draft.trim()
 
   return (
-    <>
+    <FavoritesProvider favorites={props.favorites}>
       <Head title={props.q ? `搜索 · ${props.q}` : '搜索'} />
       {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
       <h1 className="sr-only">搜索</h1>
@@ -213,7 +216,7 @@ export default function Show(props: SearchShowProps) {
       <SearchFilters q={navigationQuery} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
       <div id="search-status" className={loading ? 'search-loading' : notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
       <Body {...props} navigationQuery={navigationQuery} onModifyQuery={modifyQuery} loading={loading} />
-    </>
+    </FavoritesProvider>
   )
 }
 

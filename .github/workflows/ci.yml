@@ -115,6 +115,10 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      # 首屏资源不超过 300 KB（PRD N-1）：读上一步的构建产物，超出就红（同 config/ci.rb 的那一步）
+      - name: Check first screen budget
+        run: script/first_screen_size
+
       # autoBuild 在测试 worker 并行请求时会撞车（见 config/ci.rb 同一个步骤的注释）。RAILS_ENV
       # 必须显式传：vite_rails 的 CLI 扩展会先把 Rails 应用整个启动起来才处理 --mode，Rails.env
       # 没有 RAILS_ENV 时默认是 development，产物会悄悄写进 public/vite-dev 而不是 public/vite-test。

@@ -22,6 +22,7 @@ function show(overrides: Partial<DailyShowProps> = {}) {
     missing: false,
     sources,
     items_by_source: { 'src-hn': [item()] },
+    favorites: [],
     active_source_id: 'src-hn',
     latest_weekly_key: '2026-W36',
     ...overrides,
@@ -71,7 +72,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     const { unmount } = show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新', time_label: '06:00' }) })
 
     vi.advanceTimersByTime(10_000)
-    expect(router.reload).toHaveBeenCalledWith({ only: ['issue', 'missing', 'sources', 'items_by_source'] })
+    expect(router.reload).toHaveBeenCalledWith({ only: ['issue', 'missing', 'sources', 'items_by_source', 'favorites'] })
     unmount()
 
     router.reload.mockClear()
@@ -296,4 +297,14 @@ it('管理员补生成保持等待状态并显示实际服务端结果', async (
  act(() => { options.onSuccess({ props: { flash: { alert: '这一天已有期' } } }); options.onFinish() })
  expect(screen.getByRole('status')).toHaveTextContent('这一天已有期')
  expect(screen.getByRole('button', { name: '补生成本期' })).toBeEnabled()
+})
+
+// PRD 5.10：页面把 favorites 交给 FavoritesProvider，条目行的书签对着它画
+it('条目行有书签，已收藏的链接是实心', () => {
+  const { unmount } = show()
+  expect(screen.getByRole('button', { name: '收藏：Show HN: A terminal log viewer written in Rust' })).not.toHaveAttribute('data-on')
+  unmount()
+
+  show({ favorites: ['hash-termlog'] })
+  expect(screen.getByRole('button', { name: '取消收藏：Show HN: A terminal log viewer written in Rust' })).toHaveAttribute('data-on')
 })

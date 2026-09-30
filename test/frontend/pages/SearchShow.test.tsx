@@ -21,6 +21,7 @@ function showProps(overrides: Partial<SearchShowProps> = {}): SearchShowProps {
     date_presets: { '7d': { from: '2026-09-05', to: '2026-09-11' }, '30d': { from: '2026-08-13', to: '2026-09-11' } },
     state: 'initial',
     results: [],
+    favorites: [],
     total: 0,
     page: 1,
     pages: 0,
@@ -391,5 +392,18 @@ describe('排序与分页', () => {
     expect(pager.getByRole('link', { name: '上一页' })).toHaveAttribute('href', '/search?q=kuber+rust&page=2')
     expect(pager.getByRole('link', { name: '下一页' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('navigation', { name: '分页' })).toHaveTextContent('3 / 3')
+  })
+})
+
+// PRD 5.10：书签在底行右端，名字用没有高亮切分的整句标题
+describe('结果行的书签', () => {
+  it('结果行有书签，状态照 favorites', () => {
+    const { container, unmount } = results()
+    const mark = within(container.querySelector('.search-links') as HTMLElement).getByRole('button', { name: '收藏：Kubernetes operator in Rust' })
+    expect(mark).toHaveClass('favorite-button', 'search-mark')
+    unmount()
+
+    results({ favorites: ['hash-k8s-rust'] })
+    expect(screen.getByRole('button', { name: '取消收藏：Kubernetes operator in Rust' })).toHaveAttribute('data-on')
   })
 })

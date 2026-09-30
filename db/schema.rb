@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -88,6 +88,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.check_constraint "length(object_key::text) <= 255", name: "backup_runs_object_key_len"
     t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'running'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text])", name: "backup_runs_status"
     t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying::text, 'manual'::character varying::text])", name: "backup_runs_trigger"
+  end
+
+  create_table "favorites", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "anchor", limit: 120
+    t.datetime "created_at", null: false
+    t.string "period_key", limit: 10, null: false
+    t.string "publication", limit: 10, null: false
+    t.string "section", limit: 100
+    t.string "source_id", limit: 25, null: false
+    t.string "summary", limit: 500
+    t.string "summary_zh", limit: 500
+    t.string "title", limit: 300, null: false
+    t.string "title_zh", limit: 300
+    t.string "url", limit: 2048, null: false
+    t.string "url_hash", limit: 64, null: false
+    t.string "user_id", limit: 25, null: false
+    t.index ["user_id", "created_at"], name: "index_favorites_on_user_id_and_created_at"
+    t.index ["user_id", "url_hash"], name: "index_favorites_on_user_id_and_url_hash", unique: true
+    t.check_constraint "length(anchor::text) <= 120", name: "favorites_anchor_len"
+    t.check_constraint "length(section::text) <= 100", name: "favorites_section_len"
+    t.check_constraint "length(summary::text) <= 500", name: "favorites_summary_len"
+    t.check_constraint "length(summary_zh::text) <= 500", name: "favorites_summary_zh_len"
+    t.check_constraint "length(title::text) <= 300", name: "favorites_title_len"
+    t.check_constraint "length(title_zh::text) <= 300", name: "favorites_title_zh_len"
+    t.check_constraint "length(url::text) <= 2048", name: "favorites_url_len"
+    t.check_constraint "length(url_hash::text) = 64", name: "favorites_url_hash_len"
+    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "favorites_publication"
   end
 
   create_table "fetch_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -311,6 +338,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
   add_foreign_key "alert_events", "sources", on_delete: :nullify
   add_foreign_key "audit_logs", "users", on_delete: :nullify
   add_foreign_key "auth_identities", "users", on_delete: :cascade
+  add_foreign_key "favorites", "sources"
+  add_foreign_key "favorites", "users", on_delete: :cascade
   add_foreign_key "fetch_runs", "issues"
   add_foreign_key "fetch_runs", "sources"
   add_foreign_key "items", "issues"

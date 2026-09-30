@@ -43,8 +43,15 @@ export function searchHref(params: SearchParams = {}): string {
   return text ? `${SEARCH}?${text}` : SEARCH
 }
 
+// P4 收藏（config/routes.rb 的 resources :favorites）：资源的键是链接的 url_hash，不是行 id；第 1 页不写 page
+export const FAVORITES = '/favorites'
+export const favoritesHref = (page = 1) => (page > 1 ? `${FAVORITES}?page=${page}` : FAVORITES)
+export const favoriteHref = (urlHash: string) => `${FAVORITES}/${urlHash}`
+
 // P2-① 登录（config/routes.rb 的 login / session / settings，OmniAuth 的 /auth/:provider 与回调）
 export const LOGIN = '/login'
+// 会话过期后去登录页并带上当前地址（R-5.7：next 只认站内相对路径）
+export const loginHref = (next: string) => `${LOGIN}?next=${encodeURIComponent(next)}`
 export const SESSION = '/session'
 export const SETTINGS = '/settings'
 // P1 注销（R-5.11，config/routes.rb 的 resource :user）：DELETE /user 删掉当前用户

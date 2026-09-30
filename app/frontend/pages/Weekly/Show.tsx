@@ -8,6 +8,7 @@ import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
 import { useScrollToHash } from '@/lib/anchors'
+import { FavoritesProvider } from '@/lib/favorites'
 import { WEEKLY_ARCHIVE, latestWeeklyHref, weeklyHref } from '@/lib/paths'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/types/lowpass'
@@ -25,6 +26,8 @@ const anchorId = (anchor: string) => encodeURIComponent(anchor)
 export type WeeklyShowProps = FooterData & {
   issue: WeeklyIssue
   sections: WeeklySection[]
+  // 这一期里当前读者收藏过的链接（url_hash），书签对着它画（PRD 5.10）
+  favorites: string[]
 }
 
 // 反白横带：期号是来源的说明信息，跟随源名形成一个阅读组；右端只保留原文操作。
@@ -182,10 +185,10 @@ function Section({ section }: { section: WeeklySection }) {
   )
 }
 
-export default function Show({ issue, sections }: WeeklyShowProps) {
+export default function Show({ issue, sections, favorites }: WeeklyShowProps) {
   useScrollToHash(issue.period_key)
   return (
-    <>
+    <FavoritesProvider favorites={favorites}>
       <PageHead
         big={issue.week_label}
         title={`周刊 · ${issue.year} · ${issue.week_label}`}
@@ -204,7 +207,7 @@ export default function Show({ issue, sections }: WeeklyShowProps) {
       ) : (
         sections.map((section) => <Section key={`${section.source.id}-${section.issue_no ?? 0}`} section={section} />)
       )}
-    </>
+    </FavoritesProvider>
   )
 }
 

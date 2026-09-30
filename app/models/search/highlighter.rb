@@ -9,6 +9,9 @@ class Search::Highlighter
   LATIN = /[\p{L}\p{N}]/
   CJK_CHAR = "[\\p{Han}\\p{Hiragana}\\p{Katakana}\\p{Hangul}]"
 
+  # 不带命中的片段（收藏页的摘要，R-10.6）：同一套 160 字与不切词的规则，取开头
+  def self.excerpt(text) = new([]).snippet(text)&.map { |run| run[:text] }&.join
+
   def initialize(terms)
     @patterns = terms.map { |term| pattern(term) }
   end

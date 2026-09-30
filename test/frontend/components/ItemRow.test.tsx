@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ItemRow from '@/components/ItemRow'
+import { FavoritesProvider } from '@/lib/favorites'
 import { setPageProps } from '../support/inertia'
 import { item } from '../support/props'
 
@@ -410,5 +411,45 @@ describe('ItemRow 阅读页不提供重生成入口', () => {
     setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: null, admin: true }, flash: {}, errors: {} })
     render(<ItemRow item={item({ id: 'it-3' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
     expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
+  })
+})
+
+describe('ItemRow 书签（PRD 5.10）', () => {
+  const TITLE = 'Show HN: A terminal log viewer written in Rust'
+
+  it('页面套了 FavoritesProvider：条目行末有书签，排在正文后面，状态照 favorites', () => {
+    const { container, unmount } = render(
+      <FavoritesProvider favorites={[]}>
+        <ItemRow item={hn()} adapter="hacker_news" rank={1} />
+      </FavoritesProvider>,
+    )
+    const mark = screen.getByRole('button', { name: `收藏：${TITLE}` })
+    expect(mark).toHaveClass('favorite-button', 'item-mark')
+    // Tab 先到标题再到书签：书签在 DOM 里排在正文后面
+    expect(container.querySelector('.item-body')?.nextElementSibling).toBe(mark)
+    unmount()
+
+    render(
+      <FavoritesProvider favorites={['hash-termlog']}>
+        <ItemRow item={hn()} adapter="hacker_news" rank={1} />
+      </FavoritesProvider>,
+    )
+    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveAttribute('data-on')
+  })
+
+  it('周刊那一版同样有书签', () => {
+    render(
+      <FavoritesProvider favorites={[]}>
+        <ItemRow item={item({ title: '人生的容错率' })} adapter="ruanyf_weekly" rank={1} variant="weekly" heading="h4" />
+      </FavoritesProvider>,
+    )
+
+    expect(screen.getByRole('button', { name: '收藏：人生的容错率' })).toBeInTheDocument()
+  })
+
+  it('没有 FavoritesProvider 时条目行里没有书签', () => {
+    const { container } = render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
+
+    expect(container.querySelector('.favorite-button')).toBeNull()
   })
 })

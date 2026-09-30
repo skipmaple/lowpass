@@ -31,6 +31,13 @@ class ApplicationController < ActionController::Base
       { daily_time: Setting.get("daily_time"), latest_weekly_key: Issue.latest_weekly_key, latest_daily_key: Issue.latest_daily_key }
     end
 
+    # 这一页的条目里，当前读者收藏过哪些链接（R-10.2）：只给 url_hash，书签的开合由前端对着它画。
+    # 按链接认，所以同一链接在另一期、另一个来源再出现也算。传关系进来时它得 select(:url_hash)：
+    # 不然 Rails 拼成 IN (SELECT id …)，拿条目 id 去比链接，永远是空列表
+    def favorite_hashes(url_hashes)
+      Current.user.favorites.where(url_hash: url_hashes).pluck(:url_hash)
+    end
+
     # 附录 B 的 404 页，带页脚：地址形状不对、月份或年份越界都落到这里，
     # 读者看到的是站内的一页，不是 public/404.html 那张没有报头页脚的静态页。
     # layout 显式指定的理由同 render_forbidden：Admin::BaseController 把 RecordNotFound 也接到这里，

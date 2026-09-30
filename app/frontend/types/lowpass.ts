@@ -4,8 +4,8 @@ export type SourceSummary = { id: string; name: string; adapter: Adapter; state:
 // RSS 的首图与「时间是抓取时间不是发布时间」标记（Adapters::Rss、Adapters::RuanyfWeekly）。
 export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; time_from_fetch?: boolean };
 // title_zh 是 HN 与 Hackaday 标题的中文译文，summary_zh 是 GitHub Trending 简介的中文译文（D25）；
-// 都跟推荐理由同一次生成，没生成前与不译的源都是 null。
-export type Item = { id: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
+// 都跟推荐理由同一次生成，没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
+export type Item = { id: string; url_hash: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";
 // status 与 time_label 是服务端定稿的期头文案（附录 B）：没有开 SSR，页面上读得到的字符串都得先进 props。
 export type DailyIssue = { period_key: string; year: number; date_label: string; weekday: string; state: IssueState | null; time_label: string | null; status: string | null; daily_time: string; published_at: string | null; revised_at: string | null; generated_late: boolean; is_yesterday: boolean; prev_key: string | null; next_key: string | null };
@@ -38,7 +38,11 @@ export type DatePreset = { from: string; to: string };
 export type DatePresets = Record<"7d" | "30d", DatePreset>;
 // 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
 export type HitRun = { text: string; hit: boolean };
-export type SearchResult = { item_id: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null };
+export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null };
+
+// 收藏（PRD 5.10）：日刊、周刊、搜索、收藏四个页面的 props 都带 favorites——这一页里已收藏链接的 url_hash 列表。
+// 收藏页的一行（FavoritesController#entry_props）：字段照搜索结果行，标题不带命中 run；snippet 是不超过 160 字的摘要片段
+export type FavoriteEntry = { url_hash: string; publication: Publication; source_name: string; where: { label: string; href: string }; url: string; title: string; title_zh: string | null; snippet: string | null; summary_zh: string | null };
 
 // P2-① 登录（PRD 5.5）：ApplicationController 的 inertia_share 每页都带的两样，加登录页与设置页的字段
 export type CurrentUser = { display_name: string; avatar_url: string | null; email: string | null; admin: boolean };

@@ -10,6 +10,7 @@ import type {
   BackupStatus,
   CurrentUser,
   DailyIssue,
+  FavoriteEntry,
   InterestArea,
   Item,
   ReasonsStatus,
@@ -40,6 +41,7 @@ export function source(overrides: Partial<SourceSummary> = {}): SourceSummary {
 export function item(overrides: Partial<Item> = {}): Item {
   return {
     id: 'itm-hn-1',
+    url_hash: 'hash-termlog',
     title: 'Show HN: A terminal log viewer written in Rust',
     title_zh: null,
     url: 'https://example.com/termlog',
@@ -151,6 +153,7 @@ export function searchFilters(overrides: Partial<SearchFilters> = {}): SearchFil
 export function searchResult(overrides: Partial<SearchResult> = {}): SearchResult {
   return {
     item_id: 'itm-hn-1',
+    url_hash: 'hash-k8s-rust',
     rank: 1,
     publication: 'daily',
     source_name: 'Hacker News',
@@ -167,6 +170,22 @@ export function searchResult(overrides: Partial<SearchResult> = {}): SearchResul
       { text: 'Kubernetes', hit: true },
       { text: ' operator with the Rust SDK', hit: false },
     ],
+    ...overrides,
+  }
+}
+
+// 收藏页的一行（FavoritesController#entry_props）：默认是一条日刊收藏，没有译文与摘要
+export function favoriteEntry(overrides: Partial<FavoriteEntry> = {}): FavoriteEntry {
+  return {
+    url_hash: 'hash-termlog',
+    publication: 'daily',
+    source_name: 'Hacker News',
+    where: { label: '2026年9月8日', href: '/daily/2026-09-08?source=src-hn#item-itm-hn-1' },
+    url: 'https://example.com/termlog',
+    title: 'Show HN: A terminal log viewer written in Rust',
+    title_zh: null,
+    snippet: null,
+    summary_zh: null,
     ...overrides,
   }
 }

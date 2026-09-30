@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import Icon from '@/components/Icon'
-import { ADMIN_SOURCES, DAILY_LATEST, SEARCH, SESSION, SETTINGS, latestWeeklyHref } from '@/lib/paths'
+import { ADMIN_SOURCES, DAILY_LATEST, FAVORITES, SEARCH, SESSION, SETTINGS, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
 import type { CurrentUser, SharedProps } from '@/types/lowpass'
 
@@ -41,7 +41,7 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
 }
 
 // 头像菜单（R-8.2，画布 pages_front3.py 的 menu_sheet()）：32px 圆是按钮，点开右对齐 220px 纸卡，
-// 顶部等宽邮箱（没邮箱用显示名），「设置」「管理」（仅 admin，指向后台的信息源页）「登出」。
+// 顶部等宽邮箱（没邮箱用显示名），「账户信息」「收藏」（收藏页的唯一入口，D29）「管理」（仅 admin，指向后台的信息源页）「登出」。
 // Escape、点卡外、选中任一项都关闭；打开时焦点进第一项。画布那张卡带阴影，这里不取：
 // 设计规则说纸面里不许有阴影，1px 墨线足够分层（设计 L1）。
 function AccountMenu({ user }: { user: CurrentUser }) {
@@ -123,6 +123,9 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           </div>
           <Link role="menuitem" className="menu-item" href={SETTINGS} onClick={close}>
             账户信息
+          </Link>
+          <Link role="menuitem" className="menu-item" href={FAVORITES} onClick={close}>
+            收藏
           </Link>
           {user.admin ? (
             <Link role="menuitem" className="menu-item" href={ADMIN_SOURCES} onClick={close}>

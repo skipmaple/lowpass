@@ -812,3 +812,26 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .model-name-field, .model-name-field > .field, .model-name-detail { width: 100% !important; max-width: 100%; }
   .source-band-meta { width: 100%; }
 }
+
+/* ─── 收藏（P4，PRD 5.10、6.3）──────────────────────────────────────────
+   界面稿：docs/design/notes/2026-09-30-favorites-mock.html。
+   书签：44px 见方的独立目标（PRD 6.4），描线是未收藏、实心是已收藏——两态靠形状分，不靠颜色（D30）。
+   条目行里它在行末另占一列；手机上与序号同一行、靠右，不挤标题。搜索结果与收藏页的行里它在底行右端。
+   18px 的图标居中在 44px 的目标里，两边各空 13px：右边距收回 13px，图标的右缘才跟正文右缘、分页按钮对齐。 */
+.favorite-button { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin-right: -13px;
+                   border: 0; background: none; color: var(--ink2); cursor: pointer; }
+.favorite-button:hover, .favorite-button[data-on] { color: var(--ink); }
+.favorite-button[data-on] svg, .favorite-button[data-on] svg path { fill: currentColor; }
+.favorite-button:focus-visible { outline: 2px solid var(--ink); outline-offset: -6px; }
+.item-row { grid-template-columns: 28px minmax(0, 1fr) 31px; grid-template-areas: "rank body mark"; }
+.item-mark { grid-area: mark; margin-top: -8px; }
+.search-mark { margin-left: auto; }
+/* 收藏页上取消的那一行：原地留一句状态与「恢复」（R-10.7） */
+.favorite-removed { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+@media (max-width: 767px) {
+  .item-row { grid-template-columns: minmax(0, 1fr) 31px; grid-template-areas: "rank mark" "body body"; align-items: center; }
+  .item-mark { margin-top: -12px; margin-bottom: -12px; }
+}
+@media (min-width: 1920px) {
+  .item-row { grid-template-columns: 32px minmax(0, 1fr) 31px; }
+}

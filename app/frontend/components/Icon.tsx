@@ -1,4 +1,4 @@
-import { Archive, ArrowUp, ArrowUpRight, BookOpen, Check, ChevronLeft, ChevronRight, Clock, LogOut, MessageSquare, MessagesSquare, Plus, RefreshCw, Search, Star, TriangleAlert, User, X } from 'lucide'
+import { Archive, ArrowUp, ArrowUpRight, BookOpen, Bookmark, Check, ChevronLeft, ChevronRight, Clock, LogOut, MessageSquare, MessagesSquare, Plus, RefreshCw, Search, Star, TriangleAlert, User, X } from 'lucide'
 import { MorphIcon } from 'morphicons/react'
 
 // Lucide 提供图形数据，Morphicons 在同一个 SVG 内衔接状态；只导入实际使用的图标。
@@ -10,6 +10,7 @@ const ICONS = {
   'arrow-up': ArrowUp,
   archive: Archive,
   'book-open': BookOpen,
+  bookmark: Bookmark,
   clock: Clock,
   'message-square': MessageSquare,
   'messages-square': MessagesSquare,

@@ -10,6 +10,7 @@ import {
   ADMIN_TODAY_ISSUE,
   DAILY_ARCHIVE,
   DAILY_LATEST,
+  FAVORITES,
   LOGIN,
   SEARCH,
   SEARCH_CLICKS,
@@ -27,7 +28,10 @@ import {
   authCallbackHref,
   authHref,
   dailyHref,
+  favoriteHref,
+  favoritesHref,
   latestWeeklyHref,
+  loginHref,
   monthHref,
   searchHref,
   weeklyHref,
@@ -105,6 +109,16 @@ describe('后台地址', () => {
     expect(ADMIN_TODAY_ISSUE).toBe('/admin/today_issue')
     expect(ADMIN_SETTINGS).toBe('/admin/settings')
     expect(ADMIN_TEST_ALERT).toBe('/admin/test_alert')
+  })
+
+  // P4 收藏：资源的键是链接的 url_hash；第 1 页不写 page
+  it('收藏页、书签的两个动作与带 next 的登录页', () => {
+    expect(FAVORITES).toBe('/favorites')
+    expect(favoritesHref()).toBe('/favorites')
+    expect(favoritesHref(1)).toBe('/favorites')
+    expect(favoritesHref(3)).toBe('/favorites?page=3')
+    expect(favoriteHref('abc123')).toBe('/favorites/abc123')
+    expect(loginHref('/daily/2026-09-08?source=src-hn')).toBe('/login?next=%2Fdaily%2F2026-09-08%3Fsource%3Dsrc-hn')
   })
 
   // ④ 推荐理由：兴趣画像 CRUD、整期重生成理由端点

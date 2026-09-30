@@ -11,6 +11,7 @@ function show(overrides: Partial<WeeklyShowProps> = {}) {
   const props: WeeklyShowProps = {
     issue: weeklyIssue(),
     sections: [weeklySection()],
+    favorites: [],
     daily_time: '06:00',
     latest_weekly_key: '2026-W36',
     ...overrides,
@@ -21,7 +22,7 @@ function show(overrides: Partial<WeeklyShowProps> = {}) {
 
 describe('周刊期头', () => {
   it('周次是 h1，年份与日期范围在右侧', () => {
-    render(<Show issue={weeklyIssue()} sections={[]} daily_time="06:00" latest_weekly_key="2026-W36" />)
+    render(<Show issue={weeklyIssue()} sections={[]} favorites={[]} daily_time="06:00" latest_weekly_key="2026-W36" />)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('第 36 周')
     expect(screen.getByText('2026')).toBeInTheDocument()
@@ -48,6 +49,7 @@ describe('周刊期头', () => {
       <Show
         issue={weeklyIssue({ state: null, status: '本周无内容', published_at: null })}
         sections={[]}
+        favorites={[]}
         daily_time="06:00"
         latest_weekly_key="2026-W36"
       />,
@@ -335,4 +337,14 @@ it('手机目录默认收起，返回目录会展开并聚焦导航', () => {
   } finally {
     vi.unstubAllGlobals()
   }
+})
+
+// PRD 5.10：周刊条目同样有书签；降级成整期一条的节是一句提示，不是条目行，没有书签（R-10.4）
+it('周刊条目有书签，降级的节没有', () => {
+  const { unmount } = show({ favorites: ['hash-termlog'] })
+  expect(screen.getByRole('button', { name: '取消收藏：人生的容错率' })).toHaveAttribute('data-on')
+  unmount()
+
+  const { container } = show({ sections: [weeklySection({ degraded: true })] })
+  expect(container.querySelector('.favorite-button')).toBeNull()
 })

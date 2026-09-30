@@ -64,6 +64,20 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 停用源的历史条目保留可搜（R-4.8）。
 不要为了搜索改条目表本身。〔改造自 fizzy `app/models/concerns/searchable.rb` 与 `app/models/search/`〕
 
+## 收藏
+
+留存夹，不是稍后读队列（PRD 5.10、D26）。设计见 `docs/superpowers/specs/2026-09-30-favorites-design.md`。
+
+- 一条收藏按链接的 `url_hash` 认，`(user_id, url_hash)` 唯一（D27）。收藏时把条目抄成快照，**不引用条目行**：管理员重抓是整栏先删后插，
+  条目 id 全换。收藏页渲染时按（刊物、周期键、来源、`url_hash`）现查条目还在不在（`Favorite.live_items`），在就用它现在的译文与条目锚点。
+- 取消是真删，服务端不留「已取消」的行。删的同时回一张签名凭据（`Favorite::Undoing`，`MessageVerifier`，一天有效，只认本人），
+  收藏页的「恢复」凭它把同一条原样插回去；凭据参数 `undo` 在 `filter_parameters` 里，不进请求日志。
+- 书签的两个动作（`POST /favorites`、`DELETE /favorites/:url_hash`）是 fetch + JSON，不是 Inertia 访问；未登录回 401 而不是 302。
+  页面 props 里每个条目带 `url_hash`，页面级的 `favorites` 是这一页里已收藏的 `url_hash` 列表；前端的状态、回滚与提示都在
+  `lib/favorites.tsx` 的 `FavoritesProvider` 里，请求结束后用 `router.replaceProp` 写回 Inertia 当前页。读者已经离开、
+  或者换页的访问还在路上时不写（那时写回会顶掉那次访问），没写上的不补。
+- 只有本人可见：读写都从 `Current.user.favorites` 进来，后台、审计日志、错误上报里都没有收藏；用户删除时外键级联。
+
 ## 抓取与出站 HTTP
 
 - 适配器放在模型层（`app/models/<source>/…`），输出 7.2 契约的规范化条目；网络 I/O 与解析分开，解析可以拿固定样本单测。
@@ -106,6 +120,8 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 - 形状借 fizzy：`Session` 记录 + 签名 cookie `session_token`；`Current` 保存 session、user 与请求属性（request_id、ip、user_agent）；
   `Authentication` concern 只提供 `allow_unauthenticated_access` 一个类方法（反向那条没有：已登录访问登录页跳首页，
   是 `SessionsController` 自己的 `before_action :redirect_signed_in`）；未登录跳 `/login?next=`，`next` 只接受站内相对路径（R-5.7）。〔改造〕
+- Inertia 的历史是加密的（`config.encrypt_history`，密钥在 sessionStorage）。登录页带 `clear_history: true` 渲染：到了登录页就没有人登录着，
+  密钥一清，登出、会话过期被带到登录页之后按后退，拿不回上一个人的页面（收藏页的列表就在 props 里，R-10.8）。
 - 搜索与点击上报用 Rails 8 的 `rate_limit`（每用户每分钟 60 次，R-4.10）；登录回调不是——它在 OmniAuth 之前的 Rack 中间件里（见下条）。〔采用〕
 - `Rails.error.set_context(user_id:)` 往错误上下文里加 user id（`Authentication#find_session_by_cookie` 续上会话时调）；`allow_browser versions: :modern`；
   CSP 用 nonce（Inertia 的 script 需要 nonce），来源列表可由环境变量覆盖。〔采用自 fizzy `error_context.rb`、`content_security_policy.rb`〕
@@ -121,7 +137,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 
 Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hotwire / importmap。〔不采用其前端〕
 仍然适用的：控制器是 CRUD 资源、动作只做一件事并渲染一个 Inertia 页面；props 是前后端唯一契约，必须有类型；
-首屏资源不超过 300 KB（N-1）；颜色、字体、字号只从设计 skill 的令牌取。字体是首屏的大头：霞鹜文楷的 npm 包按字频切成 97 片，界面固定文案的字另外按读者首屏、读者其余页、后台合成三个小子集（`script/subset_fonts` 生成字体与 `app/frontend/styles/fonts-subset.css`，声明在包之后，unicode-range 重叠时先用子集），Maple Mono 与 Bodoni 也只留用得到的字形。界面文案新加了汉字就重跑一次（`--check` 列出没收进来的字）；漏收不会缺字，只是回落到包的分片、首屏多下载一片。
+首屏资源不超过 300 KB（N-1，`script/first_screen_size` 读生产构建的清单来量，`bin/ci` 里有一步守着）；颜色、字体、字号只从设计 skill 的令牌取。字体是首屏的大头：霞鹜文楷的 npm 包按字频切成 97 片，界面固定文案的字另外按读者首屏、读者其余页、后台合成三个小子集（`script/subset_fonts` 生成字体与 `app/frontend/styles/fonts-subset.css`，声明在包之后，unicode-range 重叠时先用子集），Maple Mono 与 Bodoni 也只留用得到的字形。界面文案新加了汉字就重跑一次（`--check` 列出没收进来的字）；漏收不会缺字，只是回落到包的分片、首屏多下载一片。
 
 ## 数据库与迁移
 
@@ -135,7 +151,7 @@ Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hot
 
 - Minitest + fixtures（`fixtures :all`，并行 worker），`bin/rails test` 做快速循环。〔采用〕
 - `bin/ci` 是完整门禁，用 `ActiveSupport::ContinuousIntegration` 按 `config/ci.rb` 依次跑：setup、rubocop（rubocop-rails-omakase）、
-  前端类型检查、前端单元测试、前端依赖审计、前端构建、bundler-audit、brakeman、gitleaks、test 模式的 Vite 构建、Rails 测试、
+  前端类型检查、前端单元测试、前端依赖审计、前端构建、首屏预算、bundler-audit、brakeman、gitleaks、test 模式的 Vite 构建、Rails 测试、
   系统测试、种子数据（`db:seed:replant`）。全绿才能合并与部署；每步的命令见 `docs/development.md`「测试与 CI」。〔采用〕
 - 测试辅助放 `test/test_helpers/`，例如 `sign_in_as`；时间敏感的测试用 `travel_to` 卡在 05:59 / 06:00 / 06:20 边界；不碰网络。
 - 前端单元测试（Vitest + Testing Library，jsdom）里，`getByRole` 的 `name` 落在 `Mixed` / `HitText` 拆出的多段 `<span>` 上时

@@ -1,6 +1,16 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  # R-10.11：注销（F-22）落地时删用户即可，收藏跟着走；数据库外键也是级联的
+  test "用户删除时收藏一并删除" do
+    Favorite.keep(users(:guest), items(:hn_one))
+    Favorite.keep(users(:drew), items(:hn_one))
+
+    users(:guest).destroy!
+
+    assert_equal [ users(:drew).id ], Favorite.pluck(:user_id)
+  end
+
   test "fixture 的角色" do
     assert users(:drew).admin?
     assert_not users(:guest).admin?
@@ -49,7 +59,7 @@ class UserTest < ActiveSupport::TestCase
     assert_nil nomail[:last_login_label]
   end
 
-  # 注销（R-5.11、D26）就是 destroy：登录身份与全部会话跟着删；写过的审计记录留着、操作者置空；期与条目不碰
+  # 注销（R-5.11、D33）就是 destroy：登录身份与全部会话跟着删；写过的审计记录留着、操作者置空；期与条目不碰
   test "destroy 连带登录身份与会话，审计记录留着、操作者置空" do
     drew = users(:drew)
     drew.auth_identities.create!(provider: "github", provider_uid: "github-drew", email: "drew@example.com", email_verified: true, linked_at: Time.current)

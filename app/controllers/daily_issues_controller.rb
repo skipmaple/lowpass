@@ -24,6 +24,7 @@ class DailyIssuesController < ApplicationController
         missing: issue.nil?,
         sources: sources,
         items_by_source: issue&.items_by_source || {},
+        favorites: issue ? favorite_hashes(issue.items.visible.select(:url_hash)) : [],
         active_source_id: params[:source].presence_in(sources.pluck(:id)) || sources.dig(0, :id),
         latest_weekly_key: Issue.latest_weekly_key,
         latest_daily_key: Issue.latest_daily_key,

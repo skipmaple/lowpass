@@ -56,6 +56,7 @@ class SearchesController < ApplicationController
         date_presets: date_presets,
         state: state,
         results: results_props(query, result),
+        favorites: result ? favorite_hashes(result.entries.map { |entry| entry.record.item.url_hash }) : [],
         total: result&.total || 0,
         page: query.page,
         pages: result&.pages || 0,
@@ -90,6 +91,7 @@ class SearchesController < ApplicationController
       item = record.item
       {
         item_id: item.id,
+        url_hash: item.url_hash,
         rank: entry.rank,
         publication: record.publication,
         source_name: item.source.name,

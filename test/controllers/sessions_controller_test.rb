@@ -28,6 +28,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[google_oauth2 github], page_props["providers"]
     assert_equal "/weekly", page_props["next"]
     assert_nil page_props["current_user"]
+    # 到了登录页就没有人登录着：清掉 Inertia 加密历史的密钥，后退拿不回上一个人的页面（R-10.8）
+    assert page["clearHistory"]
   end
 
   test "登录页的 next 是站外地址时当没有" do

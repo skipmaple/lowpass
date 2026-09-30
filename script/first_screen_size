@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+# 首屏资源有多大（PRD N-1：不超过 300 KB）。先 npm run build，再跑这个脚本；超出预算以 1 退出。
+# 这里的 KB 都按 1024 字节算（KiB）。
+#
+# 首屏 = 打开 /daily/<周期键> 时浏览器必须下载的东西：
+#   - JS：入口 entrypoints/application.tsx、日刊页 pages/Daily/Show.tsx，以及它们静态 import 的分片（按 gzip 后算）
+#   - CSS：entrypoints/application.css（按 gzip 后算）
+#   - 字体：文楷界面子集（布局里 preload 的只有它）、Maple Mono 子集、Newsreader 拉丁分片（这两个经 @font-face 在用到时下载，
+#     日刊页首屏都用得到）；woff2 本身已压缩，按原大小算
+# 正文与推荐理由里的汉字按需下载的文楷分片不算：那是内容，不是界面。报头的 Bodoni 已经内联进 CSS。
+require "json"
+require "zlib"
+
+BUILD = File.expand_path("../public/vite", __dir__)
+BUDGET_KB = 300
+ENTRIES = %w[ entrypoints/application.tsx pages/Daily/Show.tsx ].freeze
+STYLES = %w[ entrypoints/application.css ].freeze
+FONTS = %w[
+  fonts/lxgw-wenkai-screen-ui.woff2
+  fonts/maple-mono-nl.woff2
+  ../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2
+].freeze
+
+manifest = JSON.parse(File.read(File.join(BUILD, ".vite/manifest.json")))
+
+# 一个入口加上它静态 import 的分片；动态 import（别的页面）不算
+collect = lambda do |key, found|
+  chunk = manifest.fetch(key)
+  unless found.include?(chunk["file"])
+    found << chunk["file"]
+    chunk.fetch("imports", []).each { |imported| collect.call(imported, found) }
+  end
+  found
+end
+
+gzipped = ->(name) { Zlib.gzip(File.binread(File.join(BUILD, name)), level: Zlib::BEST_COMPRESSION).bytesize }
+raw = ->(name) { File.size(File.join(BUILD, name)) }
+
+scripts = ENTRIES.each_with_object([]) { |entry, found| collect.call(entry, found) }.sort
+rows = scripts.map { |name| [ "JS #{name}", gzipped.call(name) ] }
+rows += STYLES.map { |key| manifest.fetch(key)["file"] }.map { |name| [ "CSS #{name}", gzipped.call(name) ] }
+rows += FONTS.map { |key| manifest.fetch(key)["file"] }.map { |name| [ "字体 #{name}", raw.call(name) ] }
+
+rows.each { |label, size| puts format("%8.2f KB  %s", size / 1024.0, label) }
+total = rows.sum { |_, size| size } / 1024.0
+puts format("%8.2f KB  合计（预算 %d KB）", total, BUDGET_KB)
+exit(total <= BUDGET_KB ? 0 : 1)

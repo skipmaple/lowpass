@@ -62,20 +62,11 @@ class SearchingTest < ApplicationSystemTestCase
 
       click_on "原文"
 
-      Timeout.timeout(5) { sleep 0.1 until Search::Click.count == 1 }
+      wait_until { Search::Click.count == 1 }
       click = Search::Click.sole
       assert_equal items(:hn_one), click.item
       assert_equal 1, click.rank
       assert_equal "terminal", click.query
     end
   end
-
-  private
-    def with_forgery_protection
-      was = ActionController::Base.allow_forgery_protection
-      ActionController::Base.allow_forgery_protection = true
-      yield
-    ensure
-      ActionController::Base.allow_forgery_protection = was
-    end
 end

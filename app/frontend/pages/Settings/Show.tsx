@@ -65,7 +65,7 @@ function IdentityRow({ identity }: { identity: SettingsIdentity }) {
   )
 }
 
-// 注销（R-5.11、D26，附录 B）：一行说删什么，「注销」打开确认框，确认才发 DELETE /user。确认框里给出要注销的
+// 注销（R-5.11、D33，附录 B）：一行说删什么，「注销」打开确认框，确认才发 DELETE /user。确认框里给出要注销的
 // 是哪个账号（邮箱，没有就是显示名）：邮箱不同的登录方式会是两个账号（R-5.3）。成功时服务端跳到登录页，
 // 这一页随之卸下；没跳走就是没删成，确认框留着并说一句
 function DeleteAccountRow({ user }: { user: SettingsShowProps['user'] }) {

@@ -80,7 +80,7 @@ describe('Settings/Show', () => {
     expect(router.delete).toHaveBeenCalledWith('/session')
   })
 
-  // 注销（R-5.11、AC-5.8、AC-5.9、D26）：一行说删什么；「注销」只开确认框，确认才发 DELETE /user
+  // 注销（R-5.11、AC-5.8、AC-5.9、D33）：一行说删什么；「注销」只开确认框，确认才发 DELETE /user
   describe('注销账号', () => {
     it('一行说删什么，「注销」打开确认框，框里是要注销的账号', async () => {
       show()

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>收藏界面稿 · Lowpass</title>
+  <!--
+    收藏（PRD 5.10）的界面稿，2026-09-30。样式直接用线上的 tokens.css 与真实字体，稿子里新增的只有
+    <style id="proposed"> 那一块——实现时原样搬进 app/frontend/styles/tokens.css 的末尾。
+    看法：在装过依赖（npm ci）的仓库根目录跑 python3 -m http.server 8767，打开
+    http://localhost:8767/docs/design/notes/2026-09-30-favorites-mock.html ；把窗口收窄到 375px 看手机版。
+  -->
+  <link rel="stylesheet" href="/node_modules/@fontsource-variable/newsreader/index.css">
+  <link rel="stylesheet" href="/node_modules/@fontsource-variable/bodoni-moda/index.css">
+  <link rel="stylesheet" href="/node_modules/lxgw-wenkai-screen-webfont/lxgwwenkaiscreen.css">
+  <style>
+    @font-face { font-family: "Maple Mono NL"; src: url("/vendor/fonts/MapleMonoNL-Regular.woff2") format("woff2"); font-weight: 400; }
+    /* 线上由 Tailwind 的 preflight 做的那几条重置 */
+    *, ::before, ::after { box-sizing: border-box; border: 0 solid; }
+    h1, h2, h3, h4, p { margin: 0; font-size: inherit; font-weight: inherit; }
+    button { font: inherit; color: inherit; background: transparent; padding: 0; }
+  </style>
+  <link rel="stylesheet" href="/app/frontend/styles/tokens.css">
+
+  <style id="proposed">
+    /* ─── 收藏（P4，PRD 5.10、6.3）──────────────────────────────────────────
+       界面稿：docs/design/notes/2026-09-30-favorites-mock.html。
+       书签：44px 见方的独立目标（PRD 6.4），描线是未收藏、实心是已收藏——两态靠形状分，不靠颜色（D30）。
+       条目行里它在行末另占一列；手机上与序号同一行、靠右，不挤标题。搜索结果与收藏页的行里它在底行右端。
+       18px 的图标居中在 44px 的目标里，两边各空 13px：右边距收回 13px，图标的右缘才跟正文右缘、分页按钮对齐。 */
+    .favorite-button { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin-right: -13px;
+                       border: 0; background: none; color: var(--ink2); cursor: pointer; }
+    .favorite-button:hover, .favorite-button[data-on] { color: var(--ink); }
+    .favorite-button[data-on] svg, .favorite-button[data-on] svg path { fill: currentColor; }
+    .favorite-button:focus-visible { outline: 2px solid var(--ink); outline-offset: -6px; }
+    .item-row { grid-template-columns: 28px minmax(0, 1fr) 31px; grid-template-areas: "rank body mark"; }
+    .item-mark { grid-area: mark; margin-top: -8px; }
+    .search-mark { margin-left: auto; }
+    /* 收藏页上取消的那一行：原地留一句状态与「恢复」（R-10.7） */
+    .favorite-removed { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+    @media (max-width: 767px) {
+      .item-row { grid-template-columns: minmax(0, 1fr) 31px; grid-template-areas: "rank mark" "body body"; align-items: center; }
+      .item-mark { margin-top: -12px; margin-bottom: -12px; }
+    }
+    @media (min-width: 1920px) {
+      .item-row { grid-template-columns: 32px minmax(0, 1fr) 31px; }
+    }
+  </style>
+
+  <style>
+    /* 只属于这张稿子的标注，不进产品 */
+    .mock-note { margin: 56px 0 0 0; padding: 8px 0; border-top: 1px dashed var(--rule); font-family: var(--font-data); font-size: var(--fs-12); color: var(--ink2); letter-spacing: 0.04em; }
+    .mock-note b { font-family: var(--font-cjk); font-size: var(--fs-13); font-weight: 400; color: var(--ink); }
+    .mock-menu-room { height: 250px; }
+    .c { font-family: var(--font-cjk); }
+    .l { font-family: var(--font-latin); font-weight: 500; }
+    .d { font-family: var(--font-data); }
+  </style>
+</head>
+<body>
+<div class="paper sheet">
+
+  <!-- ① 入口：头像菜单里的「收藏」（D29），报头其余部分不变 -->
+  <header class="masthead">
+    <div class="masthead-left">
+      <a href="#" class="masthead-brand">lowpass</a>
+      <nav class="masthead-nav">
+        <a href="#" aria-current="page" style="font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--paper); line-height: 1; padding-bottom: 2px; white-space: nowrap;">日刊</a>
+        <a href="#" style="font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--paper); line-height: 1; padding-bottom: 2px; white-space: nowrap; opacity: 0.72;">周刊</a>
+      </nav>
+    </div>
+    <div class="masthead-actions">
+      <a href="#" aria-label="搜索" style="display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; color: var(--paper);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+      </a>
+      <div class="account">
+        <button type="button" class="account-button" aria-label="账户" aria-expanded="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+        <div class="menu-card" role="menu">
+          <div class="menu-head" role="none"><span class="d" style="font-size: var(--fs-12); color: var(--ink2);">drew@example.com</span></div>
+          <a role="menuitem" class="menu-item" href="#">账户信息</a>
+          <a role="menuitem" class="menu-item" href="#">收藏</a>
+          <a role="menuitem" class="menu-item" href="#">管理</a>
+          <button type="button" role="menuitem" class="menu-item">登出</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="sheet-body">
+    <main>
+      <div class="mock-menu-room"></div>
+      <p class="mock-note" style="margin-top: 0;"><b>① 入口</b> · 头像菜单第二项「收藏」，报头不变（D29）</p>
+
+      <!-- ② 日刊条目 -->
+      <p class="mock-note"><b>② 日刊条目</b> · 书签在行末另占一列；手机上与序号同一行、靠右。第 1、3 条未收藏（描线），第 2 条已收藏（实心）</p>
+      <div class="issue-body">
+
+        <article class="item-row">
+          <span class="item-rank">1</span>
+          <div class="item-body">
+            <div class="item-heading item-heading--tagged">
+              <h2 class="item-title"><a class="t" href="#" lang="en">Show HN: A terminal log viewer written in Rust</a></h2>
+              <div class="item-tag"><span class="chip-outline item-interest-chip"><span class="c" style="font-size: var(--fs-12); color: var(--ink2);">开发者效率</span></span></div>
+            </div>
+            <p class="item-translation">Show HN：一个用 <span class="l" style="font-weight: 400;">Rust</span> 写的终端日志查看器</p>
+            <span class="item-meta">
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg><span>312</span></span>
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>145</span></span>
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>5h</span></span>
+            </span>
+            <div class="item-reason">开发者效率：终端里直接筛日志的小工具，和你常用的 CLI 工作流贴得很近。</div>
+          </div>
+          <button type="button" class="favorite-button item-mark" aria-label="收藏：Show HN: A terminal log viewer written in Rust">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+          </button>
+        </article>
+
+        <article class="item-row">
+          <span class="item-rank">2</span>
+          <div class="item-body">
+            <div class="item-heading item-heading--tagged">
+              <h2 class="item-title"><a class="t" href="#" lang="en">astral-sh/ruff</a></h2>
+              <div class="item-tag"><span class="chip-outline item-interest-chip"><span class="c" style="font-size: var(--fs-12); color: var(--ink2);">后端开发</span></span></div>
+            </div>
+            <span class="item-summary" lang="en">An extremely fast Python linter and code formatter, written in Rust.</span>
+            <p class="item-translation">一个用 <span class="l" style="font-weight: 400;">Rust</span> 写的极快的 <span class="l" style="font-weight: 400;">Python</span> 代码检查与格式化工具。</p>
+            <span class="item-meta">
+              <span class="d" style="font-size: var(--fs-13); color: var(--ink2);">Rust</span>
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg><span>38.2k</span></span>
+              <span class="d" style="font-size: var(--fs-12); background: var(--green); color: var(--ink); padding: 2px 7px; white-space: nowrap;">+420</span>
+            </span>
+            <div class="item-reason">后端开发：<span class="l" style="font-weight: 400;">Python</span> 项目的检查与格式化一步到位，值得在现有 <span class="l" style="font-weight: 400;">CI</span> 里试一次。</div>
+          </div>
+          <button type="button" class="favorite-button item-mark" data-on aria-label="取消收藏：astral-sh/ruff">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+          </button>
+        </article>
+
+        <article class="item-row">
+          <span class="item-rank">3</span>
+          <div class="item-body">
+            <div class="item-heading">
+              <h2 class="item-title"><a class="t" href="#" lang="en">Ask HN: What is the most underrated tool in your daily workflow, and why did it take you so long to find it?</a></h2>
+            </div>
+            <p class="item-translation">Ask HN：你日常工作流里最被低估的工具是什么？为什么这么晚才发现它？</p>
+            <span class="item-meta">
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg><span>97</span></span>
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>212</span></span>
+              <span class="item-metric"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>9h</span></span>
+            </span>
+          </div>
+          <button type="button" class="favorite-button item-mark" aria-label="收藏：Ask HN">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+          </button>
+        </article>
+      </div>
+
+      <!-- ③ 周刊条目 -->
+      <p class="mock-note"><b>③ 周刊条目</b> · 同一个位置；这一条已收藏</p>
+      <h3 class="weekly-section-head">工具</h3>
+      <article class="item-row">
+        <span class="item-rank">1</span>
+        <div class="item-body">
+          <div class="item-heading">
+            <h4 class="item-title"><a class="t" href="#" lang="en">Zed</a></h4>
+          </div>
+          <div class="item-content item-content--weekly">
+            <p class="c" style="font-size: var(--fs-15); color: var(--ink2); line-height: 1.8;">一个用 <span class="l" style="font-weight: 500;">Rust</span> 写的代码编辑器，启动与滚动都很快，新版本加入了多人协作与内置的 <span class="l" style="font-weight: 500;">AI</span> 补全。</p>
+          </div>
+        </div>
+        <button type="button" class="favorite-button item-mark" data-on aria-label="取消收藏：Zed">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+        </button>
+      </article>
+
+      <!-- ④ 搜索结果行 -->
+      <p class="mock-note"><b>④ 搜索结果行</b> · 书签在底行右端，与「所在期」「原文」同一行</p>
+      <div class="search-results">
+        <article class="search-row">
+          <div class="search-eyebrow">
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; background: var(--ink); letter-spacing: 0.06em;"><span class="c" style="font-size: var(--fs-12); color: var(--paper);">日刊</span></span>
+            <span class="l" style="font-size: var(--fs-13); color: var(--ink2);">Hacker News</span>
+            <span class="search-dot">·</span>
+            <span class="c" style="font-size: var(--fs-13); color: var(--ink2);">2026年9月8日</span>
+          </div>
+          <h2 class="search-title"><a class="t" href="#" lang="en"><span class="hit"><span class="l" style="font-size: var(--fs-20);">Kuber</span></span><span class="l" style="font-size: var(--fs-20);">netes operator in </span><span class="hit"><span class="l" style="font-size: var(--fs-20);">Rust</span></span></a></h2>
+          <p class="search-snippet" lang="en"><span class="l" style="font-size: var(--fs-15); color: var(--ink2);">Build a Kubernetes operator with the Rust SDK, from the reconcile loop to packaging.</span></p>
+          <div class="search-links">
+            <a class="t" href="#"><span class="c" style="font-size: var(--fs-13);">所在期 · 2026年9月8日</span></a>
+            <a class="search-original" href="#"><span>原文</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+            <button type="button" class="favorite-button search-mark" aria-label="收藏：Kubernetes operator in Rust">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <!-- ⑤ 收藏页 -->
+      <p class="mock-note"><b>⑤ 收藏页</b> · 行沿用搜索结果行；第 3 行刚取消，原地留「已取消收藏」与「恢复」（R-10.7）</p>
+      <header class="page-head">
+        <div class="issue-head-main">
+          <div class="issue-head-title">
+            <h1 class="issue-head-date">收藏</h1>
+          </div>
+        </div>
+      </header>
+      <div class="search-results">
+
+        <article class="search-row">
+          <div class="search-eyebrow">
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; background: var(--ink); letter-spacing: 0.06em;"><span class="c" style="font-size: var(--fs-12); color: var(--paper);">日刊</span></span>
+            <span class="l" style="font-size: var(--fs-13); color: var(--ink2);">GitHub Trending</span>
+            <span class="search-dot">·</span>
+            <span class="c" style="font-size: var(--fs-13); color: var(--ink2);">2026年9月29日</span>
+          </div>
+          <h2 class="search-title"><a class="t" href="#" lang="en"><span class="l" style="font-size: var(--fs-20);">astral-sh/ruff</span></a></h2>
+          <p class="search-snippet" lang="en"><span class="l" style="font-size: var(--fs-15); color: var(--ink2);">An extremely fast Python linter and code formatter, written in Rust.</span></p>
+          <p class="item-translation">一个用 <span class="l" style="font-weight: 400;">Rust</span> 写的极快的 <span class="l" style="font-weight: 400;">Python</span> 代码检查与格式化工具。</p>
+          <div class="search-links">
+            <a class="t" href="#"><span class="c" style="font-size: var(--fs-13);">所在期 · 2026年9月29日</span></a>
+            <a class="search-original" href="#"><span>原文</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+            <button type="button" class="favorite-button search-mark" data-on aria-label="取消收藏：astral-sh/ruff">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="search-row">
+          <div class="search-eyebrow">
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; background: var(--ink); letter-spacing: 0.06em;"><span class="c" style="font-size: var(--fs-12); color: var(--paper);">周刊</span></span>
+            <span class="c" style="font-size: var(--fs-13); color: var(--ink2);">阮一峰科技爱好者周刊</span>
+            <span class="search-dot">·</span>
+            <span class="c" style="font-size: var(--fs-13); color: var(--ink2);">2026年 · 第 39 周 · 工具</span>
+          </div>
+          <h2 class="search-title"><a class="t" href="#" lang="en"><span class="l" style="font-size: var(--fs-20);">Zed</span></a></h2>
+          <p class="search-snippet"><span class="c" style="font-size: var(--fs-15); color: var(--ink2);">一个用 </span><span class="l" style="font-size: var(--fs-15); color: var(--ink2);">Rust</span><span class="c" style="font-size: var(--fs-15); color: var(--ink2);"> 写的代码编辑器，启动与滚动都很快，新版本加入了多人协作与内置的 </span><span class="l" style="font-size: var(--fs-15); color: var(--ink2);">AI</span><span class="c" style="font-size: var(--fs-15); color: var(--ink2);"> 补全。</span></p>
+          <div class="search-links">
+            <a class="t" href="#"><span class="c" style="font-size: var(--fs-13);">所在期 · 2026年 · 第 39 周 · 工具</span></a>
+            <a class="search-original" href="#"><span>原文</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+            <button type="button" class="favorite-button search-mark" data-on aria-label="取消收藏：Zed">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="search-row">
+          <div class="search-eyebrow">
+            <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; background: var(--ink); letter-spacing: 0.06em;"><span class="c" style="font-size: var(--fs-12); color: var(--paper);">日刊</span></span>
+            <span class="l" style="font-size: var(--fs-13); color: var(--ink2);">Hacker News</span>
+            <span class="search-dot">·</span>
+            <span class="c" style="font-size: var(--fs-13); color: var(--ink2);">2026年9月27日</span>
+          </div>
+          <h2 class="search-title"><a class="t" href="#" lang="en"><span class="l" style="font-size: var(--fs-20); color: var(--ink2);">Show HN: A terminal log viewer written in Rust</span></a></h2>
+          <p class="item-translation">Show HN：一个用 <span class="l" style="font-weight: 400;">Rust</span> 写的终端日志查看器</p>
+          <div class="search-links">
+            <a class="t" href="#"><span class="c" style="font-size: var(--fs-13);">所在期 · 2026年9月27日</span></a>
+            <a class="search-original" href="#"><span>原文</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+            <span class="favorite-removed search-mark"><span id="removed-note">已取消收藏</span><button type="button" class="link-button" aria-describedby="removed-note">恢复</button></span>
+          </div>
+        </article>
+      </div>
+      <nav class="search-pager" aria-label="分页">
+        <span class="ctrl ctrl-off" role="link" aria-disabled="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg><span>上一页</span></span>
+        <span class="search-page">1 / 3</span>
+        <a class="ctrl" href="#"><span>下一页</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></a>
+      </nav>
+
+      <!-- ⑥ 空态 -->
+      <p class="mock-note"><b>⑥ 收藏页空态</b> · 一句原因加一个动作（附录 B）</p>
+      <header class="page-head">
+        <div class="issue-head-main">
+          <div class="issue-head-title">
+            <h1 class="issue-head-date">收藏</h1>
+          </div>
+        </div>
+      </header>
+      <div class="issue-body">
+        <div class="source-state">
+          <span class="state-line">还没有收藏。</span>
+          <div><a class="ctrl" href="#">阅读最新日刊</a></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

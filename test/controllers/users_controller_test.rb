@@ -1,6 +1,6 @@
 require "test_helper"
 
-# 注销（R-5.11、AC-5.8、AC-5.10、D26）：DELETE /user 删掉当前用户，回登录页
+# 注销（R-5.11、AC-5.8、AC-5.10、D33）：DELETE /user 删掉当前用户，回登录页
 class UsersControllerTest < ActionDispatch::IntegrationTest
   test "AC-5.8 注销：删掉用户、两个登录身份与全部会话，回登录页并提示；另一台设备下次访问跳登录页" do
     drew = users(:drew)
@@ -26,7 +26,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     other_device.assert_redirected_to login_path(next: "/settings")
   end
 
-  test "AC-5.10 注销后用同一个 Google 账号再登录：建新用户，白名单不变仍是管理员（D26）" do
+  test "AC-5.10 注销后用同一个 Google 账号再登录：建新用户，白名单不变仍是管理员（D33）" do
     drew = users(:drew)
     auth = identity_auth(auth_identities(:drew_google))
     sign_in_as(drew)

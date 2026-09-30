@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -34,12 +34,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.index ["created_at"], name: "index_alert_events_on_created_at"
     t.index ["dedup_key"], name: "index_alert_events_on_dedup_key", unique: true
     t.index ["kind", "source_id", "recovered_at"], name: "index_alert_events_on_kind_and_source_id_and_recovered_at"
-    t.check_constraint "kind::text = ANY (ARRAY['source_failed'::character varying::text, 'parse_degraded'::character varying::text, 'issue_empty'::character varying::text, 'issue_late'::character varying::text, 'search_unavailable'::character varying::text, 'backup_failed'::character varying::text, 'reasons_missing'::character varying::text, 'test'::character varying::text])", name: "alert_events_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['source_failed'::character varying, 'parse_degraded'::character varying, 'issue_empty'::character varying, 'issue_late'::character varying, 'search_unavailable'::character varying, 'backup_failed'::character varying, 'reasons_missing'::character varying, 'test'::character varying]::text[])", name: "alert_events_kind"
     t.check_constraint "length(dedup_key::text) <= 120", name: "alert_events_dedup_key_len"
     t.check_constraint "length(delivery_error::text) <= 200", name: "alert_events_delivery_error_len"
     t.check_constraint "length(summary::text) <= 200", name: "alert_events_summary_len"
     t.check_constraint "length(url_path::text) <= 200", name: "alert_events_url_path_len"
-    t.check_constraint "level::text = ANY (ARRAY['warning'::character varying::text, 'critical'::character varying::text, 'info'::character varying::text])", name: "alert_events_level"
+    t.check_constraint "level::text = ANY (ARRAY['warning'::character varying, 'critical'::character varying, 'info'::character varying]::text[])", name: "alert_events_level"
   end
 
   create_table "audit_logs", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -68,7 +68,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.index ["user_id"], name: "index_auth_identities_on_user_id"
     t.check_constraint "length(email::text) <= 254", name: "auth_identities_email_len"
     t.check_constraint "length(provider_uid::text) <= 255", name: "auth_identities_provider_uid_len"
-    t.check_constraint "provider::text = ANY (ARRAY['google'::character varying::text, 'github'::character varying::text, 'developer'::character varying::text])", name: "auth_identities_provider"
+    t.check_constraint "provider::text = ANY (ARRAY['google'::character varying, 'github'::character varying, 'developer'::character varying]::text[])", name: "auth_identities_provider"
   end
 
   create_table "backup_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -86,8 +86,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.index ["created_at"], name: "index_backup_runs_on_created_at"
     t.check_constraint "length(error_summary::text) <= 200", name: "backup_runs_error_summary_len"
     t.check_constraint "length(object_key::text) <= 255", name: "backup_runs_object_key_len"
-    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'running'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text])", name: "backup_runs_status"
-    t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying::text, 'manual'::character varying::text])", name: "backup_runs_trigger"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'failed'::character varying]::text[])", name: "backup_runs_status"
+    t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying, 'manual'::character varying]::text[])", name: "backup_runs_trigger"
+  end
+
+  create_table "favorites", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "anchor", limit: 120
+    t.datetime "created_at", null: false
+    t.string "period_key", limit: 10, null: false
+    t.string "publication", limit: 10, null: false
+    t.string "section", limit: 100
+    t.string "source_id", limit: 25, null: false
+    t.string "summary", limit: 500
+    t.string "summary_zh", limit: 500
+    t.string "title", limit: 300, null: false
+    t.string "title_zh", limit: 300
+    t.string "url", limit: 2048, null: false
+    t.string "url_hash", limit: 64, null: false
+    t.string "user_id", limit: 25, null: false
+    t.index ["user_id", "created_at"], name: "index_favorites_on_user_id_and_created_at"
+    t.index ["user_id", "url_hash"], name: "index_favorites_on_user_id_and_url_hash", unique: true
+    t.check_constraint "length(anchor::text) <= 120", name: "favorites_anchor_len"
+    t.check_constraint "length(section::text) <= 100", name: "favorites_section_len"
+    t.check_constraint "length(summary::text) <= 500", name: "favorites_summary_len"
+    t.check_constraint "length(summary_zh::text) <= 500", name: "favorites_summary_zh_len"
+    t.check_constraint "length(title::text) <= 300", name: "favorites_title_len"
+    t.check_constraint "length(title_zh::text) <= 300", name: "favorites_title_zh_len"
+    t.check_constraint "length(url::text) <= 2048", name: "favorites_url_len"
+    t.check_constraint "length(url_hash::text) = 64", name: "favorites_url_hash_len"
+    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "favorites_publication"
   end
 
   create_table "fetch_runs", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -105,8 +132,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.datetime "updated_at", null: false
     t.index ["issue_id"], name: "index_fetch_runs_on_issue_id"
     t.index ["source_id", "created_at"], name: "index_fetch_runs_on_source_id_and_created_at"
-    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'running'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text])", name: "fetch_runs_status"
-    t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying::text, 'manual'::character varying::text, 'test'::character varying::text])", name: "fetch_runs_trigger"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'timed_out'::character varying]::text[])", name: "fetch_runs_status"
+    t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying, 'manual'::character varying, 'test'::character varying]::text[])", name: "fetch_runs_trigger"
   end
 
   create_table "interest_areas", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -133,8 +160,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.string "state", limit: 12, default: "generating", null: false
     t.datetime "updated_at", null: false
     t.index ["kind", "period_key"], name: "index_issues_on_kind_and_period_key", unique: true
-    t.check_constraint "kind::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "issues_kind"
-    t.check_constraint "state::text = ANY (ARRAY['generating'::character varying::text, 'published'::character varying::text, 'empty'::character varying::text])", name: "issues_state"
+    t.check_constraint "kind::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "issues_kind"
+    t.check_constraint "state::text = ANY (ARRAY['generating'::character varying, 'published'::character varying, 'empty'::character varying]::text[])", name: "issues_state"
   end
 
   create_table "items", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -183,7 +210,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.index ["created_at"], name: "index_model_calls_on_created_at"
     t.index ["issue_id"], name: "index_model_calls_on_issue_id"
     t.check_constraint "length(error_summary::text) <= 200", name: "model_calls_error_summary_len"
-    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text, 'invalid'::character varying::text])", name: "model_calls_status"
+    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying, 'failed'::character varying, 'timed_out'::character varying, 'invalid'::character varying]::text[])", name: "model_calls_status"
   end
 
   create_table "search_clicks", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -234,7 +261,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.check_constraint "length(source_name::text) <= 100", name: "search_records_source_name_len"
     t.check_constraint "length(summary::text) <= 500", name: "search_records_summary_len"
     t.check_constraint "length(title::text) <= 300", name: "search_records_title_len"
-    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "search_records_publication"
+    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "search_records_publication"
   end
 
   create_table "sessions", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -289,8 +316,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.datetime "updated_at", null: false
     t.index "publication, ((config ->> 'feed_url'::text))", name: "index_sources_on_publication_and_feed_url", unique: true, where: "((adapter)::text = 'rss'::text)"
     t.index ["name"], name: "index_sources_on_name", unique: true
-    t.check_constraint "adapter::text = ANY (ARRAY['hacker_news'::character varying::text, 'github_trending'::character varying::text, 'rss'::character varying::text, 'ruanyf_weekly'::character varying::text])", name: "sources_adapter"
-    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "sources_publication"
+    t.check_constraint "adapter::text = ANY (ARRAY['hacker_news'::character varying, 'github_trending'::character varying, 'rss'::character varying, 'ruanyf_weekly'::character varying]::text[])", name: "sources_adapter"
+    t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying]::text[])", name: "sources_publication"
   end
 
   create_table "users", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -304,13 +331,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.check_constraint "length(avatar_url::text) <= 2048", name: "users_avatar_url_len"
     t.check_constraint "length(display_name::text) <= 100", name: "users_display_name_len"
     t.check_constraint "length(email::text) <= 254", name: "users_email_len"
-    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying::text, 'member'::character varying::text])", name: "users_role"
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'member'::character varying]::text[])", name: "users_role"
   end
 
   add_foreign_key "alert_events", "issues", on_delete: :nullify
   add_foreign_key "alert_events", "sources", on_delete: :nullify
   add_foreign_key "audit_logs", "users", on_delete: :nullify
   add_foreign_key "auth_identities", "users", on_delete: :cascade
+  add_foreign_key "favorites", "sources"
+  add_foreign_key "favorites", "users", on_delete: :cascade
   add_foreign_key "fetch_runs", "issues"
   add_foreign_key "fetch_runs", "sources"
   add_foreign_key "items", "issues"

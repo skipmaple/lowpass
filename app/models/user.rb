@@ -5,6 +5,8 @@ class User < ApplicationRecord
 
   has_many :auth_identities, dependent: :destroy
   has_many :sessions, dependent: :destroy
+  # 收藏是个人数据（N-4）：人没了收藏一起没（R-10.11）；一条语句删完，不逐条回调
+  has_many :favorites, dependent: :delete_all
 
   validates :display_name, presence: true, length: { maximum: 100 }
   validates :email, length: { maximum: 254 }, allow_nil: true

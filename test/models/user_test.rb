@@ -1,6 +1,16 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  # R-10.11：注销（F-22）落地时删用户即可，收藏跟着走；数据库外键也是级联的
+  test "用户删除时收藏一并删除" do
+    Favorite.keep(users(:guest), items(:hn_one))
+    Favorite.keep(users(:drew), items(:hn_one))
+
+    users(:guest).destroy!
+
+    assert_equal [ users(:drew).id ], Favorite.pluck(:user_id)
+  end
+
   test "fixture 的角色" do
     assert users(:drew).admin?
     assert_not users(:guest).admin?

@@ -37,7 +37,11 @@ module Adapters
            .each_with_index.map { |e, i| e.rank = i + 1; e }
       end
 
+      # rss 的 Parser.parse 只把含 < 的字符串当 XML，其余当成地址（open-uri）或本地文件路径去读：
+      # 源站回一行地址就能让服务器绕过 surfguard 再请求一次。源站的正文只当 XML 解析，没有 < 就不是 feed
       def parse_feed(body)
+        raise ParseError, "not a feed" unless body.include?("<")
+
         feed = ::RSS::Parser.parse(body, false)
         raise ParseError, "not a feed" if feed.nil?
         feed

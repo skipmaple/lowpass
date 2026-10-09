@@ -32,6 +32,8 @@ body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: 
   background-color: var(--paper);
   background-image: repeating-linear-gradient(0deg, rgba(29,29,27,0.012) 0 1px, transparent 1px 3px),
                     repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px);
+  /* 固定纸纹周期并从左上角平铺，避免长周刊的整页渐变改变纹理相位或渲染精度。 */
+  background-size: 4px 3px;
 }
 .cjk { font-family: var(--font-cjk); }
 .data { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }

@@ -337,4 +337,15 @@ describe('打印（D34）', () => {
     act(() => { window.dispatchEvent(new Event('beforeprint')) })
     expect(screen.getAllByText('生成中，约 1 分钟后刷新')).toHaveLength(1)
   })
+
+  // 自查第 1 轮：页面一打开就已经是打印媒体（无头浏览器打印成 PDF、打印预览里刷新）时，没有 beforeprint 也没有 change
+  it('打开时已经是打印媒体，就直接渲染全部来源', () => {
+    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: query === 'print', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+
+    show({ items_by_source: { 'src-hn': [item()], 'src-gh': [], 'src-had': [] } })
+
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
+    vi.unstubAllGlobals()
+  })
 })

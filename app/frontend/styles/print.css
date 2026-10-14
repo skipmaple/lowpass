@@ -17,6 +17,9 @@
 
   .print-source-name { margin: 18pt 0 6pt; font-family: var(--font-latin); font-weight: 600; font-size: var(--fs-20); break-after: avoid; }
   .item-row { break-inside: avoid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; }
+  /* 打印页宽落在手机断点里：那里的 align-items: center 会让序号沉到条目中间，这里拉回与标题首行同一条基线 */
+  .item-rank, .item-body { align-self: baseline; }
+  .item-rank { padding-top: 0; text-align: right; }
   .item-title a.t { text-decoration: none; }
   .item-title a.t[data-host]::after { content: "  " attr(data-host); font-family: var(--font-data); font-size: var(--fs-12); font-weight: 400; color: var(--ink2); }
   .item-reason { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

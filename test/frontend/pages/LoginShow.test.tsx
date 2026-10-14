@@ -99,3 +99,11 @@ it('低通日出带一次性的日出动画；按钮立刻可用，不等动画'
   expect(art?.querySelectorAll('.sunrise-ray')).toHaveLength(8)
   expect(screen.getByRole('button', { name: '使用 Google 登录' })).toBeEnabled()
 })
+
+// 自查第 1 轮：纸纹只铺在纸卡上时，纸卡四周露出一圈不同纹理的边。纸纹铺满整页，纸卡不另起一块
+it('纸纹铺满整页，纸卡不另起一块纸纹', () => {
+  const { container } = render(<Show providers={['google_oauth2']} next={null} />)
+
+  expect(container.querySelector('.login-ground')).toHaveClass('paper')
+  expect(container.querySelector('.login-card')).not.toHaveClass('paper')
+})

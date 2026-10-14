@@ -189,6 +189,15 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal INK, style(".masthead-brand", "color")
   end
 
+  # 自查第 1 轮：打印页宽 700 多像素，手机断点里的 align-items: center 让序号沉到条目中间
+  test "D2 打印时序号与标题首行同一条基线" do
+    render_fragment(format(ITEM, title: "Show HN: Geiger – See every AI agent on your machine and what it can touch", tag: "AI / LLM"), width: 720, media: "print")
+    # 探针插在开头：长标题在 720 宽折成两行，序号对的是第一行
+    baseline = "((selector) => { const el = document.querySelector(selector); const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.prepend(probe); const y = probe.getBoundingClientRect().top; probe.remove(); return y })"
+
+    assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

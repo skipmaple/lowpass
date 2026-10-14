@@ -90,6 +90,44 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "rgba(29, 29, 27, 0.35) rgba(0, 0, 0, 0)", style("html", "scrollbar-color")
   end
 
+  ITEM = <<~HTML.freeze
+    <div style="padding: 0 24px"><article class="item-row"><span class="item-rank">2</span><div class="item-body">
+      <div class="item-heading"><h2 class="item-title"><a class="t" href="#">%<title>s</a></h2><span class="item-tag"><span class="chip-outline item-interest-chip">%<tag>s</span></span></div>
+    </div></article></div>
+  HTML
+
+  test "Q4/C4 兴趣标签紧跟标题末尾，放不下就整个换到下一行行首" do
+    [ 1440, 1024, 375, 320 ].each do |width|
+      render_fragment(format(ITEM, title: "OpenAI engineer arrested in bugging of executive conference room", tag: "智能家居 / IoT"), width: width)
+      placed = evaluate_script(<<~JS)
+        (() => {
+          const rects = [...document.querySelector('.item-title a').getClientRects()]
+          const last = rects[rects.length - 1]
+          const tag = document.querySelector('.item-tag').getBoundingClientRect()
+          const heading = document.querySelector('.item-heading').getBoundingClientRect()
+          const sameLine = Math.abs(tag.bottom - last.bottom) <= 6 && tag.left >= last.right
+          const nextLineStart = tag.top >= last.bottom - 1 && Math.abs(tag.left - heading.left) <= 1
+          return sameLine || nextLineStart
+        })()
+      JS
+      assert placed, "#{width}px：标签应在标题末尾或下一行行首"
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, evaluate_script("document.documentElement.clientWidth"), "#{width}px：不横向溢出"
+    end
+  end
+
+  test "T4 序号与标题首行同一条基线；期头小字末行与大字日期同一条基线" do
+    render_fragment(<<~HTML)
+      #{format(ITEM, title: "Gemini 4 Argon", tag: "AI / LLM")}
+      <header class="page-head"><div class="issue-head-main"><div class="issue-head-title"><h1 class="issue-head-date">10月14日</h1><div class="issue-head-stack"><span class="issue-head-calendar">2026 年 · 星期三</span><span class="issue-head-time">06:00 发布</span></div></div></div></header>
+    HTML
+    baseline = <<~JS
+      ((selector) => { const el = document.querySelector(selector); const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.appendChild(probe); const y = probe.getBoundingClientRect().top; probe.remove(); return y })
+    JS
+
+    assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1
+    assert_in_delta evaluate_script("#{baseline}('.issue-head-date')"), evaluate_script("#{baseline}('.issue-head-time')"), 1
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

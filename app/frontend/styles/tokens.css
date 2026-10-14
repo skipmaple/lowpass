@@ -882,3 +882,20 @@ details[open] > summary::before { rotate: 90deg; }
 @media (max-width: 480px) {
   .item-comments { min-height: 0; min-width: 0; }
 }
+
+/* Q4 / C4（O1 选 b）：兴趣标签紧跟标题最后一个词——标题元素行内排，标签是行内小签，基线对齐标题；
+   放不下就整个换到下一行行首。所有宽度同一条规则；书签仍在行末自己的一列。 */
+.item-heading { display: block; max-width: 780px; }
+.item-heading > .item-title { display: inline; }
+.item-tag { display: inline-flex; vertical-align: baseline; margin-left: 10px; padding-top: 0; }
+@media (min-width: 1920px) { .item-heading { max-width: 920px; } }
+
+/* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
+.item-rank, .item-body { align-self: baseline; }
+.item-rank { padding-top: 0; }
+.issue-head-title { align-items: last baseline; }
+.issue-head-stack { padding-bottom: 0; }
+@media (max-width: 767px) {
+  /* 手机上序号与书签同一行、正文另起一行，没有可对的基线 */
+  .item-rank, .item-body { align-self: auto; }
+}

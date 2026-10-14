@@ -10,7 +10,7 @@ import type { Adapter, Item } from '@/types/lowpass'
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、标题译文（HN、Hackaday，D25）、说明、
 // 说明译文（GitHub Trending，D25）、元数据、兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
-// 标签锚定条目行末端；窄屏自然换行，仍属于同一阅读组。
+// 兴趣标签紧跟标题最后一个词（所有宽度，2026-10-14 O1）：标题元素行内排，标签是它后面的行内小签，放不下就整个换到下一行行首。
 // 书签（PRD 5.10）在条目行末另占一格，手机上与序号同一行、靠右；DOM 里排在正文后面，Tab 先到标题再到书签。
 // 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
 
@@ -163,15 +163,15 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
       <span className="item-rank">{rank}</span>
 
       <div className="item-body">
-        {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。 */}
-        <div className={tagged ? 'item-heading item-heading--tagged' : 'item-heading'}>
+        {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。标签在标题元素外面：不进标题的可读名称 */}
+        <div className="item-heading">
           <Heading className="item-title">
             <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" lang={latinLang(item.title)}>
               {item.title}
             </a>
           </Heading>
           {tagged ? (
-            <div className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></div>
+            <span className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></span>
           ) : null}
         </div>
         {!weekly && item.title_zh ? <Translation text={item.title_zh} /> : null}

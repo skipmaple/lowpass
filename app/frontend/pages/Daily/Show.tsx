@@ -12,6 +12,7 @@ import SourceTabs from '@/components/SourceTabs'
 import { useScrollToHash } from '@/lib/anchors'
 import { FavoritesProvider } from '@/lib/favorites'
 import { DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
+import { useArrowTurns } from '@/lib/pageTurn'
 import { usePolling } from '@/lib/polling'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SharedProps, SourceSummary } from '@/types/lowpass'
@@ -114,6 +115,7 @@ const GENERATING_POLL_MS = 10_000
 export default function Show({ issue, missing, sources, items_by_source, favorites, active_source_id, latest_daily_key, backfill_available }: DailyShowProps) {
   useScrollToHash(issue.period_key)
   usePolling(issue.state === 'generating', GENERATING_RELOAD, GENERATING_POLL_MS)
+  useArrowTurns(issue.prev_key ? dailyHref(issue.prev_key) : null, issue.next_key ? dailyHref(issue.next_key) : null)
   const notice = bodyNotice(issue, missing)
   const [backfilling, setBackfilling] = useState(false)
   const [backfillResult, setBackfillResult] = useState<string | null>(null)

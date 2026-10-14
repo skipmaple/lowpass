@@ -76,6 +76,25 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
 .favorite-button[data-stamp] { animation: lp-press var(--dur-2) var(--ease-out); }
 @keyframes lp-press { from { transform: scale(0.92); } }
 
+/* ─── M2 翻页 ─────────────────────────────────────────────────────────── */
+
+/* 名字只在过渡进行中起（lib/pageTurn.ts 的 data-vt）：常驻会让元素自成层叠上下文 */
+html[data-vt] .masthead { view-transition-name: masthead; }
+html[data-vt] #main-content { view-transition-name: page; }
+html[data-vt] .issue-head-date { view-transition-name: issue-date; }
+::view-transition-group(*) { animation-duration: var(--dur-2); animation-timing-function: var(--ease-out); }
+/* 报头不动 */
+::view-transition-old(masthead), ::view-transition-new(masthead) { animation: none; }
+/* 前一期：新页从左边进、旧页向右出；后一期相反。位移 24px 加淡入淡出 */
+html[data-turn="back"]::view-transition-old(page) { animation: lp-turn-out-right var(--dur-3) var(--ease-move) both; }
+html[data-turn="back"]::view-transition-new(page) { animation: lp-turn-in-left var(--dur-3) var(--ease-move) both; }
+html[data-turn="forward"]::view-transition-old(page) { animation: lp-turn-out-left var(--dur-3) var(--ease-move) both; }
+html[data-turn="forward"]::view-transition-new(page) { animation: lp-turn-in-right var(--dur-3) var(--ease-move) both; }
+@keyframes lp-turn-out-right { to { opacity: 0; transform: translateX(24px); } }
+@keyframes lp-turn-out-left { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes lp-turn-in-left { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes lp-turn-in-right { from { opacity: 0; transform: translateX(24px); } }
+
 /* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
 
 .menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }
@@ -93,4 +112,5 @@ details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
     animation-duration: 1ms !important; animation-delay: 0ms !important;
     transition-duration: 1ms !important; transition-delay: 0ms !important;
   }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

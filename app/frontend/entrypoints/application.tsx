@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/react'
 
 import Layout from '@/components/Layout'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
+import { crossfadeFor } from '@/lib/pageTurn'
 
 focusMainOnNavigate()
 
@@ -29,8 +30,8 @@ void createInertiaApp({
       forceIndicesArrayFormatInFormData: false,
       withAllErrors: true,
     },
-    visitOptions: () => {
-      return { queryStringArrayFormat: "brackets" }
+    visitOptions: (href, options) => {
+      return { queryStringArrayFormat: "brackets", ...crossfadeFor(href, options) }
     },
   },
 }).catch((error) => {

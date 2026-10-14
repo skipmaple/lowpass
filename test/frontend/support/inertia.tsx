@@ -52,7 +52,7 @@ export function Head({ title }: { title?: string }) {
   return null
 }
 
-export function Link({ href, children, preserveState: _preserveState, ...rest }: React.ComponentProps<'a'> & { preserveState?: boolean }) {
+export function Link({ href, children, preserveState: _preserveState, viewTransition: _viewTransition, ...rest }: React.ComponentProps<'a'> & { preserveState?: boolean; viewTransition?: unknown }) {
   return (
     <a href={href} {...rest}>
       {children}

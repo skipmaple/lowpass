@@ -31,6 +31,34 @@ class MotionTest < ApplicationSystemTestCase
     end
   end
 
+  test "M8 ← 到前一期，→ 回到后一期；最新一期按 → 不动；输入框里按 ← 不翻" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    visit daily_issue_path("2026-09-08")
+
+    find("body").send_keys(:right)
+    assert_current_path daily_issue_path("2026-09-08")
+
+    find("body").send_keys(:left)
+    assert_current_path daily_issue_path("2026-09-07")
+    assert_no_selector "html[data-vt]", visible: :all, wait: 2
+
+    find("body").send_keys(:right)
+    assert_current_path daily_issue_path("2026-09-08")
+
+    find("a[aria-label='搜索']").click
+    find("input[type='search']").send_keys(:left)
+    assert_current_path search_path
+  end
+
+  test "M2 前一期按钮带方向与键盘提示" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    visit daily_issue_path("2026-09-08")
+
+    assert_selector ".issue-nav a.ctrl[aria-keyshortcuts='ArrowLeft']", text: "前一期"
+    find(".issue-nav a.ctrl", text: "前一期").click
+    assert_current_path daily_issue_path("2026-09-07")
+  end
+
   private
     # 等过渡跑完，再比副本露出的矩形（inline style 里设的 inset）与当前项的矩形
     def assert_ink_on(name)

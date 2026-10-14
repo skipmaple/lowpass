@@ -83,8 +83,8 @@ export default function Footer({
       {/* 归档页没有前后期可去，两个按钮就不占位（页面上只放对应数据字段的东西） */}
       {prevHref || nextHref ? (
         <div style={{ display: 'flex', gap: 8 }}>
-          <Ctrl href={prevHref ?? null} label="前一期" icon="chevron-left" side="left" />
-          <Ctrl href={nextHref ?? null} label="后一期" icon="chevron-right" side="right" />
+          <Ctrl href={prevHref ?? null} label="前一期" icon="chevron-left" side="left" turn="back" />
+          <Ctrl href={nextHref ?? null} label="后一期" icon="chevron-right" side="right" turn="forward" />
         </div>
       ) : null}
     </footer>

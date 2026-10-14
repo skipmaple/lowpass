@@ -9,6 +9,7 @@ import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
 import { useScrollToHash } from '@/lib/anchors'
 import { FavoritesProvider } from '@/lib/favorites'
+import { useArrowTurns } from '@/lib/pageTurn'
 import { WEEKLY_ARCHIVE, latestWeeklyHref, weeklyHref } from '@/lib/paths'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/types/lowpass'
@@ -187,6 +188,7 @@ function Section({ section }: { section: WeeklySection }) {
 
 export default function Show({ issue, sections, favorites }: WeeklyShowProps) {
   useScrollToHash(issue.period_key)
+  useArrowTurns(issue.prev_key ? weeklyHref(issue.prev_key) : null, issue.next_key ? weeklyHref(issue.next_key) : null)
   return (
     <FavoritesProvider favorites={favorites}>
       <PageHead

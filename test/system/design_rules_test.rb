@@ -208,6 +208,17 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_operator evaluate_script("document.querySelector('.masthead-brand').getBoundingClientRect().width"), :>=, 147
   end
 
+  # 自查第 2 轮：375 宽的登录卡里，「每天一期技术日刊，登录后阅读」折行后第二行只剩一个「读」。放不下时只在逗号后断行
+  test "登录页那句话放不下时只在逗号后断行" do
+    render_fragment(%(<div style="width: 279px"><p class="login-tagline">每天一期技术日刊，登录后阅读</p></div>), width: 375, height: 812)
+    line_of = <<~JS
+      ((index) => { const node = document.querySelector('.login-tagline').firstChild; const range = document.createRange(); range.setStart(node, index); range.setEnd(node, index + 1); return Math.round(range.getBoundingClientRect().top) })
+    JS
+
+    assert_operator evaluate_script("#{line_of}(8)"), :<, evaluate_script("#{line_of}(9)"), "逗号在第一行，「登」另起一行"
+    assert_equal evaluate_script("#{line_of}(9)"), evaluate_script("#{line_of}(13)"), "「登录后阅读」在同一行"
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

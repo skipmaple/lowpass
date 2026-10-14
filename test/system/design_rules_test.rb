@@ -128,6 +128,49 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_in_delta evaluate_script("#{baseline}('.issue-head-date')"), evaluate_script("#{baseline}('.issue-head-time')"), 1
   end
 
+  test "M 动效令牌就这五个" do
+    render_fragment("<p>x</p>")
+
+    root = ->(name) { evaluate_script("getComputedStyle(document.documentElement).getPropertyValue(#{name.to_json}).trim()") }
+    assert_equal "120ms", root.("--dur-1")
+    assert_equal "240ms", root.("--dur-2")
+    assert_equal "360ms", root.("--dur-3")
+    assert_equal "cubic-bezier(0.2, 0.7, 0.2, 1)", root.("--ease-out")
+    assert_equal "cubic-bezier(0.65, 0, 0.35, 1)", root.("--ease-move")
+  end
+
+  test "M4 描边按钮悬停时墨从底部漫满、字转纸色；不可点的没有" do
+    render_fragment(%(<div style="padding: 40px"><a class="ctrl" href="#p">前一期</a> <span class="ctrl ctrl-off">后一期</span></div>))
+
+    assert_equal "matrix(1, 0, 0, 0, 0, 0)", style(".ctrl:not(.ctrl-off)", "transform", "::before")
+    find("a.ctrl").hover
+    wait_until { style("a.ctrl", "color") == PAPER }
+    wait_until { style("a.ctrl", "transform", "::before") == "matrix(1, 0, 0, 1, 0, 0)" }
+    assert_equal "none", style(".ctrl-off", "content", "::before")
+  end
+
+  test "M4 未选中的索引条与分段控件悬停只加下划线，不反白" do
+    render_fragment(%(<div class="source-tabs"><button class="source-tab" data-state="active"><span class="source-tab-name">A</span></button><button class="source-tab" data-state="inactive"><span class="source-tab-name">B</span></button></div>))
+
+    name = ".source-tab[data-state='inactive'] .source-tab-name"
+    assert_equal "underline", style(name, "text-decoration-line")
+    assert_equal "rgba(0, 0, 0, 0)", style(name, "text-decoration-color")
+    find(".source-tab[data-state='inactive']").hover
+    wait_until { style(name, "text-decoration-color") == INK }
+    assert_not_equal INK, style(".source-tab[data-state='inactive']", "background-color")
+  end
+
+  test "M7 菜单、对话框、提示条带出现动画；减少动态效果时几乎为零" do
+    render_fragment(%(<div class="menu-card">菜单</div><div class="dialog">问句</div><div class="toast">提示</div>))
+    assert_equal "lp-unfold", style(".menu-card", "animation-name")
+    assert_equal "lp-settle", style(".dialog", "animation-name")
+    assert_equal "lp-drop", style(".toast", "animation-name")
+
+    render_fragment(%(<div class="menu-card">菜单</div><a class="ctrl" href="#p">前一期</a>), reduced_motion: true)
+    assert_equal "0.001s", style(".menu-card", "animation-duration")
+    assert_equal "0.001s", style(".ctrl", "transition-duration", "::before")
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

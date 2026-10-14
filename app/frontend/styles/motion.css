@@ -1,0 +1,67 @@
+/* 动效（设计 skill「动效」、PRD D34、设计说明 2026-10-14 第 4.4 节）。
+   只有三个动作：墨走、翻页、盖章。只动 transform、opacity、clip-path、stroke-dashoffset 与颜色类属性，不动布局。
+   令牌只有这五个；新动效先问「它是这三个动作之一吗」，不是就不加。 */
+
+:root {
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+  --dur-3: 360ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes lp-fade { from { opacity: 0; } }
+@keyframes lp-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes lp-settle { from { opacity: 0; transform: translateY(8px); } }
+@keyframes lp-drop { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes lp-unfold { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* ─── M4 墨线 ─────────────────────────────────────────────────────────── */
+
+/* 链接下划线由 30% 墨加深到实墨；原先悬停才画下划线的几处改成常驻透明下划线，悬停只换颜色，才过渡得起来 */
+a.t, .link-button, .archive-key, .search-original { transition: text-decoration-color var(--dur-1) linear, color var(--dur-1) linear; }
+.menu-item, .directory-return, .source-band-link {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
+  transition: text-decoration-color var(--dur-1) linear, color var(--dur-1) linear;
+}
+.menu-item:hover, .directory-return:hover { text-decoration-color: var(--ink); }
+.source-band-link:hover { text-decoration-color: var(--paper); }
+
+/* 描边按钮悬停：墨从底部漫满、字转纸色。墨是一层伪元素做纵向缩放（只动 transform），看到的是实墨块，不是渐变 */
+.ctrl:not(.ctrl-off):not(:disabled) { position: relative; isolation: isolate; transition: color var(--dur-1) linear; }
+.ctrl:not(.ctrl-off):not(:disabled)::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ink);
+  transform: scaleY(0); transform-origin: 50% 100%; transition: transform var(--dur-2) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ctrl:not(.ctrl-off):not(:disabled):hover { color: var(--paper); }
+  .ctrl:not(.ctrl-off):not(:disabled):hover::before { transform: scaleY(1); }
+}
+
+/* 可选中的控件（来源索引条、分段控件）反白专指选中：未选中项悬停只给名字加 1px 下划线 */
+.source-tab .source-tab-name, .seg-item {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
+  transition: text-decoration-color var(--dur-1) linear;
+}
+@media (hover: hover) and (pointer: fine) {
+  .source-tab[data-state="inactive"]:hover .source-tab-name, .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }
+}
+
+/* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
+
+.menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }
+.dialog-shade { animation: lp-fade var(--dur-2) var(--ease-out); }
+.dialog { animation: lp-settle var(--dur-2) var(--ease-out); }
+.toast { animation: lp-drop var(--dur-2) var(--ease-out); }
+/* 周刊「板块目录」展开：目录项淡入；版面本身不做高度动画（不动布局） */
+details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
+
+/* ─── 减少动态效果 ───────────────────────────────────────────────────── */
+
+/* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码（盖章）不会卡住 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important; animation-delay: 0ms !important;
+    transition-duration: 1ms !important; transition-delay: 0ms !important;
+  }
+}

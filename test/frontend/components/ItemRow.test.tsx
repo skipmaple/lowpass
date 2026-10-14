@@ -184,14 +184,16 @@ describe('ItemRow 推荐理由与兴趣标签', () => {
     expect(container.querySelector('.item-tag')).toBeNull()
   })
 
-  it('有值时理由成段、标签使用低对比度的描边样式', () => {
+  it('有值时理由成段；标签紧跟在标题元素后面，不进标题的可读名称', () => {
     const { container } = render(
       <ItemRow item={item({ reason: '与你关注的终端工具相关。', interest_tag: 'AI' })} adapter="hacker_news" rank={1} />,
     )
 
     expect(screen.getByText('与你关注的终端工具相关。')).toHaveClass('item-reason')
-    expect(container.querySelector('.item-heading')).toHaveClass('item-heading--tagged')
-    expect(container.querySelector('.item-tag')).toHaveTextContent('AI')
+    const heading = screen.getByRole('heading', { level: 2 })
+    expect(container.querySelector('.item-heading')).not.toHaveClass('item-heading--tagged')
+    expect(heading.nextElementSibling).toHaveClass('item-tag')
+    expect(heading).not.toHaveTextContent('AI')
     expect(container.querySelector('.item-tag .item-interest-chip')).toHaveClass('chip-outline')
   })
 })
@@ -452,4 +454,10 @@ describe('ItemRow 书签（PRD 5.10）', () => {
 
     expect(container.querySelector('.favorite-button')).toBeNull()
   })
+})
+
+it('标题链接带域名（打印时印在标题后），去掉 www.', () => {
+  render(<ItemRow item={item({ url: 'https://www.example.com/termlog' })} adapter="hacker_news" rank={1} />)
+
+  expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toHaveAttribute('data-host', 'example.com')
 })

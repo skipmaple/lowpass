@@ -1,0 +1,32 @@
+/* 打印（PRD D34，设计说明 2026-10-14 D2）：一份日刊打出来是一张排好的报纸——白底墨字，交互件不印，条目不跨页。
+   打印页宽在 700px 上下，手机断点的规则也会生效；这里写在 tokens.css 与 motion.css 之后，同权重以这里为准。 */
+@media print {
+  @page { margin: 16mm 14mm; }
+  html, body, .paper { background: none !important; }
+  .sheet { min-height: 0; }
+  .sheet-body { max-width: none; padding: 0; }
+
+  /* 报头：墨带改成白底墨字加一条 2px 线；导航、搜索、头像不印 */
+  .masthead { height: auto; min-height: 0; padding: 0 0 8pt 0; background: none; border-bottom: 2px solid var(--ink); }
+  .masthead-brand { color: var(--ink); }
+  .masthead-nav, .masthead-actions, .skip-link, .toasts, #nprogress { display: none !important; }
+
+  /* 交互件不印：期导航、书签、索引条、目录、返回链接、栏尾外链、页脚的按钮与链接、搜索框与筛选 */
+  .issue-nav, .issue-nav-mobile, .page-nav, .favorite-button, .source-tabs-frame, .weekly-directory, .directory-return,
+  .source-foot, footer a, footer .ctrl, .search-head, .filters-shell, .search-pager { display: none !important; }
+
+  .print-source-name { margin: 18pt 0 6pt; font-family: var(--font-latin); font-weight: 600; font-size: var(--fs-20); break-after: avoid; }
+  .item-row { break-inside: avoid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; }
+  /* 打印页宽落在手机断点里：那里的 align-items: center 会让序号沉到条目中间，这里拉回与标题首行同一条基线 */
+  .item-rank, .item-body { align-self: baseline; }
+  .item-rank { padding-top: 0; text-align: right; }
+  .item-title a.t { text-decoration: none; }
+  .item-title a.t[data-host]::after { content: "  " attr(data-host); font-family: var(--font-data); font-size: var(--fs-12); font-weight: 400; color: var(--ink2); }
+  .item-reason { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .item-media-image { mix-blend-mode: normal; }
+
+  /* 周刊横带：白底墨字，上 2px、下 1px 两条线 */
+  .source-band { background: none; color: var(--ink); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); --band-hole: transparent; }
+  .source-band span { color: var(--ink) !important; }
+  footer { break-inside: avoid; }
+}

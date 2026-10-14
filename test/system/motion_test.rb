@@ -1,0 +1,158 @@
+require "application_system_test_case"
+
+# 动效（设计说明 2026-10-14 第 4.4 节）里要在真页面上量的部分
+class MotionTest < ApplicationSystemTestCase
+  setup do
+    sign_in_with_browser(users(:drew))
+  end
+
+  test "M1 墨块跟着当前来源：副本的裁切与当前项重合，切换后滑到新来源" do
+    visit daily_issue_path("2026-09-08")
+    assert_selector ".source-tabs-frame[data-ink]"
+    assert_ink_on sources(:hn).name
+
+    find(".source-tabs:not(.source-tabs-ink)").click_on sources(:hackaday).name
+    assert_ink_on sources(:hackaday).name
+  end
+
+  test "M1 连点两个来源，墨块最后停在第二个上" do
+    visit daily_issue_path("2026-09-08")
+
+    find(".source-tabs:not(.source-tabs-ink)").click_on sources(:github).name
+    find(".source-tabs:not(.source-tabs-ink)").click_on sources(:hackaday).name
+    assert_ink_on sources(:hackaday).name
+  end
+
+  test "M1 手机宽度同样对齐" do
+    with_viewport(375, 812) do
+      visit daily_issue_path("2026-09-08")
+      find(".source-tabs:not(.source-tabs-ink)").click_on sources(:github).name
+      assert_ink_on sources(:github).name
+    end
+  end
+
+  test "M8 ← 到前一期，→ 回到后一期；最新一期按 → 不动；输入框里按 ← 不翻" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    visit daily_issue_path("2026-09-08")
+
+    find("body").send_keys(:right)
+    assert_current_path daily_issue_path("2026-09-08")
+
+    find("body").send_keys(:left)
+    assert_current_path daily_issue_path("2026-09-07")
+    assert_no_selector "html[data-vt]", visible: :all, wait: 2
+
+    find("body").send_keys(:right)
+    assert_current_path daily_issue_path("2026-09-08")
+
+    find("a[aria-label='搜索']").click
+    find("input[type='search']").send_keys(:left)
+    assert_current_path search_path
+  end
+
+  test "M2 前一期按钮带方向与键盘提示" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    visit daily_issue_path("2026-09-08")
+
+    assert_selector ".issue-nav a.ctrl[aria-keyshortcuts='ArrowLeft']", text: "前一期"
+    find(".issue-nav a.ctrl", text: "前一期").click
+    assert_current_path daily_issue_path("2026-09-07")
+  end
+
+  test "M5 会话第一次打开播开场，刷新不重播，版面不跳" do
+    execute_script("sessionStorage.clear()")
+    visit daily_issue_path("2026-09-08")
+    assert evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "第一次打开应有开场标记"
+
+    cls = evaluate_async_script(<<~JS)
+      const done = arguments[0]
+      let total = 0
+      new PerformanceObserver((list) => { for (const entry of list.getEntries()) total += entry.value }).observe({ type: 'layout-shift', buffered: true })
+      setTimeout(() => done(total), 900)
+    JS
+    assert_equal 0, cls
+
+    assert_not evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "800ms 后应摘掉"
+    refresh
+    assert_not evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "同一会话刷新不重播"
+  end
+
+  test "D2 打印媒体下三个来源都印出来，书签与索引条不印" do
+    visit daily_issue_path("2026-09-08")
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "print")
+
+    assert_selector ".print-source-name", count: 3
+    assert_equal "none", evaluate_script("getComputedStyle(document.querySelector('.favorite-button')).display")
+    assert_no_selector ".source-tabs-frame"
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+  end
+
+  # 终审：从页面下方（页脚的前一期）翻页时，旧画面是滚动后截的、新画面在顶部；报头与期头大字不许跟着滚动距离滑过去
+  test "M2 从页面下方翻页：报头与期头大字不位移，正文整屏向右翻出" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    visit daily_issue_path("2026-09-08")
+    execute_script(<<~JS)
+      document.querySelector('#main-content').style.paddingBottom = '2000px'
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      window.__anims = null
+      const start = document.startViewTransition.bind(document)
+      document.startViewTransition = (callback) => {
+        const transition = start(callback)
+        transition.ready.then(() => {
+          window.__anims = document.getAnimations().filter((a) => a.effect && a.effect.pseudoElement).map((a) => ({
+            pseudo: a.effect.pseudoElement, name: a.animationName, transforms: a.effect.getKeyframes().map((frame) => frame.transform || 'none')
+          }))
+        })
+        return transition
+      }
+    JS
+    find("footer a.ctrl", text: "前一期").click
+    wait_until { evaluate_script("window.__anims") }
+    anims = evaluate_script("window.__anims")
+
+    moving = anims.select { |a| a["pseudo"].match?(/group\((masthead|issue-date)\)/) && a["transforms"].any? { |t| t != "none" } }
+    assert_empty moving, "报头与期头大字的组不该有位移动画：#{moving.inspect}"
+    assert_includes anims.map { |a| [ a["pseudo"], a["name"] ] }, [ "::view-transition-old(root)", "lp-turn-out-right" ]
+    assert_includes anims.map { |a| [ a["pseudo"], a["name"] ] }, [ "::view-transition-new(root)", "lp-turn-in-left" ]
+  end
+
+  # 终审：报头导航这类普通 <Link> 换页也要淡入淡出（Inertia 的 Link 默认带 viewTransition: false）
+  test "M2 报头导航换页时正文淡入淡出" do
+    visit daily_issue_path("2026-09-08")
+    execute_script(<<~JS)
+      window.__vt = false
+      new MutationObserver(() => { if (document.documentElement.hasAttribute('data-vt')) window.__vt = true }).observe(document.documentElement, { attributes: true })
+    JS
+    find(".masthead-nav a", text: "周刊").click
+    assert_current_path %r{\A/weekly}
+    assert evaluate_script("window.__vt"), "换页时应进入过渡"
+  end
+
+  private
+    # 等过渡跑完，再比副本露出的矩形（inline style 里设的 inset）与当前项的矩形
+    def assert_ink_on(name)
+      wait_until do
+        evaluate_script(<<~JS)
+          (() => {
+            const frame = document.querySelector('.source-tabs-frame').getBoundingClientRect()
+            const tab = [...document.querySelectorAll('.source-tabs:not(.source-tabs-ink) [role="tab"]')].find((t) => t.textContent.includes(#{name.to_json}))
+            const ink = document.querySelector('.source-tabs-ink')
+            if (!tab || !ink || tab.getAttribute('aria-selected') !== 'true' || ink.getAnimations().length) return false
+            const values = ink.style.clipPath.match(/inset\\(([^)]*)\\)/)[1].split(/\\s+/).map(parseFloat)
+            const [top, right = top, bottom = top, left = right] = values
+            const r = tab.getBoundingClientRect()
+            const near = (a, b) => Math.abs(a - b) <= 1
+            return near(left, r.left - frame.left) && near(top, r.top - frame.top) && near(frame.width - right, r.right - frame.left) && near(frame.height - bottom, r.bottom - frame.top)
+          })()
+        JS
+      end
+    end
+
+    def with_viewport(width, height)
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
+      yield
+    ensure
+      page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    end
+end

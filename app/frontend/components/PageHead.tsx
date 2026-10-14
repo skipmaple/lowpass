@@ -48,9 +48,9 @@ export default function PageHead({ big, context, title, top, bottom, tag, nav, c
 
         {nav ? (
           <nav className="issue-nav" aria-label="期导航">
-            <Ctrl href={nav.prevHref} label="前一期" icon="chevron-left" side="left" />
+            <Ctrl href={nav.prevHref} label="前一期" icon="chevron-left" side="left" turn="back" />
             <Ctrl href={nav.archiveHref} label={nav.archiveLabel ?? '归档'} />
-            <Ctrl href={nav.nextHref} label="后一期" icon="chevron-right" side="right" />
+            <Ctrl href={nav.nextHref} label="后一期" icon="chevron-right" side="right" turn="forward" />
           </nav>
         ) : null}
         {controls ? <nav className="page-nav">{controls}</nav> : null}
@@ -60,9 +60,9 @@ export default function PageHead({ big, context, title, top, bottom, tag, nav, c
           375px 宽里 40px 大字加三个文字按钮装不下。画布 page(compact=True) 的 controls 行就是这么排的。 */}
       {nav ? (
         <nav className="issue-nav-mobile" aria-label="期导航">
-          <Square href={nav.prevHref} label="前一期" icon="chevron-left" />
+          <Square href={nav.prevHref} label="前一期" icon="chevron-left" turn="back" />
           <Square href={nav.archiveHref} label={nav.archiveLabel ?? '归档'} icon="archive" />
-          <Square href={nav.nextHref} label="后一期" icon="chevron-right" />
+          <Square href={nav.nextHref} label="后一期" icon="chevron-right" turn="forward" />
         </nav>
       ) : null}
     </>

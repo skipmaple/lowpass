@@ -3,12 +3,14 @@ import type * as React from 'react'
 import { useEffect, useRef } from 'react'
 
 import Icon from '@/components/Icon'
+import { OpenBook } from '@/components/Illustration'
 import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
 import { useScrollToHash } from '@/lib/anchors'
 import { FavoritesProvider } from '@/lib/favorites'
+import { useArrowTurns } from '@/lib/pageTurn'
 import { WEEKLY_ARCHIVE, latestWeeklyHref, weeklyHref } from '@/lib/paths'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { FooterData, WeeklyGroup, WeeklyIssue, WeeklySection } from '@/types/lowpass'
@@ -35,7 +37,7 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
     <div className="source-band" id={id}>
       <div className="source-band-name">
-        <Icon name="book-open" size={28} color="currentColor" />
+        <OpenBook hole="var(--band-hole)" className="source-band-mark" />
         <div className="source-band-copy">
           <h2 className="source-band-title" lang={latinLang(section.source.name)}>
             <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />
@@ -187,6 +189,7 @@ function Section({ section }: { section: WeeklySection }) {
 
 export default function Show({ issue, sections, favorites }: WeeklyShowProps) {
   useScrollToHash(issue.period_key)
+  useArrowTurns(issue.prev_key ? weeklyHref(issue.prev_key) : null, issue.next_key ? weeklyHref(issue.next_key) : null)
   return (
     <FavoritesProvider favorites={favorites}>
       <PageHead

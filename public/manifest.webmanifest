@@ -1,0 +1,15 @@
+{
+  "name": "Lowpass",
+  "short_name": "Lowpass",
+  "description": "每天一期技术日刊，登录后阅读",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#E8E3DA",
+  "theme_color": "#1D1D1B",
+  "icons": [
+    { "src": "/icon.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.svg?v=3", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

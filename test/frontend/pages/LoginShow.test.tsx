@@ -89,3 +89,21 @@ it('各登录方式显示自己的等待状态，从登录方返回后可重试'
  fireEvent(window, new Event('pageshow'))
  expect(screen.getByRole('button', { name: '使用 Google 登录' })).toBeEnabled()
 })
+
+it('低通日出带一次性的日出动画；按钮立刻可用，不等动画', () => {
+  const { container } = render(<Show providers={['google_oauth2', 'github']} next={null} />)
+
+  const art = container.querySelector('.login-art svg')
+  expect(art).toHaveClass('sunrise--animated')
+  expect(art?.querySelector('.sunrise-sun')).not.toBeNull()
+  expect(art?.querySelectorAll('.sunrise-ray')).toHaveLength(8)
+  expect(screen.getByRole('button', { name: '使用 Google 登录' })).toBeEnabled()
+})
+
+// 自查第 1 轮：纸纹只铺在纸卡上时，纸卡四周露出一圈不同纹理的边。纸纹铺满整页，纸卡不另起一块
+it('纸纹铺满整页，纸卡不另起一块纸纹', () => {
+  const { container } = render(<Show providers={['google_oauth2']} next={null} />)
+
+  expect(container.querySelector('.login-ground')).toHaveClass('paper')
+  expect(container.querySelector('.login-card')).not.toHaveClass('paper')
+})

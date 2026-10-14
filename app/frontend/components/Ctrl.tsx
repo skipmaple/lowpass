@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react'
 
 import Icon, { type IconName } from '@/components/Icon'
+import { pageTurn, type TurnDirection } from '@/lib/pageTurn'
 
 // 40px 描边按钮（画布 pages_front2.py 的 ctrl()）：期导航、翻月、翻年都用它。
 // 没有目标（最新一期的「后一期」、最早一个月的「前一月」）时退成 35% 墨线的不可点态。
@@ -11,9 +12,13 @@ export type CtrlProps = {
   label: string
   icon?: IconName
   side?: 'left' | 'right'
+  // 前一期 / 后一期：带方向的翻页（设计 skill「动效」M2），并告诉读屏 ← / → 也能翻（M8）
+  turn?: TurnDirection
 }
 
-export function Ctrl({ href, label, icon, side }: CtrlProps) {
+const KEYS: Record<TurnDirection, string> = { back: 'ArrowLeft', forward: 'ArrowRight' }
+
+export function Ctrl({ href, label, icon, side, turn }: CtrlProps) {
   const off = href === null
   const body = (
     <>
@@ -31,14 +36,14 @@ export function Ctrl({ href, label, icon, side }: CtrlProps) {
     )
   }
   return (
-    <Link className="ctrl" href={href}>
+    <Link className="ctrl" href={href} viewTransition={turn ? pageTurn(turn) : undefined} aria-keyshortcuts={turn ? KEYS[turn] : undefined}>
       {body}
     </Link>
   )
 }
 
 // 手机版的方形图标按钮：44px 触控目标（PRD 6.4），名字交给 aria-label
-export function Square({ href, label, icon }: { href: string | null; label: string; icon: IconName }) {
+export function Square({ href, label, icon, turn }: { href: string | null; label: string; icon: IconName; turn?: TurnDirection }) {
   if (href === null) {
     return (
       <span className="ctrl ctrl-off ctrl-square" role="link" aria-disabled="true" aria-label={label}>
@@ -47,7 +52,7 @@ export function Square({ href, label, icon }: { href: string | null; label: stri
     )
   }
   return (
-    <Link className="ctrl ctrl-square" href={href} aria-label={label}>
+    <Link className="ctrl ctrl-square" href={href} aria-label={label} viewTransition={turn ? pageTurn(turn) : undefined} aria-keyshortcuts={turn ? KEYS[turn] : undefined}>
       <Icon name={icon} size={18} color="currentColor" />
     </Link>
   )

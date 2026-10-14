@@ -69,8 +69,13 @@ class Search::Highlighter
       gap && gap > (first || start) + 1 && finish - gap <= SLACK ? gap : finish
     end
 
-    # 位置两侧都是拉丁字母数字：切在这里就是切在词中间
+    # 切点两侧都不是空白、都不是中日韩字符，且至少一侧是拉丁字母数字：切在这里就是切在词中间。
+    # 连字符、撇号、斜线连起来的「Production-grade」「agent-skills」也算一个词（设计说明 2026-10-14 E2）
     def latin_boundary?(text, at)
-      [ text[at - 1], text[at] ].all? { |char| char&.match?(LATIN) && !char.match?(Search::Query::CJK) }
+      before, after = text[at - 1], text[at]
+      return false if before.nil? || after.nil?
+      return false if [ before, after ].any? { |char| char.match?(/[[:space:]]/) || char.match?(Search::Query::CJK) }
+
+      [ before, after ].any? { |char| char.match?(LATIN) }
     end
 end

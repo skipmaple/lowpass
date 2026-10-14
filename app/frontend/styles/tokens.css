@@ -837,3 +837,101 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 @media (min-width: 1920px) {
   .item-row { grid-template-columns: 32px minmax(0, 1fr) 31px; }
 }
+
+/* ─── 2026-10-14 品质提升（docs/superpowers/specs/2026-10-14-award-quality-design.md）────────────────
+   写在文件末尾：前面同一选择器有好几层覆盖，放这里才是最后的定论。后续任务往这一段追加。 */
+
+/* T1 中西文自动间距只给来自源站与模型的内容；界面字（期头日期、归档日期、状态句里的 9月7日、按钮）保持已定的紧排 */
+.item-title, .item-translation, .item-summary, .item-reason, .item-content--weekly, .source-band-issue, .search-title, .search-snippet { text-autospace: normal; }
+
+/* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
+.item-heading, .search-title, .state-line { text-wrap: balance; }
+.item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
+
+/* T3 选区反白：墨底纸字（浏览器的蓝色选区是令牌之外的颜色） */
+::selection { background: var(--ink); color: var(--paper); }
+/* 墨底上的字选中时反过来：纸底墨字（墨上墨看不见） */
+:is(.masthead, .login-band, .source-band, .source-tab[data-state="active"], .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"])::selection,
+:is(.masthead, .login-band, .source-band, .source-tab[data-state="active"], .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"]) ::selection { background: var(--paper); color: var(--ink); }
+
+/* T5 墨底上的纸色字用灰度抗锯齿，字不发胖 */
+.masthead, .login-band, .source-tab[data-state="active"], .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"] {
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+
+/* T6 滚动条用令牌色：35% 墨的滑块、透明轨道（macOS 的悬浮滚动条不受影响，不占版面宽度） */
+html { scrollbar-color: var(--rule) transparent; }
+
+/* Q1 横带里的文字与图标统一取纸色：图标用 currentColor，原先继承了墨，墨画在墨上看不见 */
+.source-band { color: var(--paper); }
+
+/* Q2 所有折叠目录：去掉浏览器默认的三角，换成与搜索筛选折叠钮同款的 chevron（Lucide chevron-right、1.75 描边），展开转 90° */
+details > summary { list-style: none; display: block; }
+details > summary::-webkit-details-marker { display: none; }
+/* chevron 是开头的行内块：summary 保持块级，里面的行内片段（「错误详情 · 原因」）照常连成一行 */
+details > summary::before {
+  content: ""; display: inline-block; vertical-align: -2px; width: 14px; height: 14px; margin-right: 8px; background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+details[open] > summary::before { rotate: 90deg; }
+
+/* Q3 索引条相邻的边合成一条 1px：每条向左压 1px 叠住左邻的右边、向下压 1px 让下一行（与下面列表的顶线）叠住底边；
+   容器左边补回 1px，最左一条仍贴齐版心。墨块副本（M1）用同一组类名，位置跟着一致 */
+.source-tabs { padding-left: 1px; }
+.source-tabs > .source-tab { margin: 0 0 -1px -1px; }
+
+/* Q5 评论链接：44px 触控区由伪元素扩出，元数据行回到 24px 高（手机上原先被 min-height 撑高，间距忽大忽小） */
+.item-comments { position: relative; }
+.item-comments::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%); }
+@media (max-width: 480px) {
+  .item-comments { min-height: 0; min-width: 0; }
+}
+
+/* Q4 / C4（O1 选 b）：兴趣标签紧跟标题最后一个词——标题元素行内排，标签是行内小签，基线对齐标题；
+   放不下就整个换到下一行行首。所有宽度同一条规则；书签仍在行末自己的一列。 */
+.item-heading { display: block; max-width: 780px; }
+/* 标题与标签之间的 10px 记在标题的右外边距上：标签换到下一行时，这段间距留在上一行的行尾，标签从行首起
+   （记在标签的左外边距上会跟着它换行，变成 10px 缩进） */
+.item-heading > .item-title { display: inline; margin-right: 10px; }
+.item-tag { display: inline-flex; vertical-align: baseline; margin-left: 0; padding-top: 0; }
+@media (min-width: 1920px) { .item-heading { max-width: 920px; } }
+
+/* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
+.item-rank, .item-body { align-self: baseline; }
+.item-rank { padding-top: 0; }
+.issue-head-title { align-items: last baseline; }
+.issue-head-stack { padding-bottom: 0; }
+@media (max-width: 767px) {
+  /* 手机上序号与书签同一行、正文另起一行，没有可对的基线 */
+  .item-rank, .item-body { align-self: auto; }
+}
+
+/* Q1 横带图形「翻开的书」：纸色线、挖空填墨，比例 120:78。挖空的颜色走变量，打印时换成透明（print.css） */
+.source-band { --band-hole: var(--ink); }
+.source-band-mark { flex: none; display: block; width: 52px; height: 34px; }
+@media (max-width: 767px) { .source-band-mark { width: 37px; height: 24px; } }
+
+/* C3（O2 选 a）：周刊配图正片叠底压进纸面，白处呈纸色，像印在纸上；打印时恢复原样（print.css） */
+.item-media-image { mix-blend-mode: multiply; }
+
+/* C2 404 / 403：左边 1px 框里一幅「缺页」，右边一句事实加一个动作；手机上下排。与栏级失败态同一装置 */
+.error-state { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: center; }
+.error-art { border: 1px solid var(--ink); padding: 16px; }
+.error-art svg { display: block; width: 100%; height: auto; }
+.error-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+@media (max-width: 480px) {
+  .error-state { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .error-art { max-width: 260px; }
+}
+
+/* C1 登录页：整窗纸面上垂直居中，视觉重心略高于几何中心（上下留白 2:3）；内容高过视口时自然滚动 */
+.login-ground { min-height: 100dvh; display: grid; grid-template-rows: 2fr auto 3fr; grid-template-columns: minmax(0, 400px); justify-content: center; align-items: start; padding: 24px; box-sizing: border-box; }
+/* 列宽封顶 400px、可以收窄：窄屏上纸卡收进视口（自查第 1 轮：320–390 宽曾撑出横向滚动） */
+.login-card { grid-row: 2; width: 100%; }
+
+/* 自查第 1 轮：品牌字占住 Bodoni 的宽度（LOWPASS 在 Bodoni 900、0.02em 字距下是 5.66em）。
+   冷缓存时内联的 Bodoni 晚一帧解码，窄的回退字体先排出来，换字时把后面的导航推开（CLS）；预留宽度后换字不再推动版面 */
+.masthead-brand { min-width: 5.67em; }
+
+/* 自查第 2 轮：登录页那句话放不下时只在逗号后断行，不在词中间断出一个孤字（「登录后阅 / 读」） */
+.login-tagline { word-break: keep-all; }

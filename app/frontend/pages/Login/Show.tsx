@@ -58,16 +58,16 @@ export default function Show({ providers, next }: LoginShowProps) {
   const { flash } = usePage<SharedProps>().props
 
   return (
-    <main className="login-ground">
+    <main className="paper login-ground">
       <Head title="登录" />
-      <div className="paper login-card">
+      <div className="login-card">
         <div className="login-band">
           <span className="masthead-brand">lowpass</span>
         </div>
         <div className="login-body">
           <h1 className="sr-only">登录</h1>
           <div className="login-art">
-            <Sunrise />
+            <Sunrise animated />
           </div>
           <p className="login-tagline">每天一期技术日刊，登录后阅读</p>
           <div className="login-forms">

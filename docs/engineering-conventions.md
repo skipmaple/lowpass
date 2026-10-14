@@ -137,7 +137,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 
 Inertia + React + TypeScript + shadcn/ui（ADR T1、T6），不是 fizzy 的 Hotwire / importmap。〔不采用其前端〕
 仍然适用的：控制器是 CRUD 资源、动作只做一件事并渲染一个 Inertia 页面；props 是前后端唯一契约，必须有类型；
-首屏资源不超过 300 KB（N-1，`script/first_screen_size` 读生产构建的清单来量，`bin/ci` 里有一步守着）；颜色、字体、字号只从设计 skill 的令牌取。字体是首屏的大头：霞鹜文楷的 npm 包按字频切成 97 片，界面固定文案的字另外按读者首屏、读者其余页、后台合成三个小子集（`script/subset_fonts` 生成字体与 `app/frontend/styles/fonts-subset.css`，声明在包之后，unicode-range 重叠时先用子集），Maple Mono 与 Bodoni 也只留用得到的字形。界面文案新加了汉字就重跑一次（`--check` 列出没收进来的字）；漏收不会缺字，只是回落到包的分片、首屏多下载一片。
+首屏资源不超过 300 KB（N-1，`script/first_screen_size` 读生产构建的清单来量，`bin/ci` 里有一步守着）；颜色、字体、字号只从设计 skill 的令牌取。字体是首屏的大头：霞鹜文楷的 npm 包按字频切成 97 片，界面固定文案的字另外按读者首屏、读者其余页、后台合成三个小子集（`script/subset_fonts` 生成字体与 `app/frontend/styles/fonts-subset.css`，声明在包之后，unicode-range 重叠时先用子集），Maple Mono 与 Bodoni 也只留用得到的字形。界面文案新加了汉字就重跑一次（`--check` 列出没收进来的字）；漏收不会缺字，只是回落到包的分片、首屏多下载一片。文楷包 97 个分片的 `@font-face` 声明（gzip 后 32 KB）不放进阻塞渲染的 `application.css`：它们在 `entrypoints/fonts-content.css`，布局里 preload、`lib/contentFonts.ts` 启动时挂上，首屏预算不计（它和按需下载的分片一样是内容）。界面子集在两处都声明，保证界面字始终从子集取。
 
 ## 数据库与迁移
 

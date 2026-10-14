@@ -77,7 +77,7 @@ class FavoritesController < ApplicationController
         url: favorite.url,
         title: favorite.title,
         title_zh: item&.title_zh.presence || favorite.title_zh,
-        snippet: Search::Highlighter.excerpt(favorite.summary),
+        snippet: Search::Highlighter.excerpt(SummaryCleaner.clean(favorite.summary)),
         summary_zh: item&.summary_zh.presence || favorite.summary_zh
       }
     end

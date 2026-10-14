@@ -1,0 +1,156 @@
+/* 动效（设计 skill「动效」、PRD D34、设计说明 2026-10-14 第 4.4 节）。
+   只有三个动作：墨走、翻页、盖章。只动 transform、opacity、clip-path、stroke-dashoffset 与颜色类属性，不动布局。
+   令牌只有这五个；新动效先问「它是这三个动作之一吗」，不是就不加。 */
+
+:root {
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+  --dur-3: 360ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes lp-fade { from { opacity: 0; } }
+@keyframes lp-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes lp-settle { from { opacity: 0; transform: translateY(8px); } }
+@keyframes lp-drop { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes lp-unfold { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* ─── M4 墨线 ─────────────────────────────────────────────────────────── */
+
+/* 链接下划线由 30% 墨加深到实墨；原先悬停才画下划线的几处改成常驻透明下划线，悬停只换颜色，才过渡得起来 */
+a.t, .link-button, .archive-key, .search-original { transition: text-decoration-color var(--dur-1) linear, color var(--dur-1) linear; }
+.menu-item, .directory-return, .source-band-link {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
+  transition: text-decoration-color var(--dur-1) linear, color var(--dur-1) linear;
+}
+.menu-item:hover, .directory-return:hover { text-decoration-color: var(--ink); }
+.source-band-link:hover { text-decoration-color: var(--paper); }
+
+/* 描边按钮悬停：墨从底部漫满、字转纸色。墨是一层伪元素做纵向缩放（只动 transform），看到的是实墨块，不是渐变 */
+.ctrl:not(.ctrl-off):not(:disabled) { position: relative; isolation: isolate; transition: color var(--dur-1) linear; }
+.ctrl:not(.ctrl-off):not(:disabled)::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ink);
+  transform: scaleY(0); transform-origin: 50% 100%; transition: transform var(--dur-2) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ctrl:not(.ctrl-off):not(:disabled):hover { color: var(--paper); }
+  .ctrl:not(.ctrl-off):not(:disabled):hover::before { transform: scaleY(1); }
+}
+
+/* 可选中的控件（来源索引条、分段控件）反白专指选中：未选中项悬停只给名字加 1px 下划线 */
+.source-tab .source-tab-name, .seg-item {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
+  transition: text-decoration-color var(--dur-1) linear;
+}
+@media (hover: hover) and (pointer: fine) {
+  .source-tab[data-state="inactive"]:hover .source-tab-name, .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }
+}
+
+/* ─── M1 墨块平移 ─────────────────────────────────────────────────────── */
+
+/* 副本盖在真的索引条上，用同一组类名排版（含 Q3 的叠边），clip-path 只露出当前项；切换时过渡 clip-path */
+.source-tabs-frame { position: relative; }
+.source-tabs-ink { position: absolute; inset: 0; pointer-events: none; user-select: none; transition: clip-path var(--dur-2) var(--ease-move); }
+.source-tabs-ink .source-tab { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+/* 有副本时真的当前项不再自己反白，墨块由副本画——不然目的地一开始就是墨色，看不到滑动 */
+.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"] { background: transparent; color: var(--ink); --tab-hole: var(--paper); }
+.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"] .source-tab-state { color: var(--ink2); opacity: 1; }
+/* 焦点框画在当前项外面：副本只裁到当前项的矩形，盖不住它 */
+.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* 新来源的列表淡入并上移 6px */
+.source-panel[data-switched] { animation: lp-rise var(--dur-2) var(--ease-out); }
+/* 高对比模式下背景都被系统色换掉，副本没有意义；当前项靠 tokens.css 里的系统色描边区分 */
+@media (forced-colors: active) { .source-tabs-ink { display: none; } }
+
+/* ─── M3 盖章 ─────────────────────────────────────────────────────────── */
+
+/* 描线一层常在；实心那层叠在上面，用 clip-path 从底部涨满；收藏的那一下按钮轻压（0.92 → 1） */
+.favorite-button { position: relative; }
+.favorite-line, .favorite-ink { display: block; }
+.favorite-ink { position: absolute; left: 50%; top: 50%; translate: -50% -50%; clip-path: inset(100% 0 0 0); transition: clip-path var(--dur-2) var(--ease-out); }
+.favorite-ink svg, .favorite-ink svg path { fill: currentColor; }
+.favorite-button[data-on] .favorite-ink { clip-path: inset(0 0 0 0); }
+/* tokens.css 里「data-on 时整个 svg 填墨」那条留给旧结构；描线那层不填，墨只由实心层带出来 */
+.favorite-button[data-on] .favorite-line svg, .favorite-button[data-on] .favorite-line svg path { fill: none; }
+.favorite-button[data-stamp] { animation: lp-press var(--dur-2) var(--ease-out); }
+@keyframes lp-press { from { transform: scale(0.92); } }
+
+/* ─── M2 翻页 ─────────────────────────────────────────────────────────── */
+
+/* 名字只在过渡进行中起（lib/pageTurn.ts 的 data-vt）：常驻会让元素自成层叠上下文 */
+html[data-vt] .masthead { view-transition-name: masthead; }
+html[data-vt] .issue-head-date { view-transition-name: issue-date; }
+::view-transition-group(*) { animation-duration: var(--dur-2); animation-timing-function: var(--ease-out); }
+/* 报头不动、期头大字原位交替。Inertia 换完页才把滚动归零，旧画面是在滚动后的位置截的：组动画会让报头与日期
+   从「滚动前的位置」滑到顶部，整屏一掠而过（从页脚翻页时上千像素）。组动画关掉，新旧两张快照都画在新位置上 */
+::view-transition-group(masthead), ::view-transition-group(issue-date) { animation: none; }
+::view-transition-old(masthead), ::view-transition-new(masthead) { animation: none; }
+::view-transition-old(issue-date), ::view-transition-new(issue-date) { inline-size: auto; }
+/* 去往没有报头的页面（会话过期回登录页）时，旧报头淡出，不在原处停满一整段再消失 */
+::view-transition-old(masthead):only-child { animation: lp-fade-away var(--dur-2) var(--ease-out) both; }
+@keyframes lp-fade-away { to { opacity: 0; } }
+/* 前一期：新页从左边进、旧页向右出；后一期相反。位移 24px 加淡入淡出。翻的是整屏快照（root），
+   它就是视口那么大，不随滚动位置位移 */
+html[data-turn="back"]::view-transition-old(root) { animation: lp-turn-out-right var(--dur-3) var(--ease-move) both; }
+html[data-turn="back"]::view-transition-new(root) { animation: lp-turn-in-left var(--dur-3) var(--ease-move) both; }
+html[data-turn="forward"]::view-transition-old(root) { animation: lp-turn-out-left var(--dur-3) var(--ease-move) both; }
+html[data-turn="forward"]::view-transition-new(root) { animation: lp-turn-in-right var(--dur-3) var(--ease-move) both; }
+@keyframes lp-turn-out-right { to { opacity: 0; transform: translateX(24px); } }
+@keyframes lp-turn-out-left { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes lp-turn-in-left { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes lp-turn-in-right { from { opacity: 0; transform: translateX(24px); } }
+
+/* ─── M5 开场 ─────────────────────────────────────────────────────────── */
+
+/* 每个标签页会话第一次整页加载：期头大字自下而上露出并上移 8px（360ms）；2px 底线从左画出（延迟 60ms）；
+   索引条 / 搜索框淡入（延迟 120ms）；列表最后淡入（延迟 180ms）。总长 420ms。只动 clip-path、transform、opacity。
+   底线动画期间由伪元素代画：标记摘掉后原来的 border 回来，像素一致。 */
+@keyframes lp-reveal { from { clip-path: inset(100% 0 0 0); transform: translateY(8px); } to { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes lp-draw { from { transform: scaleX(0); } }
+html[data-first-load] .page-head .issue-head-date { animation: lp-reveal var(--dur-3) var(--ease-out) both; }
+html[data-first-load] .page-head { position: relative; border-bottom-color: transparent; }
+html[data-first-load] .page-head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--ink);
+  transform-origin: 0 50%; animation: lp-draw var(--dur-3) var(--ease-move) 60ms both;
+}
+html[data-first-load] .source-tabs-frame, html[data-first-load] .search-head, html[data-first-load] .source-band {
+  animation: lp-rise var(--dur-2) var(--ease-out) 120ms both;
+}
+html[data-first-load] .source-panel, html[data-first-load] .archive-list, html[data-first-load] .weekly-directory,
+html[data-first-load] #main-content section, html[data-first-load] .search-entry, html[data-first-load] .search-count,
+html[data-first-load] .search-row, html[data-first-load] .settings-rows, html[data-first-load] #main-content > .issue-body {
+  animation: lp-fade var(--dur-2) var(--ease-out) 180ms both;
+}
+
+/* ─── M6 日出（登录页）────────────────────────────────────────────────── */
+
+/* 太阳从地平线下升起（两个 --dur-3），光芒依次画出（每根错开 --dur-1 的三分之一），水纹从左向右画出；约 1 秒，只播一次 */
+.sunrise--animated .sunrise-sun { animation: lp-sun calc(var(--dur-3) * 2) var(--ease-out) both; }
+@keyframes lp-sun { from { transform: translateY(34px); } }
+.sunrise--animated .sunrise-ray {
+  stroke-dasharray: 1; animation: lp-stroke var(--dur-3) var(--ease-out) both;
+  animation-delay: calc(var(--dur-3) + var(--i) * var(--dur-1) / 3);
+}
+.sunrise--animated .sunrise-wave { stroke-dasharray: 1; animation: lp-stroke calc(var(--dur-3) + var(--dur-2)) var(--ease-move) var(--dur-2) both; }
+@keyframes lp-stroke { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
+
+.menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }
+.dialog-shade { animation: lp-fade var(--dur-2) var(--ease-out); }
+.dialog { animation: lp-settle var(--dur-2) var(--ease-out); }
+.toast { animation: lp-drop var(--dur-2) var(--ease-out); }
+/* 周刊「板块目录」展开：目录项淡入；版面本身不做高度动画（不动布局） */
+details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
+
+/* ─── 减少动态效果 ───────────────────────────────────────────────────── */
+
+/* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码不会卡住 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important; animation-delay: 0ms !important;
+    transition-duration: 1ms !important; transition-delay: 0ms !important;
+  }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

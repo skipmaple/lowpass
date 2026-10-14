@@ -1,9 +1,14 @@
 import { createInertiaApp } from '@inertiajs/react'
 
 import Layout from '@/components/Layout'
+import { loadContentFonts } from '@/lib/contentFonts'
+import { markFirstLoad } from '@/lib/motion'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
+import { crossfadeFor } from '@/lib/pageTurn'
 
+loadContentFonts()
 focusMainOnNavigate()
+markFirstLoad()
 
 void createInertiaApp({
   pages: "../pages",
@@ -29,8 +34,8 @@ void createInertiaApp({
       forceIndicesArrayFormatInFormData: false,
       withAllErrors: true,
     },
-    visitOptions: () => {
-      return { queryStringArrayFormat: "brackets" }
+    visitOptions: (href, options) => {
+      return { queryStringArrayFormat: "brackets", ...crossfadeFor(href, options) }
     },
   },
 }).catch((error) => {

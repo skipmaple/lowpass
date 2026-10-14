@@ -8,6 +8,8 @@
 #   - 字体：文楷界面子集（布局里 preload 的只有它）、Maple Mono 子集、Newsreader 拉丁分片（这两个经 @font-face 在用到时下载，
 #     日刊页首屏都用得到）；woff2 本身已压缩，按原大小算
 # 正文与推荐理由里的汉字按需下载的文楷分片不算：那是内容，不是界面。报头的 Bodoni 已经内联进 CSS。
+# 文楷 97 个分片的 @font-face 声明（entrypoints/fonts-content.css）也不算：它由布局 preload、启动时挂上，不阻塞渲染，
+# 跟按需下载的分片一样属于内容（设计说明 2026-10-14 D3）。
 require "json"
 require "zlib"
 

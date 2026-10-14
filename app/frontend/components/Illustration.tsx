@@ -130,6 +130,26 @@ export function Sunrise({ className }: { className?: string }) {
   )
 }
 
+// 缺页：一张对折的报纸，右页正中被裁去一块（虚线是裁口），缺口里是 45° 排线的阴影。404 与 403 用（viewBox 同日出，260×138）。
+export function MissingPage({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 260 138" className={className} fill="none" stroke="var(--ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M30 20 L 128 14 L 128 124 L 30 118 Z" fill="var(--paper)" />
+      <path d="M132 14 L 230 20 L 230 118 L 132 124 Z" fill="var(--paper)" />
+      <line x1="130" y1="12" x2="130" y2="126" strokeWidth={1} />
+      <line x1="40" y1="30" x2="118" y2="26" strokeWidth={4} />
+      {[44, 54, 64, 74, 84, 94, 104].map((y, index) => (
+        <line key={y} x1="40" y1={y - index * 0.4} x2={index % 3 === 2 ? 96 : 118} y2={y - index * 0.4 - 3} strokeWidth={1} />
+      ))}
+      <line x1="146" y1="28" x2="218" y2="31" strokeWidth={1} />
+      <rect x="150" y="40" width="62" height="48" fill="var(--paper)" strokeDasharray="4 3" />
+      {hatch(152, 42, 58, 44, 4)}
+      <line x1="146" y1="100" x2="218" y2="103" strokeWidth={1} />
+      <line x1="146" y1="110" x2="200" y2="112.5" strokeWidth={1} />
+    </svg>
+  )
+}
+
 function round(value: number): number {
   return Math.round(value * 10) / 10
 }

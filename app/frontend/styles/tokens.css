@@ -906,3 +906,13 @@ details[open] > summary::before { rotate: 90deg; }
 
 /* C3（O2 选 a）：周刊配图正片叠底压进纸面，白处呈纸色，像印在纸上；打印时恢复原样（print.css） */
 .item-media-image { mix-blend-mode: multiply; }
+
+/* C2 404 / 403：左边 1px 框里一幅「缺页」，右边一句事实加一个动作；手机上下排。与栏级失败态同一装置 */
+.error-state { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: center; }
+.error-art { border: 1px solid var(--ink); padding: 16px; }
+.error-art svg { display: block; width: 100%; height: auto; }
+.error-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+@media (max-width: 480px) {
+  .error-state { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .error-art { max-width: 260px; }
+}

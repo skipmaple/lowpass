@@ -14,7 +14,8 @@ import { FavoritesProvider } from '@/lib/favorites'
 import { DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
 import { useArrowTurns } from '@/lib/pageTurn'
 import { usePolling } from '@/lib/polling'
-import { Mixed } from '@/lib/typeset'
+import { usePrinting } from '@/lib/print'
+import { Mixed, latinLang } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SharedProps, SourceSummary } from '@/types/lowpass'
 
 // 日刊详情，也是首页（D20）。期头带状态，来源索引条一次只显示一个来源，
@@ -55,12 +56,12 @@ function rememberSource(sourceId: string) {
   })
 }
 
-function SourceBody({ source, items }: { source: SourceSummary; items: Item[] }) {
+function SourceBody({ source, items, heading = 'h2' }: { source: SourceSummary; items: Item[]; heading?: 'h2' | 'h3' }) {
   return (
     <>
       <div className="issue-body">
         {source.state === 'ok' ? (
-          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} />)
+          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} heading={heading} />)
         ) : (
           <SourceState state={source.state} lastOkLabel={source.last_ok_label} />
         )}
@@ -91,6 +92,7 @@ export type SourcesProps = {
 // 调用方用 key={period_key} 拿住它：换一期就换一个实例，不会有一帧还停在上一期的来源上。
 function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProps) {
   const [activeId, setActiveId] = useState(activeSourceId)
+  const printing = usePrinting()
 
   function selectSource(id: string) {
     setActiveId(id)
@@ -99,6 +101,21 @@ function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProp
 
   const active = sources.find((source) => source.id === activeId)
   if (!active) return notice ? <IssueNotice text={notice} /> : null
+
+  // 打印时印出全部来源，每个来源前印来源名（PRD D34）；期级事实句只印一次。平时一次只显示一个来源（PRD 6.2）
+  if (printing) {
+    if (notice) return <IssueNotice text={notice} />
+    return (
+      <div className="print-sources">
+        {sources.map((source) => (
+          <section key={source.id} className="print-source">
+            <h2 className="print-source-name" lang={latinLang(source.name)}>{source.name}</h2>
+            <SourceBody source={source} items={itemsBySource[source.id] ?? []} heading="h3" />
+          </section>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <SourceTabs sources={sources} activeId={active.id} onSelect={selectSource}>

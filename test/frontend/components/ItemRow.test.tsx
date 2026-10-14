@@ -455,3 +455,9 @@ describe('ItemRow 书签（PRD 5.10）', () => {
     expect(container.querySelector('.favorite-button')).toBeNull()
   })
 })
+
+it('标题链接带域名（打印时印在标题后），去掉 www.', () => {
+  render(<ItemRow item={item({ url: 'https://www.example.com/termlog' })} adapter="hacker_news" rank={1} />)
+
+  expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toHaveAttribute('data-host', 'example.com')
+})

@@ -107,6 +107,15 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
   )
 }
 
+// 打印时标题后印链接的域名（print.css 读 data-host）；地址解析不了就不印
+function hostOf(url: string): string | undefined {
+  try {
+    return new URL(url).host.replace(/^www\./, '')
+  } catch {
+    return undefined
+  }
+}
+
 // D25 译文紧跟它译的那段原文：HN 与 Hackaday 在标题下，GitHub Trending 在简介下。不是链接（卡片只有标题可点）。
 // 中文走文楷，夹在里面的产品名、项目名走 Newsreader，跟原文同一字体（设计 skill「译文排进 Newsreader」那条偏差的改法）；
 // 字号与颜色交给 CSS 按断点走。收藏页的行也用它。
@@ -166,7 +175,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。标签在标题元素外面：不进标题的可读名称 */}
         <div className="item-heading">
           <Heading className="item-title">
-            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" lang={latinLang(item.title)}>
+            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" lang={latinLang(item.title)} data-host={hostOf(item.url)}>
               {item.title}
             </a>
           </Heading>

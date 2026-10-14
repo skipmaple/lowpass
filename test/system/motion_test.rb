@@ -77,6 +77,17 @@ class MotionTest < ApplicationSystemTestCase
     assert_not evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "同一会话刷新不重播"
   end
 
+  test "D2 打印媒体下三个来源都印出来，书签与索引条不印" do
+    visit daily_issue_path("2026-09-08")
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "print")
+
+    assert_selector ".print-source-name", count: 3
+    assert_equal "none", evaluate_script("getComputedStyle(document.querySelector('.favorite-button')).display")
+    assert_no_selector ".source-tabs-frame"
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+  end
+
   private
     # 等过渡跑完，再比副本露出的矩形（inline style 里设的 inset）与当前项的矩形
     def assert_ink_on(name)

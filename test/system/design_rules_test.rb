@@ -181,6 +181,14 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal [ 37, 24 ], evaluate_script("(() => { const r = document.querySelector('.source-band-mark').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })()")
   end
 
+  test "D2 打印时配图不叠底，报头是白底墨字" do
+    render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header><img class="item-media-image" alt="">), media: "print")
+
+    assert_equal "normal", style(".item-media-image", "mix-blend-mode")
+    assert_equal "rgba(0, 0, 0, 0)", style(".masthead", "background-color")
+    assert_equal INK, style(".masthead-brand", "color")
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

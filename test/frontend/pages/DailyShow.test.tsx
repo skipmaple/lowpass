@@ -308,3 +308,33 @@ it('条目行有书签，已收藏的链接是实心', () => {
   show({ favorites: ['hash-termlog'] })
   expect(screen.getByRole('button', { name: '取消收藏：Show HN: A terminal log viewer written in Rust' })).toHaveAttribute('data-on')
 })
+
+describe('打印（D34）', () => {
+  it('打印前渲染全部来源、每个来源前印来源名，失败的来源印它的事实句；打印完收回', () => {
+    show({
+      sources: [
+        source(),
+        source({ id: 'src-gh', name: 'GitHub Trending', adapter: 'github_trending' }),
+        source({ id: 'src-had', name: 'Hackaday', adapter: 'rss', state: 'failed' }),
+      ],
+      items_by_source: { 'src-hn': [item()], 'src-gh': [item({ id: 'itm-gh-1', url_hash: 'hash-gh', title: 'openclaw/openclaw' })] },
+    })
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
+
+    act(() => { window.dispatchEvent(new Event('beforeprint')) })
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
+    expect(screen.getByText('openclaw/openclaw')).toBeInTheDocument()
+    expect(screen.getByText('本期抓取失败，已通知管理员')).toBeInTheDocument()
+
+    act(() => { window.dispatchEvent(new Event('afterprint')) })
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
+  })
+
+  it('期级事实句（生成中）打印时只印一次', () => {
+    show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
+
+    act(() => { window.dispatchEvent(new Event('beforeprint')) })
+    expect(screen.getAllByText('生成中，约 1 分钟后刷新')).toHaveLength(1)
+  })
+})

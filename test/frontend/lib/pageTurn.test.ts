@@ -8,8 +8,10 @@ import { router } from '../support/inertia'
 
 function fakeTransition() {
   let finish!: () => void
+  let swapped!: () => void
   const finished = new Promise<void>((resolve) => { finish = resolve })
-  return { transition: { finished } as unknown as ViewTransition, finish }
+  const updateCallbackDone = new Promise<void>((resolve) => { swapped = resolve })
+  return { transition: { finished, updateCallbackDone } as unknown as ViewTransition, finish, swapped }
 }
 
 function reduceMotion(matches: boolean) {
@@ -81,9 +83,16 @@ describe('crossfadeFor', () => {
     expect(crossfadeFor('/favorites', { method: 'post' })).toEqual({})
   })
 
-  // Inertia 把这里的返回值盖在访问自带的选项上：前一期 / 后一期自己带了方向，必须原样放过
-  it('访问已经带了 viewTransition 就不碰', () => {
-    expect(crossfadeFor('/weekly', { viewTransition: false })).toEqual({})
+  // Inertia 把这里的返回值盖在访问自带的选项上：前一期 / 后一期自己带了方向（一个回调），必须原样放过
+  it('访问自己带了过渡回调就不碰', () => {
+    expect(crossfadeFor('/weekly', { viewTransition: () => {} })).toEqual({})
+    expect(crossfadeFor('/weekly', { viewTransition: true })).toEqual({})
+  })
+
+  // 终审：Inertia 的 <Link> 默认把 viewTransition: false 一路传进访问，false 不是「调用方要求不做」
+  it('<Link> 默认带来的 viewTransition: false 照样淡入淡出', () => {
+    window.history.replaceState({}, '', '/daily/2026-09-08')
+    expect(crossfadeFor('/weekly', { viewTransition: false }).viewTransition).toBeTypeOf('function')
   })
 
   it('减少动态效果时不做', () => {
@@ -126,5 +135,38 @@ describe('键盘翻页', () => {
     router.visit.mockClear()
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
     expect(router.visit).not.toHaveBeenCalled()
+  })
+})
+
+// 终审：过渡的换页回调要等下一帧才跑；这一帧里按了后退，Inertia 先换上后退的那一页，过渡回调随后又把要去的那一页换回来。
+// 后退赶上过渡还没换完页时，先扣下这次后退，等过渡换完再原样交给 Inertia
+describe('过渡换页未完成时的后退', () => {
+  it('扣下 popstate，等过渡换完页再把同一个 state 交出去', async () => {
+    const seen: unknown[] = []
+    const inertia = (event: PopStateEvent) => seen.push(event.state)
+    window.addEventListener('popstate', inertia)
+    const { transition, swapped, finish } = fakeTransition()
+    ;(pageTurn('forward') as (t: ViewTransition) => void)(transition)
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { page: 'daily' } }))
+    expect(seen).toEqual([])
+
+    swapped()
+    await transition.updateCallbackDone
+    await Promise.resolve()
+    expect(seen).toEqual([{ page: 'daily' }])
+
+    finish()
+    window.removeEventListener('popstate', inertia)
+  })
+
+  it('没有过渡在换页时，后退照常直接交给 Inertia', () => {
+    const seen: unknown[] = []
+    const inertia = (event: PopStateEvent) => seen.push(event.state)
+    window.addEventListener('popstate', inertia)
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { page: 'search' } }))
+    expect(seen).toEqual([{ page: 'search' }])
+    window.removeEventListener('popstate', inertia)
   })
 })

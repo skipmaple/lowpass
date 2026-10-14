@@ -88,6 +88,47 @@ class MotionTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
   end
 
+  # 终审：从页面下方（页脚的前一期）翻页时，旧画面是滚动后截的、新画面在顶部；报头与期头大字不许跟着滚动距离滑过去
+  test "M2 从页面下方翻页：报头与期头大字不位移，正文整屏向右翻出" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    visit daily_issue_path("2026-09-08")
+    execute_script(<<~JS)
+      document.querySelector('#main-content').style.paddingBottom = '2000px'
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      window.__anims = null
+      const start = document.startViewTransition.bind(document)
+      document.startViewTransition = (callback) => {
+        const transition = start(callback)
+        transition.ready.then(() => {
+          window.__anims = document.getAnimations().filter((a) => a.effect && a.effect.pseudoElement).map((a) => ({
+            pseudo: a.effect.pseudoElement, name: a.animationName, transforms: a.effect.getKeyframes().map((frame) => frame.transform || 'none')
+          }))
+        })
+        return transition
+      }
+    JS
+    find("footer a.ctrl", text: "前一期").click
+    wait_until { evaluate_script("window.__anims") }
+    anims = evaluate_script("window.__anims")
+
+    moving = anims.select { |a| a["pseudo"].match?(/group\((masthead|issue-date)\)/) && a["transforms"].any? { |t| t != "none" } }
+    assert_empty moving, "报头与期头大字的组不该有位移动画：#{moving.inspect}"
+    assert_includes anims.map { |a| [ a["pseudo"], a["name"] ] }, [ "::view-transition-old(root)", "lp-turn-out-right" ]
+    assert_includes anims.map { |a| [ a["pseudo"], a["name"] ] }, [ "::view-transition-new(root)", "lp-turn-in-left" ]
+  end
+
+  # 终审：报头导航这类普通 <Link> 换页也要淡入淡出（Inertia 的 Link 默认带 viewTransition: false）
+  test "M2 报头导航换页时正文淡入淡出" do
+    visit daily_issue_path("2026-09-08")
+    execute_script(<<~JS)
+      window.__vt = false
+      new MutationObserver(() => { if (document.documentElement.hasAttribute('data-vt')) window.__vt = true }).observe(document.documentElement, { attributes: true })
+    JS
+    find(".masthead-nav a", text: "周刊").click
+    assert_current_path %r{\A/weekly}
+    assert evaluate_script("window.__vt"), "换页时应进入过渡"
+  end
+
   private
     # 等过渡跑完，再比副本露出的矩形（inline style 里设的 inset）与当前项的矩形
     def assert_ink_on(name)

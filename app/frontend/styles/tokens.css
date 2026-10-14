@@ -850,6 +850,9 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 
 /* T3 选区反白：墨底纸字（浏览器的蓝色选区是令牌之外的颜色） */
 ::selection { background: var(--ink); color: var(--paper); }
+/* 墨底上的字选中时反过来：纸底墨字（墨上墨看不见） */
+:is(.masthead, .login-band, .source-band, .source-tab[data-state="active"], .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"])::selection,
+:is(.masthead, .login-band, .source-band, .source-tab[data-state="active"], .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"]) ::selection { background: var(--paper); color: var(--ink); }
 
 /* T5 墨底上的纸色字用灰度抗锯齿，字不发胖 */
 .masthead, .login-band, .source-tab[data-state="active"], .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"] {
@@ -863,10 +866,11 @@ html { scrollbar-color: var(--rule) transparent; }
 .source-band { color: var(--paper); }
 
 /* Q2 所有折叠目录：去掉浏览器默认的三角，换成与搜索筛选折叠钮同款的 chevron（Lucide chevron-right、1.75 描边），展开转 90° */
-details > summary { list-style: none; display: flex; align-items: center; gap: 8px; }
+details > summary { list-style: none; display: block; }
 details > summary::-webkit-details-marker { display: none; }
+/* chevron 是开头的行内块：summary 保持块级，里面的行内片段（「错误详情 · 原因」）照常连成一行 */
 details > summary::before {
-  content: ""; flex: none; width: 14px; height: 14px; background: currentColor;
+  content: ""; display: inline-block; vertical-align: -2px; width: 14px; height: 14px; margin-right: 8px; background: currentColor;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 details[open] > summary::before { rotate: 90deg; }
@@ -886,8 +890,10 @@ details[open] > summary::before { rotate: 90deg; }
 /* Q4 / C4（O1 选 b）：兴趣标签紧跟标题最后一个词——标题元素行内排，标签是行内小签，基线对齐标题；
    放不下就整个换到下一行行首。所有宽度同一条规则；书签仍在行末自己的一列。 */
 .item-heading { display: block; max-width: 780px; }
-.item-heading > .item-title { display: inline; }
-.item-tag { display: inline-flex; vertical-align: baseline; margin-left: 10px; padding-top: 0; }
+/* 标题与标签之间的 10px 记在标题的右外边距上：标签换到下一行时，这段间距留在上一行的行尾，标签从行首起
+   （记在标签的左外边距上会跟着它换行，变成 10px 缩进） */
+.item-heading > .item-title { display: inline; margin-right: 10px; }
+.item-tag { display: inline-flex; vertical-align: baseline; margin-left: 0; padding-top: 0; }
 @media (min-width: 1920px) { .item-heading { max-width: 920px; } }
 
 /* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
@@ -900,7 +906,8 @@ details[open] > summary::before { rotate: 90deg; }
   .item-rank, .item-body { align-self: auto; }
 }
 
-/* Q1 横带图形「翻开的书」：纸色线、挖空填墨，比例 120:78 */
+/* Q1 横带图形「翻开的书」：纸色线、挖空填墨，比例 120:78。挖空的颜色走变量，打印时换成透明（print.css） */
+.source-band { --band-hole: var(--ink); }
 .source-band-mark { flex: none; display: block; width: 52px; height: 34px; }
 @media (max-width: 767px) { .source-band-mark { width: 37px; height: 24px; } }
 

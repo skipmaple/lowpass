@@ -37,7 +37,7 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
     <div className="source-band" id={id}>
       <div className="source-band-name">
-        <OpenBook hole="var(--ink)" className="source-band-mark" />
+        <OpenBook hole="var(--band-hole)" className="source-band-mark" />
         <div className="source-band-copy">
           <h2 className="source-band-title" lang={latinLang(section.source.name)}>
             <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />

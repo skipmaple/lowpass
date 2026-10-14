@@ -219,6 +219,55 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal evaluate_script("#{line_of}(9)"), evaluate_script("#{line_of}(13)"), "「登录后阅读」在同一行"
   end
 
+  # 终审：均衡换行总给标签在标题末行留出位置，上面那条用例走不到「换到下一行」的分支；
+  # 这里用一个几乎占满一行、又不至于被拆开的词逼它换行
+  test "Q4 标签换到下一行时从行首起，不缩进" do
+    render_fragment(format(ITEM, title: "Mmmmmmmmmmmmmm", tag: "智能家居 / IoT"), width: 320, height: 800)
+    offsets = evaluate_script(<<~JS)
+      (() => {
+        const rects = [...document.querySelector('.item-title a').getClientRects()]
+        const last = rects[rects.length - 1]
+        const tag = document.querySelector('.item-tag').getBoundingClientRect()
+        const heading = document.querySelector('.item-heading').getBoundingClientRect()
+        return { wrapped: tag.top >= last.bottom - 1, left: tag.left - heading.left }
+      })()
+    JS
+
+    assert offsets["wrapped"], "这个标题应把标签挤到下一行"
+    assert_in_delta 0, offsets["left"], 1
+  end
+
+  # 终审：打印时横带底色去掉了，「翻开的书」挖空处却还填着墨，印出来是一块黑剪影
+  test "D2 周刊横带的图形：屏幕上挖空填墨，打印时挖空透明" do
+    band = %(<div class="source-band"><svg class="source-band-mark" viewBox="0 0 10 10"><path class="hole" fill="var(--band-hole)" d="M0 0h10v10H0z"/></svg></div>)
+    render_fragment(band)
+    assert_equal INK, style(".source-band .hole", "fill")
+
+    render_fragment(band, media: "print")
+    assert_equal "rgba(0, 0, 0, 0)", style(".source-band .hole", "fill")
+  end
+
+  # 终审：选区统一成墨底纸字后，墨底上的字（报头、横带、反白按钮）选中时成了墨上墨，看不见。墨底上反过来用纸底墨字
+  test "T3 墨底上的字选中时是纸底墨字" do
+    render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header><div class="source-band"><h2 class="source-band-title"><span>阮一峰科技爱好者周刊</span></h2></div><button class="btn-primary">搜索</button>))
+
+    [ ".masthead-brand", ".source-band-title span", ".btn-primary" ].each do |selector|
+      assert_equal PAPER, style(selector, "background-color", "::selection"), selector
+      assert_equal INK, style(selector, "color", "::selection"), selector
+    end
+  end
+
+  # 终审：summary 设成 flex 后，后台抓取记录里「错误详情 · 原因」这种行内片段各成一个弹性项、互相隔开 8px。
+  # summary 保持块级，chevron 用行内块挂在开头，里面的字照常排成一行
+  test "Q2 summary 里的行内片段照常连成一行" do
+    render_fragment(%(<details class="admin-details"><summary><span class="a">错误详情</span> · <span class="b">超时</span></summary><p>x</p></details>))
+
+    assert_equal "block", style("summary", "display")
+    gap = evaluate_script("document.querySelector('.b').getBoundingClientRect().left - document.querySelector('.a').getBoundingClientRect().right")
+    assert_operator gap, :<, 20, "「 · 」本身的宽度，不该再加上弹性间距"
+    assert_includes style("summary", "mask-image", "::before"), "url("
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

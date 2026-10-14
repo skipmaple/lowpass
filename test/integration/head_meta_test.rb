@@ -30,4 +30,10 @@ class HeadMetaTest < ActionDispatch::IntegrationTest
     assert_operator png.size, :<=, 150.kilobytes
     assert_equal [ 1200, 630 ], png.binread[16, 8].unpack("NN")
   end
+
+  test "正文字体声明 preload 成样式表，不在阻塞渲染的 CSS 里" do
+    get login_path
+
+    assert_select "link[rel=preload][as=style][data-content-fonts][href$='.css']"
+  end
 end

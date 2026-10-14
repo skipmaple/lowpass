@@ -30,6 +30,8 @@
 
     <%# 每页都有的界面字（报头、期头、页脚）在这个文楷子集里：不等 JS 渲染出文字才发现要它（script/subset_fonts） %>
     <link rel="preload" href="<%= vite_asset_path "fonts/lxgw-wenkai-screen-ui.woff2" %>" as="font" type="font/woff2" crossorigin>
+    <%# 正文字体声明不挡首屏：先 preload，lib/contentFonts.ts 启动时挂成样式表（设计说明 2026-10-14 D3） %>
+    <link rel="preload" as="style" href="<%= vite_asset_path "fonts-content.css" %>" data-content-fonts>
 
     <%= vite_client_tag %>
     <%= vite_react_refresh_tag %>

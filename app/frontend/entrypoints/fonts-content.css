@@ -1,0 +1,5 @@
+/* 正文字体声明（设计说明 2026-10-14 D3）：霞鹜文楷 97 个分片的 @font-face 有 32 KB（gzip），不该挡着首屏渲染。
+   布局里 preload 这张表，lib/contentFonts.ts 在应用启动时把它挂成样式表。界面子集在包的分片之后再声明一遍：
+   unicode-range 重叠时后声明的先用，界面字仍从子集取（与 styles/fonts.css 同一条规则）。 */
+@import "lxgw-wenkai-screen-webfont/lxgwwenkaiscreen.css";
+@import "../styles/fonts-subset.css";

@@ -59,6 +59,24 @@ class MotionTest < ApplicationSystemTestCase
     assert_current_path daily_issue_path("2026-09-07")
   end
 
+  test "M5 会话第一次打开播开场，刷新不重播，版面不跳" do
+    execute_script("sessionStorage.clear()")
+    visit daily_issue_path("2026-09-08")
+    assert evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "第一次打开应有开场标记"
+
+    cls = evaluate_async_script(<<~JS)
+      const done = arguments[0]
+      let total = 0
+      new PerformanceObserver((list) => { for (const entry of list.getEntries()) total += entry.value }).observe({ type: 'layout-shift', buffered: true })
+      setTimeout(() => done(total), 900)
+    JS
+    assert_equal 0, cls
+
+    assert_not evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "800ms 后应摘掉"
+    refresh
+    assert_not evaluate_script("document.documentElement.hasAttribute('data-first-load')"), "同一会话刷新不重播"
+  end
+
   private
     # 等过渡跑完，再比副本露出的矩形（inline style 里设的 inset）与当前项的矩形
     def assert_ink_on(name)

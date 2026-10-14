@@ -95,6 +95,28 @@ html[data-turn="forward"]::view-transition-new(page) { animation: lp-turn-in-rig
 @keyframes lp-turn-in-left { from { opacity: 0; transform: translateX(-24px); } }
 @keyframes lp-turn-in-right { from { opacity: 0; transform: translateX(24px); } }
 
+/* ─── M5 开场 ─────────────────────────────────────────────────────────── */
+
+/* 每个标签页会话第一次整页加载：期头大字自下而上露出并上移 8px（360ms）；2px 底线从左画出（延迟 60ms）；
+   索引条 / 搜索框淡入（延迟 120ms）；列表最后淡入（延迟 180ms）。总长 420ms。只动 clip-path、transform、opacity。
+   底线动画期间由伪元素代画：标记摘掉后原来的 border 回来，像素一致。 */
+@keyframes lp-reveal { from { clip-path: inset(100% 0 0 0); transform: translateY(8px); } to { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes lp-draw { from { transform: scaleX(0); } }
+html[data-first-load] .page-head .issue-head-date { animation: lp-reveal var(--dur-3) var(--ease-out) both; }
+html[data-first-load] .page-head { position: relative; border-bottom-color: transparent; }
+html[data-first-load] .page-head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--ink);
+  transform-origin: 0 50%; animation: lp-draw var(--dur-3) var(--ease-move) 60ms both;
+}
+html[data-first-load] .source-tabs-frame, html[data-first-load] .search-head, html[data-first-load] .source-band {
+  animation: lp-rise var(--dur-2) var(--ease-out) 120ms both;
+}
+html[data-first-load] .source-panel, html[data-first-load] .archive-list, html[data-first-load] .weekly-directory,
+html[data-first-load] #main-content section, html[data-first-load] .search-entry, html[data-first-load] .search-count,
+html[data-first-load] .search-row, html[data-first-load] .settings-rows, html[data-first-load] #main-content > .issue-body {
+  animation: lp-fade var(--dur-2) var(--ease-out) 180ms both;
+}
+
 /* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
 
 .menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }

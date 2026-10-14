@@ -328,3 +328,61 @@ describe('FavoriteButton', () => {
     expect(seen.value?.removed(HASH)).toBe(true)
   })
 })
+
+describe('盖章（M3）', () => {
+  // 压一下的动画在 data-stamp 出现时播一次；取消时去掉，下次收藏再出现，才会再播
+  it('点「收藏」那一下带上 data-stamp，取消时去掉，再收藏又带上', async () => {
+    stubFetch(ok({ url_hash: HASH }))
+    const user = userEvent.setup()
+    mount()
+
+    const button = screen.getByRole('button', { name: ADD })
+    await user.click(button)
+    expect(button).toHaveAttribute('data-on')
+    expect(button).toHaveAttribute('data-stamp')
+
+    stubFetch(ok({}, 204))
+    await user.click(button)
+    expect(button).not.toHaveAttribute('data-stamp')
+
+    stubFetch(ok({ url_hash: HASH }))
+    await user.click(button)
+    expect(button).toHaveAttribute('data-stamp')
+  })
+
+  it('取消收藏只退墨，不压', async () => {
+    stubFetch(ok({}, 204))
+    const user = userEvent.setup()
+    mount([HASH])
+
+    const button = screen.getByRole('button', { name: REMOVE })
+    await user.click(button)
+    expect(button).not.toHaveAttribute('data-on')
+    expect(button).not.toHaveAttribute('data-stamp')
+  })
+
+  it('页面带进来的已收藏不压：只有点击才盖章', () => {
+    mount([HASH])
+
+    expect(screen.getByRole('button', { name: REMOVE })).not.toHaveAttribute('data-stamp')
+  })
+
+  it('收藏失败回滚时墨退下，data-stamp 一起去掉', async () => {
+    stubFetch(rejected(500))
+    const user = userEvent.setup()
+    mount()
+
+    const button = screen.getByRole('button', { name: ADD })
+    await user.click(button)
+    await waitFor(() => expect(button).not.toHaveAttribute('data-on'))
+    expect(button).not.toHaveAttribute('data-stamp')
+  })
+
+  it('描线与实心两层都对读屏隐藏', () => {
+    mount()
+
+    const button = screen.getByRole('button', { name: ADD })
+    expect(button.querySelector('.favorite-line')).toHaveAttribute('aria-hidden', 'true')
+    expect(button.querySelector('.favorite-ink')).toHaveAttribute('aria-hidden', 'true')
+  })
+})

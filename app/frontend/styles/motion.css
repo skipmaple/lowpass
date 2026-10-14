@@ -63,6 +63,19 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
 /* 高对比模式下背景都被系统色换掉，副本没有意义；当前项靠 tokens.css 里的系统色描边区分 */
 @media (forced-colors: active) { .source-tabs-ink { display: none; } }
 
+/* ─── M3 盖章 ─────────────────────────────────────────────────────────── */
+
+/* 描线一层常在；实心那层叠在上面，用 clip-path 从底部涨满；收藏的那一下按钮轻压（0.92 → 1） */
+.favorite-button { position: relative; }
+.favorite-line, .favorite-ink { display: block; }
+.favorite-ink { position: absolute; left: 50%; top: 50%; translate: -50% -50%; clip-path: inset(100% 0 0 0); transition: clip-path var(--dur-2) var(--ease-out); }
+.favorite-ink svg, .favorite-ink svg path { fill: currentColor; }
+.favorite-button[data-on] .favorite-ink { clip-path: inset(0 0 0 0); }
+/* tokens.css 里「data-on 时整个 svg 填墨」那条留给旧结构；描线那层不填，墨只由实心层带出来 */
+.favorite-button[data-on] .favorite-line svg, .favorite-button[data-on] .favorite-line svg path { fill: none; }
+.favorite-button[data-stamp] { animation: lp-press var(--dur-2) var(--ease-out); }
+@keyframes lp-press { from { transform: scale(0.92); } }
+
 /* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
 
 .menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }
@@ -74,7 +87,7 @@ details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
 
 /* ─── 减少动态效果 ───────────────────────────────────────────────────── */
 
-/* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码（盖章）不会卡住 */
+/* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码不会卡住 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important; animation-delay: 0ms !important;

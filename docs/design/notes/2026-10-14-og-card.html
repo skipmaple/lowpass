@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Lowpass 分享卡片（源稿）</title>
+<!-- 设计说明 2026-10-14 D1：分享卡片。按 600×315 排、用 2 倍像素渲染成 public/og.png（1200×630）：
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=600,315 --screenshot=public/og.png "file://$PWD/docs/design/notes/2026-10-14-og-card.html"
+     字体直接引仓库里的子集：Bodoni 子集只含 LOWPASS 几个字母，文楷界面子集含登录页那句话。 -->
+<style>
+  @font-face { font-family: "Bodoni Brand"; src: url("../../../app/frontend/fonts/bodoni-moda-brand.woff2") format("woff2"); font-weight: 900; }
+  @font-face { font-family: "WenKai UI"; src: url("../../../app/frontend/fonts/lxgw-wenkai-screen-ui.woff2") format("woff2"); }
+  html, body { margin: 0; width: 600px; height: 315px; overflow: hidden; background: #E8E3DA; color: #1D1D1B; }
+  .band { height: 80px; background: #1D1D1B; display: flex; align-items: center; justify-content: center; }
+  .brand { font-family: "Bodoni Brand", serif; font-weight: 900; font-size: 40px; letter-spacing: 0.02em; color: #E8E3DA; line-height: 1; }
+  .body { display: flex; align-items: center; justify-content: center; gap: 32px; height: 235px; }
+  .art { border: 1px solid #1D1D1B; padding: 12px; width: 236px; }
+  .art svg { display: block; width: 100%; height: auto; }
+  .tagline { font-family: "WenKai UI", serif; font-size: 20px; line-height: 1.6; width: 200px; }
+</style>
+</head>
+<body>
+  <div class="band"><span class="brand">LOWPASS</span></div>
+  <div class="body">
+    <div class="art">
+      <!-- 与 app/frontend/components/Illustration.tsx 的 Sunrise 同一幅（终态） -->
+      <svg viewBox="0 0 260 138" fill="none" stroke="#1D1D1B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M96 84 a34 34 0 0 1 68 0 z" fill="#96B59F"/>
+        <path d="M96 84 a34 34 0 0 1 68 0"/>
+        <line x1="171.3" y1="68.9" x2="182.6" y2="64.8"/><line x1="163.7" y1="55.7" x2="172.8" y2="47.9"/><line x1="151.9" y1="45.8" x2="157.9" y2="35.4"/><line x1="137.5" y1="40.6" x2="139.5" y2="28.8"/><line x1="122.2" y1="40.7" x2="120" y2="28.9"/><line x1="107.8" y1="46" x2="101.7" y2="35.7"/><line x1="96.1" y1="55.9" x2="86.9" y2="48.3"/><line x1="88.5" y1="69.3" x2="77.2" y2="65.2"/>
+        <line x1="14" y1="84" x2="246" y2="84" stroke-width="2"/>
+        <path d="M14 118 C 50 100 84 104 118 112 S 190 122 246 108"/>
+        <path d="M14 126 C 70 112 120 118 160 124 S 220 130 246 122" stroke-width="1"/>
+        <path d="M14 42 l6 -12 l6 16 l6 -20 l6 18 l6 -14 l6 16 l6 -12 l6 10 l6 -14 l6 12 l6 -12 l6 10 l4 -6" stroke-width="1.4"/>
+        <rect x="90" y="24" width="30" height="32" fill="#E8E3DA"/>
+        <path d="M92 50 L96 54 M92 46 L100 54 M92 42 L104 54 M92 38 L108 54 M92 34 L112 54 M92 30 L116 54 M92 26 L118 52 M96 26 L118 48 M100 26 L118 44 M104 26 L118 40 M108 26 L118 36 M112 26 L118 32 M116 26 L118 28" stroke-width="0.9"/>
+        <path d="M120 40 c 14 -18 28 -18 42 0 s 28 18 42 0 s 28 -18 42 0" stroke-width="1.6"/>
+      </svg>
+    </div>
+    <!-- 在逗号后断行：不让「登录」拆在两行 -->
+    <p class="tagline">每天一期技术日刊，<br>登录后阅读</p>
+  </div>
+</body>
+</html>

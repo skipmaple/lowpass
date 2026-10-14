@@ -6,14 +6,23 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Lowpass">
     <meta name="mobile-web-app-capable" content="yes">
+    <%# 设计说明 2026-10-14 D1：简介用附录 B 的登录页一句话；手机浏览器顶栏跟报头墨带同色；分享卡片落在登录页上也成立 %>
+    <meta name="description" content="每天一期技术日刊，登录后阅读">
+    <meta name="theme-color" content="#1D1D1B">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta property="og:site_name" content="Lowpass">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Lowpass">
+    <meta property="og:description" content="每天一期技术日刊，登录后阅读">
+    <meta property="og:image" content="<%= request.base_url %>/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= yield :head %>
     <%= inertia_ssr_head %>
-
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
     <link rel="icon" href="/icon.png?v=3" type="image/png">
     <link rel="icon" href="/icon.svg?v=3" type="image/svg+xml">

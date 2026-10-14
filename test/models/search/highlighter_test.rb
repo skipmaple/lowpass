@@ -121,4 +121,11 @@ class Search::HighlighterTest < ActiveSupport::TestCase
     assert_match(/\A…w\d+ /, body)
     assert_match(/ z…\z|z…\z/, body)
   end
+
+  # F7：片段起点落在连字符上（「Production-grade」的 -）时，挪到下一个词的开头，不从「-grade」开始
+  test "连字符连起来的词也不从中间切开" do
+    body = joined(highlighter("agent").snippet("Production-grade engineering skills for AI coding agents."))
+
+    assert_equal "…engineering skills for AI coding agents.", body
+  end
 end

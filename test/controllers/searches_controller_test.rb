@@ -192,4 +192,14 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     get search_path(q: "kuber rust")
     assert_equal [ @item.url_hash ], page_props["favorites"]
   end
+
+  # 旧条目库里存着「…read more」：片段先过一遍清洗（PRD 7.5），不把源站的尾巴带进结果
+  test "片段不带源站附加的阅读更多" do
+    index_item("Negative resistance explained", summary: "A look at negative resistance that goes further than expected …read more")
+
+    get search_path(q: "negative resistance")
+
+    snippet = page_props["results"].first["snippet_runs"].map { |run| run["text"] }.join
+    assert_no_match(/read more/i, snippet)
+  end
 end

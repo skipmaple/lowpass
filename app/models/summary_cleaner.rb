@@ -14,6 +14,11 @@ class SummaryCleaner
     /`([^`]*)`/
   ].freeze
 
+  # 源站附加的「阅读更多」链接不是摘要（PRD 7.5）：Hackaday 用 a.read-more，WordPress 默认主题用 a.more-link
+  READ_MORE = "a.read-more, a.more-link".freeze
+  # 已发布的旧条目库里存着清洗过的「…read more」：读出时再过一遍 clean，只去结尾这一种（期发布后不改库）
+  READ_MORE_TAIL = /[[:space:]]*…[[:space:]]*read more[[:space:]]*\z/i
+
   class << self
     def clean(text)
       truncate(normalize(text), STORE_LIMIT) if text
@@ -32,7 +37,7 @@ class SummaryCleaner
     private
       def normalize(text)
         s = strip_markdown(strip_html(text))
-        CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip
+        CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip.sub(READ_MORE_TAIL, "")
       end
 
       def paragraphs(text)
@@ -41,7 +46,9 @@ class SummaryCleaner
       end
 
       def strip_html(text)
-        Nokogiri::HTML.fragment(text).text
+        fragment = Nokogiri::HTML.fragment(text)
+        fragment.css(READ_MORE).each(&:remove)
+        fragment.text
       end
 
       def strip_markdown(text)

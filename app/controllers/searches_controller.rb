@@ -99,7 +99,7 @@ class SearchesController < ApplicationController
         published_label: record.published_label,
         url: item.url,
         title_runs: highlighter.runs(item.title),
-        snippet_runs: item.summary.presence && highlighter.snippet(item.summary)
+        snippet_runs: item.summary.presence && highlighter.snippet(SummaryCleaner.clean(item.summary))
       }
     end
 

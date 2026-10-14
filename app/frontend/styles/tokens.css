@@ -921,3 +921,7 @@ details[open] > summary::before { rotate: 90deg; }
 .login-ground { min-height: 100dvh; display: grid; grid-template-rows: 2fr auto 3fr; grid-template-columns: minmax(0, 400px); justify-content: center; align-items: start; padding: 24px; box-sizing: border-box; }
 /* 列宽封顶 400px、可以收窄：窄屏上纸卡收进视口（自查第 1 轮：320–390 宽曾撑出横向滚动） */
 .login-card { grid-row: 2; width: 100%; }
+
+/* 自查第 1 轮：品牌字占住 Bodoni 的宽度（LOWPASS 在 Bodoni 900、0.02em 字距下是 5.66em）。
+   冷缓存时内联的 Bodoni 晚一帧解码，窄的回退字体先排出来，换字时把后面的导航推开（CLS）；预留宽度后换字不再推动版面 */
+.masthead-brand { min-width: 5.67em; }

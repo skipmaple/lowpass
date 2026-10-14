@@ -36,4 +36,11 @@ class HeadMetaTest < ActionDispatch::IntegrationTest
 
     assert_select "link[rel=preload][as=style][data-content-fonts][href$='.css']"
   end
+
+  # 自查第 1 轮：Newsreader 要等文字排出来才开始下，冷缓存时总在首次绘制之后换字、推动版面。跟文楷界面子集一样先 preload
+  test "Newsreader 拉丁字体 preload" do
+    get login_path
+
+    assert_select "link[rel=preload][as=font][type='font/woff2'][crossorigin][href*='newsreader-latin-wght-normal']"
+  end
 end

@@ -198,6 +198,16 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1
   end
 
+  # 自查第 1 轮：冷缓存时 Bodoni 晚到，品牌字由窄的回退字体换成 Bodoni，后面的导航被推开 40px（CLS）。
+  # 这页没有加载网页字体，量到的就是回退字体下的宽度：必须已经预留到 Bodoni 的宽度（5.66em）
+  test "报头品牌字没加载 Bodoni 时也占住 Bodoni 的宽度" do
+    render_fragment(%(<header class="masthead"><div class="masthead-left"><a class="masthead-brand">lowpass</a><nav class="masthead-nav"><a>日刊</a></nav></div></header>))
+    assert_operator evaluate_script("document.querySelector('.masthead-brand').getBoundingClientRect().width"), :>=, 226.5
+
+    render_fragment(%(<header class="masthead"><div class="masthead-left"><a class="masthead-brand">lowpass</a></div></header>), width: 375, height: 812)
+    assert_operator evaluate_script("document.querySelector('.masthead-brand').getBoundingClientRect().width"), :>=, 147
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

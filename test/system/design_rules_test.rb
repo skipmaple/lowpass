@@ -140,7 +140,7 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   test "M4 描边按钮悬停时墨从底部漫满、字转纸色；不可点的没有" do
-    render_fragment(%(<div style="padding: 40px"><a class="ctrl" href="#p">前一期</a> <span class="ctrl ctrl-off">后一期</span></div>))
+    render_fragment(%(<div style="padding: 40px"><a class="ctrl" href="#p">前一期</a> <span class="ctrl ctrl-off">后一期</span></div>), hover: true)
 
     assert_equal "matrix(1, 0, 0, 0, 0, 0)", style(".ctrl:not(.ctrl-off)", "transform", "::before")
     find("a.ctrl").hover
@@ -150,7 +150,7 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   test "M4 未选中的索引条与分段控件悬停只加下划线，不反白" do
-    render_fragment(%(<div class="source-tabs"><button class="source-tab" data-state="active"><span class="source-tab-name">A</span></button><button class="source-tab" data-state="inactive"><span class="source-tab-name">B</span></button></div>))
+    render_fragment(%(<div class="source-tabs"><button class="source-tab" data-state="active"><span class="source-tab-name">A</span></button><button class="source-tab" data-state="inactive"><span class="source-tab-name">B</span></button></div>), hover: true)
 
     name = ".source-tab[data-state='inactive'] .source-tab-name"
     assert_equal "underline", style(name, "text-decoration-line")
@@ -210,7 +210,15 @@ class DesignRulesTest < ApplicationSystemTestCase
 
   # 自查第 2 轮：375 宽的登录卡里，「每天一期技术日刊，登录后阅读」折行后第二行只剩一个「读」。放不下时只在逗号后断行
   test "登录页那句话放不下时只在逗号后断行" do
-    render_fragment(%(<div style="width: 279px"><p class="login-tagline">每天一期技术日刊，登录后阅读</p></div>), width: 375, height: 812)
+    # 容器宽度按这句话在当前字体下一行的宽度来定（比它窄一点，逼它折行），不假设某台机器上的回退字体有多宽
+    render_fragment(%(<div class="box"><p class="login-tagline">每天一期技术日刊，登录后阅读</p></div>), width: 375, height: 812)
+    execute_script(<<~JS)
+      const box = document.querySelector('.box'), line = document.querySelector('.login-tagline')
+      line.style.cssText = 'display: inline-block; white-space: nowrap'
+      const full = line.getBoundingClientRect().width
+      line.style.cssText = ''
+      box.style.width = (full - 8) + 'px'
+    JS
     line_of = <<~JS
       ((index) => { const node = document.querySelector('.login-tagline').firstChild; const range = document.createRange(); range.setStart(node, index); range.setEnd(node, index + 1); return Math.round(range.getBoundingClientRect().top) })
     JS
@@ -269,8 +277,11 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   private
-    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
+    # hover: true 把悬停规则外面那层 (hover: hover) and (pointer: fine) 换成 all：那层只是给触屏设备的保护，
+    # GitHub Actions 的无头 Chrome 没有指针设备、不匹配它，悬停的效果却正是这里要量的（CDP 也模拟不了这两个媒体特性）
+    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false)
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
+      css = css.gsub("@media (hover: hover) and (pointer: fine)", "@media all") if hover
       browser = page.driver.browser
       browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
       browser.execute_cdp("Emulation.setEmulatedMedia", media: media, features: [ { name: "prefers-reduced-motion", value: reduced_motion ? "reduce" : "no-preference" } ])

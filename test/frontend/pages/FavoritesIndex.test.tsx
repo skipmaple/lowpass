@@ -208,7 +208,8 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     settle({ ok: false, status: 500, json: async () => ({}) })
 
     expect(await screen.findByText('取消收藏没有保存，请重试。')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveFocus()
+    // 焦点在回滚那次提交的副作用里移，提示画出来时副作用可能还没跑（CI 忙的时候）：等它移过去
+    await waitFor(() => expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveFocus())
   })
 
   it('恢复没保存上、读者还在这一行：焦点回到「恢复」', async () => {
@@ -225,7 +226,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     settle({ ok: false, status: 500, json: async () => ({}) })
 
     expect(await screen.findByText('收藏没有保存，请重试。')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '恢复' })).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('button', { name: '恢复' })).toHaveFocus())
   })
 
   // 网慢的时候，读者可能在取消的请求回来之前就点了「恢复」：不丢这一下

@@ -918,5 +918,6 @@ details[open] > summary::before { rotate: 90deg; }
 }
 
 /* C1 登录页：整窗纸面上垂直居中，视觉重心略高于几何中心（上下留白 2:3）；内容高过视口时自然滚动 */
-.login-ground { min-height: 100dvh; display: grid; grid-template-rows: 2fr auto 3fr; justify-items: center; align-items: start; padding: 24px; box-sizing: border-box; }
-.login-card { grid-row: 2; }
+.login-ground { min-height: 100dvh; display: grid; grid-template-rows: 2fr auto 3fr; grid-template-columns: minmax(0, 400px); justify-content: center; align-items: start; padding: 24px; box-sizing: border-box; }
+/* 列宽封顶 400px、可以收窄：窄屏上纸卡收进视口（自查第 1 轮：320–390 宽曾撑出横向滚动） */
+.login-card { grid-row: 2; width: 100%; }

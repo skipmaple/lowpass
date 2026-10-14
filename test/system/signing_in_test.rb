@@ -72,4 +72,17 @@ class SigningInTest < ApplicationSystemTestCase
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
+
+  # 自查第 1 轮：登录卡最宽 400px，窄屏上要收进视口，不撑出横向滚动
+  test "登录页在 320、375 宽不横向溢出" do
+    [ 320, 375 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 800, deviceScaleFactor: 1, mobile: false)
+      visit login_path
+      assert_selector ".login-card"
+
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, evaluate_script("document.documentElement.clientWidth"), "#{width}px"
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
 end

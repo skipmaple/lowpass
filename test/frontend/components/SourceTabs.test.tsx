@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
-import SourceTabs from '@/components/SourceTabs'
+import SourceTabs, { inkInset } from '@/components/SourceTabs'
 import type { SourceSummary } from '@/types/lowpass'
 import { source } from '../support/props'
 
@@ -169,5 +169,32 @@ describe('SourceTabs', () => {
     await user.tab()
 
     expect(screen.getAllByRole('tab')[0]).toHaveFocus()
+  })
+})
+
+describe('墨块平移（M1）', () => {
+  it('inkInset 把当前项相对容器的位置换成 inset(上 右 下 左)', () => {
+    expect(inkInset({ width: 900, height: 104 }, { left: 299, top: 24, width: 301, height: 80 })).toBe('inset(24px 300px 0px 299px)')
+  })
+
+  it('inkInset 四舍五入到 0.01px', () => {
+    expect(inkInset({ width: 100.004, height: 10 }, { left: 33.333, top: 0, width: 33.333, height: 10 })).toBe('inset(0px 33.34px 0px 33.33px)')
+  })
+
+  // jsdom 没有布局：量不到位置就不叠副本，当前项照旧自己反白（跟以前一样）
+  it('量不到位置时不叠反白副本', () => {
+    const { container } = renderTabs()
+
+    expect(container.querySelector('.source-tabs-ink')).toBeNull()
+    expect(container.querySelector('.source-tabs-frame')).not.toHaveAttribute('data-ink')
+  })
+
+  it('首次渲染的面板不带换入动画，切换之后的才带', async () => {
+    const user = userEvent.setup()
+    render(<Harness onSelect={vi.fn()} />)
+
+    expect(screen.getByRole('tabpanel')).not.toHaveAttribute('data-switched')
+    await user.click(screen.getAllByRole('tab')[1])
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('data-switched')
   })
 })

@@ -47,6 +47,22 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
   .source-tab[data-state="inactive"]:hover .source-tab-name, .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }
 }
 
+/* ─── M1 墨块平移 ─────────────────────────────────────────────────────── */
+
+/* 副本盖在真的索引条上，用同一组类名排版（含 Q3 的叠边），clip-path 只露出当前项；切换时过渡 clip-path */
+.source-tabs-frame { position: relative; }
+.source-tabs-ink { position: absolute; inset: 0; pointer-events: none; user-select: none; transition: clip-path var(--dur-2) var(--ease-move); }
+.source-tabs-ink .source-tab { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+/* 有副本时真的当前项不再自己反白，墨块由副本画——不然目的地一开始就是墨色，看不到滑动 */
+.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"] { background: transparent; color: var(--ink); --tab-hole: var(--paper); }
+.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"] .source-tab-state { color: var(--ink2); opacity: 1; }
+/* 焦点框画在当前项外面：副本只裁到当前项的矩形，盖不住它 */
+.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* 新来源的列表淡入并上移 6px */
+.source-panel[data-switched] { animation: lp-rise var(--dur-2) var(--ease-out); }
+/* 高对比模式下背景都被系统色换掉，副本没有意义；当前项靠 tokens.css 里的系统色描边区分 */
+@media (forced-colors: active) { .source-tabs-ink { display: none; } }
+
 /* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
 
 .menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }

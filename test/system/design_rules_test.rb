@@ -1,0 +1,106 @@
+require "application_system_test_case"
+require "base64"
+
+# 设计说明 2026-10-14 里能用计算样式与几何量出来的规则。直接把生产 CSS 和最小的 HTML 片段装进一页
+# （同 paper_test），不经 Vite、不登录：量的是样式表本身。动效与打印的样式表还没建时就跳过它们。
+class DesignRulesTest < ApplicationSystemTestCase
+  STYLES = %w[ tokens.css motion.css print.css ].freeze
+  PAPER = "rgb(232, 227, 218)".freeze
+  INK = "rgb(29, 29, 27)".freeze
+
+  teardown do
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "", features: [])
+  end
+
+  test "Q1 周刊来源横带里的图标与文字是纸色" do
+    render_fragment(%(<div class="source-band"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor"><path d="M0 0L10 10"/></svg></div>))
+
+    assert_equal PAPER, style(".source-band svg", "color")
+  end
+
+  test "Q2 折叠目录没有默认三角，换成会转的 chevron" do
+    render_fragment(%(<details class="weekly-directory"><summary>板块目录</summary><p>x</p></details>))
+
+    assert_not_equal "list-item", style("summary", "display")
+    assert_includes style("summary", "mask-image", "::before"), "url("
+    assert_equal "none", style("summary", "rotate", "::before")
+
+    execute_script("document.querySelector('details').open = true")
+    assert_equal "90deg", style("summary", "rotate", "::before")
+  end
+
+  test "Q3 索引条相邻的边与下面的列表线都合成一条 1px" do
+    [ 1440, 375 ].each do |width|
+      render_fragment(<<~HTML, width: width)
+        <div class="source-tabs"><button class="source-tab">A</button><button class="source-tab">B</button><button class="source-tab">C</button></div>
+        <div class="issue-body"><p>x</p></div>
+      HTML
+      tabs = evaluate_script("[...document.querySelectorAll('.source-tab')].map((tab) => tab.getBoundingClientRect().toJSON())")
+      body = evaluate_script("document.querySelector('.issue-body').getBoundingClientRect().toJSON()")
+
+      assert_in_delta 0, tabs[0]["left"], 0.5, "#{width}px：最左一条贴齐版心"
+      assert_in_delta tabs[0]["right"] - 1, tabs[1]["left"], 0.5, "#{width}px：第一、二条共用一条边"
+      assert_in_delta tabs[1]["right"] - 1, tabs[2]["left"], 0.5, "#{width}px：第二、三条共用一条边"
+      assert_in_delta tabs[0]["bottom"] - 1, body["top"], 0.5, "#{width}px：索引条底边与列表顶线合成一条"
+    end
+  end
+
+  test "Q5 手机上评论链接的触控区 44px，元数据行仍是 24px 高" do
+    render_fragment(%(<div style="padding: 60px"><div class="item-meta"><a class="item-metric item-comments" href="#c"><span>6</span></a></div></div>), width: 375, height: 812)
+
+    assert_operator evaluate_script("document.querySelector('.item-meta').getBoundingClientRect().height"), :<=, 24.5
+    hits = evaluate_script(<<~JS)
+      (() => {
+        const r = document.querySelector('.item-comments').getBoundingClientRect()
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2
+        return [[cx, cy - 21], [cx, cy + 21], [cx - 21, cy], [cx + 21, cy]].map(([x, y]) => document.elementFromPoint(x, y)?.closest('.item-comments') !== null)
+      })()
+    JS
+    assert_equal [ true, true, true, true ], hits
+  end
+
+  test "T1 内容文字开中西文间距，界面日期保持紧排" do
+    render_fragment(%(<p class="item-reason">涉及AI模型</p><p class="item-translation">OpenAI工程师</p><h1 class="issue-head-date">10月14日</h1>))
+
+    assert_equal "normal", style(".item-reason", "text-autospace")
+    assert_equal "normal", style(".item-translation", "text-autospace")
+    assert_equal "no-autospace", style(".issue-head-date", "text-autospace")
+  end
+
+  test "T2 标题均衡换行，段落避免孤字" do
+    render_fragment(%(<div class="item-heading"><h2 class="item-title">Title</h2></div><span class="item-summary">Summary</span><div class="item-reason">理由</div>))
+
+    assert_equal "balance", style(".item-heading", "text-wrap-style")
+    assert_equal "pretty", style(".item-summary", "text-wrap-style")
+    assert_equal "pretty", style(".item-reason", "text-wrap-style")
+  end
+
+  test "T3 选区是墨底纸字" do
+    render_fragment(%(<p class="item-reason">理由</p>))
+
+    assert_equal INK, style(".item-reason", "background-color", "::selection")
+    assert_equal PAPER, style(".item-reason", "color", "::selection")
+  end
+
+  test "T5 墨底纸字用灰度抗锯齿；T6 滚动条用令牌色" do
+    render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header>))
+
+    assert_equal "antialiased", style(".masthead", "-webkit-font-smoothing")
+    assert_equal "rgba(29, 29, 27, 0.35) rgba(0, 0, 0, 0)", style("html", "scrollbar-color")
+  end
+
+  private
+    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
+      css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
+      browser = page.driver.browser
+      browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
+      browser.execute_cdp("Emulation.setEmulatedMedia", media: media, features: [ { name: "prefers-reduced-motion", value: reduced_motion ? "reduce" : "no-preference" } ])
+      document = "<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><style>#{css}</style></head><body class='paper'>#{html}</body></html>"
+      visit "data:text/html;charset=utf-8;base64,#{Base64.strict_encode64(document)}"
+    end
+
+    def style(selector, property, pseudo = nil)
+      evaluate_script("getComputedStyle(document.querySelector(#{selector.to_json}), #{pseudo.to_json}).getPropertyValue(#{property.to_json})")
+    end
+end

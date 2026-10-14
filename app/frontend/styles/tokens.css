@@ -837,3 +837,48 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 @media (min-width: 1920px) {
   .item-row { grid-template-columns: 32px minmax(0, 1fr) 31px; }
 }
+
+/* ─── 2026-10-14 品质提升（docs/superpowers/specs/2026-10-14-award-quality-design.md）────────────────
+   写在文件末尾：前面同一选择器有好几层覆盖，放这里才是最后的定论。后续任务往这一段追加。 */
+
+/* T1 中西文自动间距只给来自源站与模型的内容；界面字（期头日期、归档日期、状态句里的 9月7日、按钮）保持已定的紧排 */
+.item-title, .item-translation, .item-summary, .item-reason, .item-content--weekly, .source-band-issue, .search-title, .search-snippet { text-autospace: normal; }
+
+/* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
+.item-heading, .search-title, .state-line { text-wrap: balance; }
+.item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
+
+/* T3 选区反白：墨底纸字（浏览器的蓝色选区是令牌之外的颜色） */
+::selection { background: var(--ink); color: var(--paper); }
+
+/* T5 墨底上的纸色字用灰度抗锯齿，字不发胖 */
+.masthead, .login-band, .source-tab[data-state="active"], .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"] {
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+
+/* T6 滚动条用令牌色：35% 墨的滑块、透明轨道（macOS 的悬浮滚动条不受影响，不占版面宽度） */
+html { scrollbar-color: var(--rule) transparent; }
+
+/* Q1 横带里的文字与图标统一取纸色：图标用 currentColor，原先继承了墨，墨画在墨上看不见 */
+.source-band { color: var(--paper); }
+
+/* Q2 所有折叠目录：去掉浏览器默认的三角，换成与搜索筛选折叠钮同款的 chevron（Lucide chevron-right、1.75 描边），展开转 90° */
+details > summary { list-style: none; display: flex; align-items: center; gap: 8px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+  content: ""; flex: none; width: 14px; height: 14px; background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+details[open] > summary::before { rotate: 90deg; }
+
+/* Q3 索引条相邻的边合成一条 1px：每条向左压 1px 叠住左邻的右边、向下压 1px 让下一行（与下面列表的顶线）叠住底边；
+   容器左边补回 1px，最左一条仍贴齐版心。墨块副本（M1）用同一组类名，位置跟着一致 */
+.source-tabs { padding-left: 1px; }
+.source-tabs > .source-tab { margin: 0 0 -1px -1px; }
+
+/* Q5 评论链接：44px 触控区由伪元素扩出，元数据行回到 24px 高（手机上原先被 min-height 撑高，间距忽大忽小） */
+.item-comments { position: relative; }
+.item-comments::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%); }
+@media (max-width: 480px) {
+  .item-comments { min-height: 0; min-width: 0; }
+}

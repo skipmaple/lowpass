@@ -67,7 +67,7 @@ export default function Show({ providers, next }: LoginShowProps) {
         <div className="login-body">
           <h1 className="sr-only">登录</h1>
           <div className="login-art">
-            <Sunrise />
+            <Sunrise animated />
           </div>
           <p className="login-tagline">每天一期技术日刊，登录后阅读</p>
           <div className="login-forms">

@@ -60,4 +60,16 @@ class SigningInTest < ApplicationSystemTestCase
     assert_selector ".login-card [role='alert']", text: "已取消登录。"
     assert_current_path login_path
   end
+
+  # 设计说明 2026-10-14 C1：登录卡在视口里居中，视觉重心略高（上方留白约占 40%）
+  test "登录卡在 1440×900 的视口里垂直居中、略偏上" do
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
+    visit login_path
+
+    top, height = evaluate_script("(() => { const r = document.querySelector('.login-card').getBoundingClientRect(); return [r.top, r.height] })()")
+    share = top / (900 - height)
+    assert_in_delta 0.4, share, 0.06
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
 end

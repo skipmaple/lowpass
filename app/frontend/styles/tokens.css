@@ -916,3 +916,7 @@ details[open] > summary::before { rotate: 90deg; }
   .error-state { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .error-art { max-width: 260px; }
 }
+
+/* C1 登录页：整窗纸面上垂直居中，视觉重心略高于几何中心（上下留白 2:3）；内容高过视口时自然滚动 */
+.login-ground { min-height: 100dvh; display: grid; grid-template-rows: 2fr auto 3fr; justify-items: center; align-items: start; padding: 24px; box-sizing: border-box; }
+.login-card { grid-row: 2; }

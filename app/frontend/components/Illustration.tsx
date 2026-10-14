@@ -5,6 +5,7 @@
 // 反白的索引条上，原本纸色的填充要改填墨色才继续读作「挖空」——画布里是
 // `ill().replace(PAPER, INK)`，这里由 hole 这个参数承担。
 
+import { useId } from 'react'
 import type * as React from 'react'
 
 import type { Adapter } from '@/types/lowpass'
@@ -104,15 +105,30 @@ export function OpenBook({ hole, className }: SourceMarkProps) {
 
 const RAY_ANGLES = [0.35, 0.7, 1.05, 1.4, 1.75, 2.1, 2.45, 2.8]
 
-// 低通日出：失败态那张小图（画布 130×69，viewBox 260×138）
-export function Sunrise({ className }: { className?: string }) {
+// 低通日出：失败态那张小图（画布 130×69，viewBox 260×138）；登录页用 animated 版——太阳从地平线下升起，
+// 光芒依次画出，水纹从左向右画出，只播一次（设计 skill「动效」日出，motion.css）。太阳裁在地平线以上，
+// 升起前藏在地平线下面，不压到水纹上。
+export function Sunrise({ className, animated = false }: { className?: string; animated?: boolean }) {
+  const horizon = useId()
+  const classes = [className, animated ? 'sunrise--animated' : null].filter(Boolean).join(' ') || undefined
+
   return (
-    <svg viewBox="0 0 260 138" className={className} fill="none" stroke="var(--ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      <path d="M96 84 a34 34 0 0 1 68 0 z" fill="var(--green)" />
-      <path d="M96 84 a34 34 0 0 1 68 0" />
-      {RAY_ANGLES.map((a) => (
+    <svg viewBox="0 0 260 138" className={classes} fill="none" stroke="var(--ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id={horizon}><rect x="0" y="0" width="260" height="84" /></clipPath>
+      </defs>
+      <g clipPath={`url(#${horizon})`}>
+        <g className="sunrise-sun">
+          <path d="M96 84 a34 34 0 0 1 68 0 z" fill="var(--green)" />
+          <path d="M96 84 a34 34 0 0 1 68 0" />
+        </g>
+      </g>
+      {RAY_ANGLES.map((a, index) => (
         <line
           key={a}
+          className="sunrise-ray"
+          pathLength={1}
+          style={{ '--i': index } as React.CSSProperties}
           x1={round(130 + 44 * Math.cos(a))}
           y1={round(84 - 44 * Math.sin(a))}
           x2={round(130 + 56 * Math.cos(a))}
@@ -120,8 +136,8 @@ export function Sunrise({ className }: { className?: string }) {
         />
       ))}
       <line x1="14" y1="84" x2="246" y2="84" strokeWidth={2} />
-      <path d="M14 118 C 50 100 84 104 118 112 S 190 122 246 108" />
-      <path d="M14 126 C 70 112 120 118 160 124 S 220 130 246 122" strokeWidth={1} />
+      <path className="sunrise-wave" pathLength={1} d="M14 118 C 50 100 84 104 118 112 S 190 122 246 108" />
+      <path className="sunrise-wave" pathLength={1} d="M14 126 C 70 112 120 118 160 124 S 220 130 246 122" strokeWidth={1} />
       <path d="M14 42 l6 -12 l6 16 l6 -20 l6 18 l6 -14 l6 16 l6 -12 l6 10 l6 -14 l6 12 l6 -12 l6 10 l4 -6" strokeWidth={1.4} />
       <rect x="90" y="24" width="30" height="32" fill="var(--paper)" />
       {hatch(92, 26, 26, 28, 4)}

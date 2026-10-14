@@ -348,3 +348,11 @@ it('周刊条目有书签，降级的节没有', () => {
   const { container } = show({ sections: [weeklySection({ degraded: true })] })
   expect(container.querySelector('.favorite-button')).toBeNull()
 })
+
+it('来源横带用「翻开的书」木刻图形，对读屏隐藏', () => {
+  const { container } = show()
+
+  const mark = container.querySelector('.source-band svg.source-band-mark')
+  expect(mark).not.toBeNull()
+  expect(mark).toHaveAttribute('aria-hidden', 'true')
+})

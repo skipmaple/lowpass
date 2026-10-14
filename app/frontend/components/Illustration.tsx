@@ -83,6 +83,25 @@ function Solder({ hole, className }: SourceMarkProps) {
   )
 }
 
+// 翻开的书：周刊的来源图形（阮一峰周刊与以后的周刊源都用它）。左页几行字，右页一块排线像版面上的图，下面是书口。
+// 与其余三幅同一套笔法：2px 墨线、圆头、45° 排线；反白时挖空处填墨（hole）。
+export function OpenBook({ hole, className }: SourceMarkProps) {
+  return (
+    <svg viewBox="0 0 120 78" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M60 18 C 48 12 30 10 14 13 L 14 64 C 30 61 48 63 60 70 Z" fill={hole} />
+      <path d="M60 18 C 72 12 90 10 106 13 L 106 64 C 90 61 72 63 60 70 Z" fill={hole} />
+      <line x1="60" y1="18" x2="60" y2="70" />
+      <path d="M22 24 C 32 22 42 23 52 26" strokeWidth={1.4} />
+      <path d="M22 32 C 32 30 42 31 52 34" strokeWidth={1.4} />
+      <path d="M22 40 C 32 38 42 39 52 42" strokeWidth={1.4} />
+      <path d="M22 48 C 30 46.5 36 47 42 48.5" strokeWidth={1.4} />
+      <rect x="68" y="24" width="30" height="26" fill={hole} strokeWidth={1.4} />
+      {hatch(70, 26, 26, 22, 5)}
+      <path d="M14 64 C 30 61 48 63 60 70 C 72 63 90 61 106 64 L 106 68 C 90 65 72 67 60 74 C 48 67 30 65 14 68 Z" strokeWidth={1.4} />
+    </svg>
+  )
+}
+
 const RAY_ANGLES = [0.35, 0.7, 1.05, 1.4, 1.75, 2.1, 2.45, 2.8]
 
 // 低通日出：失败态那张小图（画布 130×69，viewBox 260×138）
@@ -115,13 +134,12 @@ function round(value: number): number {
   return Math.round(value * 10) / 10
 }
 
-// 适配器决定用哪一幅。ruanyf_weekly 是周刊源，不会出现在日刊的索引条上，
-// Task 18 做周刊页时再给它一幅自己的。
+// 适配器决定用哪一幅。ruanyf_weekly 是周刊源，不会出现在日刊的索引条上；周刊源用「翻开的书」（2026-10-14）。
 const MARKS: Record<Adapter, (props: SourceMarkProps) => React.ReactElement> = {
   hacker_news: Bubbles,
   github_trending: Branches,
   rss: Solder,
-  ruanyf_weekly: Solder,
+  ruanyf_weekly: OpenBook,
 }
 
 export function SourceMark({ adapter, hole, className }: SourceMarkProps & { adapter: Adapter }) {

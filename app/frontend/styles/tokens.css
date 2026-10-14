@@ -899,3 +899,10 @@ details[open] > summary::before { rotate: 90deg; }
   /* 手机上序号与书签同一行、正文另起一行，没有可对的基线 */
   .item-rank, .item-body { align-self: auto; }
 }
+
+/* Q1 横带图形「翻开的书」：纸色线、挖空填墨，比例 120:78 */
+.source-band-mark { flex: none; display: block; width: 52px; height: 34px; }
+@media (max-width: 767px) { .source-band-mark { width: 37px; height: 24px; } }
+
+/* C3（O2 选 a）：周刊配图正片叠底压进纸面，白处呈纸色，像印在纸上；打印时恢复原样（print.css） */
+.item-media-image { mix-blend-mode: multiply; }

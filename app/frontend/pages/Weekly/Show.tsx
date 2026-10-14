@@ -3,6 +3,7 @@ import type * as React from 'react'
 import { useEffect, useRef } from 'react'
 
 import Icon from '@/components/Icon'
+import { OpenBook } from '@/components/Illustration'
 import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
@@ -36,7 +37,7 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
   return (
     <div className="source-band" id={id}>
       <div className="source-band-name">
-        <Icon name="book-open" size={28} color="currentColor" />
+        <OpenBook hole="var(--ink)" className="source-band-mark" />
         <div className="source-band-copy">
           <h2 className="source-band-title" lang={latinLang(section.source.name)}>
             <Mixed text={section.source.name} font="latin" weight={600} size="inherit" color="var(--paper)" />

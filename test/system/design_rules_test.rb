@@ -171,6 +171,16 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "0.001s", style(".ctrl", "transition-duration", "::before")
   end
 
+  test "C3 周刊配图正片叠底；横带图形 52×34，手机 37×24" do
+    render_fragment(%(<div class="source-band"><svg class="source-band-mark" viewBox="0 0 120 78"></svg></div><img class="item-media-image" alt="">))
+
+    assert_equal "multiply", style(".item-media-image", "mix-blend-mode")
+    assert_equal [ 52, 34 ], evaluate_script("(() => { const r = document.querySelector('.source-band-mark').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })()")
+
+    render_fragment(%(<div class="source-band"><svg class="source-band-mark" viewBox="0 0 120 78"></svg></div>), width: 375, height: 812)
+    assert_equal [ 37, 24 ], evaluate_script("(() => { const r = document.querySelector('.source-band-mark').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })()")
+  end
+
   private
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "")
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")

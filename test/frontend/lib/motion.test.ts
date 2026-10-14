@@ -39,10 +39,25 @@ describe('markFirstLoad', () => {
     expect(document.documentElement.dataset.firstLoad).toBeUndefined()
   })
 
-  it('800ms 后摘掉标记', () => {
+  // 终审：页面组件是按需加载的分片，网慢时要好一会儿才挂上；800ms 从第一页挂上（Inertia 的首个 navigate）算起，
+  // 不从脚本开始跑算起，不然动画还没播完标记就没了
+  it('第一页挂上之后 800ms 摘掉标记；挂上之前不计时', () => {
     markFirstLoad(memoryStorage())
 
+    vi.advanceTimersByTime(1500)
+    expect(document.documentElement.dataset.firstLoad).toBe('')
+
+    emitRouterEvent('navigate')
     vi.advanceTimersByTime(799)
+    expect(document.documentElement.dataset.firstLoad).toBe('')
+    vi.advanceTimersByTime(1)
+    expect(document.documentElement.dataset.firstLoad).toBeUndefined()
+  })
+
+  it('迟迟没有挂上（加载出错）时，5 秒后也摘掉标记', () => {
+    markFirstLoad(memoryStorage())
+
+    vi.advanceTimersByTime(4999)
     expect(document.documentElement.dataset.firstLoad).toBe('')
     vi.advanceTimersByTime(1)
     expect(document.documentElement.dataset.firstLoad).toBeUndefined()

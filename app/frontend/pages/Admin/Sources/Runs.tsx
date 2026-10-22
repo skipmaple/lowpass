@@ -33,7 +33,7 @@ function RunError({ error }: { error: string | null }) {
 
   return (
     <details className="admin-details">
-      <summary><span>错误详情</span> · <Mixed text={`${error.slice(0, 80)}…`} font="latin" /></summary>
+      <summary data-table-focus="error"><span>错误详情</span> · <Mixed text={`${error.slice(0, 80)}…`} font="latin" /></summary>
       <Mixed text={error} font="latin" />
     </details>
   )

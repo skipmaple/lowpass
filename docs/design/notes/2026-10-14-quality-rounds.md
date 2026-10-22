@@ -113,3 +113,9 @@ PR #58 合并后，main 上的 CI 有一条前端单测偶发失败（收藏页�
 新发现：`/manifest.webmanifest` 以 `text/plain` 返回。Chrome 解析 manifest 时不看 MIME 类型，眼下没有影响；要改，就给静态文件注册 `application/manifest+json`。
 
 第 1 节第 4 条满足：评估列出的 14 个问题在生产上都已消掉；上面两项没在生产上测，依据第 2 轮本地数据。
+
+## 管理表格跨断点焦点（2026-10-23，独立候选）
+
+main c1f4795的真实Sources复现7个跨1024/1025px案例丢失焦点与行上下文，2个不跨对照正常。本轮沿用单套响应式DOM，以稳定row/action恢复焦点、必要details展开与focused summary原状态；无入口只读行使用tabIndex=-1，不抢新的表外选择。真实蓝色UA描边反例后复用既有墨色2px焦点样式。
+
+最终本地CI467前端、856 Rails/3763 assertions、80系统/8079 assertions，首屏264.61KB。独立代码评审的fallback焦点接管问题先RED后GREEN；13个真实GET候选场景由原12通过与Issues纠正不存在动作的预期后定向1通过收口，51个Table焦点阶段有真实AX与可见墨框。所有失败与错误预期保留；不把窄修复当整个键盘/全站颜色通过。详见 `2026-10-23-table-focus-quality.md`。本轮不含待合并PR69–79，未合并部署，无新的奖项自评分；历史自评需连同后续60项审计与进展记录阅读。

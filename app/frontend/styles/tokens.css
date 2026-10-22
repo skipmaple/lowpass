@@ -791,7 +791,8 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .management-row .admin-actions { gap: 0 16px; }
 .management-row .admin-details { width: auto; }
 .management-row-details > summary { font-family: var(--font-cjk); font-size: var(--fs-13); min-height: 44px; align-content: center; cursor: pointer; }
-.management-row-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.table:focus-visible, .table-row:focus-visible, .management-list:focus-visible, .management-row:focus-visible, .table-empty:focus-visible,
+.table summary:focus-visible, .management-list summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .management-secondary-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px 24px; margin: 0; padding: 8px 0; }
 .management-field-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); margin-bottom: 4px; }
 .management-field-content { margin: 0; min-width: 0; overflow-wrap: anywhere; }

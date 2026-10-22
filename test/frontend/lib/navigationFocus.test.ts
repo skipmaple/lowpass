@@ -40,6 +40,46 @@ describe('focusMainOnNavigate', () => {
     expect(document.activeElement).toBe(document.getElementById('item-1'))
   })
 
+  it('跳到正文后用键盘跨页，仍聚焦新页锚点', () => {
+    document.getElementById('main-content')!.focus()
+
+    navigate('/daily/2026-09-23#item-1')
+
+    expect(document.activeElement).toBe(document.getElementById('item-1'))
+  })
+
+  it('等待渲染期间已经进入正文输入框，不再抢走焦点', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.mocked(window.requestAnimationFrame).mockImplementation((callback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    const input = document.createElement('input')
+    document.getElementById('main-content')!.append(input)
+
+    navigate('/admin/sources/new')
+    input.focus()
+    frames.forEach((callback) => callback(0))
+
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('等待渲染期间再次换页，旧页的回调不再移动焦点', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.mocked(window.requestAnimationFrame).mockImplementation((callback) => {
+      frames.push(callback)
+      return frames.length
+    })
+
+    navigate('/daily/2026-09-23#item-1')
+    navigate('/search')
+    frames[0](0)
+    expect(document.activeElement).toBe(document.body)
+
+    frames[1](0)
+    expect(document.activeElement).toBe(document.querySelector('h1'))
+  })
+
   // 筛选、翻页码、切来源都在同一路径里：读者还在原来的位置上，不动焦点
   it('同一路径内的访问不动焦点', () => {
     const link = document.querySelector('a')!

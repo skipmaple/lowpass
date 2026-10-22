@@ -1,5 +1,5 @@
 /* 动效（设计 skill「动效」、PRD D34、设计说明 2026-10-14 第 4.4 节）。
-   只有三个动作：墨走、翻页、盖章。只动 transform、opacity、clip-path、stroke-dashoffset 与颜色类属性，不动布局。
+   只有三个动作：墨走、翻页、盖章。日刊跨来源沿用墨线与短距离落定。只动 transform、opacity、clip-path、stroke-dashoffset 与颜色类属性，不动布局。
    令牌只有这五个；新动效先问「它是这三个动作之一吗」，不是就不加。 */
 
 :root {
@@ -47,21 +47,15 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
   .source-tab[data-state="inactive"]:hover .source-tab-name, .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }
 }
 
-/* ─── M1 墨块平移 ─────────────────────────────────────────────────────── */
+/* ─── 日刊跨来源：沿纸面接入下一栏（D35）─────────────────────────── */
 
-/* 副本盖在真的索引条上，用同一组类名排版（含 Q3 的叠边），clip-path 只露出当前项；切换时过渡 clip-path */
-.source-tabs-frame { position: relative; }
-.source-tabs-ink { position: absolute; inset: 0; pointer-events: none; user-select: none; transition: clip-path var(--dur-2) var(--ease-move); }
-.source-tabs-ink .source-tab { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-/* 有副本时真的当前项不再自己反白，墨块由副本画——不然目的地一开始就是墨色，看不到滑动 */
-.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"] { background: transparent; color: var(--ink); --tab-hole: var(--paper); }
-.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"] .source-tab-state { color: var(--ink2); opacity: 1; }
-/* 焦点框画在当前项外面：副本只裁到当前项的矩形，盖不住它 */
-.source-tabs-frame[data-ink] > .source-tabs:not(.source-tabs-ink) > .source-tab[data-state="active"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-/* 新来源的列表淡入并上移 6px */
-.source-panel[data-switched] { animation: lp-rise var(--dur-2) var(--ease-out); }
-/* 高对比模式下背景都被系统色换掉，副本没有意义；当前项靠 tokens.css 里的系统色描边区分 */
-@media (forced-colors: active) { .source-tabs-ink { display: none; } }
+/* 标题、细线与正文作为同一纸面接入，内部间距固定；进入阅读区域前恢复普通滚动。
+   位移只跟随当前位置，起止平顺，无正文追赶、墨色延迟或额外的标题后留白。 */
+.daily-source[data-scroll-source] {
+  --source-lift: clamp(48px, 6vh, 64px);
+}
+.daily-source[data-source-opening] { overflow: clip; overflow-clip-margin: 8px; }
+.daily-source[data-scroll-source] > .daily-source-sheet { transform: translateY(calc(var(--source-lift) * (1 - var(--source-progress)))); }
 
 /* ─── M3 盖章 ─────────────────────────────────────────────────────────── */
 
@@ -117,8 +111,8 @@ html[data-first-load] .page-head::after {
 html[data-first-load] .source-tabs-frame, html[data-first-load] .search-head, html[data-first-load] .source-band {
   animation: lp-rise var(--dur-2) var(--ease-out) 120ms both;
 }
-html[data-first-load] .source-panel, html[data-first-load] .archive-list, html[data-first-load] .weekly-directory,
-html[data-first-load] #main-content section, html[data-first-load] .search-entry, html[data-first-load] .search-count,
+html[data-first-load] .archive-list, html[data-first-load] .weekly-directory,
+html[data-first-load] #main-content section:not(.daily-source), html[data-first-load] .search-entry, html[data-first-load] .search-count,
 html[data-first-load] .search-row, html[data-first-load] .settings-rows, html[data-first-load] #main-content > .issue-body {
   animation: lp-fade var(--dur-2) var(--ease-out) 180ms both;
 }
@@ -148,9 +142,13 @@ details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
 
 /* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码不会卡住 */
 @media (prefers-reduced-motion: reduce) {
+  .daily-source { overflow: visible !important; }
+  .daily-source > .daily-source-sheet { transform: none !important; }
+  .daily-source .item-row { color: var(--ink) !important; }
   *, *::before, *::after {
     animation-duration: 1ms !important; animation-delay: 0ms !important;
     transition-duration: 1ms !important; transition-delay: 0ms !important;
   }
+  .daily-source *, .daily-source *::before, .daily-source *::after { animation: none !important; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

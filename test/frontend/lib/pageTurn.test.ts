@@ -108,6 +108,20 @@ describe('键盘翻页', () => {
     return event
   }
 
+  it('来源目录链接获得焦点时，左右键不翻到其他刊期', () => {
+    renderHook(() => useArrowTurns('/daily/2026-09-07', '/daily/2026-09-09'))
+    const directory = document.createElement('nav')
+    directory.id = 'source-directory'
+    const link = document.createElement('a')
+    link.href = '#source-github'
+    directory.appendChild(link)
+    document.body.appendChild(directory)
+    link.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }))
+    link.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
+    expect(router.visit).not.toHaveBeenCalled()
+    directory.remove()
+  })
+
   it('输入框、索引条、菜单、对话框里，按着修饰键或按住不放时不翻', () => {
     const input = document.createElement('input')
     const tablist = document.createElement('div')

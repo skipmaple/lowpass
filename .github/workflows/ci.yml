@@ -5,9 +5,11 @@ on:
   push:
     branches: [ main ]
 
+# ubuntu-latest 已开始迁移到 26.04，ruby/setup-ruby 不提供该镜像的 Ruby 3.4.8。
+# 固定与部署一致的 24.04；升级项目 Ruby 时再一起评估 runner 镜像。
 jobs:
   scan_ruby:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -33,7 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
@@ -59,7 +61,7 @@ jobs:
         run: bin/rubocop -f github
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -136,7 +138,7 @@ jobs:
         run: bin/rails db:test:prepare test
 
   system-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -179,7 +181,7 @@ jobs:
       # autoBuild 在测试 worker 并行请求时会撞车（见 config/ci.rb 同一个步骤的注释，以及上面
       # test job 的「Build frontend test bundle」）。系统测试真的会在浏览器里加载这份产物，
       # 这一步不能省。RAILS_ENV 必须显式传，理由同上。
-      # 浏览器：ubuntu-latest 自带 Chrome，chromedriver 由 selenium-webdriver 自己下（Selenium Manager）。
+      # 浏览器：ubuntu-24.04 自带 Chrome，chromedriver 由 selenium-webdriver 自己下（Selenium Manager）。
       - name: Build frontend test bundle
         env:
           RAILS_ENV: test

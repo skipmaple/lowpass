@@ -16,8 +16,20 @@ export type DialogProps = React.PropsWithChildren<{
   onConfirm: () => void
 }>
 
-// 纸卡里可以停焦点的元素，顺序就是 Tab 的顺序
+// 纸卡里的候选控件；同组 radio 只有当前选中项参与 Tab 首尾判断。
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function tabStops(paper: HTMLElement | null): HTMLElement[] {
+  const elements = Array.from(paper?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])
+  return elements.filter((element) => {
+    if (element instanceof HTMLInputElement && element.type === 'radio' && element.name) {
+      const group = elements.filter((candidate): candidate is HTMLInputElement =>
+        candidate instanceof HTMLInputElement && candidate.type === 'radio' && candidate.name === element.name && candidate.form === element.form)
+      return element === (group.find((candidate) => candidate.checked) ?? group[0])
+    }
+    return true
+  })
+}
 
 export default function Dialog({ open, text, cancel, confirm, busy = false, returnFocus, onCancel, onConfirm, children }: DialogProps) {
   const paperRef = useRef<HTMLDivElement>(null)
@@ -46,11 +58,11 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, retu
     else initialFocusRef.current?.focus()
     // 焦点圈：只在走到两头的那一下把焦点接回来，中间几下照旧交给浏览器
     function keepFocusInside(event: KeyboardEvent) {
-      const focusable = Array.from(paperRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])
+      const focusable = tabStops(paperRef.current)
       if (focusable.length === 0) { event.preventDefault(); paperRef.current?.focus(); return }
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
-      if (document.activeElement === (event.shiftKey ? first : last)) {
+      if (document.activeElement === paperRef.current || document.activeElement === (event.shiftKey ? first : last)) {
         event.preventDefault()
         const wrapped = event.shiftKey ? last : first
         wrapped.focus()

@@ -103,6 +103,8 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         onKeyDown={(event) => {
           if (!open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault()
+            // 打开后可能立即挂上 document 监听；本次按键已处理，不能再冒泡过去移动一次。
+            event.stopPropagation()
             focusLast.current = event.key === 'ArrowUp'
             setOpen(true)
           }

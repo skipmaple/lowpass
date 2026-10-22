@@ -857,6 +857,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 
 /* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
 .item-heading, .search-title, .state-line { text-wrap: balance; }
+.item-title-tail { display: inline-block; max-inline-size: 100%; overflow-wrap: anywhere; vertical-align: baseline; text-decoration: inherit; }
 .item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
 
 /* T3 选区反白：墨底纸字（浏览器的蓝色选区是令牌之外的颜色） */

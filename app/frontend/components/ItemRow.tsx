@@ -169,6 +169,15 @@ function WeeklyMedia({ item }: { item: Item }) {
 export type ItemVariant = 'daily' | 'weekly'
 export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4' }
 
+// 标签也参与父盒的 balance；保留英文末两词的断行关系，避免标签把标题末词独留一行。
+// slice 原文而不重新拼词，空白与可读名称不变；超长片段仍可在自己的宽度上限内折行。
+function TitleText({ text, tagged }: { text: string; tagged: boolean }) {
+  const tail = tagged && latinLang(text) === 'en' ? text.match(/\S+\s+\S+\s*$/u) : null
+  if (!tail || tail.index === undefined) return text
+
+  return <>{text.slice(0, tail.index)}<span className="item-title-tail">{tail[0]}</span></>
+}
+
 export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
   const weekly = variant === 'weekly'
   const tagged = !weekly && Boolean(item.interest_tag)
@@ -183,7 +192,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         <div className="item-heading">
           <Heading className="item-title">
             <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" lang={latinLang(item.title)} data-host={hostOf(item.url)}>
-              {item.title}
+              <TitleText text={item.title} tagged={tagged} />
             </a>
           </Heading>
           {tagged ? (

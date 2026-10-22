@@ -147,8 +147,9 @@ a.t:hover { text-decoration-color: var(--ink); }
    --tab-hole 是插图里「挖空」处的填充：纸上留纸色，反白后填墨色。 */
 .source-tabs { display: flex; padding: 24px 0 0 0; }
 .source-tab { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 18px 24px 18px 18px;
-              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: default;
               --tab-hole: var(--paper); }
+a.source-tab { cursor: pointer; }
 .source-tab + .source-tab { margin-left: -1px; }
 .source-tab[data-state="active"] { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); }
 .source-tab:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

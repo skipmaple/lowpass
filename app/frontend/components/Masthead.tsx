@@ -40,6 +40,14 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
   )
 }
 
+function AccountAvatar({ url, open }: { url: string; open: boolean }) {
+  const [failed, setFailed] = useState(false)
+
+  return failed ? null : (
+    <img src={url} alt="" className={`account-avatar${open ? ' account-avatar--open' : ''}`} referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+  )
+}
+
 // 头像菜单（R-8.2，画布 pages_front3.py 的 menu_sheet()）：32px 圆是按钮，点开右对齐 220px 纸卡，
 // 顶部等宽邮箱（没邮箱用显示名），「账户信息」「收藏」（收藏页的唯一入口，D29）「管理」（仅 admin，指向后台的信息源页）「登出」。
 // Escape、点卡外、选中任一项都关闭；打开时焦点进第一项。画布那张卡带阴影，这里不取：
@@ -110,9 +118,10 @@ function AccountMenu({ user }: { user: CurrentUser }) {
       >
         <Icon name={open ? 'x' : 'user'} size={15} color="currentColor" />
         {/* 头像覆盖人像占位，展开时淡出以露出关闭图标；SVG 始终挂载，才能连续变形。
-            provider 头像用 referrerPolicy 拦住 Referer，避免泄露读者正在看的页面。 */}
+            provider 头像用 referrerPolicy 拦住 Referer，避免泄露读者正在看的页面。
+            加载失败后露出原有图标；按 URL 重新挂载，只在头像地址变化时重新尝试。 */}
         {user.avatar_url ? (
-          <img src={user.avatar_url} alt="" className={`account-avatar${open ? ' account-avatar--open' : ''}`} referrerPolicy="no-referrer" />
+          <AccountAvatar key={user.avatar_url} url={user.avatar_url} open={open} />
         ) : null}
       </button>
       {open ? (

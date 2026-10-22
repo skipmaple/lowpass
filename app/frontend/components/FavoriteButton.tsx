@@ -34,8 +34,10 @@ export default function FavoriteButton({ urlHash, title, itemId, className, ref 
       data-stamp={stamping && on ? '' : undefined}
       aria-label={`${on ? '取消收藏' : '收藏'}：${title}`}
       onClick={() => {
-        setStamping(!on)
+        const wasOn = favorites.has(urlHash)
         favorites.toggle({ urlHash, itemId })
+        // Provider 同步换态；在途请求忽略的点击没有换态，也不能改动这次盖章。
+        if (favorites.has(urlHash) !== wasOn) setStamping(!wasOn)
       }}
     >
       {/* 描线一层常在；实心那层由 clip-path 从底部涨满（两态靠形状分，D30） */}

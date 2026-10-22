@@ -24,6 +24,8 @@ export default function FavoriteButton({ urlHash, title, itemId, className, ref 
   if (!favorites) return null
 
   const on = favorites.has(urlHash)
+  // 本次添加退回未收藏就结束盖章资格；后来从别处同步成已收藏，只填墨。
+  if (!on && stamping) setStamping(false)
 
   return (
     <button

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 被在途请求忽略的再次点击不得改变盖章，取消失败回滚也不应盖章。
+**Goal:** 只有本按钮新接受的收藏操作可以盖章；在途忽略点击、失败回滚及外部收藏状态同步都不能复活或中断旧盖章。
 
 **Architecture:** 复用 FavoritesProvider 已有的同步乐观状态契约：点击前后用 has 读取实际状态，只有 toggle 真正改变状态才修改本按钮的盖章标记。保留现有去重、请求与恢复语义。
 
@@ -34,4 +34,13 @@
 - [x] 只在同步 toggle 前后状态变化时更新 stamping。
 - [x] 同一文件与收藏页测试通过；完整 `bin/ci` 退出 0。
 - [x] 固定真实构建并重放四个正常 / 减少动态上下文及取消失败连点反例；比较自然帧、请求数与终态。保留原始失败证据。
-- [ ] 独立审查 diff 与原始证据，提交 Draft PR 并验证最新 head 的四项远端 CI；发布与用户 Chrome 验收仍单列。
+- [x] 独立审查初版 diff 与原始证据，提交 Draft PR #75 并验证 6fdc6eb 的四项远端 CI；首轮滚动超时日志及随后同提交重跑通过均保留，发布与用户 Chrome 验收仍单列。
+
+## Task 2: 失败后终止本次盖章资格
+
+真实 Search/Show 生产模块在 375/1440、正常/减少动态四个上下文复现：添加失败回滚后，同一个按钮通过 preserveState 筛选收到 favorites=[H]，没有新书签点击却又触发 lp-press。新服务器状态仅由内存响应模拟，不写业务数据。
+
+- [x] 真实 Provider 下增加外部 props 更新与同 hash 另一按钮添加两项回归，当前实现为 2 failed / 27 passed。
+- [x] on=false 时清除本次盖章资格，保留节点与 Provider 接口、CSS、乐观状态和在途点击行为；组件与收藏页共 46 项通过。
+- [x] 复跑组件/收藏页 46 项与完整 CI（459 前端、856 Rails、77 系统）；真实筛选路径四个上下文保持同节点，外部同步不盖章；另复跑原 16 次操作及两个连点单例。
+- [ ] 独立审查、更新同一 Draft PR #75，核对新 head 的远端门禁；不据此宣称收藏页完整退墨或首次历史超时已解决。

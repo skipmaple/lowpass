@@ -429,6 +429,48 @@ describe('盖章（M3）', () => {
     expect(button).not.toHaveAttribute('data-stamp')
   })
 
+  it('添加失败后同一按钮收到外部已收藏状态，只填墨，不复活旧盖章', async () => {
+    const fetchMock = stubFetch(rejected(500))
+    const user = userEvent.setup()
+    const view = mount()
+    const button = screen.getByRole('button', { name: ADD })
+
+    await user.click(button)
+    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    expect(button).not.toHaveAttribute('data-on')
+
+    view.rerender(tree([HASH]))
+
+    expect(await screen.findByRole('button', { name: REMOVE })).toBe(button)
+    expect(button).toHaveAttribute('data-on')
+    expect(button).not.toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('添加失败后同链接的另一颗按钮收藏，只有新接受添加的按钮盖章', async () => {
+    const fetchMock = stubFetch(rejected(500))
+    const user = userEvent.setup()
+    render(
+      <FavoritesProvider favorites={[]}>
+        <FavoriteButton itemId="itm-hn-1" urlHash={HASH} title={TITLE} />
+        <FavoriteButton itemId="itm-hn-2" urlHash={HASH} title="同链接的另一期条目" />
+      </FavoritesProvider>,
+    )
+    const first = screen.getByRole('button', { name: ADD })
+    const second = screen.getByRole('button', { name: '收藏：同链接的另一期条目' })
+
+    await user.click(first)
+    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    fetchMock.mockResolvedValue(ok({ url_hash: HASH }))
+    await user.click(second)
+
+    expect(first).toHaveAttribute('data-on')
+    expect(first).not.toHaveAttribute('data-stamp')
+    expect(second).toHaveAttribute('data-on')
+    expect(second).toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('描线与实心两层都对读屏隐藏', () => {
     mount()
 

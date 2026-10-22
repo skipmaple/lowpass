@@ -279,7 +279,14 @@ module Issue::Presenting
   # 搜索结果的「所在期」链接指向同一个值（设计 6.3），所以不能再按位置编号。
   # D19：周刊条目不生成推荐理由，条目字段与日刊同一套（reason 与 interest_tag 一直是空的）。
   def weekly_section_props
-    weekly_sections.map do |section|
+    sections = weekly_sections
+    image_urls = sections.flat_map do |section|
+      section[:sections].flat_map { |_, list| list.flat_map { |item| Array(item.meta["image_urls"]).grep(String) } }
+    end.uniq
+    dimensions = ImageDimension.for_urls(image_urls)
+    ImageDimension.enqueue_for(image_urls) if image_urls.any?
+
+    sections.map do |section|
       source = section[:source]
       {
         source: { id: source.id, name: source.name, adapter: source.adapter, home_url: source.home_url },
@@ -289,7 +296,7 @@ module Issue::Presenting
         degraded: section[:degraded],
         original_url: section_original_url(section),
         groups: section[:sections].map do |(name, list)|
-          { name: name, anchor: list.first.anchor, items: list.map { |item| item_props(item) } }
+          { name: name, anchor: list.first.anchor, items: list.map { |item| item_props(item, image_dimensions: dimensions) } }
         end
       }
     end
@@ -314,14 +321,14 @@ module Issue::Presenting
     # url_hash 给书签用：收藏按链接认（D27），页面的 favorites 列的就是它；
     # title_zh 是 HN 与 Hackaday 标题的中文译文、summary_zh 是 GitHub Trending 简介的中文译文（D25），
     # 跟推荐理由同一次生成，没生成前是 nil。
-    def item_props(item)
-      {
+    def item_props(item, image_dimensions: nil)
+      props = {
         id: item.id,
         url_hash: item.url_hash,
         title: item.title,
         title_zh: item.title_zh,
         url: item.url,
-        summary: SummaryCleaner.clean(item.summary),
+        summary: SummaryCleaner.stored(item.summary),
         summary_zh: item.summary_zh,
         content: item.content,
         section: item.section,
@@ -329,8 +336,10 @@ module Issue::Presenting
         published_at: item.published_at&.iso8601,
         rank: item.rank,
         meta: item.meta,
+        image_dimensions: (image_dimensions || {}).slice(*Array(item.meta["image_urls"]).grep(String)),
         reason: item.reason,
         interest_tag: item.interest_tag
       }
+      props
     end
 end

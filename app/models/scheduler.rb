@@ -17,6 +17,7 @@ class Scheduler
     step(:generate_daily_if_due)
     step(:finalize_stale_issues)
     step(:check_weekly_if_due)
+    step(:discover_image_dimensions)
     step(:check_reasons_if_due)
     step(:cleanup_if_due)
     step(:backup_if_due)
@@ -56,6 +57,11 @@ class Scheduler
 
       WeeklyCheckJob.perform_later
       Setting.set("weekly_checked_on", today)
+    end
+
+    # 尺寸只进独立展示缓存；每分钟有限回填，队列故障与错过的 tick 都由下一次补跑。
+    def discover_image_dimensions
+      ImageDimension.discover_later(now: @now)
     end
 
     # 5.7「推荐理由缺失」：当天发布超过 30 分钟仍有条目没理由（供应商配好了才算事故；没配是读者页静默、后台显示）

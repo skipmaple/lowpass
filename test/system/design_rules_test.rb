@@ -181,6 +181,35 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal [ 37, 24 ], evaluate_script("(() => { const r = document.querySelector('.source-band-mark').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })()")
   end
 
+  test "已知天然尺寸的周刊配图解码前后不推移后文，手机与多图同样成立" do
+    [ 375, 1440 ].each do |width|
+      [ "item-media--single", "item-media--multiple" ].each do |layout|
+        render_fragment(<<~HTML, width: width)
+          <div class="item-media #{layout}">
+            <figure class="item-media-frame item-media-frame--sized" style="--image-width:1200px;--image-ratio:1.5">
+              <img class="item-media-image" width="1200" height="800" alt="横图">
+            </figure>
+            #{if layout == "item-media--multiple"
+                '<figure class="item-media-frame item-media-frame--sized" style="--image-width:400px;--image-ratio:0.5"><img class="item-media-image" width="400" height="800" alt="竖图"></figure>'
+              end}
+          </div>
+          <p id="after-media">下一段正文</p>
+        HTML
+        before = evaluate_script("document.querySelector('#after-media').getBoundingClientRect().top")
+        execute_script(<<~JS)
+          for (const image of document.images) {
+            const w = Number(image.getAttribute('width')), h = Number(image.getAttribute('height'))
+            image.src = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="black"/></svg>`)
+          }
+        JS
+        wait_until { evaluate_script("[...document.images].every(image => image.complete && image.naturalWidth > 0)") }
+        after = evaluate_script("document.querySelector('#after-media').getBoundingClientRect().top")
+        assert_in_delta before, after, 0.5, "#{width}px #{layout}：解码不推移后文"
+        assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
+      end
+    end
+  end
+
   test "D2 打印时配图不叠底，报头是白底墨字" do
     render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header><img class="item-media-image" alt="">), media: "print")
 

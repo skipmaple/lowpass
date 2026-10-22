@@ -34,6 +34,34 @@ class Source::TestFetchTest < ActiveSupport::TestCase
     end
   end
 
+  test "预览对适配器的原始摘要只清洗一次，保留代码片段" do
+    entry = Adapters::Entry.new(title: "代码片段", url: "https://example.com/code",
+      summary: "<p>改成**每月发一个版本**。写作`目录**/文件.rb`，配合`目录**/文件.ts`使用，`&lt;T&gt;`是标签。</p>")
+    Adapters::Rss.any_instance.stubs(:test_fetch).returns([ entry ])
+
+    result = Source::TestFetch.call(rss_attrs)
+
+    assert result.ok
+    assert_equal "改成每月发一个版本。写作目录**/文件.rb，配合目录**/文件.ts使用，<T>是标签。", result.entries.sole[:summary]
+  end
+
+  test "原始 RSS 摘要中的 HTML 代码在预览中保留" do
+    stub_request(:get, "https://hackaday.com/feed/").to_return(body: <<~XML)
+      <rss version="2.0"><channel>
+        <title>HTML 代码样本</title><link>https://example.com/</link><description>代码示例</description>
+        <item><title>HTML 代码片段</title><link>https://example.com/html-code</link>
+          <description><![CDATA[<p>写作<code>目录**/文件.rb</code>，配合<code>目录**/文件.ts</code>使用。</p>]]></description>
+        </item>
+      </channel></rss>
+    XML
+
+    result = Source::TestFetch.call(rss_attrs)
+
+    assert result.ok
+    assert_equal "HTML 代码样本", result.feed_title
+    assert_equal "写作目录**/文件.rb，配合目录**/文件.ts使用。", result.entries.sole[:summary]
+  end
+
   # feed_url_unique（Source）给这个地址挂 :duplicate：那是保存时的事，表单在保存时报；
   # 试抓只答「这个地址能不能抓到东西」，不因为撞了别的源就不让点（下面用同一个 fixture 的地址来撞）
   test "新源的 feed 地址与现有源重复：试抓照样进行，重复留给保存时报" do

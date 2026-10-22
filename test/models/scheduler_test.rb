@@ -59,6 +59,28 @@ class SchedulerTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: WeeklyCheckJob) { Scheduler.tick(now: sh("2026-09-10 08:59:00")) }
   end
 
+  test "每个 tick 为既刊周刊发现缺失尺寸，已有租约不重复入队" do
+    item = items(:hn_one).dup
+    item.assign_attributes(issue: issues(:weekly_w36), source: sources(:ruanyf), meta: { image_urls: [ "https://example.com/weekly.png" ] })
+    item.save!
+
+    assert_enqueued_jobs 1, only: ProbeImageDimensionJob do
+      Scheduler.tick(now: sh("2026-09-10 05:00:00"))
+    end
+    assert_equal sh("2026-09-10 05:00:00"), ImageDimension.sole.queued_at
+    assert_no_enqueued_jobs(only: ProbeImageDimensionJob) { Scheduler.tick(now: sh("2026-09-10 05:01:00")) }
+  end
+
+  test "尺寸缓存发现出错不阻止清理与后续调度" do
+    ImageDimension.stubs(:discover_later).raises(ActiveRecord::StatementInvalid, "cache unavailable")
+    FetchRun.expects(:cleanup).once
+
+    Scheduler.tick(now: sh("2026-09-10 05:00:00"))
+
+    assert_equal "2026-09-10", Setting.get("cleaned_on")
+    assert_equal "2026-09-10T05:00:00+08:00", Setting.get("ticked_at")
+  end
+
   test "过了 04:00 清理一次抓取记录、搜索日志与点击" do
     alert_event(created_at: 91.days.ago)
     ModelCall.create!(status: "ok", created_at: 91.days.ago)

@@ -189,7 +189,7 @@ describe('ItemRow 推荐理由与兴趣标签', () => {
       <ItemRow item={item({ reason: '与你关注的终端工具相关。', interest_tag: 'AI' })} adapter="hacker_news" rank={1} />,
     )
 
-    expect(screen.getByText('与你关注的终端工具相关。')).toHaveClass('item-reason')
+    expect(screen.getByText('与你关注的终端工具相关。').closest('.item-reason')).toBeInTheDocument()
     const heading = screen.getByRole('heading', { level: 2 })
     expect(container.querySelector('.item-heading')).not.toHaveClass('item-heading--tagged')
     expect(heading.nextElementSibling).toHaveClass('item-tag')
@@ -317,6 +317,29 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(paragraphs).toEqual(['第一段。', '第二段 OpenClaw。', '第三段。'])
   })
 
+  it('使用独立展示尺寸为原图占位，未知或非法尺寸不伪造宽高', () => {
+    render(
+      <ItemRow
+        item={item({
+          title: '周刊配图',
+          meta: { image_urls: ['https://cdn.example.com/known.png', 'https://cdn.example.com/unknown.png', 'https://cdn.example.com/invalid.png'] },
+          image_dimensions: {
+            'https://cdn.example.com/known.png': { width: 1200, height: 800 },
+            'https://cdn.example.com/invalid.png': { width: 0, height: 800 },
+          },
+        })}
+        adapter="ruanyf_weekly"
+        rank={1}
+        variant="weekly"
+      />,
+    )
+    const images = screen.getAllByRole('img', { name: /周刊配图配图/ })
+    expect(images[0]).toHaveAttribute('width', '1200')
+    expect(images[0]).toHaveAttribute('height', '800')
+    expect(images[1]).not.toHaveAttribute('width')
+    expect(images[2]).not.toHaveAttribute('width')
+  })
+
   it('按原顺序展示条目对应的图片，并为外链图片保护来源页面', () => {
     const { container } = render(
       <ItemRow
@@ -404,7 +427,7 @@ describe('ItemRow 阅读页不提供重生成入口', () => {
     setPageProps({ current_user: { display_name: 'Drew', avatar_url: null, email: 'd@example.com', admin }, flash: {}, errors: {} })
     render(<ItemRow item={item({ reason: '与你关注的终端工具相关。', interest_tag: 'AI' })} adapter="hacker_news" rank={1} />)
 
-    expect(screen.getByText('与你关注的终端工具相关。')).toHaveClass('item-reason')
+    expect(screen.getByText('与你关注的终端工具相关。').closest('.item-reason')).toBeInTheDocument()
     expect(screen.getByText('AI')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '重生成' })).toBeNull()
   })

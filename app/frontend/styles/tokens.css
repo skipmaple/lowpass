@@ -907,6 +907,16 @@ details[open] > summary::before { rotate: 90deg; }
 .item-tag { display: inline-flex; vertical-align: baseline; margin-left: 0; padding-top: 0; }
 @media (min-width: 1920px) { .item-heading { max-width: 920px; } }
 
+/* PRD 6.4：标题目标至少 44px 高。绝对伪元素从标题字形盒上下各扩 12px，
+   不给行内链接加 padding，以免改变均衡换行与末词标签的位置。
+   标题后留 8px，兼顾较高的回退字体，避免扩展侵入下一段上沿；序号与标签保有自己的非链接命中层。打印仍用原几何。 */
+@media screen {
+  .item-title > a.t { position: relative; }
+  .item-title > a.t::before { content: ""; position: absolute; inset-inline: 0; top: -12px; bottom: -12px; }
+  .item-rank, .item-tag { position: relative; z-index: 1; }
+  .item-heading { padding-bottom: 8px; }
+}
+
 /* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
 .item-rank, .item-body { align-self: baseline; }
 .item-rank { padding-top: 0; }

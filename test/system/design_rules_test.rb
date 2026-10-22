@@ -60,6 +60,42 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal [ true, true, true, true ], hits
   end
 
+  test "标题的 44px 高触控区不占用译文、标签、摘要、周刊正文或独立操作" do
+    [ 320, 375, 1440, 1920, 2560 ].each do |width|
+      [ "I", "Rust 异步运行时：从任务调度到取消传播，理解 Tokio 在真实服务里的边界" ].each do |title|
+        [ :translated, :summary, :weekly ].each do |variant|
+          render_fragment(touch_item(title, variant), width: width)
+          probes = title_touch_probes
+          install_touch_recorder
+
+          probes.each do |probe|
+            x, y = probe.values_at("x", "y").map(&:round)
+            expected = probe.fetch("expected")
+            label = "#{width}px #{variant} #{title.inspect} #{probe.fetch('label')}"
+            hit = evaluate_script("document.elementFromPoint(#{x}, #{y})?.closest('[data-touch]')?.dataset.touch || 'nonlink'")
+            page.driver.browser.action.move_to_location(x, y, duration: 0).click.perform
+            assert_equal [ expected, true ], evaluate_script("window.touchHits.at(-1)"), "#{label}：原生点击"
+            assert_equal expected, hit, label
+          end
+          assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
+          if width <= 767
+            assert_equal "24px", style(".item-row", "padding-top")
+            assert_equal "24px", style(".item-row", "padding-bottom")
+          end
+        end
+      end
+    end
+  end
+
+  test "标题触控扩展不进入打印布局" do
+    render_fragment(touch_item("A practical guide to asynchronous systems", :weekly), width: 720, media: "print")
+
+    assert_equal "0px", style(".item-heading", "padding-bottom")
+    assert_equal "static", style(".item-title a", "position")
+    assert_equal "static", style(".item-rank", "position")
+    assert_equal "none", style(".item-title a", "content", "::before")
+  end
+
   test "T1 内容文字开中西文间距，界面日期保持紧排" do
     render_fragment(%(<p class="item-reason">涉及AI模型</p><p class="item-translation">OpenAI工程师</p><h1 class="issue-head-date">10月14日</h1>))
 
@@ -306,6 +342,73 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   private
+    # 与 ItemRow 的三种正文次序一致：HN 译文、GitHub 简介、无标签的周刊完整正文。
+    # 只装生产 CSS 与静态结构；点击记录器阻止导航，书签没有持久化处理器，不发请求。
+    def touch_item(title, variant)
+      heading = variant == :weekly ? "h4" : "h2"
+      tag = %(<span class="item-tag"><span class="chip-outline item-interest-chip">前端开发</span></span>) unless variant == :weekly
+      copy = case variant
+      when :translated
+        %(<p class="item-translation">原文标题的中文译文，保持完整展示。</p>)
+      when :summary
+        %(<span class="item-summary">A complete summary that remains ordinary, nonlinked reading text.</span><p class="item-translation">这段简介的中文译文。</p>)
+      when :weekly
+        %(<div class="item-content item-content--weekly"><p><span style="font-family:var(--font-cjk);font-size:var(--fs-15);line-height:1.8">这是周刊的完整正文，按原文分段展示。</span></p><p><span style="font-family:var(--font-latin);font-size:var(--fs-15);line-height:1.8">The second paragraph remains part of the weekly reading column.</span></p></div>)
+      end
+      meta = if variant == :weekly
+        %(<span class="data" data-protected>10-22 06:00</span>)
+      else
+        %(<div class="item-meta"><span class="item-metric" data-protected>382</span><a class="item-metric item-comments" href="#comments" data-touch="comments">147</a><time class="item-metric" data-protected>42d</time></div><div class="item-reason">与关注的领域相关，说明具体使用场景。</div>)
+      end
+      <<~HTML
+        <div class="sheet-body" style="padding-top:40px"><article class="item-row"><span class="item-rank">1</span><div class="item-body">
+          <div class="item-heading"><#{heading} class="item-title"><a class="t" href="#title" data-touch="title">#{ERB::Util.html_escape(title)}</a></#{heading}>#{tag}</div>
+          #{copy}#{meta}
+        </div><button type="button" class="favorite-button item-mark" aria-label="收藏" data-touch="bookmark">书签</button></article></div>
+      HTML
+    end
+
+    def title_touch_probes
+      evaluate_script(<<~JS)
+        (() => {
+          const probes = [], add = (x, y, expected, label) => probes.push({x, y, expected, label})
+          const title = document.querySelector('.item-title a'), range = document.createRange()
+          range.selectNodeContents(title)
+          const lines = [...range.getClientRects()].filter(r => r.width > 0), last = lines.at(-1)
+          const cx = last.left + last.width / 2, cy = last.top + last.height / 2
+          // 高度要求不隐含宽度要求，单字母 I 也只在自身宽度内探测。
+          for (const dy of [-21.5, 21.5]) add(cx, cy + dy, 'title', '44px 上下边缘')
+          for (const line of lines) add(line.left + line.width / 2, line.top + line.height / 2, 'title', '每行字形')
+          for (const element of document.querySelectorAll('.item-rank,.item-tag,.item-translation,.item-summary,.item-content--weekly > p,.item-reason,[data-protected]')) {
+            const r = element.getBoundingClientRect()
+            for (const x of [r.left + 1, r.left + r.width / 2, r.right - 1]) {
+              add(x, r.top + 1, 'nonlink', element.className + ' 上沿')
+              add(x, r.top + r.height / 2, 'nonlink', element.className + ' 中部')
+              add(x, r.bottom - 1, 'nonlink', element.className + ' 下沿')
+            }
+          }
+          for (const element of document.querySelectorAll('.item-comments,.favorite-button')) {
+            const r = element.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2
+            for (const [dx, dy] of [[0, 0], [-21, -21], [21, -21], [-21, 21], [21, 21]]) {
+              add(x + dx, y + dy, element.dataset.touch, element.dataset.touch + ' 独立目标')
+            }
+          }
+          return probes
+        })()
+      JS
+    end
+
+    def install_touch_recorder
+      execute_script(<<~JS)
+        window.touchHits = []
+        document.addEventListener('click', event => {
+          window.touchHits.push([event.target.closest('[data-touch]')?.dataset.touch || 'nonlink', event.isTrusted])
+          event.preventDefault()
+          event.stopImmediatePropagation()
+        }, true)
+      JS
+    end
+
     # hover: true 把悬停规则外面那层 (hover: hover) and (pointer: fine) 换成 all：那层只是给触屏设备的保护，
     # GitHub Actions 的无头 Chrome 没有指针设备、不匹配它，悬停的效果却正是这里要量的（CDP 也模拟不了这两个媒体特性）
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false)

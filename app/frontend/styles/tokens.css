@@ -935,3 +935,21 @@ details[open] > summary::before { rotate: 90deg; }
 
 /* 自查第 2 轮：登录页那句话放不下时只在逗号后断行，不在词中间断出一个孤字（「登录后阅 / 读」） */
 .login-tagline { word-break: keep-all; }
+
+/* D35 日刊连续阅读：来源之间留出呼吸，标题与细线属于正文，没有独立的切换屏。 */
+.daily-source { margin-top: 32px; scroll-margin-top: 24px; }
+.daily-source + .daily-source { margin-top: 40px; }
+.daily-source-head { position: relative; padding: 20px 0; }
+.daily-source-anchor { position: absolute; top: 0; width: 0; height: 0; scroll-margin-top: 24px; }
+.daily-source-rule { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--ink); transform-origin: left center; }
+.daily-source-heading { display: flex; align-items: center; gap: 14px; }
+.daily-source-icon { width: 32px; height: 32px; flex: none; }
+.daily-source h2 { position: relative; margin: 0; font-family: var(--font-latin); font-size: var(--fs-26); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.daily-source-content > .issue-body { border-top: 0; }
+@media (max-width: 767px) {
+  .daily-source + .daily-source { margin-top: 32px; }
+  .daily-source-head { padding: 18px 0; }
+  .daily-source-heading { gap: 12px; }
+  .daily-source-icon { width: 26px; height: 26px; }
+  .daily-source h2 { font-size: var(--fs-22); }
+}

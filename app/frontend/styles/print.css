@@ -15,7 +15,13 @@
   .issue-nav, .issue-nav-mobile, .page-nav, .favorite-button, .source-tabs-frame, .weekly-directory, .directory-return,
   .source-foot, footer a, footer .ctrl, .search-head, .filters-shell, .search-pager { display: none !important; }
 
-  .print-source-name { margin: 18pt 0 6pt; font-family: var(--font-latin); font-weight: 600; font-size: var(--fs-20); break-after: avoid; }
+  .daily-source { margin-top: 18pt !important; overflow: visible !important; }
+  .daily-source-head { padding: 0; break-after: avoid; }
+  .daily-source-icon, .daily-source-rule { display: none; }
+  .daily-source *, .daily-source *::before, .daily-source *::after { animation: none !important; }
+  .daily-source > .daily-source-sheet { transform: none !important; }
+  .daily-source .item-row { color: var(--ink) !important; }
+  .daily-source h2, .print-source-name { margin: 18pt 0 6pt; font-family: var(--font-latin); font-weight: 600; font-size: var(--fs-20); break-after: avoid; }
   .item-row { break-inside: avoid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; }
   /* 打印页宽落在手机断点里：那里的 align-items: center 会让序号沉到条目中间，这里拉回与标题首行同一条基线 */
   .item-rank, .item-body { align-self: baseline; }

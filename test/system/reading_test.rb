@@ -5,6 +5,73 @@ class ReadingTest < ApplicationSystemTestCase
   include ContinuousReadingHelpers
   HN_TITLE = "Show HN: A terminal log viewer written in Rust".freeze
 
+  test "目录跳转建立独立历史，后退与前进恢复相应来源和阅读位置" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    visit daily_issue_path("2026-09-08")
+    assert_selector ".daily-source", count: 3
+    history_length = evaluate_script("history.length")
+    within("#source-directory") { click_on sources(:github).name }
+    wait_until { evaluate_script("location.hash") == "#source-#{sources(:github).id}" }
+    assert_equal history_length + 1, evaluate_script("history.length")
+    wait_until { evaluate_script("window.history.state.documentScrollPosition?.top") == evaluate_script("scrollY") }
+    github_position = evaluate_script("scrollY")
+    execute_script("document.querySelector('#source-directory a[href=\"#source-#{sources(:hackaday).id}\"]').click()")
+    wait_until { evaluate_script("location.hash") == "#source-#{sources(:hackaday).id}" }
+    assert_equal history_length + 2, evaluate_script("history.length")
+    page.go_back
+    wait_until { evaluate_script("location.hash") == "#source-#{sources(:github).id}" }
+    wait_until { (evaluate_script("scrollY") - github_position).abs < 2 }
+    page.go_forward
+    wait_until { evaluate_script("location.hash") == "#source-#{sources(:hackaday).id}" }
+    assert_text sources(:hackaday).name
+  end
+
+  test "从同源条目深链点击目录后，后退仍能回到原条目" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    source = sources(:github)
+    item = Item.where(issue: issues(:daily_0908), source: source).order(:rank).offset(2).first!
+    visit daily_issue_path("2026-09-08", source: source.id, anchor: "item-#{item.id}")
+    assert_selector "#item-#{item.id}"
+    wait_until { evaluate_script("scrollY > 500 && window.history.state.documentScrollPosition?.top === scrollY") }
+    reading_position = evaluate_script("scrollY")
+    history_length = evaluate_script("history.length")
+    execute_script("document.querySelector('#source-directory a[href=\"#source-#{source.id}\"]').click()")
+    wait_until { evaluate_script("location.hash") == "#source-#{source.id}" }
+    assert_equal history_length + 1, evaluate_script("history.length")
+    page.go_back
+    wait_until { evaluate_script("location.hash") == "#item-#{item.id}" }
+    wait_until { (evaluate_script("scrollY") - reading_position).abs < 2 }
+    assert_current_path daily_issue_path("2026-09-08", source: source.id)
+  end
+
+  test "来源目录焦点内的左右键不触发翻期" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    sign_in_with_browser(users(:drew))
+    visit daily_issue_path("2026-09-08")
+    find("#source-directory a", match: :first).send_keys(:left, :right)
+    assert_current_path daily_issue_path("2026-09-08")
+  end
+
+  test "目录跳转后收藏写回与离开后返回都保留来源 hash" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    source = sources(:github)
+    item = Item.where(issue: issues(:daily_0908), source: source).order(:rank).first!
+    visit daily_issue_path("2026-09-08")
+    within("#source-directory") { click_on source.name }
+    within("#source-#{source.id}") { find("button[aria-label='收藏：#{item.title}']").click }
+    wait_until { users(:drew).favorites.exists?(url_hash: item.url_hash) }
+    wait_for_favorite_requests(1)
+    assert_equal "#source-#{source.id}", evaluate_script("location.hash")
+    execute_script("document.querySelector('a[aria-label=搜索]').click()")
+    assert_current_path search_path
+    page.go_back
+    wait_until { evaluate_script("location.hash") == "#source-#{source.id}" }
+    within("#source-#{source.id}") { assert_selector "button[aria-label='取消收藏：#{item.title}'][data-on]" }
+  end
+
   test "键盘选择目录后焦点进入来源，Tab 继续正文而非回到顶部目录" do
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))

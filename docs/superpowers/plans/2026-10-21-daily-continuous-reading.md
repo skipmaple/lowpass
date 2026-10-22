@@ -4,7 +4,7 @@
 
 **Goal:** 日刊的全部来源按既定顺序连续呈现，自然滚动进入下一来源时播放已确认的短过渡。
 
-**Architecture:** 来源目录使用页内锚点与 Inertia 客户端历史，所有来源正文持续挂载。被动 scroll / resize 监听在 RAF 内读取不受位移影响的栏首位置，将视口高度 95% 到 65% 的区间经起止平顺的空间曲线映射到 CSS 进度变量；useLayoutEffect 在首次绘制前同步当前位置。标题、细线与完整正文在内部 sheet 中等量接入（6vh，48–64px），标题与首条间距固定，进入主要阅读区前落定；短栏与异常状态静态完整呈现。无时间动画、循环 RAF 或惯性追赶。旧来源与条目深链、历史位置和完整正文打印保留。
+**Architecture:** 来源目录由原生 hash 导航建立历史，Inertia 的 popstate 同步当前 URL 与加密状态，所有来源正文持续挂载。被动 scroll / resize 监听在 RAF 内读取不受位移影响的栏首位置，将视口高度 95% 到 65% 的区间经起止平顺的空间曲线映射到 CSS 进度变量；useLayoutEffect 在首次绘制前同步当前位置。标题、细线与完整正文在内部 sheet 中等量接入（6vh，48–64px），标题与首条间距固定，进入主要阅读区前落定；短栏与异常状态静态完整呈现。无时间动画、循环 RAF 或惯性追赶。旧来源与条目深链、历史位置和完整正文打印保留。
 
 **Tech Stack:** Rails 8、Inertia React、TypeScript、原生 scroll / requestAnimationFrame、CSS animations、Vitest、Rails system tests。
 
@@ -110,3 +110,12 @@
 - 同一 senior_ui_motion_review agent 最终明确通过：两个交界的标题与首条固定成组，双重停顿消除；进入主要阅读区后普通等量滚动，没有转成整栏追赶；整体接入克制但可辨，停止/回退成立，Lowpass 风格保留，无必须继续修改的设计问题。子会话 IAB 不可用，改用 CUA 独立 Chrome 和开发库既有普通读者登录，实际视口约 606 × 1355，两个交界均亲自推进、停顿与回退；812 × 1311 仅补看截图，未声称覆盖高帧率或其他尺寸，临时 Chrome 页已关闭。
 - 主会话另在用户当前 812 × 1311 正式页实测：HN → GitHub 中途停止约 12 秒完全保持，反向回到同一位置恢复相同间距与位移；首条到约 74% 视口时仅余约 0.51px 位移。GitHub → Hackaday 前进 60px 时整体位移约 31.97 → 17.79px，标题至正文间距仍为 20px；停顿保持，上滑 60px 精确恢复。原生滚动录帧 tmp/screenshots/continuous-reading-unified.gif 保留实际输入与推进时间，仅将工具往返产生的长停顿截短至 700ms；原始帧与时间在 /tmp/lowpass-unified-record/。
 - 最终完整 CI=true bin/ci 通过：444 项前端测试，781 项 Rails 测试 / 3381 断言，66 项系统测试 / 596 断言；首屏 263.97 KB / 300 KB，类型、风格、构建、安全审计及 Seeds 均通过。日志 /tmp/lowpass-unified-source-ci.log。交付仍为当前功能分支工作区正式代码与 3100 本地预览，未提交、推送、合并或部署。
+
+### 2026-10-22：PR #63 的 CI 与合并前代码评审
+
+- 用户授权处理 CI 和 review 问题，通过后合并。初始 head c09bf67 的四个 GitHub job 均在安装 Ruby 时失败：ubuntu-latest 开始切到 26.04，而 Ruby 3.4.8 在该镜像没有预编译包。保持项目 Ruby 不变，将四个 CI job 和相同前置条件的部署 job 固定为 ubuntu-24.04；官方 24.04 构建包 HEAD 返回 200，两个 workflow YAML 语法检查通过，不删减门禁。
+- 独立完整代码评审发现两项 Important：Inertia 3.7.0 对只改 hash 的 router.push 强制 replace，目录跳转覆盖历史；新来源目录不再是 tablist，左右键遗漏快捷键保护。修复前新增真实历史回归失败（历史长度未增加），键盘回归也确实触发了两次翻期。
+- Ruling: 目录保留真正原生的 href="#source-…"，移除 click 拦截，让浏览器建立历史、Inertia 自带的 state-null popstate 分支同步内部 URL 与加密历史；不增加查询参数、不复制 history state — 同源条目深链也能完整后退，收藏 props 写回仍保留 hash。独立评审在项目实际加密配置下隔离验证成立，主会话真实系统测试覆盖跨来源 Back/Forward、同源条目深链返回、收藏后离开/返回与键盘焦点。
+- 快捷键忽略区加入 #source-directory，保留链接语义；前端 40 项专项、reading + favoriting 系统 16 项 / 80 断言通过。
+- 收藏仍遵循既有设计：每次写回当前历史项，旧历史项保持当时快照；本轮不改变收藏服务或扩展跨历史项的全局同步。
+- 独立代码评审窄范围复核两项 Important 均已处理，代码层面 Ready to merge: Yes。本地完整 CI=true bin/ci 通过：445 项前端，781 项 Rails / 3381 断言，70 项系统 / 611 断言；首屏 263.90 KB，日志 /tmp/lowpass-pr63-fixes-ci.log。合并仍以最终 head 的 GitHub 四项门禁和 review 状态为准。

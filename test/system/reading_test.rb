@@ -5,6 +5,11 @@ class ReadingTest < ApplicationSystemTestCase
   include ContinuousReadingHelpers
   HN_TITLE = "Show HN: A terminal log viewer written in Rust".freeze
 
+  setup do
+    # Capybara 复用 Chrome 标签页；先前测试积累的历史会达到 50 条上限，使新增导航的长度断言失真。
+    page.driver.browser.execute_cdp("Page.resetNavigationHistory")
+  end
+
   test "栏尾返回目录保持原生历史，键盘可继续选择来源" do
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))

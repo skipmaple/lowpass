@@ -79,3 +79,14 @@
 - Firefox 158.0.1 使用现有 geckodriver 0.37.1，网页字体/阻断 woff 回退各48组合，共96组合；校正验收环境后7680次可信点击，其中4080次覆盖全部标题字形。有效44高区域、宽标题44×44内接区域、字形/标签/换行与保护区通过。Search/Favorites 非空/合成标题使用响应 fixture。原生右侧覆盖式滚动条遮住书签角的32次未触达事件保留，去padding基线同样出现；中心/左角与所有标题字形原生检查通过。条件验收仅在测试页隐藏UA滚动条，前后几何一致，不冒充原生右角通过。Firefox打印未实测；Chrome/WebKit及系统打印媒体另有证据。
 - 根代理重新打开真实3102日刊/周刊/搜索页面，320/375/768/1440 × 前两条共24组合，663次可信点击通过。所有目标均找到经1936点网格排除保护区的44×44内接矩形；37/33px局部凹口继续保留诊断，无邻文侵占。证据 `title-native-root-acceptance.json`。
 - 完整CI通过：76.18秒，46文件/454前端、856 Rails/3763断言、77系统/8044断言，首屏264.56/300 KB。之后仅整理系统测试缩进，Ruby Ripper去除位置元数据后的语法树完全相同，单文件RuboCop及diffcheck通过。
+
+## PR #68 远端导航测试隔离
+
+- 远端系统门禁 seed `35968` 的三个 ReadingTest 在原第 18 / 34 / 61 行同时出现 `Expected: 51 / Actual: 50`。Capybara 在同一 worker 内复用 Chrome 标签页；此前无网络片段与页面访问积累的历史达到 Chrome 50 条上限，后续原生导航仍发生，但 `history.length` 不再增加。根代理在独立 Chrome 155 空白页预填 70 次 `pushState` 证实 50 条截断，并验证 CDP `Page.resetNavigationHistory` 将长度归一且保留当前页面。
+- 受控 RED：仓库外 `/tmp/lowpass-reading-history-saturation.rb` 在每测 setup 之前访问本地登录页并预填 70 条历史，断言已达 50。`CI=true PARALLEL_WORKERS=1`、seed `35968` 下，三个原导航测试仍在相同行号报 `51 / 50`：3 测试 / 15 断言 / 3 失败 / 0 错误。日志 `/tmp/lowpass-reading-history-red.log`。夹具沿用 OmniAuth mock 与禁止外网的测试环境，不连接真实信息源。
+- 仅在 ReadingTest 的 setup 调用现有 Selenium CDP 接口 `Page.resetNavigationHistory`，清理前一测试留下的标签页历史；不重新启动浏览器、不改生产行为，不放宽历史增长断言，也保留后退、前进、滚动恢复与键盘焦点的真实功能断言。70 条预填仅作为一次性根因夹具，不增加测试 CDP 接口自身的永久镜像断言。
+- 受控 GREEN：相同夹具和 seed，全部 11 个 ReadingTest 都先证实历史已达 50，随后完整功能通过：11 测试 / 66 断言 / 0 失败 / 0 错误（6.38 秒）。日志 `/tmp/lowpass-reading-history-green.log`；其中夹具额外验证登录按钮与饱和状态各 11 次。最初未带 `CI=true` 的仪器运行遇到 Vite dev proxy 502、登录页空白，未计作目标 RED；改为与远端一致的 CI 资源模式后才得到上述因果证据。
+- 常规 `ReadingTest --seed 35968` 再验：11 测试 / 44 断言 / 0 失败 / 0 错误（5.82 秒），日志 `/tmp/lowpass-reading-history-normal-green.log`。单文件 RuboCop 与 `git diff --check` 通过。完整 CI、原远端 seed 的系统门禁及独立审阅由根代理继续完成；本修复未提交、推送或部署。
+
+- 隔离后根代理完整 `bin/ci` exit0（71.52秒）：454前端、856 Rails/3763、77系统/8044，首屏264.56KB。`TESTOPTS` 没有传入Rails系统命令（该次系统seed为41918），因此另以显式 `bin/rails test:system --seed 35968` 复验远端原seed：77测试/8044断言全绿（39.85秒），未以环境参数的意图冒充实际执行seed。
+- 独立审阅确认仅在被测操作开始前重置历史，不修改History API、不在导航之间清理，原有增长、后退前进、hash、焦点与滚动位置断言均保留；无新增Critical/Important。本类实际11测试/44断言常规通过，饱和夹具多出的22断言只属于仓库外复现实验。

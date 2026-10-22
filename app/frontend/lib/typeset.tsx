@@ -62,7 +62,7 @@ export type MixedProps = {
   color?: string
   nowrap?: boolean
   className?: string
-  lineHeight?: number
+  lineHeight?: number | 'inherit'
   // 拉丁段的字重：默认按角色取（Maple 400、Newsreader 500），来源名是 600（令牌表）
   weight?: number
 }

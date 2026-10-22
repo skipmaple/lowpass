@@ -138,19 +138,26 @@ function WeeklyMedia({ item }: { item: Item }) {
 
   return (
     <div className={visible.length > 1 ? 'item-media item-media--multiple' : 'item-media item-media--single'}>
-      {visible.map(({ url, index }) => (
-        <figure className="item-media-frame" key={`${url}-${index}`}>
-          <img
-            className="item-media-image"
-            src={url}
-            alt={`${item.title}配图${imageUrls.length > 1 ? ` ${index + 1}` : ''}`}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={() => setFailed((current) => new Set(current).add(index))}
-          />
-        </figure>
-      ))}
+      {visible.map(({ url, index }) => {
+        const size = item.image_dimensions?.[url]
+        const known = size && [size.width, size.height].every((value) => Number.isInteger(value) && value > 0 && value <= 100_000) ? size : undefined
+        const geometry = known ? { '--image-width': `${known.width}px`, '--image-ratio': known.width / known.height } as React.CSSProperties : undefined
+        return (
+          <figure className={`item-media-frame${known ? ' item-media-frame--sized' : ''}`} style={geometry} key={`${url}-${index}`}>
+            <img
+              className="item-media-image"
+              src={url}
+              width={known?.width}
+              height={known?.height}
+              alt={`${item.title}配图${imageUrls.length > 1 ? ` ${index + 1}` : ''}`}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onError={() => setFailed((current) => new Set(current).add(index))}
+            />
+          </figure>
+        )
+      })}
     </div>
   )
 }
@@ -201,7 +208,11 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         {!weekly && item.summary_zh ? <Translation text={item.summary_zh} /> : null}
         {weekly ? <WeeklyMedia item={item} /> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
-        {!weekly && item.reason ? <div className="item-reason">{item.reason}</div> : null}
+        {!weekly && item.reason ? (
+          <div className="item-reason">
+            <Mixed text={item.reason} font="latin" size="inherit" color="inherit" weight={400} lineHeight="inherit" />
+          </div>
+        ) : null}
       </div>
 
       <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} />

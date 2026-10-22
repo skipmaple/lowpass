@@ -13,7 +13,7 @@ const STATE_LINES: Record<SourceSummary['state'], string | null> = {
 export default function SourceDirectory({ sources }: { sources: SourceSummary[] }) {
   return (
     <div className="source-tabs-frame">
-      <nav id="source-directory" className="source-tabs" aria-label="来源">
+      <nav id="source-directory" className="source-tabs" aria-label="来源" tabIndex={-1}>
         {/* 原生 hash 导航建立独立历史，Inertia 的 popstate 负责同步 URL；router.push 会把纯 hash 变化替换掉。 */}
         {sources.map((source) => (
           <a key={source.id} className="source-tab" data-state="inactive" href={`#source-${source.id}`}>

@@ -78,7 +78,7 @@ export function crossfadeFor(href: string, options: VisitOptions): { viewTransit
 }
 
 // 键盘翻页（M8）：焦点在输入框、索引条、菜单、对话框里，按着修饰键，或按住不放（repeat）时不翻
-const IGNORE_WITHIN = '#source-directory, [role="tablist"], [role="menu"], [role="dialog"], [role="listbox"], [role="slider"], [contenteditable=""], [contenteditable="true"]'
+const IGNORE_WITHIN = '#source-directory, .weekly-directory, .anchors, [role="tablist"], [role="menu"], [role="dialog"], [role="listbox"], [role="slider"], [contenteditable=""], [contenteditable="true"]'
 
 export function ignoresArrow(event: KeyboardEvent): boolean {
   if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return true

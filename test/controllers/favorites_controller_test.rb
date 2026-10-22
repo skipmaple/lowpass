@@ -73,6 +73,16 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert snippet.end_with?("…")
   end
 
+  test "收藏快照的摘要保留代码符号与实体文字，只去阅读更多尾巴" do
+    summary = "变量_用户_名称，目录**/文件.rb、目录**/文件.ts，<T> 与 &lt;value&gt;。"
+    favorite = Favorite.keep(users(:drew), index_item("Literal preservation", summary: summary + " …read more"))
+
+    get favorites_path
+
+    assert_equal summary, page_props["entries"].sole["snippet"]
+    assert_equal summary + " …read more", favorite.reload.summary
+  end
+
   test "收藏之后才生成的译文也显示" do
     Favorite.keep(users(:drew), @item)
     @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器", summary_zh: "一个用 Rust 写的终端日志查看器。")

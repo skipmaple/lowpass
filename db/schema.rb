@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -134,6 +134,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_090000) do
     t.index ["source_id", "created_at"], name: "index_fetch_runs_on_source_id_and_created_at"
     t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'running'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text])", name: "fetch_runs_status"
     t.check_constraint "trigger::text = ANY (ARRAY['scheduled'::character varying::text, 'manual'::character varying::text, 'test'::character varying::text])", name: "fetch_runs_trigger"
+  end
+
+  create_table "image_dimensions", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "url", limit: 2048, null: false
+    t.string "url_hash", limit: 64, null: false
+    t.integer "width"
+    t.integer "height"
+    t.datetime "confirmed_at"
+    t.datetime "retry_at"
+    t.datetime "queued_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["url_hash"], name: "index_image_dimensions_on_url_hash", unique: true
+    t.check_constraint "length(url::text) >= 1 AND length(url::text) <= 2048", name: "image_dimensions_url_len"
+    t.check_constraint "url_hash::text ~ '^[0-9a-f]{64}$'::text", name: "image_dimensions_url_hash"
+    t.check_constraint "width IS NULL AND height IS NULL AND confirmed_at IS NULL OR width IS NOT NULL AND height IS NOT NULL AND confirmed_at IS NOT NULL AND width >= 1 AND width <= 100000 AND height >= 1 AND height <= 100000", name: "image_dimensions_size"
   end
 
   create_table "interest_areas", id: { type: :string, limit: 25 }, force: :cascade do |t|

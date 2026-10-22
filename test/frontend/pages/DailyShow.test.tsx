@@ -98,6 +98,13 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 })
 
 describe('连续阅读与来源目录', () => {
+  it('每栏均可返回来源目录，失败或没有源站外链时也保留入口', () => {
+    show({ sources: [sources[0], { ...sources[1], state: 'failed', home_url: null }, sources[2]] })
+    const returns = screen.getAllByRole('link', { name: '返回来源目录' })
+    expect(returns).toHaveLength(3)
+    for (const link of returns) expect(link).toHaveAttribute('href', '#source-directory')
+  })
+
   it('全部来源按配置顺序同时呈现，目录是到正文的原生锚点', () => {
     show({
       active_source_id: 'src-had',

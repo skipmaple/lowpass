@@ -5,7 +5,8 @@ export type SourceSummary = { id: string; name: string; adapter: Adapter; state:
 export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; time_from_fetch?: boolean };
 // title_zh 是 HN 与 Hackaday 标题的中文译文，summary_zh 是 GitHub Trending 简介的中文译文（D25）；
 // 都跟推荐理由同一次生成，没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
-export type Item = { id: string; url_hash: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
+export type ImageDimensions = { width: number; height: number };
+export type Item = { id: string; url_hash: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; image_dimensions?: Record<string, ImageDimensions>; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";
 // status 与 time_label 是服务端定稿的期头文案（附录 B）：没有开 SSR，页面上读得到的字符串都得先进 props。
 export type DailyIssue = { period_key: string; year: number; date_label: string; weekday: string; state: IssueState | null; time_label: string | null; status: string | null; daily_time: string; published_at: string | null; revised_at: string | null; generated_late: boolean; is_yesterday: boolean; prev_key: string | null; next_key: string | null };

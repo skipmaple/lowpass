@@ -60,6 +60,121 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal [ true, true, true, true ], hits
   end
 
+  test "标题的 44px 高触控区不占用译文、标签、摘要、周刊正文或独立操作" do
+    [ 320, 375, 1440, 1920, 2560 ].each do |width|
+      [ "I", "Rust 异步运行时：从任务调度到取消传播，理解 Tokio 在真实服务里的边界" ].each do |title|
+        [ :translated, :summary, :weekly ].each do |variant|
+          render_fragment(touch_item(title, variant), width: width)
+          probes = title_touch_probes
+          install_touch_recorder
+
+          probes.each do |probe|
+            x, y = probe.values_at("x", "y").map(&:round)
+            expected = probe.fetch("expected")
+            label = "#{width}px #{variant} #{title.inspect} #{probe.fetch('label')}"
+            hit = evaluate_script("document.elementFromPoint(#{x}, #{y})?.closest('[data-touch]')?.dataset.touch || 'nonlink'")
+            page.driver.browser.action.move_to_location(x, y, duration: 0).click.perform
+            assert_equal [ expected, true ], evaluate_script("window.touchHits.at(-1)"), "#{label}：原生点击"
+            assert_equal expected, hit, label
+          end
+          assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
+          if width <= 767
+            assert_equal "24px", style(".item-row", "padding-top")
+            assert_equal "24px", style(".item-row", "padding-bottom")
+          end
+        end
+      end
+    end
+  end
+
+  test "标题触控扩展不进入打印布局" do
+    render_fragment(touch_item("A practical guide to asynchronous systems", :weekly), width: 720, media: "print")
+
+    assert_equal "0px", style(".item-heading", "padding-bottom")
+    assert_equal "static", style(".item-title a", "position")
+    assert_equal "static", style(".item-rank", "position")
+    assert_equal "none", style(".item-title a", "content", "::before")
+    assert_equal "0px", style(".item-title a", "padding-top")
+    assert_equal "0px", style(".item-title a", "padding-bottom")
+  end
+
+  test "搜索与收藏标题命中区保持混排几何并保护眉行、译文、片段和独立操作" do
+    [ 320, 375, 1440 ].each do |width|
+      [ "I", "A practical guide to reliable asynchronous systems and cancellation in production services", "理解异步系统的任务调度与取消传播，保留完整的阅读上下文和工程边界", "Rust 异步运行时：从任务调度到取消传播，理解 Tokio 在真实服务里的边界" ].each do |title|
+        [ false, true ].each do |favorite|
+          render_fragment(search_touch_row(title, favorite: favorite), width: width, preflight: true)
+          geometry = search_title_geometry
+          # 去掉链接的装饰类作为排版参照，不复制实现的 CSS；命中扩展不能改变同一份文字的排版。
+          execute_script("document.querySelector('.search-title a').classList.remove('t')")
+          reference = search_title_geometry
+          execute_script("document.querySelector('.search-title a').classList.add('t')")
+          assert_equal reference, geometry, "#{width}px #{title.inspect}：链接命中样式不能改变字形、换行或首标题位置"
+          assert_equal "balance", style(".search-title", "text-wrap-style")
+          assert_equal "2px", style(".search-title .hit", "text-decoration-thickness") unless favorite
+          install_touch_recorder
+          targets = search_touch_probes
+          assert_operator targets.fetch("height"), :>=, 44, "#{width}px #{title.inspect}：包含字形的连续命中区至少 44px 高"
+
+          targets.fetch("probes").each do |probe|
+            x, y = probe.values_at("x", "y").map(&:round)
+            expected = probe.fetch("expected")
+            label = "#{width}px #{favorite ? 'favorite' : 'search'} #{title.inspect} #{probe.fetch('label')}"
+            hit = evaluate_script("document.elementFromPoint(#{x}, #{y})?.closest('[data-touch]')?.dataset.touch || 'nonlink'")
+            execute_script("window.touchHits = []")
+            page.driver.browser.action.move_to_location(x, y, duration: 0).click.perform
+            assert_equal [ [ expected, true ] ], evaluate_script("window.touchHits"), "#{label}：一次可信原生点击"
+            assert_equal expected, hit, label
+          end
+          assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
+        end
+      end
+    end
+  end
+
+  test "搜索与收藏标题的命中扩展不进入打印布局" do
+    render_fragment(search_touch_row("I", favorite: true), width: 720, media: "print", preflight: true)
+
+    assert_equal "0px", style(".search-title", "padding-bottom")
+    assert_equal "static", style(".search-title a", "position")
+    assert_equal "none", style(".search-title a", "content", "::before")
+    assert_equal "static", style(".search-eyebrow", "position")
+    assert_equal "0px", style(".search-title a", "padding-top")
+    assert_equal "0px", style(".search-title a", "padding-bottom")
+  end
+
+  test "标题保护区之外有完整触控矩形且所有字形仍可原生点击" do
+    samples = [
+      [ "A practical guide to reliable asynchronous systems, cancellation, and the subtle boundaries of production services", "前端开发", [ :item, :search, :favorite ] ],
+      [ "Tailwind Labs is joining Shopify", "前端开发", [ :item ] ],
+      [ "Desert Ant Labs: local, fast models that run on device", "AI / LLM", [ :item ] ]
+    ]
+    [ 320, 375 ].each do |width|
+      samples.each do |title, tag, kinds|
+        kinds.each do |kind|
+          html = kind == :item ? touch_item(title, :translated, interest_tag: tag) : search_touch_row(title, favorite: kind == :favorite)
+          render_fragment(html, width: width, preflight: kind != :item)
+          install_touch_recorder
+          selector = kind == :item ? ".item-title a" : ".search-title a"
+          title_fragment_targets(selector).each do |target|
+            [ target.fetch("top"), target.fetch("glyph_top"), target.fetch("glyph_center"), target.fetch("glyph_bottom"), target.fetch("bottom") ].uniq.each do |y|
+              execute_script("window.touchHits = []")
+              page.driver.browser.action.move_to_location(target.fetch("x"), y, duration: 0).click.perform
+              assert_equal [ [ "title", true ] ], evaluate_script("window.touchHits"), "#{width}px #{kind} #{target.inspect}：原生命中边缘"
+            end
+          end
+          # 标签是非链接保护区，目标可以有凹口；宽标题仍必须容纳完整 44×44 区域，不能只靠细列通过。
+          rectangle = title_touch_rectangle(selector)
+          assert rectangle, "#{width}px #{kind} #{title.inspect}：保护区之外应有完整 44×44 命中矩形"
+          [ 1, 22, 43 ].product([ 1, 22, 43 ]).each do |dx, dy|
+            execute_script("window.touchHits = []")
+            page.driver.browser.action.move_to_location(rectangle.fetch("x") + dx, rectangle.fetch("y") + dy, duration: 0).click.perform
+            assert_equal [ [ "title", true ] ], evaluate_script("window.touchHits"), "#{width}px #{kind}：内接矩形原生点击"
+          end
+        end
+      end
+    end
+  end
+
   test "T1 内容文字开中西文间距，界面日期保持紧排" do
     render_fragment(%(<p class="item-reason">涉及AI模型</p><p class="item-translation">OpenAI工程师</p><h1 class="issue-head-date">10月14日</h1>))
 
@@ -101,7 +216,8 @@ class DesignRulesTest < ApplicationSystemTestCase
       render_fragment(format(ITEM, title: "OpenAI engineer arrested in bugging of executive conference room", tag: "智能家居 / IoT"), width: width)
       placed = evaluate_script(<<~JS)
         (() => {
-          const rects = [...document.querySelector('.item-title a').getClientRects()]
+          const range = document.createRange(); range.selectNodeContents(document.querySelector('.item-title a'))
+          const rects = [...range.getClientRects()]
           const last = rects[rects.length - 1]
           const tag = document.querySelector('.item-tag').getBoundingClientRect()
           const heading = document.querySelector('.item-heading').getBoundingClientRect()
@@ -262,7 +378,8 @@ class DesignRulesTest < ApplicationSystemTestCase
     render_fragment(format(ITEM, title: "Mmmmmmmmmmmmmm", tag: "智能家居 / IoT"), width: 320, height: 800)
     offsets = evaluate_script(<<~JS)
       (() => {
-        const rects = [...document.querySelector('.item-title a').getClientRects()]
+          const range = document.createRange(); range.selectNodeContents(document.querySelector('.item-title a'))
+          const rects = [...range.getClientRects()]
         const last = rects[rects.length - 1]
         const tag = document.querySelector('.item-tag').getBoundingClientRect()
         const heading = document.querySelector('.item-heading').getBoundingClientRect()
@@ -306,10 +423,185 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   private
+    def title_touch_rectangle(selector)
+      evaluate_script(<<~JS)
+        (() => {
+          const anchor = document.querySelector(#{selector.to_json}), hit = (x, y) => document.elementFromPoint(x, y)?.closest(#{selector.to_json}) === anchor
+          for (const r of [...anchor.getClientRects(), anchor.getBoundingClientRect()]) {
+            if (r.width < 44 || r.height < 44) continue
+            for (const x of [r.left, r.left + (r.width - 44) / 2, r.right - 44]) for (const y of [r.top, r.top + (r.height - 44) / 2, r.bottom - 44]) {
+              let solid = true
+              for (let dx = .5; dx < 44 && solid; dx++) for (let dy = .5; dy < 44; dy++) if (!hit(x + dx, y + dy)) { solid = false; break }
+              if (solid) return {x, y, width:44, height:44, sampledPixels:1936}
+            }
+          }
+          return null
+        })()
+      JS
+    end
+
+    def title_fragment_targets(selector)
+      evaluate_script(<<~JS)
+        (() => {
+          const anchor = document.querySelector(#{selector.to_json}), walker = document.createTreeWalker(anchor, NodeFilter.SHOW_TEXT), targets = []
+          let fragment = 0
+          for (let node; (node = walker.nextNode());) {
+            const range = document.createRange(); range.selectNodeContents(node)
+            for (const r of range.getClientRects()) if (r.width > 0) {
+              for (const [edge, point] of [['left', r.left + 1], ['middle', r.left + r.width / 2], ['right', r.right - 1]]) {
+                const x = Math.round(point), cy = Math.round(r.top + r.height / 2)
+                const hit = y => document.elementFromPoint(x, y)?.closest(#{selector.to_json}) === anchor
+                let top = cy, bottom = cy
+                while (top > 0 && cy - top < 100 && hit(top - 1)) top--
+                while (bottom < innerHeight - 1 && bottom - cy < 100 && hit(bottom + 1)) bottom++
+                targets.push({fragment, width:r.width, edge, x, top, bottom, height:bottom - top + 1, glyph_top:Math.ceil(r.top + 1), glyph_center:cy, glyph_bottom:Math.floor(r.bottom - 1)})
+              }
+              fragment++
+            }
+          }
+          return targets
+        })()
+      JS
+    end
+
+    # SearchResultRow 与 Favorites/Index 的静态 fixture，保留 Mixed/HitText 的嵌套与行高。
+    # 搜索没有译文；收藏的标题译文直接跟在 h2 后，不借用 ItemRow 的 flex gap。
+    def search_touch_row(title, favorite:)
+      segments = title.split(/(Rust |Tokio )/).reject(&:empty?).map do |text|
+        font = text.match?(/\p{Han}/) ? "cjk" : "latin"
+        %(<span style="font-family:var(--font-#{font});font-size:var(--fs-20)">#{ERB::Util.html_escape(text)}</span>)
+      end.join
+      mixed = %(<span style="line-height:1.6">#{segments}</span>)
+      title_markup = favorite ? mixed : %(<span class="hit">#{mixed}</span>)
+      translation = %(<p class="item-translation">原文标题的完整中文译文。</p>) if favorite
+      <<~HTML
+        <div class="sheet-body" style="padding-top:40px"><article class="search-row">
+          <div class="search-eyebrow"><span class="chip">日刊</span><span>Hacker News</span><span class="search-dot">·</span><span>2026年10月13日</span></div>
+          <h2 class="search-title"><a class="t" href="#title" data-touch="title">#{title_markup}</a></h2>
+          #{translation}<p class="search-snippet">A complete ordinary reading excerpt remains nonlinked.</p>
+          <div class="search-links"><a class="t" href="#issue" data-touch="where">所在期 · 2026年10月13日</a><a class="search-original" href="#original" data-touch="original">原文 ↗</a><button type="button" class="favorite-button search-mark" data-touch="bookmark" aria-label="收藏">书签</button></div>
+        </article></div>
+      HTML
+    end
+
+    def search_title_geometry
+      evaluate_script(<<~JS)
+        (() => {
+          const heading = document.querySelector('.search-title'), anchor = heading.querySelector('a'), box = heading.getBoundingClientRect()
+          const walker = document.createTreeWalker(anchor, NodeFilter.SHOW_TEXT), glyphs = []
+          for (let node; (node = walker.nextNode());) {
+            const range = document.createRange(); range.selectNodeContents(node)
+            for (const r of range.getClientRects()) if (r.width > 0) glyphs.push([r.x, r.y - box.y, r.width, r.height])
+          }
+          return {top:box.top, glyphs}
+        })()
+      JS
+    end
+
+    def search_touch_probes
+      evaluate_script(<<~JS)
+        (() => {
+          const probes = [], add = (x, y, expected, label) => probes.push({x, y, expected, label})
+          const anchor = document.querySelector('.search-title a'), walker = document.createTreeWalker(anchor, NodeFilter.SHOW_TEXT), lines = []
+          for (let node; (node = walker.nextNode());) {
+            const range = document.createRange(); range.selectNodeContents(node)
+            for (const r of range.getClientRects()) if (r.width > 0) lines.push(r)
+          }
+          const last = lines.at(-1), cx = Math.round(last.left + last.width / 2), cy = Math.round(last.top + last.height / 2)
+          // 44px 不隐含相对字形居中；从字形内部扫描连续命中区，原生点击它的实际上下边缘。
+          const hit = y => Boolean(document.elementFromPoint(cx, y)?.closest('.search-title a'))
+          let top = cy, bottom = cy
+          while (top > 0 && cy - top < 100 && hit(top - 1)) top--
+          while (bottom < innerHeight - 1 && bottom - cy < 100 && hit(bottom + 1)) bottom++
+          add(cx, top, 'title', '连续命中区上沿'); add(cx, bottom, 'title', '连续命中区下沿')
+          for (const line of lines) for (const x of [line.left + 1, line.left + line.width / 2, line.right - 1]) for (const y of [line.top + 1, line.top + line.height / 2, line.bottom - 1]) add(x, y, 'title', '每段字形边界')
+          for (const element of document.querySelectorAll('.search-eyebrow,.item-translation,.search-snippet')) {
+            const r = element.getBoundingClientRect()
+            for (const x of [r.left + 1, r.left + r.width / 2, r.right - 1]) for (const y of [r.top + 1, r.top + r.height / 2, r.bottom - 1]) add(x, y, 'nonlink', element.className)
+          }
+          for (const element of document.querySelectorAll('.search-links > a,.favorite-button')) {
+            const r = element.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2
+            for (const dy of [-21, 0, 21]) add(x, y + dy, element.dataset.touch, element.dataset.touch + ' 独立目标')
+          }
+          return {height:bottom - top + 1, probes}
+        })()
+      JS
+    end
+
+    # 与 ItemRow 的三种正文次序一致：HN 译文、GitHub 简介、无标签的周刊完整正文。
+    # 只装生产 CSS 与静态结构；点击记录器阻止导航，书签没有持久化处理器，不发请求。
+    def touch_item(title, variant, interest_tag: "前端开发")
+      heading = variant == :weekly ? "h4" : "h2"
+      tag_font = interest_tag.match?(/\p{Han}/) ? "cjk" : "data"
+      tag = %(<span class="item-tag"><span class="chip-outline item-interest-chip"><span style="line-height:1.6;white-space:nowrap"><span style="font-family:var(--font-#{tag_font});font-size:var(--fs-12)">#{ERB::Util.html_escape(interest_tag)}</span></span></span></span>) unless variant == :weekly
+      copy = case variant
+      when :translated
+        %(<p class="item-translation">原文标题的中文译文，保持完整展示。</p>)
+      when :summary
+        %(<span class="item-summary">A complete summary that remains ordinary, nonlinked reading text.</span><p class="item-translation">这段简介的中文译文。</p>)
+      when :weekly
+        %(<div class="item-content item-content--weekly"><p><span style="font-family:var(--font-cjk);font-size:var(--fs-15);line-height:1.8">这是周刊的完整正文，按原文分段展示。</span></p><p><span style="font-family:var(--font-latin);font-size:var(--fs-15);line-height:1.8">The second paragraph remains part of the weekly reading column.</span></p></div>)
+      end
+      meta = if variant == :weekly
+        %(<span class="data" data-protected>10-22 06:00</span>)
+      else
+        %(<div class="item-meta"><span class="item-metric" data-protected>382</span><a class="item-metric item-comments" href="#comments" data-touch="comments">147</a><time class="item-metric" data-protected>42d</time></div><div class="item-reason">与关注的领域相关，说明具体使用场景。</div>)
+      end
+      <<~HTML
+        <div class="sheet-body" style="padding-top:40px"><article class="item-row"><span class="item-rank">1</span><div class="item-body">
+          <div class="item-heading"><#{heading} class="item-title"><a class="t" href="#title" data-touch="title">#{ERB::Util.html_escape(title)}</a></#{heading}>#{tag}</div>
+          #{copy}#{meta}
+        </div><button type="button" class="favorite-button item-mark" aria-label="收藏" data-touch="bookmark">书签</button></article></div>
+      HTML
+    end
+
+    def title_touch_probes
+      evaluate_script(<<~JS)
+        (() => {
+          const probes = [], add = (x, y, expected, label) => probes.push({x, y, expected, label})
+          const title = document.querySelector('.item-title a'), range = document.createRange()
+          range.selectNodeContents(title)
+          const lines = [...range.getClientRects()].filter(r => r.width > 0), last = lines.at(-1)
+          const cx = last.left + last.width / 2, cy = last.top + last.height / 2
+          // 高度要求不隐含宽度要求，单字母 I 也只在自身宽度内探测。
+          for (const dy of [-21.5, 21.5]) add(cx, cy + dy, 'title', '44px 上下边缘')
+          for (const line of lines) add(line.left + line.width / 2, line.top + line.height / 2, 'title', '每行字形')
+          for (const element of document.querySelectorAll('.item-rank,.item-tag,.item-translation,.item-summary,.item-content--weekly > p,.item-reason,[data-protected]')) {
+            const r = element.getBoundingClientRect()
+            for (const x of [r.left + 1, r.left + r.width / 2, r.right - 1]) {
+              add(x, r.top + 1, 'nonlink', element.className + ' 上沿')
+              add(x, r.top + r.height / 2, 'nonlink', element.className + ' 中部')
+              add(x, r.bottom - 1, 'nonlink', element.className + ' 下沿')
+            }
+          }
+          for (const element of document.querySelectorAll('.item-comments,.favorite-button')) {
+            const r = element.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2
+            for (const [dx, dy] of [[0, 0], [-21, -21], [21, -21], [-21, 21], [21, 21]]) {
+              add(x + dx, y + dy, element.dataset.touch, element.dataset.touch + ' 独立目标')
+            }
+          }
+          return probes
+        })()
+      JS
+    end
+
+    def install_touch_recorder
+      execute_script(<<~JS)
+        window.touchHits = []
+        document.addEventListener('click', event => {
+          window.touchHits.push([event.target.closest('[data-touch]')?.dataset.touch || 'nonlink', event.isTrusted])
+          event.preventDefault()
+          event.stopImmediatePropagation()
+        }, true)
+      JS
+    end
+
     # hover: true 把悬停规则外面那层 (hover: hover) and (pointer: fine) 换成 all：那层只是给触屏设备的保护，
     # GitHub Actions 的无头 Chrome 没有指针设备、不匹配它，悬停的效果却正是这里要量的（CDP 也模拟不了这两个媒体特性）
-    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false)
+    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false, preflight: false)
       css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
+      # 搜索标题的 h2 继承 15px，内部 Mixed 才是 20px；使用应用实际加载的 Tailwind reset。
+      css = Rails.root.join("node_modules/tailwindcss/preflight.css").read + "\n" + css if preflight
       css = css.gsub("@media (hover: hover) and (pointer: fine)", "@media all") if hover
       browser = page.driver.browser
       browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)

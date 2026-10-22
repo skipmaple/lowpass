@@ -907,6 +907,24 @@ details[open] > summary::before { rotate: 90deg; }
 .item-tag { display: inline-flex; vertical-align: baseline; margin-left: 0; padding-top: 0; }
 @media (min-width: 1920px) { .item-heading { max-width: 920px; } }
 
+/* 标题触控（PRD 6.4）：目标至少 44px 高，原生垂直 padding 覆盖换行分片而不改变行距。
+   保留默认 box-decoration-break: slice；clone 会让 WebKit 的均衡换行退化。
+   标题后留 8px，兼顾较高的回退字体，避免扩展侵入下一段上沿；序号与标签保有自己的非链接命中层。打印仍用原几何。 */
+@media screen {
+  .item-title > a.t { position: relative; padding-block: 12px; padding-inline: 0; }
+  .item-rank, .item-tag { position: relative; z-index: 1; }
+  .item-heading { padding-bottom: 8px; }
+}
+
+/* 搜索与收藏的标题由 Mixed / HitText 排出 20px 字形，外层链接仍继承 15px。
+   每个分片上加 17px、下加 12px 原生 padding，补足 44px；不改外层字号，以免改变中文多行的行距。
+   标题后留 8px 保护译文与片段，眉行保持非链接命中。 */
+@media screen {
+  .search-title > a.t { position: relative; padding-block: 17px 12px; padding-inline: 0; }
+  .search-title { padding-bottom: 8px; }
+  .search-eyebrow { position: relative; z-index: 1; }
+}
+
 /* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
 .item-rank, .item-body { align-self: baseline; }
 .item-rank { padding-top: 0; }

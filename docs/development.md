@@ -350,6 +350,9 @@ mise exec -- ruby script/search_eval queries.txt
 
 ## 测试与 CI
 
+GitHub Actions 的 CI 与自动部署均固定使用 `ubuntu-24.04`。`ubuntu-latest` 自 2026-10-19 起迁移到 26.04，
+该镜像没有项目锁定的 Ruby 3.4.8 预编译包；升级 Ruby 时再同步评估 runner 镜像，不单独放宽 CI 的 Ruby 版本。
+
 ```
 bin/rails test          # 快速循环，不连网络
 npm test                # 前端单元测试（Vitest，jsdom），npm run test:watch 是监视模式

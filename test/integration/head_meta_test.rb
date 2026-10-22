@@ -35,6 +35,12 @@ class HeadMetaTest < ActionDispatch::IntegrationTest
     get login_path
 
     assert_select "link[rel=preload][as=style][data-content-fonts][href$='.css']"
+
+    preload = css_select("link[data-content-fonts]").first
+    application = css_select("link[rel=stylesheet][href*='application']").first
+    assert application, "应用样式必须提供后声明的界面字体子集"
+    head = preload.parent.element_children.to_a
+    assert_operator head.index(preload), :<, head.index(application)
   end
 
   # 自查第 1 轮：Newsreader 要等文字排出来才开始下，冷缓存时总在首次绘制之后换字、推动版面。跟文楷界面子集一样先 preload

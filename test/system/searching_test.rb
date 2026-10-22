@@ -36,6 +36,69 @@ class SearchingTest < ApplicationSystemTestCase
     assert_selector "article#item-#{items(:hn_one).id}", text: "Show HN"
   end
 
+  test "长搜索页从第十三条所在期返回，恢复该链接与滚动位置并继续 Tab" do
+    entries = (1..16).map { |rank| entry("historyfocus result #{rank}", section: "工具", rank: rank) }
+    issues(:weekly_w36).replace_section!(sources(:ruanyf), entries, issue_no: 366)
+    visit search_path(q: "historyfocus")
+    assert_text "16 条结果"
+    evaluate_async_script("document.fonts.ready.then(arguments[0])")
+    target = all(".search-links > a:first-child")[12]
+    execute_script("arguments[0].scrollIntoView({ block: 'center' }); arguments[0].focus({ preventScroll: true })", target)
+    reading_position = evaluate_script("scrollY")
+    assert_operator reading_position, :>, 500
+    wait_until { evaluate_script("history.state.documentScrollPosition?.top") == reading_position }
+    with_network_latency(250) do
+      target.send_keys(:enter)
+      assert_current_path weekly_issue_path("2026-W36")
+      assert_selector "section[id='issue-366-%E5%B7%A5%E5%85%B7'] h3", text: "工具"
+    end
+
+    page.go_back
+    assert_current_path search_path(q: "historyfocus")
+    assert_selector ".search-row:nth-child(13) .search-links > a:first-child:focus"
+    wait_until { (evaluate_script("scrollY") - reading_position).abs < 2 }
+    assert evaluate_script("(() => { const rect = document.activeElement.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight })()")
+    page.driver.browser.switch_to.active_element.send_keys(:tab)
+    assert_selector ".search-row:nth-child(13) .search-original:focus"
+    assert_in_delta reading_position, evaluate_script("scrollY"), 2
+
+    page.go_forward
+    assert_current_path weekly_issue_path("2026-W36")
+    page.go_back
+    assert_selector ".search-row:nth-child(13) .search-links > a:first-child:focus"
+
+    find(".filters").click_on "日刊"
+    assert_current_path search_path(q: "historyfocus", type: "daily")
+    assert_selector ".filters .seg-item:focus", text: "日刊"
+    fill_in "搜索", with: "terminal"
+    find_field("搜索").send_keys(:enter)
+    assert_current_path search_path(q: "terminal", type: "daily")
+    assert_selector "#search-query:focus"
+  end
+
+  test "返回搜索后收藏保留结果锚点、未提交草稿与再次往返的焦点" do
+    visit search_path(q: "terminal")
+    click_on "所在期 · 2026年9月8日"
+    assert_current_path daily_issue_path("2026-09-08", source: sources(:hn).id)
+
+    page.go_back
+    target_id = "search-result-#{items(:hn_one).id}"
+    assert_selector "a##{target_id}:focus"
+    fill_in "搜索", with: "unfinished draft"
+    find(".search-mark").click
+    assert_selector ".search-mark[data-on]:focus"
+    wait_until { users(:drew).favorites.count == 1 }
+    wait_for_favorite_requests(1)
+    assert_equal "##{target_id}", evaluate_script("location.hash")
+    assert_field "搜索", with: "unfinished draft"
+
+    page.go_forward
+    assert_current_path daily_issue_path("2026-09-08", source: sources(:hn).id)
+    page.go_back
+    assert_selector "a##{target_id}:focus"
+    assert_selector ".search-mark[data-on]"
+  end
+
   test "同一查询词的筛选历史同步搜索框并保留筛选焦点" do
     visit search_path(q: "rust")
 
@@ -69,4 +132,12 @@ class SearchingTest < ApplicationSystemTestCase
       assert_equal "terminal", click.query
     end
   end
+
+  private
+    def with_network_latency(milliseconds)
+      page.driver.browser.execute_cdp("Network.emulateNetworkConditions", offline: false, latency: milliseconds, downloadThroughput: -1, uploadThroughput: -1)
+      yield
+    ensure
+      page.driver.browser.execute_cdp("Network.emulateNetworkConditions", offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1)
+    end
 end

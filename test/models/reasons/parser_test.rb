@@ -21,9 +21,39 @@ class Reasons::ParserTest < ActiveSupport::TestCase
     assert_equal "不是 JSON", assert_raises(Reasons::Parser::Invalid) { Reasons::Parser.parse("[1,2]", NAMES) }.message
   end
 
-  test "超过 60 字截到 60" do
-    result = Reasons::Parser.parse({ reason: "长" * 80, interest_tag: "AI / LLM" }.to_json, NAMES)
-    assert_equal 60, result.reason.length
+  test "理由归一化后 19 字拒绝，20 与 60 字完整返回，61 字拒绝" do
+    [ 19, 61 ].each do |length|
+      error = assert_raises(Reasons::Parser::Invalid) do
+        Reasons::Parser.parse({ reason: "字" * length, interest_tag: "AI / LLM" }.to_json, NAMES)
+      end
+      assert_equal "理由太#{length == 19 ? '短' : '长'}（#{length} 字）", error.message
+    end
+
+    [ 20, 60 ].each do |length|
+      reason = "字" * length
+      assert_equal reason, Reasons::Parser.parse({ reason: reason, interest_tag: "AI / LLM" }.to_json, NAMES).reason
+    end
+  end
+
+  test "按归一化后的字符数验收，多余空白不使 60 字误失败" do
+    reason = "界" * 47 + " Claude Code。"
+    raw = " \t#{'界' * 47} \n Claude\t Code。 \r\n"
+    assert_equal 60, reason.length
+    assert_operator raw.length, :>, 60
+    assert_equal reason, Reasons::Parser.parse({ reason: raw, interest_tag: "AI / LLM" }.to_json, NAMES).reason
+
+    error = assert_raises(Reasons::Parser::Invalid) do
+      Reasons::Parser.parse({ reason: " \t#{'界' * 48} \n Claude\t Code。 \r\n", interest_tag: "AI / LLM" }.to_json, NAMES)
+    end
+    assert_equal "理由太长（61 字）", error.message
+  end
+
+  test "超长理由包含项目名时拒绝整条，错误只记录归一化长度" do
+    reason = "契合 AI / LLM 领域的 Agent 框架兴趣：Orca 可用自有订阅统一调度 Grok Bot、Claude Code 等编码智能体舰队。"
+    error = assert_raises(Reasons::Parser::Invalid) do
+      Reasons::Parser.parse({ reason: reason, interest_tag: "AI / LLM" }.to_json, NAMES)
+    end
+    assert_equal "理由太长（73 字）", error.message
   end
 
   REASON = "这个用 Rust 写的终端日志工具对开发者效率很有帮助，值得一看。".freeze

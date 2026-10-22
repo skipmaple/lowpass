@@ -1,6 +1,13 @@
 require "test_helper"
 
 class Reasons::PromptTest < ActiveSupport::TestCase
+  # 不要译文的条目拿到的系统提示，跟加译文（D25）之前逐字一样
+  BASE_SYSTEM = <<~TEXT.freeze
+    你是一份中文技术刊物的编辑。读者有一份兴趣画像（每行「领域：关键词」）。请为给出的条目写一句推荐理由：
+    中文，20 到 60 字，必须点名画像里的一个领域名；相关度不高就直说「相关度中等」或「相关度较低」，不得编造关联。
+    只输出 JSON：{"reason": "...", "interest_tag": "<领域名>"}。
+  TEXT
+
   def github(summary)
     Item.new(source: sources(:github), issue: issues(:daily_0908), title: "octo/tool", summary: summary, url: "https://github.com/octo/tool", meta: {})
   end
@@ -47,15 +54,11 @@ class Reasons::PromptTest < ActiveSupport::TestCase
     assert_equal Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::SUMMARY_TOKENS, Reasons::Prompt.max_tokens(item)
   end
 
-  test "没什么可译的条目只要理由和标签，不增加译文上限" do
+  test "没什么可译的条目：提示词与上限照旧" do
     chinese_title = Item.new(source: sources(:hn), issue: issues(:daily_0908), title: "中文互联网正在消失", url: "https://example.com/zh", meta: {})
 
     [ github(nil), github("一个命令行小工具"), chinese_title ].each do |item|
-      system = system_for(item)
-      fields = JSON.parse(system[/只输出 JSON：(.+)。\n\z/, 1])
-      assert_equal %w[ reason interest_tag ], fields.keys
-      assert_not_includes system, "把条目标题译成简体中文"
-      assert_not_includes system, "把条目说明译成简体中文"
+      assert_equal BASE_SYSTEM, system_for(item)
       assert_equal Reasons::Prompt::MAX_TOKENS, Reasons::Prompt.max_tokens(item)
     end
   end

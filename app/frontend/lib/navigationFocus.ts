@@ -13,7 +13,15 @@ export function focusMainOnNavigate(): () => void {
 
     path = url.pathname
     // navigate 在新页的 props 交给 React 时触发，等这一帧画完再找标题
-    window.requestAnimationFrame(() => focusMain(url.hash))
+    window.requestAnimationFrame(() => {
+      // 等待期间可能再次换页，或读者已经进入新页的输入框；自动聚焦不能盖过这两种操作。
+      const main = document.getElementById('main-content')
+      const active = document.activeElement
+      const focusedInPage = active !== main && main?.contains(active)
+      if (window.location.pathname === url.pathname && !focusedInPage) {
+        focusMain(url.hash)
+      }
+    })
   })
 }
 

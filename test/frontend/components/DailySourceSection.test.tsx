@@ -10,6 +10,7 @@ let motionChanged: (event: { matches: boolean }) => void
 
 beforeEach(() => {
   vi.useFakeTimers()
+  window.history.replaceState({}, '', '/')
   top = 1200
   vi.stubGlobal('innerHeight', 1000)
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => ({ top }) as DOMRect)
@@ -84,6 +85,28 @@ it('首次显示和恢复阅读位置直接取当前进度，不从头播放', (
   expect(progress(region)).toBeCloseTo(0.5)
   scroll(24)
   expect(progress(region)).toBe(1)
+})
+
+it('条目深链定位前不带入整栏位移，定位后仍可随滚动回退', () => {
+  window.history.replaceState({}, '', '/#item-deep')
+  const { container } = render(<DailySourceSection source={source()} animate><article id="item-deep">Deep story</article></DailySourceSection>)
+  const region = container.querySelector('section')!
+  expect(progress(region)).toBe(1)
+  emitRouterEvent('navigate')
+  act(() => vi.advanceTimersToNextFrame())
+  expect(progress(region)).toBe(1)
+  scroll(-200)
+  expect(progress(region)).toBe(1)
+  scroll(800)
+  expect(progress(region)).toBeCloseTo(0.5)
+})
+
+it('带条目 hash 的历史恢复仍按保存位置显示过渡进度', () => {
+  window.history.replaceState({ documentScrollPosition: { top: 500, left: 0 } }, '', '/#item-deep')
+  top = 800
+  const { container } = render(<DailySourceSection source={source()} animate><article id="item-deep">Deep story</article></DailySourceSection>)
+
+  expect(progress(container.querySelector('section')!)).toBeCloseTo(0.5)
 })
 
 it('Inertia 恢复滚动位置的帧完成后同步进度，不依赖额外滚动事件', () => {

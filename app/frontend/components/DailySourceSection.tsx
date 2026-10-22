@@ -15,6 +15,8 @@ export default function DailySourceSection({ source, children, animate, aliasId 
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')
     let disabled = reduced?.matches === true
     let scrollFrame = 0
+    const hash = window.location.hash.slice(1)
+    let locatingItem = !window.history.state?.documentScrollPosition && hash.startsWith('item-') && section.contains(document.getElementById(hash))
 
     function measure() {
       if (disabled) {
@@ -23,12 +25,15 @@ export default function DailySourceSection({ source, children, animate, aliasId 
         // 外层不位移，标题、细线与正文在内部作为同一纸面接入。
         const top = section!.getBoundingClientRect().top
         const height = window.innerHeight
+        // 浏览器按变换后的条目坐标定位；深链先完整展开，避免落定时又向上偏移一段。
+        // 栏目到达阅读区后恢复常规进度，上滑仍可自然回退。
+        if (locatingItem && top <= height * 0.65) locatingItem = false
         const content = section!.querySelector<HTMLElement>('.daily-source-content')!
         // 短栏与异常事实直接完整展示，不能为过渡裁掉已在视口里的正文或焦点。
         const canOpen = source.state === 'ok' && content.offsetHeight >= height * 0.75
         const position = Math.max(0, Math.min(1, (height * 0.95 - top) / (height * 0.3)))
         // 空间曲线让起止速度平顺；首条进入主要阅读区前已落定，不按时间追赶。
-        const progress = canOpen ? position * position * (3 - 2 * position) : 1
+        const progress = canOpen && !locatingItem ? position * position * (3 - 2 * position) : 1
         section!.dataset.scrollSource = ''
         section!.toggleAttribute('data-source-opening', progress < 1)
         section!.style.setProperty('--source-progress', String(progress))

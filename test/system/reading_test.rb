@@ -14,11 +14,12 @@ class ReadingTest < ApplicationSystemTestCase
     within("#source-directory") { click_on sources(:github).name }
     wait_until { evaluate_script("location.hash") == "#source-#{sources(:github).id}" }
     assert_equal history_length + 1, evaluate_script("history.length")
-    wait_until { evaluate_script("window.history.state.documentScrollPosition?.top") == evaluate_script("scrollY") }
+    wait_for_reading_anchor("source-#{sources(:github).id}")
     github_position = evaluate_script("scrollY")
     execute_script("document.querySelector('#source-directory a[href=\"#source-#{sources(:hackaday).id}\"]').click()")
     wait_until { evaluate_script("location.hash") == "#source-#{sources(:hackaday).id}" }
     assert_equal history_length + 2, evaluate_script("history.length")
+    wait_for_reading_anchor("source-#{sources(:hackaday).id}")
     page.go_back
     wait_until { evaluate_script("location.hash") == "#source-#{sources(:github).id}" }
     wait_until { (evaluate_script("scrollY") - github_position).abs < 2 }
@@ -34,12 +35,13 @@ class ReadingTest < ApplicationSystemTestCase
     item = Item.where(issue: issues(:daily_0908), source: source).order(:rank).offset(2).first!
     visit daily_issue_path("2026-09-08", source: source.id, anchor: "item-#{item.id}")
     assert_selector "#item-#{item.id}"
-    wait_until { evaluate_script("scrollY > 500 && window.history.state.documentScrollPosition?.top === scrollY") }
+    wait_for_reading_anchor("item-#{item.id}")
     reading_position = evaluate_script("scrollY")
     history_length = evaluate_script("history.length")
     execute_script("document.querySelector('#source-directory a[href=\"#source-#{source.id}\"]').click()")
     wait_until { evaluate_script("location.hash") == "#source-#{source.id}" }
     assert_equal history_length + 1, evaluate_script("history.length")
+    wait_for_reading_anchor("source-#{source.id}")
     page.go_back
     wait_until { evaluate_script("location.hash") == "#item-#{item.id}" }
     wait_until { (evaluate_script("scrollY") - reading_position).abs < 2 }
@@ -115,7 +117,7 @@ class ReadingTest < ApplicationSystemTestCase
     visit daily_issue_path("2026-09-08")
     within("#source-directory") { click_on sources(:hackaday).name }
     assert_current_path(daily_issue_path("2026-09-08")) { |url| url.fragment == "source-#{sources(:hackaday).id}" }
-    wait_until { evaluate_script("Math.abs(document.querySelector('#source-#{sources(:hackaday).id}').getBoundingClientRect().top - 24) < 2") }
+    wait_for_reading_anchor("source-#{sources(:hackaday).id}")
     execute_script("window.scrollBy(0, 100)")
     reading_position = evaluate_script("window.scrollY")
     wait_until { evaluate_script("window.history.state.documentScrollPosition?.top") == reading_position }
@@ -147,4 +149,23 @@ class ReadingTest < ApplicationSystemTestCase
 
     assert_current_path daily_issue_path("2026-09-08")
   end
+
+  private
+    def wait_for_reading_anchor(id)
+      # 原生 hash 先变，Inertia 的加密历史、延迟锚点定位和滚动快照随后才完成。
+      # 操作下一步前等待真正的阅读落点，不能把中间位置记成预期的恢复位置。
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      wait_until do
+        evaluate_script(<<~JS)
+          (() => {
+            const target = document.getElementById(#{id.to_json})
+            const top = target.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(target).scrollMarginTop || 0)
+            const expected = Math.min(top, document.documentElement.scrollHeight - innerHeight)
+            return history.state?.page instanceof ArrayBuffer &&
+              Math.abs(scrollY - expected) < 2 &&
+              Math.abs(history.state.documentScrollPosition?.top - scrollY) < 2
+          })()
+        JS
+      end
+    end
 end

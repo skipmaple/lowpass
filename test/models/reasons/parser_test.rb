@@ -3,10 +3,52 @@ require "test_helper"
 class Reasons::ParserTest < ActiveSupport::TestCase
   NAMES = [ "AI / LLM", "前端开发" ].freeze
 
+  test "合法标签不能代替正文中缺失的画像领域名" do
+    error = assert_raises(Reasons::Parser::Invalid) do
+      Reasons::Parser.parse({ reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发" }.to_json, NAMES)
+    end
+    assert_equal "理由未点名领域", error.message
+  end
+
+  test "正文点名任一合法领域即可，不额外要求与标签相同" do
+    reason = "这个终端工具可供前端开发读者考察调试流程，相关度中等。"
+    result = Reasons::Parser.parse({ reason: reason, interest_tag: "AI / LLM" }.to_json, NAMES)
+    assert_equal reason, result.reason
+    assert_equal "AI / LLM", result.interest_tag
+  end
+
+  test "正文领域名不接受去掉空格的别名" do
+    assert_raises(Reasons::Parser::Invalid) do
+      Reasons::Parser.parse({ reason: "AI/LLM 推理服务工具，可供部署场景的比较与学习参考。", interest_tag: "AI / LLM" }.to_json, NAMES)
+    end
+  end
+
+  test "正文领域名在既有空白归一化之后识别" do
+    reason = "可供 AI / LLM 读者考察推理服务方案，相关度中等。"
+    raw = "可供 AI \n /\t LLM 读者考察推理服务方案，相关度中等。"
+    assert_equal reason, Reasons::Parser.parse({ reason: raw, interest_tag: "AI / LLM" }.to_json, NAMES).reason
+  end
+
+  test "领域名称的连续空白随正文归一化，标签仍逐字匹配" do
+    name = "AI  /  LLM"
+    reason = "可供#{name}读者考察推理服务方案，相关度中等。"
+    begin
+      result = Reasons::Parser.parse({ reason: reason, interest_tag: name }.to_json, [ name ])
+    rescue Reasons::Parser::Invalid => error
+      flunk "合法领域名在归一化后应可用：#{error.message}"
+    end
+    assert_equal "可供AI / LLM读者考察推理服务方案，相关度中等。", result.reason
+    assert_equal name, result.interest_tag
+
+    assert_equal "缺领域名", assert_raises(Reasons::Parser::Invalid) {
+      Reasons::Parser.parse({ reason: reason, interest_tag: "AI / LLM" }.to_json, [ name ])
+    }.message
+  end
+
   test "整段 JSON 与夹在文字里的 JSON 都能解析；空白收成一个空格" do
-    text = { reason: "这个用 Rust 写的终端日志工具  对\n开发者效率很有帮助，值得一看。", interest_tag: "前端开发" }.to_json
+    text = { reason: "这个用 Rust 写的终端日志工具  对\n前端开发很有帮助，值得一看。", interest_tag: "前端开发" }.to_json
     result = Reasons::Parser.parse(text, NAMES)
-    assert_equal "这个用 Rust 写的终端日志工具 对 开发者效率很有帮助，值得一看。", result.reason
+    assert_equal "这个用 Rust 写的终端日志工具 对 前端开发很有帮助，值得一看。", result.reason
     assert_equal "前端开发", result.interest_tag
 
     wrapped = "好的，结果如下：\n#{text}\n希望有帮助。"
@@ -30,20 +72,20 @@ class Reasons::ParserTest < ActiveSupport::TestCase
     end
 
     [ 20, 60 ].each do |length|
-      reason = "字" * length
+      reason = "前端开发" + "字" * (length - 4)
       assert_equal reason, Reasons::Parser.parse({ reason: reason, interest_tag: "AI / LLM" }.to_json, NAMES).reason
     end
   end
 
   test "按归一化后的字符数验收，多余空白不使 60 字误失败" do
-    reason = "界" * 47 + " Claude Code。"
-    raw = " \t#{'界' * 47} \n Claude\t Code。 \r\n"
+    reason = "前端开发" + "界" * 43 + " Claude Code。"
+    raw = " \t前端开发#{'界' * 43} \n Claude\t Code。 \r\n"
     assert_equal 60, reason.length
     assert_operator raw.length, :>, 60
     assert_equal reason, Reasons::Parser.parse({ reason: raw, interest_tag: "AI / LLM" }.to_json, NAMES).reason
 
     error = assert_raises(Reasons::Parser::Invalid) do
-      Reasons::Parser.parse({ reason: " \t#{'界' * 48} \n Claude\t Code。 \r\n", interest_tag: "AI / LLM" }.to_json, NAMES)
+      Reasons::Parser.parse({ reason: " \t前端开发#{'界' * 44} \n Claude\t Code。 \r\n", interest_tag: "AI / LLM" }.to_json, NAMES)
     end
     assert_equal "理由太长（61 字）", error.message
   end
@@ -56,7 +98,7 @@ class Reasons::ParserTest < ActiveSupport::TestCase
     assert_equal "理由太长（73 字）", error.message
   end
 
-  REASON = "这个用 Rust 写的终端日志工具对开发者效率很有帮助，值得一看。".freeze
+  REASON = "这个用 Rust 写的终端日志工具对前端开发很有帮助，值得一看。".freeze
 
   test "标题译文去首尾空白、空白收成一个空格" do
     result = Reasons::Parser.parse({ reason: REASON, interest_tag: "前端开发", title_zh: "  Show HN：一个用  Rust\n写的终端日志查看器 " }.to_json, NAMES)

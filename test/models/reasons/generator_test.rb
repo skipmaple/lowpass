@@ -34,12 +34,12 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     with_model_provider do
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", prompt_tokens: 100, completion_tokens: 40))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", prompt_tokens: 100, completion_tokens: 40))
       outcome = Reasons::Generator.generate!(@issue)
       assert_equal [ 2, 0, 0, false ], [ outcome.generated, outcome.reused, outcome.failed, outcome.skipped ]
     end
     @item.reload
-    assert_equal "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", @item.reason
+    assert_equal "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", @item.reason
     assert_equal "AI / LLM", @item.interest_tag
     assert_not_nil @item.reason_generated_at
     assert_equal 2, ModelCall.where(status: "ok", issue: @issue).count
@@ -56,7 +56,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
         title = JSON.parse(request.body)["messages"].last["content"][/^标题：(.+)$/, 1]
-        { status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: titles.fetch(title), summary_zh: "#{title} 的简介译文") }
+        { status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", title_zh: titles.fetch(title), summary_zh: "#{title} 的简介译文") }
       end
       assert_equal 3, Reasons::Generator.generate!(@issue).generated
       assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::TITLE_TOKENS }
@@ -71,7 +71,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   # 译文是顺带的：不合规不为它重试、不连累理由；整期重生成这次没译好，也不抹掉上一次的（标题没变，旧译文仍然对得上）
   test "译文不合规只当没有：理由照写；重生成没译好不抹掉旧译文" do
     with_model_provider do
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
       assert Reasons::Generator.generate_item!(@item)
       assert_equal [ "AI / LLM", nil ], [ @item.reload.interest_tag, @item.title_zh ]
       assert_equal [ "ok" ], ModelCall.where(item: @item).pluck(:status)
@@ -82,6 +82,51 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", @item.reload.title_zh
     assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2)
+  end
+
+  test "正文缺领域后重试成功：invalid 记账，失败译文不流入成功结果" do
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(
+        { status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文") },
+        { status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", prompt_tokens: 200, completion_tokens: 50) }
+      )
+      assert Reasons::Generator.generate_item!(@item)
+      assert_requested stub, times: 2
+    end
+    assert_equal "新的推荐理由，前端开发相关，值得一读，二十字以上。", @item.reload.reason
+    assert_nil @item.title_zh
+    assert_equal [ [ "invalid", 100, 40, BigDecimal("0.0005"), "理由未点名领域" ], [ "ok", 200, 50, BigDecimal("0.0007"), nil ] ],
+                 ModelCall.where(item: @item).order(:id).pluck(:status, :prompt_tokens, :completion_tokens, :cost, :error_summary)
+  end
+
+  test "正文连续缺领域：最多三次请求，旧字段和时间保留" do
+    @item.update!(reason: "已有推荐理由，前端开发相关，二十个字以上的完整句子。", interest_tag: "前端开发", title_zh: "已有标题译文", summary_zh: "已有简介译文", reason_generated_at: 1.day.ago)
+    before = @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "summary_zh", "reason_generated_at", "updated_at")
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文", summary_zh: "失败响应的简介译文"))
+      assert_not Reasons::Generator.generate_item!(@item)
+      assert_requested stub, times: 3
+    end
+    assert_equal before, @item.reload.attributes.slice(*before.keys)
+    assert_equal [ [ "invalid", "理由未点名领域" ] ] * 3, ModelCall.where(item: @item).order(:id).pluck(:status, :error_summary)
+  end
+
+  test "正文缺领域首次响应耗尽预算：只请求一次并保留旧字段" do
+    @item.update!(reason: "已有推荐理由，前端开发相关，二十个字以上的完整句子。", interest_tag: "前端开发", title_zh: "已有标题译文", reason_generated_at: 1.day.ago)
+    before = @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at", "updated_at")
+    with_model_provider do
+      Setting.set("model_monthly_cap", "0.0005")
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文"))
+      assert_not Reasons::Generator.generate_item!(@item)
+      assert_requested stub, times: 1
+    end
+    assert Reasons::Budget.exhausted?
+    assert_equal before, @item.reload.attributes.slice(*before.keys)
+    assert_equal [ [ "invalid", BigDecimal("0.0005"), "理由未点名领域" ] ], ModelCall.where(item: @item).pluck(:status, :cost, :error_summary)
   end
 
   test "超长后重试成功：两次都按实际 usage 记账，失败译文不流入成功结果" do
@@ -362,10 +407,10 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     latest = Issue.create!(kind: "daily", period_key: "2026-09-10", state: "published", published_at: Time.current, generation_started_at: Time.current)
     renamed = Item.create!(source: sources(:hn), issue: latest, title: "A terminal log viewer in Rust", url: @item.url, url_hash: @item.url_hash, rank: 1, fetched_at: Time.current)
     with_model_provider do
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
       assert_equal [ 1, 0 ], Reasons::Generator.generate!(later).then { |outcome| [ outcome.generated, outcome.reused ] }
 
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "一个用 Rust 写的终端日志查看器"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", title_zh: "一个用 Rust 写的终端日志查看器"))
       assert_equal [ 1, 0 ], Reasons::Generator.generate!(latest).then { |outcome| [ outcome.generated, outcome.reused ] }
     end
     assert_equal [ "前端开发", "Show HN：一个用 Rust 写的终端日志查看器" ], [ dup.reload.interest_tag, dup.title_zh ]
@@ -382,7 +427,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     with_model_provider do
       assert_equal [ 0, 1 ], Reasons::Generator.generate!(later).then { |outcome| [ outcome.generated, outcome.reused ] }
 
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，开发者效率相关，值得一读，二十字以上。", interest_tag: "前端开发", summary_zh: "给 octo 用的命令行小工具，现在支持插件"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", summary_zh: "给 octo 用的命令行小工具，现在支持插件"))
       assert_equal [ 1, 0 ], Reasons::Generator.generate!(latest).then { |outcome| [ outcome.generated, outcome.reused ] }
     end
     assert_equal [ @other.reason, "给 octo 用的命令行小工具" ], [ same.reload.reason, same.summary_zh ]

@@ -17,6 +17,7 @@ module Reasons::Parser
       raise Invalid, "理由太短（#{reason.length} 字）" if reason.length < MIN
       raise Invalid, "理由太长（#{reason.length} 字）" if reason.length > MAX
       raise Invalid, "缺领域名" unless allowed_names.include?(tag)
+      raise Invalid, "理由未点名领域" unless allowed_names.any? { |name| reason.include?(name.strip.gsub(/\s+/, " ")) }
       Result.new(reason: reason, interest_tag: tag,
                  title_zh: translation(json["title_zh"], TITLE_MAX), summary_zh: translation(json["summary_zh"], SUMMARY_MAX))
     end

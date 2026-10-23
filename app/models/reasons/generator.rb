@@ -9,8 +9,8 @@ module Reasons::Generator
     def generate!(issue, only_missing: true)
       return Outcome.new(generated: 0, reused: 0, abstained: 0, failed: 0, skipped: true) unless Reasons.ready?
 
-      items = issue.items.visible.ranked.includes(:source, :issue).to_a
-      items = items.select { |item| item.reason.nil? } if only_missing
+      items = only_missing ? issue.items.pending_reasons : issue.items.visible.daily
+      items = items.ranked.includes(:source, :issue).to_a
       names = InterestArea.enabled_names
       profile = InterestArea.profile_text
       counts = Hash.new(0)
@@ -24,6 +24,7 @@ module Reasons::Generator
         # 跨天重复的那几条也得真的重新生成，不然这个按钮对它们没有效果（R-9.7）
         if only_missing && (previous = previous_reason(item))
           store(item, previous)
+          Reasons.recover_if_complete(issue)
           counts[:reused] += 1
           next
         end
@@ -38,9 +39,7 @@ module Reasons::Generator
         end
       end
 
-      if issue.items.visible.where(reason: nil).none?
-        Alerts.recover!(kind: "reasons_missing") unless Reasons::Budget.exhausted?
-      end
+      Reasons.recover_if_complete(issue)
       Outcome.new(generated: counts[:generated], reused: counts[:reused], abstained: counts[:abstained], failed: counts[:failed], skipped: false)
     end
 
@@ -81,10 +80,12 @@ module Reasons::Generator
           if result.decision == "insufficient_evidence"
             record(item, "abstained", response, started)
             item.record_reason_abstention(assessed_at: Time.current)
+            Reasons.recover_if_complete(item.issue)
             return :abstained
           else
             record(item, "ok", response, started)
             store(item, result)
+            Reasons.recover_if_complete(item.issue)
             return :generated
           end
         end
@@ -95,7 +96,7 @@ module Reasons::Generator
 
     private
       def alert_budget_exhausted(issue)
-        missing = issue.items.visible.where(reason: nil).count
+        missing = issue.items.pending_reasons.count
         summary = missing.positive? ? "本月费用已达上限，缺理由 #{missing} 条" : "本月费用已达上限，已停止生成"
         Alerts.reasons_missing!(issue, missing, summary: summary)
       end
@@ -104,8 +105,7 @@ module Reasons::Generator
       # 带着译文的那条——前一条早于译文上线，或源站后来改了标题、仓库改了简介，就不沿用，整条重新生成。
       # GitHub 的仓库常常连着几天上榜，简介不变就一直沿用，不重复花钱
       def previous_reason(item)
-        previous = Item.joins(:issue).where(url_hash: item.url_hash, issues: { kind: "daily" }).where("issues.period_key < ?", item.issue.period_key)
-                       .where.not(reason: nil)
+        previous = Item.reusable_reasons.where(url_hash: item.url_hash).where("issues.period_key < ?", item.issue.period_key)
         previous = previous.where(title: item.title).where.not(title_zh: nil) if item.translate_title?
         previous = previous.where(summary: item.summary).where.not(summary_zh: nil) if item.translate_summary?
         previous.order("issues.period_key DESC").first

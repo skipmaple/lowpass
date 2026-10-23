@@ -533,4 +533,109 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
     assert_equal [ "重新写过的推荐理由，前端开发相关，二十字以上。", "前端开发" ], [ dup.reload.reason, dup.interest_tag ]
   end
+
+  test "整期四结果独立计数且只有真实请求记账" do
+    earlier = Issue.create!(kind: "daily", period_key: "2026-09-07", state: "published", generation_started_at: Time.current, published_at: Time.current)
+    prior = @item.dup
+    prior.assign_attributes(issue: earlier, reason: "历史有效理由", title_zh: "旧标题译文")
+    prior.save!
+    @other.update!(title: "generated", rank: 2)
+    [ [ "abstained", 3 ], [ "invalid", 4 ] ].each do |title, rank|
+      item = @item.dup
+      item.assign_attributes(title: title, url: "https://example.test/#{title}", url_hash: Digest::SHA256.hexdigest(title), rank: rank)
+      item.save!
+    end
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
+        title = JSON.parse(request.body)["messages"].last["content"][/^标题：(.+)$/, 1]
+        body = case title
+        when "generated" then model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发")
+        when "abstained" then abstained_reply
+        else model_reply(reason: "短", interest_tag: "前端开发")
+        end
+        { status: 200, body: body }
+      end
+      outcome = Reasons::Generator.generate!(@issue)
+      assert_equal [ 1, 1, 1, 1, false ], [ outcome.generated, outcome.reused, outcome.abstained, outcome.failed, outcome.skipped ]
+    end
+    assert_equal({ "ok" => 1, "abstained" => 1, "invalid" => 3 }, ModelCall.group(:status).count)
+  end
+
+  test "补缺跳过合法拒写但整期显式重生重新评估" do
+    [ @item, @other ].each { |item| item.record_reason_abstention(assessed_at: 1.day.ago) }
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      outcome = Reasons::Generator.generate!(@issue)
+      assert_equal [ 0, 0, 0, 0, false ], [ outcome.generated, outcome.reused, outcome.abstained, outcome.failed, outcome.skipped ]
+      assert_equal 0, ModelCall.count
+      assert_equal 2, Reasons::Generator.generate!(@issue, only_missing: false).abstained
+      assert_requested stub, times: 2
+    end
+  end
+
+  test "次日相同地址不复制拒写且带判断的旧理由不可传播" do
+    @item.update!(reason: "不能再次传播的历史理由", title_zh: "旧译文")
+    @item.record_reason_abstention(assessed_at: Time.current)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", generation_started_at: Time.current, published_at: Time.current)
+    copy = @item.dup
+    copy.assign_attributes(issue: later, reason: nil, interest_tag: nil, title_zh: nil, reason_generated_at: nil)
+    copy.save!
+    assert_nil copy.reason_abstention
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      outcome = Reasons::Generator.generate!(later)
+      assert_equal [ 0, 0, 1 ], [ outcome.generated, outcome.reused, outcome.abstained ]
+      assert_requested stub, times: 1
+    end
+    assert_nil copy.reload.reason
+    assert_not_equal @item.reason_abstention.id, copy.reason_abstention.id
+  end
+
+  test "较新旧理由带判断时仍可复用更早无判断的成功内容" do
+    @item.update!(reason: "较新的旧内容", title_zh: "旧译文")
+    @item.record_reason_abstention(assessed_at: Time.current)
+    earlier = Issue.create!(kind: "daily", period_key: "2026-09-07", state: "published", generation_started_at: Time.current, published_at: Time.current)
+    prior = @item.dup
+    prior.assign_attributes(issue: earlier, reason: "更早有效内容")
+    prior.save!
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", generation_started_at: Time.current, published_at: Time.current)
+    copy = @item.dup
+    copy.assign_attributes(issue: later, reason: nil, title_zh: nil)
+    copy.save!
+    with_model_provider { assert_equal 1, Reasons::Generator.generate!(later).reused }
+    assert_equal "更早有效内容", copy.reload.reason
+    assert_equal 0, ModelCall.count
+  end
+
+  test "完成仅恢复本期，预算未解除不恢复，单条完成也恢复" do
+    @other.update!(hidden: true)
+    later = Issue.create!(kind: "daily", period_key: "2026-09-09", state: "published", generation_started_at: Time.current, published_at: Time.current)
+    ours = alert_event(kind: "reasons_missing", source: nil, issue: @issue, dedup_key: "ours")
+    theirs = alert_event(kind: "reasons_missing", source: nil, issue: later, dedup_key: "theirs")
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      assert_equal :abstained, Reasons::Generator.generate_item!(@item)
+      assert_not_nil ours.reload.recovered_at
+      assert_nil theirs.reload.recovered_at
+      budget = alert_event(kind: "reasons_missing", source: nil, issue: @issue, dedup_key: "budget")
+      Setting.set("model_monthly_cap", "1")
+      ModelCall.create!(status: "abstained", cost: 1)
+      Reasons.recover_if_complete(@issue)
+      assert_nil budget.reload.recovered_at
+      Setting.set("model_monthly_cap", "0")
+      Reasons.recover_if_complete(@issue)
+      assert_not_nil budget.reload.recovered_at
+      assert_nil theirs.reload.recovered_at
+    end
+  end
+
+  test "预算摘要不把已有合法拒写当缺失" do
+    @item.record_reason_abstention(assessed_at: Time.current)
+    with_model_provider do
+      Setting.set("model_monthly_cap", "1")
+      ModelCall.create!(status: "abstained", cost: 1)
+      Reasons::Generator.generate!(@issue)
+    end
+    assert_equal "本月费用已达上限，缺理由 1 条", AlertEvent.find_by!(kind: "reasons_missing").summary
+  end
 end

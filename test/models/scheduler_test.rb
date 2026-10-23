@@ -272,4 +272,16 @@ class SchedulerTest < ActiveSupport::TestCase
     Rails.env.stubs(:production?).returns(true)
     assert_enqueued_with(job: BackupJob) { Scheduler.tick(now: sh("2026-09-10 03:00:30")) }
   end
+
+  test "分钟检查排除合法拒写并恢复本期已有事件" do
+    issue = issues(:daily_0908)
+    issue.update!(published_at: sh("2026-09-08 06:12"))
+    items(:hn_one).record_reason_abstention(assessed_at: sh("2026-09-08 06:20"))
+    open = alert_event(kind: "reasons_missing", source: nil, issue: issue, dedup_key: "reason-tick")
+    with_model_provider do
+      assert_no_difference("ModelCall.count") { Scheduler.tick(now: sh("2026-09-08 06:43")) }
+      assert_not_nil open.reload.recovered_at
+      assert_equal 1, AlertEvent.where(kind: "reasons_missing").count
+    end
+  end
 end

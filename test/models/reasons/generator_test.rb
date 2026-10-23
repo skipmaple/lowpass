@@ -23,7 +23,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     with_model_provider do
       outcome = Reasons::Generator.generate!(@issue)
       assert outcome.skipped
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
     end
     assert_equal 0, ModelCall.count
     assert_nil @item.reload.reason
@@ -45,6 +45,81 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_equal 2, ModelCall.where(status: "ok", issue: @issue).count
     assert_equal BigDecimal("0.0005"), ModelCall.first.cost
     assert_not_nil open.reload.recovered_at
+  end
+
+  test "合法拒写一次真实调用记费用且新旧内容均不改" do
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      [ {}, { reason: "旧理由", interest_tag: "AI / LLM", title_zh: "旧译文", reason_generated_at: 1.day.ago } ].each do |fields|
+        @item.update!(fields)
+        before = @item.attributes
+        assert_equal :abstained, Reasons::Generator.generate_item!(@item)
+        assert_equal before, @item.reload.attributes
+      end
+      assert_requested stub, times: 2
+      assert_equal [ [ "abstained", 100, 40, BigDecimal("0.0005"), nil ] ] * 2, ModelCall.order(:id).pluck(:status, :prompt_tokens, :completion_tokens, :cost, :error_summary)
+      assert ModelCall.all.all? { |call| call.duration_ms >= 0 }
+      assert_equal 1, ReasonAbstention.where(item: @item).count
+    end
+  end
+
+  test "invalid 或超时后合法拒写立即结束且失败译文不保存" do
+    with_model_provider do
+      [ :invalid, :timeout ].each do |first|
+        ModelCall.delete_all
+        stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT)
+        if first == :timeout
+          stub.to_timeout.then.to_return(status: 200, body: abstained_reply)
+        else
+          stub.to_return({ status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "不得泄入的译文") }, { status: 200, body: abstained_reply })
+        end
+        before = @item.reload.attributes
+        assert_equal :abstained, Reasons::Generator.generate_item!(@item)
+        assert_equal before, @item.reload.attributes
+        assert_equal [ first == :timeout ? "timed_out" : "invalid", "abstained" ], ModelCall.order(:id).pluck(:status)
+        assert_requested stub, times: 2
+        WebMock.reset!
+      end
+    end
+  end
+
+  test "调用已记账但判断保存失败时抛出且不追加请求" do
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      @item.stubs(:record_reason_abstention).raises(ActiveRecord::StatementInvalid, "write failed")
+      assert_raises(ActiveRecord::StatementInvalid) { Reasons::Generator.generate_item!(@item) }
+      assert_equal [ "abstained" ], ModelCall.pluck(:status)
+      assert_requested stub, times: 1
+    end
+  end
+
+  test "已有拒写记录遇三次失败保留最后合法判断" do
+    marker = @item.record_reason_abstention(assessed_at: 1.day.ago)
+    before = marker.attributes
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "不保存"))
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
+      assert_equal before, marker.reload.attributes
+      assert_nil @item.reload.title_zh
+      assert_requested stub, times: 3
+    end
+  end
+
+  test "最后合法拒写恰好耗尽预算不制造预算终止事件" do
+    @other.destroy!
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      Setting.set("model_monthly_cap", "0.0005")
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      result = Reasons::Generator.generate!(@issue)
+      assert_equal [ 0, 0, 1, 0, false ], [ result.generated, result.reused, result.abstained, result.failed, result.skipped ]
+      assert Reasons::Budget.exhausted?
+      assert_equal 0, AlertEvent.where(kind: "reasons_missing").count
+      assert_requested stub, times: 1
+    end
   end
 
   # D25：译文跟理由同一次调用拿回来，不多花一次。HN 与 Hackaday 译标题，GitHub Trending 的标题是仓库名，译简介；
@@ -72,13 +147,13 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "译文不合规只当没有：理由照写；重生成没译好不抹掉旧译文" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
-      assert Reasons::Generator.generate_item!(@item)
+      assert_equal :generated, Reasons::Generator.generate_item!(@item)
       assert_equal [ "AI / LLM", nil ], [ @item.reload.interest_tag, @item.title_zh ]
       assert_equal [ "ok" ], ModelCall.where(item: @item).pluck(:status)
       assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 1)
 
       @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器")
-      assert Reasons::Generator.generate_item!(@item)
+      assert_equal :generated, Reasons::Generator.generate_item!(@item)
     end
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", @item.reload.title_zh
     assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2)
@@ -92,7 +167,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
         { status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文") },
         { status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", prompt_tokens: 200, completion_tokens: 50) }
       )
-      assert Reasons::Generator.generate_item!(@item)
+      assert_equal :generated, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 2
     end
     assert_equal "新的推荐理由，前端开发相关，值得一读，二十字以上。", @item.reload.reason
@@ -106,7 +181,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     before = @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "summary_zh", "reason_generated_at", "updated_at")
     with_model_provider do
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文", summary_zh: "失败响应的简介译文"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 3
     end
     assert_equal before, @item.reload.attributes.slice(*before.keys)
@@ -121,7 +196,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 1
     end
     assert Reasons::Budget.exhausted?
@@ -137,7 +212,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
         { status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "失败响应的标题译文", prompt_tokens: 100, completion_tokens: 40) },
         { status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", prompt_tokens: 200, completion_tokens: 50) }
       )
-      assert Reasons::Generator.generate_item!(@item)
+      assert_equal :generated, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 2
     end
     assert_equal [ "新的推荐理由，前端开发相关，值得一读，二十字以上。", "前端开发", nil ], [ @item.reload.reason, @item.interest_tag, @item.title_zh ]
@@ -168,7 +243,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "失败响应的标题译文"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 3
     end
     assert_equal before, @item.reload.attributes.slice(*before.keys)
@@ -182,7 +257,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     before = @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "summary_zh", "reason_generated_at", "updated_at")
     with_model_provider do
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "失败响应的标题译文", summary_zh: "失败响应的简介译文"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 3
     end
     assert_equal before, @item.reload.attributes.slice(*before.keys)
@@ -195,7 +270,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "失败响应的标题译文"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 1
     end
     assert_equal [ [ "invalid", BigDecimal("0.0005") ] ], ModelCall.where(item: @item).pluck(:status, :cost)
@@ -210,7 +285,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "一" * 30, interest_tag: "不存在"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 1
     end
     assert_equal [ [ "invalid", BigDecimal("0.0005") ] ], ModelCall.where(item: @item).pluck(:status, :cost)
@@ -270,7 +345,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
         Setting.set("model_input_price", "1")
         Setting.set("model_output_price", "10")
         stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM", title_zh: "失败响应的标题译文", summary_zh: "失败响应的简介译文"))
-        assert_not Reasons::Generator.generate_item!(@item)
+        assert_equal :failed, Reasons::Generator.generate_item!(@item)
         assert_equal before, @item.reload.attributes.slice(*before.keys)
         assert_equal 1, AlertEvent.where(kind: "reasons_missing").count
         event = AlertEvent.where(kind: "reasons_missing").sole
@@ -294,7 +369,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "长" * 61, interest_tag: "AI / LLM"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 3
     end
     assert_equal 3, ModelCall.where(status: "invalid").count
@@ -318,7 +393,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "输出缺领域名：重试 2 次后留空，账本记 invalid" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "一" * 30, interest_tag: "不存在"))
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
     end
     assert_nil @item.reload.reason
     assert_equal 3, ModelCall.where(item: @item, status: "invalid").count
@@ -328,7 +403,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "超时记 timed_out 并重试；密钥被拒绝整期停止" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_timeout
-      assert_not Reasons::Generator.generate_item!(@item)
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_equal 3, ModelCall.where(item: @item, status: "timed_out").count
 
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 401)

@@ -30,7 +30,11 @@ function Row({ week }: { week: ArchiveWeek }) {
         <Mark state={week.state} label={week.state === 'empty' ? '无内容' : undefined} />
       </span>
       <span className="archive-key">{week.week_label}</span>
-      <span className="archive-sub">{week.range_label}</span>
+      <span className="archive-sub">
+        {week.range_label.split(' 至 ').map((date, index) => (
+          <span key={index}>{index > 0 ? ' 至 ' : null}<span className="archive-range-date">{date}</span></span>
+        ))}
+      </span>
       <span className="archive-label">
         {week.summary ? (
           <Mixed text={week.summary} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />

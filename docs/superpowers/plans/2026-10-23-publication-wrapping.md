@@ -1,6 +1,6 @@
 # Publication Wrapping Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [x]) syntax for tracking.
 
 **Goal:** Remove the observed source subtitle and archive orphans while preserving complete text, links, fonts and the approved layout.
 
@@ -56,8 +56,8 @@
 - [x] At 320px prove the W41 range 10月5日 至 10月11日 splits a date before the fix.
 - [x] Bind the two short dates locally, allowing a line break between them and keeping the existing 15px CJK font.
 - [x] Verify cross-month 9月28日 至 10月4日 and cross-year 12月28日 至 1月3日, unchanged text/href and no overflow.
-- [ ] Run the focused real-page regressions, frontend typecheck/unit tests and complete bin/ci once the candidate is stable. Inspect the exact changed contexts at ten widths and adjacent breakpoints; review the actual pixels through CUA.
-- [ ] Obtain independent whole-diff review, address material findings, commit and prepare a reviewable PR. Do not treat local acceptance as production deployment approval.
+- [x] Run the focused real-page regressions, frontend typecheck/unit tests and complete bin/ci once the candidate is stable. Inspect the exact changed contexts at ten widths and adjacent breakpoints; review actual browser-rendered PNGs.
+- [x] Obtain independent whole-diff review, address material findings, commit and prepare a reviewable PR. Do not treat local acceptance as production deployment approval.
 
 ## Execution record
 
@@ -68,3 +68,8 @@ Current-session implementation under the existing approved T2 repair scope. The 
 - The scope removes the observed orphans and preserves full text. It does not promise dictionary-aware Chinese word wrapping for all archive themes.
 
 - Final source subtitle review accepted all 16 PNGs, including 320px and long/fallback titles. First complete CI: Rails and frontend checks passed, but one existing initial search focus assertion failed; unresolved, so CI is not yet accepted.
+
+- Final whole-diff review: no Critical / Important product findings. Deferred minor: explicitly assert both complete multi-issue archive themes in the matrix test; actual full themes remain in the accepted pixel evidence.
+- The initial full CI and diagnostic reruns exposed an inactive headless document before the search resize test began. `activeElement` was correct while `document.hasFocus()` and `:focus` were false. Same-handle window activation did not fix it. The test now explicitly emulates a focused/active target, asserts that precondition and retains every original source/375px/1440px focus assertion; both focus emulation and viewport are restored in ensure. This does not prove OS window activation.
+- Final complete `bin/ci`: 602 frontend tests, 895 Rails tests, 112 system tests / 9534 assertions, all passing; first screen 265.92 KB. The external diagnostic probe was absent from this gate.
+- Visual acceptance uses real system-test Chrome screenshots, individually inspected as image artifacts; it does not claim manual CUA interaction with this local candidate or physical-device coverage.

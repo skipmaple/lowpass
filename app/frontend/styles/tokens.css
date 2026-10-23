@@ -40,6 +40,7 @@ body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: 
 a { color: inherit; text-decoration: none; }
 a.t { text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 a.t:hover { text-decoration-color: var(--ink); }
+a.t:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* Inertia 页面跳转进度条（NProgress）。application.tsx 里 includeCSS: false，
    自己写这份最小样式：墨色细线，没有光晕、没有圆角、没有小圆点/转圈图标。 */

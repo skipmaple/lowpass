@@ -75,6 +75,46 @@ describe('ItemRow 标题与摘要', () => {
     render(<ItemRow item={item({ summary: '一个用 Rust 写的终端日志查看器。' })} adapter="hacker_news" rank={1} />)
     expect(screen.getByText('一个用 Rust 写的终端日志查看器。')).toHaveClass('item-summary')
   })
+
+  it('带标签的英文标题保留每个原字符、链接可读名与地址，换文重渲染不遗留旧标题', () => {
+    const title = '  Tailwind\tLabs is  joining Shopify  '
+    const { container, rerender } = render(<ItemRow item={item({ title, interest_tag: '前端开发' })} adapter="hacker_news" rank={1} />)
+    const link = screen.getByRole('link', { name: 'Tailwind\tLabs is joining Shopify' })
+
+    expect(link.textContent).toBe(title)
+    expect(link).toHaveAttribute('href', 'https://example.com/termlog')
+    expect(link.closest('h2')?.nextElementSibling).toHaveTextContent('前端开发')
+    expect(link.closest('h2')).not.toHaveTextContent('前端开发')
+
+    const changed = item({ title: 'Hunting the Wild Vibrotruck', interest_tag: '电子机械与自动化' })
+    rerender(<ItemRow item={changed} adapter="rss" rank={1} />)
+    rerender(<ItemRow item={changed} adapter="rss" rank={1} />)
+    expect(screen.getByRole('link', { name: changed.title }).textContent).toBe(changed.title)
+    expect(container.querySelector('.item-tag')).toHaveTextContent(changed.interest_tag!)
+    expect(screen.queryByRole('link', { name: 'Tailwind\tLabs is joining Shopify' })).toBeNull()
+  })
+
+  it('单 token、含汉字、无标签与周刊的标题保留直接原文节点', () => {
+    const { rerender } = render(<ItemRow item={gh()} adapter="github_trending" rank={1} />)
+    const unchanged = [
+      { title: 'TauricResearch/TradingAgents', interest_tag: 'AI' },
+      { title: '用 Rust 制作终端工具', interest_tag: '终端工具' },
+      { title: 'Tailwind Labs is joining Shopify', interest_tag: null },
+    ]
+    for (const props of unchanged) {
+      rerender(<ItemRow item={item(props)} adapter="hacker_news" rank={1} />)
+      const link = screen.getByRole('link', { name: props.title })
+      expect(link.childNodes).toHaveLength(1)
+      expect(link.firstChild?.nodeType).toBe(Node.TEXT_NODE)
+      expect(link.textContent).toBe(props.title)
+    }
+
+    rerender(<ItemRow item={item({ title: 'Hunting the Wild Vibrotruck', interest_tag: '电子机械与自动化' })} adapter="rss" rank={1} variant="weekly" />)
+    const weekly = screen.getByRole('link', { name: 'Hunting the Wild Vibrotruck' })
+    expect(weekly.childNodes).toHaveLength(1)
+    expect(weekly.firstChild?.nodeType).toBe(Node.TEXT_NODE)
+    expect(screen.queryByText('电子机械与自动化')).toBeNull()
+  })
 })
 
 describe('ItemRow 元数据（按适配器）', () => {

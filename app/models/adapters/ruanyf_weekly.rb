@@ -34,8 +34,13 @@ module Adapters
 
       def entry(item, parsed, number, rank)
         meta = { issue_no: number, issue_title: parsed[:title], anchor: anchor(item[:section]) }
-        image_urls = item[:image_urls].filter_map { |href| image_url(href, number) }.uniq
+        resolved_images = item[:image_urls].map { |href| image_url(href, number) }
+        image_urls = resolved_images.compact.uniq
         meta[:image_urls] = image_urls if image_urls.any?
+        if resolved_images == image_urls
+          positions = ImagePositions.for(body: item[:image_body], content: SummaryCleaner.content(item[:summary]), image_urls: item[:image_urls])
+          meta[:image_positions] = positions if positions
+        end
 
         Entry.new(
           title: item[:title],

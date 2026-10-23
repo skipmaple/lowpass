@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react'
 import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
 import Icon, { type IconName } from '@/components/Icon'
+import WeeklyContent from '@/components/WeeklyContent'
 import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/lib/typeset'
 import type { Adapter, Item } from '@/types/lowpass'
 
@@ -127,41 +128,6 @@ export function Translation({ text }: { text: string }) {
   )
 }
 
-function WeeklyMedia({ item }: { item: Item }) {
-  const [failed, setFailed] = useState<ReadonlySet<number>>(() => new Set())
-  const imageUrls = Array.isArray(item.meta.image_urls)
-    ? item.meta.image_urls.filter((url): url is string => typeof url === 'string' && /^https?:\/\//i.test(url))
-    : []
-  const visible = imageUrls.map((url, index) => ({ url, index })).filter(({ index }) => !failed.has(index))
-
-  if (visible.length === 0) return null
-
-  return (
-    <div className={visible.length > 1 ? 'item-media item-media--multiple' : 'item-media item-media--single'}>
-      {visible.map(({ url, index }) => {
-        const size = item.image_dimensions?.[url]
-        const known = size && [size.width, size.height].every((value) => Number.isInteger(value) && value > 0 && value <= 100_000) ? size : undefined
-        const geometry = known ? { '--image-width': `${known.width}px`, '--image-ratio': known.width / known.height } as React.CSSProperties : undefined
-        return (
-          <figure className={`item-media-frame${known ? ' item-media-frame--sized' : ''}`} style={geometry} key={`${url}-${index}`}>
-            <img
-              className="item-media-image"
-              src={url}
-              width={known?.width}
-              height={known?.height}
-              alt={`${item.title}配图${imageUrls.length > 1 ? ` ${index + 1}` : ''}`}
-              loading="lazy"
-              decoding="async"
-              referrerPolicy="no-referrer"
-              onError={() => setFailed((current) => new Set(current).add(index))}
-            />
-          </figure>
-        )
-      })}
-    </div>
-  )
-}
-
 // D19：周刊条目不生成推荐理由，也就没有兴趣标签；元数据只剩发布时间。
 // heading 是标题的层级（PRD 6.4「标题层级语义正确」）：日刊页 h1 是日期，条目就是 h2；
 // 周刊页 h1 是周次、h2 是源名、h3 是板块，所以条目按所在位置降一到两级。
@@ -181,7 +147,7 @@ function TitleText({ text, tagged }: { text: string; tagged: boolean }) {
 export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
   const weekly = variant === 'weekly'
   const tagged = !weekly && Boolean(item.interest_tag)
-  const copy = weekly ? item.content ?? item.summary : item.summary
+  const copy = item.summary
 
   return (
     <article className="item-row" id={`item-${item.id}`}>
@@ -201,21 +167,8 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         </div>
         {!weekly && item.title_zh ? <Translation text={item.title_zh} /> : null}
         {/* 周刊正文完整展开、按原文分段（SummaryCleaner.content 一行一段），并按中西文分配字体；日刊摘要完整显示。 */}
-        {copy ? (
-          weekly ? (
-            <div className="item-content item-content--weekly">
-              {copy.split('\n').map((paragraph, index) => (
-                <p key={index}>
-                  <Mixed text={paragraph} font="latin" size="var(--fs-15)" color="var(--ink2)" lineHeight={1.8} />
-                </p>
-              ))}
-            </div>
-          ) : (
-            <span className="item-summary" lang={latinLang(copy)}>{copy}</span>
-          )
-        ) : null}
+        {weekly ? <WeeklyContent item={item} /> : copy ? <span className="item-summary" lang={latinLang(copy)}>{copy}</span> : null}
         {!weekly && item.summary_zh ? <Translation text={item.summary_zh} /> : null}
-        {weekly ? <WeeklyMedia item={item} /> : null}
         <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? (
           <div className="item-reason">

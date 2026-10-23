@@ -277,7 +277,7 @@ a.source-tab { cursor: pointer; }
 /* 周刊正文完整展开：不继承日刊摘要的两行裁剪。 */
 .item-content--weekly { display: block; width: 100%; max-width: 780px; overflow-wrap: anywhere; }
 .item-content--weekly > p { margin: 0; }
-.item-content--weekly > p + p { margin-top: 12px; }
+.item-content--weekly > p + p, .item-content--weekly > .item-media + p { margin-top: 12px; }
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
 .item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 780px; padding: 8px 0 4px; }

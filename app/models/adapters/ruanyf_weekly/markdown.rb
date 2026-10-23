@@ -105,7 +105,8 @@ module Adapters
           url: link_in(body),
           summary: summary_of(lines, title),
           section: section,
-          image_urls: images_in(block)
+          image_urls: images_in(block),
+          image_body: image_body_of(block, title)
         }
       end
 
@@ -137,6 +138,17 @@ module Adapters
         body.drop_while { |line| line.strip.empty? }.join("\n")
       end
 
+      # 沿用去图后的标题判断，图片在标题之前时仍留在原位。标题行本身带图的情形
+      # 保留整行，交给位置证明回退，避免把原先的行内图片误认为独占行图片。
+      def image_body_of(block, title)
+        lines = [ block.first.sub(ITEM_START, ""), *block.drop(1) ]
+        first_text = lines.index { |line| line.gsub(IMAGE, "").strip.present? }
+        if first_text && title_line?(lines[first_text].gsub(IMAGE, ""), title) && !lines[first_text].match?(IMAGE)
+          lines.delete_at(first_text)
+        end
+        trim(lines).join("\n").presence
+      end
+
       # 标题后面只跟着「（英文）」这类括注的，整行还是标题；跟着正文的（`[欧盟](…)规定，……`）要留下。
       def title_line?(line, title)
         text = plain(line)
@@ -157,7 +169,8 @@ module Adapters
         image_urls = images_in(lines)
         body = trim(lines.map { |line| line.gsub(IMAGE, "") }).join("\n")
         if body.present? || image_urls.any?
-          [ { title: section, url: link_in(body), summary: body.presence, section: section, image_urls: image_urls } ]
+          [ { title: section, url: link_in(body), summary: body.presence, section: section, image_urls: image_urls,
+            image_body: trim(lines).join("\n").presence } ]
         else
           []
         end

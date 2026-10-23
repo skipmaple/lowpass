@@ -31,6 +31,7 @@ class ReasonAbstentionSystemTest < ApplicationSystemTestCase
       row.find("summary", text: "刊物详情").click if width < 768
       within(row) do
         [ "已有理由 1 条", "资料不足未写 1 条", "保留旧理由 1 条（本次资料不足）", "缺 1 条", "最后处理 2026-09-09 09:30" ].each { |text| assert_text text }
+        assert_no_overflow
         find("button[data-table-focus='reasons']").send_keys(:tab)
         assert_selector "a[data-table-focus='view']:focus"
         find("a[data-table-focus='view']").send_keys(:enter)

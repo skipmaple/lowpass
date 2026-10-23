@@ -39,7 +39,7 @@ class Reasons::ProviderTest < ActiveSupport::TestCase
                .to_return(status: 200, body: model_reply(reason: "r", interest_tag: "t", prompt_tokens: 12, completion_tokens: 3))
       response = Reasons::Provider.chat([ { role: "user", content: "hi" } ])
       assert_requested stub
-      assert_equal({ "reason" => "r", "interest_tag" => "t" }, JSON.parse(response.text))
+      assert_equal({ "decision" => "generated", "reason" => "r", "interest_tag" => "t" }, JSON.parse(response.text))
       assert_equal 12, response.prompt_tokens
       assert_equal 3, response.completion_tokens
     end
@@ -118,7 +118,7 @@ class Reasons::ProviderTest < ActiveSupport::TestCase
       body = model_reply(reason: "这是一条用来验证二进制编码标记不影响正常解析的中文推荐理由。", interest_tag: "前端开发").b
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: body)
       response = Reasons::Provider.chat([])
-      assert_equal({ "reason" => "这是一条用来验证二进制编码标记不影响正常解析的中文推荐理由。", "interest_tag" => "前端开发" }, JSON.parse(response.text))
+      assert_equal({ "decision" => "generated", "reason" => "这是一条用来验证二进制编码标记不影响正常解析的中文推荐理由。", "interest_tag" => "前端开发" }, JSON.parse(response.text))
     end
   end
 end

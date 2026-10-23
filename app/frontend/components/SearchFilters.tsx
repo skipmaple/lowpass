@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import Icon from '@/components/Icon'
@@ -133,14 +133,33 @@ export default function SearchFilters({ q, filters, sourceOptions, datePresets }
   const [open, setOpen] = useState(false)
   const toggleRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const renderedMobile = useRef(mobile)
+  const pendingFocus = useRef<Element | null>(null)
 
   useEffect(() => {
     const media = window.matchMedia?.('(max-width: 480px)')
     if (!media) return
-    const change = (event: MediaQueryListEvent) => setMobile(event.matches)
+    const change = (event: MediaQueryListEvent) => {
+      const active = document.activeElement
+      const hidesContent = event.matches && !open && contentRef.current?.contains(active)
+      const removesToggle = !event.matches && active === toggleRef.current
+      pendingFocus.current = event.matches !== renderedMobile.current && (hidesContent || removesToggle) ? active : null
+      setMobile(event.matches)
+    }
     media.addEventListener('change', change)
     return () => media.removeEventListener('change', change)
-  }, [])
+  }, [open])
+
+  // 新按钮挂上或旧按钮卸下后再交接；仍可见的控件与读者新移走的焦点不动。
+  useLayoutEffect(() => {
+    renderedMobile.current = mobile
+    const from = pendingFocus.current
+    pendingFocus.current = null
+    if (from && (document.activeElement === from || document.activeElement === document.body)) {
+      const target = mobile ? toggleRef.current : contentRef.current?.querySelector<HTMLElement>('a[href], button:not([disabled]), input:not([disabled])')
+      target?.focus()
+    }
+  }, [mobile])
 
   const summary = filterSummary(filters, sourceOptions)
 

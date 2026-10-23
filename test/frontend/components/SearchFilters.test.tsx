@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -26,6 +26,20 @@ afterEach(() => {
 
 function mobileViewport() {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+}
+
+function responsiveViewport(matches: boolean) {
+  const media = Object.assign(new EventTarget(), { matches })
+  vi.stubGlobal('matchMedia', () => media)
+  return {
+    media,
+    resize(matches: boolean) {
+      act(() => {
+        media.matches = matches
+        media.dispatchEvent(Object.assign(new Event('change'), { matches }))
+      })
+    },
+  }
 }
 
 describe('手机版筛选', () => {
@@ -56,6 +70,97 @@ describe('手机版筛选', () => {
     await user.click(toggle)
 
     expect(toggle).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Hacker News' })).toBeNull()
+  })
+})
+
+describe('筛选跨屏宽焦点', () => {
+  it.each(['来源', '起始日期'])('桌面%s收起时把焦点交给新出现的展开按钮', (field) => {
+    const viewport = responsiveViewport(false)
+    filters({ range: 'custom', from: '2026-08-01' })
+    const control = field === '来源' ? screen.getByRole('button', { name: 'Hacker News' }) : screen.getByLabelText('起始日期')
+    control.focus()
+
+    viewport.resize(true)
+
+    expect(screen.getByRole('button', { name: '筛选：自定义日期' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Hacker News' })).toBeNull()
+  })
+
+  it('手机展开按钮在桌面消失时把焦点交给第一个筛选控件', () => {
+    const viewport = responsiveViewport(true)
+    filters()
+    screen.getByRole('button', { name: '筛选：全部' }).focus()
+
+    viewport.resize(false)
+
+    expect(within(screen.getByRole('navigation', { name: '刊物' })).getByRole('link', { name: '全部' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: '筛选：全部' })).toBeNull()
+  })
+
+  it('已展开时往返保持原控件、日期草稿与查询，不重置展开状态', async () => {
+    const viewport = responsiveViewport(true)
+    const user = userEvent.setup()
+    filters({ range: 'custom', from: '2026-08-01' })
+    await user.click(screen.getByRole('button', { name: '筛选：自定义日期' }))
+    const from = screen.getByLabelText('起始日期')
+    from.focus()
+    fireEvent.change(from, { target: { value: '0202-08-01' } })
+
+    for (let turn = 0; turn < 2; turn++) {
+      viewport.resize(false)
+      expect(from).toHaveFocus()
+      viewport.resize(true)
+      expect(from).toHaveFocus()
+      expect(screen.getByRole('button', { name: '筛选：自定义日期' })).toHaveAttribute('aria-expanded', 'true')
+    }
+
+    expect(screen.getByLabelText('起始日期')).toBe(from)
+    expect(from).toHaveValue('0202-08-01')
+    expect(within(screen.getByRole('navigation', { name: '刊物' })).getByRole('link', { name: '日刊' })).toHaveAttribute('href', '/search?q=kuber&type=daily&from=2026-08-01&range=custom')
+    expect(router.get).not.toHaveBeenCalled()
+  })
+
+  it('反复往返不抢区外控件的焦点', () => {
+    const viewport = responsiveViewport(false)
+    render(<><button>其他操作</button><SearchFilters q="kuber" filters={searchFilters()} sourceOptions={sourceOptions} datePresets={datePresets} /></>)
+    const outside = screen.getByRole('button', { name: '其他操作' })
+    outside.focus()
+
+    for (const mobile of [true, false, true, false]) {
+      viewport.resize(mobile)
+      expect(outside).toHaveFocus()
+    }
+  })
+
+  it('断点变化后读者新聚焦区外时不再恢复旧位置', () => {
+    const { media } = responsiveViewport(false)
+    render(<><button>其他操作</button><SearchFilters q="kuber" filters={searchFilters()} sourceOptions={sourceOptions} datePresets={datePresets} /></>)
+    screen.getByRole('button', { name: 'Hacker News' }).focus()
+    const outside = screen.getByRole('button', { name: '其他操作' })
+
+    act(() => {
+      media.matches = true
+      media.dispatchEvent(Object.assign(new Event('change'), { matches: true }))
+      outside.focus()
+    })
+
+    expect(outside).toHaveFocus()
+  })
+
+  it('卸载时移除自己的媒体监听，不积累下一次挂载的响应', () => {
+    const viewport = responsiveViewport(false)
+    const add = vi.spyOn(viewport.media, 'addEventListener')
+    const remove = vi.spyOn(viewport.media, 'removeEventListener')
+    const first = filters()
+    const firstListener = add.mock.calls[0][1]
+    first.unmount()
+    expect(remove).toHaveBeenCalledWith('change', firstListener)
+
+    filters()
+    expect(add).toHaveBeenCalledTimes(2)
+    viewport.resize(true)
+    expect(screen.getByRole('button', { name: '筛选：全部' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Hacker News' })).toBeNull()
   })
 })

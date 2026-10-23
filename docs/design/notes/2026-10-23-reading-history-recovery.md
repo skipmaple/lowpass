@@ -1,0 +1,17 @@
+# 阅读历史快照保护
+
+当前基线c1f47954使用Inertia3.7。其window scroll记录延迟100ms、timer执行时读取当前位置并写当前native history entry；Back恢复在下一RAF再次读取live snapshot。原生Back先选中日刊后，离开Search遗留的记录可能把日刊1255写成0。
+
+自然原Motion诊断曾GREEN1/13，没有复现PR80首轮的具体顺序。受控真实浏览器已经记录上述1255→0→restore0；永久消费回归把Back之后全部RAF一起延迟160ms，保留core与应用的FIFO并保留原timer，旧产品RED1run10assert1failure。该数据流已证明可发生，远端首轮是否同因仍不作结论。
+
+应用保存原生popstate中的document position，pageTurn在缓冲前捕获，合成重放不重新捕获。matching Daily/Show或Weekly/Show的navigate后，只排一个RAF，在框架已排入的恢复帧之后纠正。保留当前state全部不透明字段（page可为加密ArrayBuffer），仅修复documentScrollPosition；实际位置相同便不额外scrollTo。不新增计时器、轮询或重复滚动，不修改框架/依赖。
+
+原生锚点entry会继承旧page URL和snapshot。同path+query的普通hash traversal不接管；若跨路径访问仍在进行，允许捕获地址已Back而Search尚未提交的阅读快照。最后提交路径取navigate的page.url，访问结束按visit.id归属清理。组件提交按path+query匹配，因为原生hash可比page.url新；执行纠正时仍要求完整原生href不变。首页`/`按Daily/Show同样处理。
+
+独立实现评审发现一个 P2：日刊原生 Back 到 Search、再 Forward 回尚为最后提交路径的日刊时，旧 hash 判别会丢掉最新快照。用原实现受控执行得到最终0；四个新单元契约 RED 后，引入与位置快照分离的最新原生路径上下文。即使中间 Search 没有 documentScrollPosition，仍记住尚未提交的原生往返；只有匹配提交或新非原生访问结束它。用户输入取消旧纠正，但后续新原生动作能取得自己的快照。V2 独立限定复核确认原反例恢复1255、普通hash不安排纠正帧。
+
+每次nativepop、新before/start/clientVisit及wheel/touchstart/pointerdown/keydown都使旧纠正失效。不会把框架自己的scroll事件当成用户输入。取消应用自己的RAF不等于取消Inertia core的RAF，因此不宣称修复所有极晚用户输入；框架输入处理边界保留。
+
+最终37项聚焦契约、491项前端测试通过。两模式真实消费回归在旧日刊产品上均 RED（2项/20断言）；候选在减少动态效果与普通原生VT下均 GREEN（2项/22断言）。普通VT用例的Back来自实际Search归零事件，不证明一定落在updateCallbackDone前；缓冲前capture位置另由静态与单元证据支撑。原15项Motion加首版消费回归也通过16项/278断言。
+
+root最终完整本地CI通过：491项前端、856项Rails/3763断言、79项系统/8066断言、首屏265.18KB，总耗时61.19秒。实际测试使用自有Chrome与本地Rails fixture；不等于生产资产、用户Chrome或跨平台验收。生产构建入口与远端head结果另记交付receipt，不修改PR80首轮失败的历史判定。

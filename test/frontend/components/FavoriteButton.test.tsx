@@ -455,7 +455,7 @@ describe('盖章（M3）', () => {
     const button = screen.getByRole('button', { name: ADD })
 
     await user.click(button)
-    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
     expect(button).not.toHaveAttribute('data-on')
 
     view.rerender(tree([HASH]))
@@ -479,7 +479,7 @@ describe('盖章（M3）', () => {
     const second = screen.getByRole('button', { name: '收藏：同链接的另一期条目' })
 
     await user.click(first)
-    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
     fetchMock.mockResolvedValue(ok({ url_hash: HASH }))
     await user.click(second)
 

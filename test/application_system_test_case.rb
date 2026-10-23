@@ -32,7 +32,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   # fetch 发出去的请求 Capybara 不会替你等：轮询到条件成立为止，5 秒不成立就算失败
   def wait_until
-    Timeout.timeout(5) { sleep 0.1 until yield }
+    # 显式异常类让 Net::HTTP 关闭被打断的连接，避免下一条 WebDriver 命令读到旧响应。
+    Timeout.timeout(5, Timeout::Error) { sleep 0.1 until yield }
   end
 
   # 浏览器里发往 /favorites 的 fetch 有几个（书签的请求；Inertia 自己的访问走 XHR，不算）

@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react'
 import type { VisitOptions } from '@inertiajs/core'
 import { useEffect } from 'react'
 
+import { captureHistoryScroll } from '@/lib/historyScroll'
 import { prefersReducedMotion } from '@/lib/motion'
 
 // 翻页（设计 skill「动效」M2、M8，PRD D34）。前一期 / 后一期是有方向的翻页：报头不动，正文从左或从右滑入；
@@ -25,6 +26,7 @@ let replaying = false
 
 if (typeof window !== 'undefined') {
   window.addEventListener('popstate', (event) => {
+    if (!replaying) captureHistoryScroll(event)
     if (replaying || !swapping) return
     event.stopImmediatePropagation()
     const state = event.state

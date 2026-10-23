@@ -155,7 +155,7 @@ function Degraded({ section }: { section: WeeklySection }) {
     <IssueNotice text="本期解析失败，已保留原文链接">
       {stub ? (
         <a className="source-foot" href={section.original_url ?? stub.url} target="_blank" rel="noopener noreferrer">
-          <Mixed text={stub.title} font="latin" size="var(--fs-15)" color="var(--ink)" />
+          <Mixed className="source-original-title" text={stub.title} font="latin" size="var(--fs-15)" color="var(--ink)" />
           <Icon name="arrow-up-right" size={13} />
         </a>
       ) : null}

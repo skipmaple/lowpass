@@ -18,6 +18,22 @@ describe('loadContentFonts', () => {
     expect(sheet?.getAttribute('href')).toBe('/vite/assets/fonts-content-abc.css')
   })
 
+  it('正文字体声明排在应用的界面子集之前', () => {
+    document.head.innerHTML = `
+      <link rel="preload" as="style" href="/fonts-content.css" data-content-fonts>
+      <meta name="viewport" content="width=device-width">
+      <link rel="stylesheet" href="/application.css">
+    `
+
+    loadContentFonts()
+
+    const sheets = [...document.head.querySelectorAll('link[rel="stylesheet"]')]
+    expect(sheets.map((sheet) => sheet.getAttribute('href'))).toEqual([
+      '/fonts-content.css',
+      '/application.css',
+    ])
+  })
+
   it('只挂一次', () => {
     document.head.innerHTML = '<link rel="preload" as="style" href="/a.css" data-content-fonts>'
 

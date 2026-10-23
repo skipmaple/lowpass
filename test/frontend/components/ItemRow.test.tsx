@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ItemRow from '@/components/ItemRow'
 import { FavoritesProvider } from '@/lib/favorites'
+import type { ItemMeta } from '@/types/lowpass'
 import { setPageProps } from '../support/inertia'
 import { item } from '../support/props'
 
@@ -74,6 +75,46 @@ describe('ItemRow 标题与摘要', () => {
 
     render(<ItemRow item={item({ summary: '一个用 Rust 写的终端日志查看器。' })} adapter="hacker_news" rank={1} />)
     expect(screen.getByText('一个用 Rust 写的终端日志查看器。')).toHaveClass('item-summary')
+  })
+
+  it('带标签的英文标题保留每个原字符、链接可读名与地址，换文重渲染不遗留旧标题', () => {
+    const title = '  Tailwind\tLabs is  joining Shopify  '
+    const { container, rerender } = render(<ItemRow item={item({ title, interest_tag: '前端开发' })} adapter="hacker_news" rank={1} />)
+    const link = screen.getByRole('link', { name: 'Tailwind\tLabs is joining Shopify' })
+
+    expect(link.textContent).toBe(title)
+    expect(link).toHaveAttribute('href', 'https://example.com/termlog')
+    expect(link.closest('h2')?.nextElementSibling).toHaveTextContent('前端开发')
+    expect(link.closest('h2')).not.toHaveTextContent('前端开发')
+
+    const changed = item({ title: 'Hunting the Wild Vibrotruck', interest_tag: '电子机械与自动化' })
+    rerender(<ItemRow item={changed} adapter="rss" rank={1} />)
+    rerender(<ItemRow item={changed} adapter="rss" rank={1} />)
+    expect(screen.getByRole('link', { name: changed.title }).textContent).toBe(changed.title)
+    expect(container.querySelector('.item-tag')).toHaveTextContent(changed.interest_tag!)
+    expect(screen.queryByRole('link', { name: 'Tailwind\tLabs is joining Shopify' })).toBeNull()
+  })
+
+  it('单 token、含汉字、无标签与周刊的标题保留直接原文节点', () => {
+    const { rerender } = render(<ItemRow item={gh()} adapter="github_trending" rank={1} />)
+    const unchanged = [
+      { title: 'TauricResearch/TradingAgents', interest_tag: 'AI' },
+      { title: '用 Rust 制作终端工具', interest_tag: '终端工具' },
+      { title: 'Tailwind Labs is joining Shopify', interest_tag: null },
+    ]
+    for (const props of unchanged) {
+      rerender(<ItemRow item={item(props)} adapter="hacker_news" rank={1} />)
+      const link = screen.getByRole('link', { name: props.title })
+      expect(link.childNodes).toHaveLength(1)
+      expect(link.firstChild?.nodeType).toBe(Node.TEXT_NODE)
+      expect(link.textContent).toBe(props.title)
+    }
+
+    rerender(<ItemRow item={item({ title: 'Hunting the Wild Vibrotruck', interest_tag: '电子机械与自动化' })} adapter="rss" rank={1} variant="weekly" />)
+    const weekly = screen.getByRole('link', { name: 'Hunting the Wild Vibrotruck' })
+    expect(weekly.childNodes).toHaveLength(1)
+    expect(weekly.firstChild?.nodeType).toBe(Node.TEXT_NODE)
+    expect(screen.queryByText('电子机械与自动化')).toBeNull()
   })
 })
 
@@ -338,6 +379,79 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(images[0]).toHaveAttribute('height', '800')
     expect(images[1]).not.toHaveAttribute('width')
     expect(images[2]).not.toHaveAttribute('width')
+  })
+
+  it('配图在原文段落之间，图后的上图说明保持在图后', () => {
+    const meta = { image_urls: ['https://cdn.example.com/earbuds.webp'], image_positions: [1] }
+    const { container } = render(
+      <ItemRow item={item({ title: '摄像头耳机', content: '无线耳机带有微型摄像头。\n上图中，小凸起就是摄像头。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />,
+    )
+    const paragraphs = [...container.querySelectorAll('.item-content--weekly > p')]
+    const image = screen.getByRole('img', { name: '摄像头耳机配图' })
+
+    expect(paragraphs.map((p) => p.textContent)).toEqual(['无线耳机带有微型摄像头。', '上图中，小凸起就是摄像头。'])
+    expect(paragraphs[0].compareDocumentPosition(image) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(image.compareDocumentPosition(paragraphs[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('同段落边界的配图同行，末尾图和全条目编号都保持原顺序', () => {
+    const { container } = render(
+      <ItemRow
+        item={item({ title: '图文', content: '介绍。\n说明。', meta: { image_urls: ['https://cdn.example.com/1.webp', 'https://cdn.example.com/2.webp', 'https://cdn.example.com/3.webp'], image_positions: [0, 0, 2] } })}
+        adapter="ruanyf_weekly" rank={1} variant="weekly"
+      />,
+    )
+    const content = container.querySelector('.item-content--weekly')!
+    expect([...content.children].map((node) => node.matches('.item-media') ? `图片${node.querySelectorAll('img').length}` : node.textContent)).toEqual(['图片2', '介绍。', '说明。', '图片1'])
+    expect(content.children[0]).toHaveClass('item-media--multiple')
+    expect(screen.getAllByRole('img').map((image) => image.getAttribute('alt'))).toEqual(['图文配图 1', '图文配图 2', '图文配图 3'])
+  })
+
+  it.each([undefined, null, {}, '1', [], [-1], [3], [1.5], ['1'], [null], [undefined], [NaN], [Infinity], Array(1), [0, 1]])('不可靠的图片位置 %j 完整回退到全文后配图', (positions) => {
+    const meta = { image_urls: ['https://cdn.example.com/1.webp'], image_positions: positions } as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '介绍。\n说明。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const content = container.querySelector('.item-content--weekly')!
+    const media = container.querySelector('.item-media')!
+
+    expect(content.querySelector('img')).toBeNull()
+    expect(content.nextElementSibling).toBe(media)
+    expect(content.textContent).toBe('介绍。说明。')
+    expect(media.querySelector('img')).toHaveAttribute('src', 'https://cdn.example.com/1.webp')
+  })
+
+  it.each([
+    { image_urls: ['https://cdn.example.com/1.webp', 'https://cdn.example.com/2.webp'], image_positions: [2, 0] },
+    { image_urls: ['invalid', 'https://cdn.example.com/2.webp'], image_positions: [0, 1] },
+    { image_urls: ['https://cdn.example.com/1.webp', 'https://cdn.example.com/1.webp'], image_positions: [0, 1] },
+  ])('原始图片列表或位置无法完整对应时不部分穿插', (meta) => {
+    const { container } = render(<ItemRow item={item({ content: '介绍。\n说明。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const content = container.querySelector('.item-content--weekly')!
+    expect(content.querySelector('img')).toBeNull()
+    expect(content.nextElementSibling).toHaveClass('item-media')
+    expect(screen.getAllByRole('img')).toHaveLength(meta.image_urls.filter((url) => url.startsWith('https://')).length)
+  })
+
+  it('只有摘要的旧记录忽略新位置字段', () => {
+    const { container } = render(<ItemRow item={item({ content: null, summary: '旧摘要。', meta: { image_urls: ['https://cdn.example.com/1.webp'], image_positions: [0] } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('.item-content--weekly')!.nextElementSibling).toHaveClass('item-media')
+  })
+
+  it('段间配图保留天然尺寸，失败后只收起对应图片并保留全文', () => {
+    const { container } = render(
+      <ItemRow
+        item={item({ title: '图文', content: '介绍。\n说明。', meta: { image_urls: ['https://cdn.example.com/1.webp', 'https://cdn.example.com/2.webp'], image_positions: [0, 1] }, image_dimensions: { 'https://cdn.example.com/2.webp': { width: 1200, height: 800 } } })}
+        adapter="ruanyf_weekly" rank={1} variant="weekly"
+      />,
+    )
+    const second = screen.getByRole('img', { name: '图文配图 2' })
+    expect(second).toHaveAttribute('width', '1200')
+    expect(second).toHaveAttribute('height', '800')
+    fireEvent.error(screen.getByRole('img', { name: '图文配图 1' }))
+    expect(screen.getAllByRole('img')).toEqual([second])
+    expect(container.querySelectorAll('.item-media')).toHaveLength(1)
+    fireEvent.error(second)
+    expect(container.querySelector('.item-media')).toBeNull()
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('介绍。说明。')
   })
 
   it('按原顺序展示条目对应的图片，并为外链图片保护来源页面', () => {

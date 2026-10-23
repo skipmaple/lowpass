@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FavoriteButton from '@/components/FavoriteButton'
 import { type Favorites, FavoritesProvider, useFavorites } from '@/lib/favorites'
-import { emitRouterEvent, router } from '../support/inertia'
+import { emitRouterEvent, expectFavoritesReplace, router } from '../support/inertia'
 
 // 条目上的书签与它背后的 FavoritesProvider（PRD 5.10、6.3，D30）：点一下立刻换态，请求走 fetch；
 // 成功不出提示，失败回滚并提示附录 B 的句子；请求结束把最新的列表写回 Inertia 当前页。
@@ -46,7 +46,7 @@ beforeEach(() => {
 afterEach(() => {
   document.head.innerHTML = ''
   vi.unstubAllGlobals()
-  router.replaceProp.mockClear()
+  router.replace.mockClear()
   router.visit.mockClear()
   window.history.replaceState({}, '', '/')
 })
@@ -92,7 +92,7 @@ describe('FavoriteButton', () => {
     expect(init.method).toBe('POST')
     expect(init.body).toBe(JSON.stringify({ item_id: 'itm-hn-1' }))
     expect(init.headers['X-CSRF-Token']).toBe('tok-123')
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', [HASH]))
+    await waitFor(() => expectFavoritesReplace([HASH]))
     // R-10.5 成功不出提示
     expect(screen.queryByRole('status')).toBeNull()
   })
@@ -108,7 +108,26 @@ describe('FavoriteButton', () => {
     expect(url).toBe(`/favorites/${HASH}`)
     expect(init.method).toBe('DELETE')
     expect(init.body).toBeUndefined()
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
+  })
+
+  it('收藏写回沿用当前含片段地址；每次回调合并当时快照，后续取消不改旧快照', async () => {
+    window.history.replaceState({}, '', '/search?q=rust&type=weekly#search-result-000000000000000000000000d')
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(ok({ url_hash: HASH }))
+      .mockResolvedValueOnce(ok({ undo: 'signed-token' }, 200))
+    vi.stubGlobal('fetch', fetchMock)
+    mount()
+
+    await userEvent.click(screen.getByRole('button', { name: ADD }))
+    await waitFor(() => expectFavoritesReplace([HASH]))
+    expect(router.replace.mock.calls[0][0].url).toBe('/search?q=rust&type=weekly#search-result-000000000000000000000000d')
+
+    await userEvent.click(screen.getByRole('button', { name: REMOVE }))
+    await waitFor(() => expectFavoritesReplace([]))
+    expect(router.replace).toHaveBeenCalledTimes(2)
+    // 第一次写回可能稍后才执行；它仍应保存第一次 settle 捕获的列表。
+    expectFavoritesReplace([HASH], 0)
   })
 
   // AC-10.9
@@ -120,7 +139,7 @@ describe('FavoriteButton', () => {
 
     expect(await screen.findByText('收藏没有保存，请重试。')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: ADD })).not.toHaveAttribute('data-on')
-    expect(router.replaceProp).toHaveBeenCalledWith('favorites', [])
+    expectFavoritesReplace([])
   })
 
   it('断网（fetch 直接 reject）同样回滚并提示', async () => {
@@ -161,7 +180,7 @@ describe('FavoriteButton', () => {
     await userEvent.click(screen.getByRole('button', { name: ADD }))
     await screen.findByText('收藏没有保存，请重试。')
     await userEvent.click(screen.getByRole('button', { name: ADD }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(2))
 
     expect(screen.getAllByText('收藏没有保存，请重试。')).toHaveLength(1)
   })
@@ -192,7 +211,7 @@ describe('FavoriteButton', () => {
     expect(screen.getByRole('button', { name: REMOVE })).toBeInTheDocument()
 
     settle(ok({ url_hash: HASH }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', [HASH]))
+    await waitFor(() => expectFavoritesReplace([HASH]))
   })
 
   it('读者已经离开这一页，请求回来后不再写当前页的 props', async () => {
@@ -205,10 +224,10 @@ describe('FavoriteButton', () => {
     settle(ok({ url_hash: HASH }))
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(router.replaceProp).not.toHaveBeenCalled()
+    expect(router.replace).not.toHaveBeenCalled()
   })
 
-  // Inertia 等新页面的分片时，replaceProp 会顶掉那次访问要落地的页面：换页的访问还在路上就不写，没写上的不补（设计 §13）
+  // Inertia 等新页面的分片时，replace 会顶掉那次访问要落地的页面：换页的访问还在路上就不写，没写上的不补（设计 §13）
   it('换页的访问还在路上时请求回来，不写当前页的 props；访问结束后再点，照常写回', async () => {
     let settle: (value: unknown) => void = () => undefined
     const fetchMock = vi.fn()
@@ -222,12 +241,12 @@ describe('FavoriteButton', () => {
     settle(ok({ url_hash: HASH }))
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(router.replaceProp).not.toHaveBeenCalled()
+    expect(router.replace).not.toHaveBeenCalled()
 
     emitRouterEvent('finish', visitEvent('finish'))
     await userEvent.click(screen.getByRole('button', { name: REMOVE }))
 
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
@@ -240,7 +259,7 @@ describe('FavoriteButton', () => {
     emitRouterEvent('start', visitEvent('start', true))
     settle(ok({ url_hash: HASH }))
 
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', [HASH]))
+    await waitFor(() => expectFavoritesReplace([HASH]))
   })
 
   // 换期、生成中的轮询、历史恢复都会带来一份新的 favorites
@@ -266,7 +285,7 @@ describe('FavoriteButton', () => {
 
     expect(screen.getByRole('button', { name: REMOVE })).toHaveAttribute('data-on')
     settle(ok({ url_hash: HASH }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', [HASH]))
+    await waitFor(() => expectFavoritesReplace([HASH]))
   })
 
   it('新的列表来了，取消的请求还在路上：这一条仍是未收藏，请求回来写回的列表里没有它', async () => {
@@ -279,7 +298,7 @@ describe('FavoriteButton', () => {
 
     expect(screen.getByRole('button', { name: ADD })).not.toHaveAttribute('data-on')
     settle(ok({ undo: 'signed-token' }, 200))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', [OTHER]))
+    await waitFor(() => expectFavoritesReplace([OTHER]))
   })
 
   // 取消的请求刚结束、界面还没重画，读者手里的还是上一次渲染的 restore：它也得拿到凭据，
@@ -316,10 +335,10 @@ describe('FavoriteButton', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(fetchMock.mock.calls[1][1].method).toBe('POST')
     expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ undo: 'token-1' }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', [HASH]))
+    await waitFor(() => expectFavoritesReplace([HASH]))
 
     await userEvent.click(screen.getByRole('button', { name: REMOVE }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(fetchMock).toHaveBeenCalledTimes(3)
@@ -330,6 +349,57 @@ describe('FavoriteButton', () => {
 })
 
 describe('盖章（M3）', () => {
+  it('添加还在路上时再次点击，保留首次收藏的盖章', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { settle = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    mount()
+
+    const button = screen.getByRole('button', { name: ADD })
+    await user.click(button)
+    expect(button).toHaveAttribute('data-stamp')
+    await user.click(button)
+    expect(button).toHaveAttribute('data-on')
+    expect(button).toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => { settle(ok({ url_hash: HASH })) })
+    expect(button).toHaveAttribute('data-on')
+  })
+
+  it('取消还在路上时再次点击，失败回滚不盖章', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { settle = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    mount([HASH])
+
+    const button = screen.getByRole('button', { name: REMOVE })
+    await user.click(button)
+    await user.click(button)
+    expect(button).not.toHaveAttribute('data-on')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => { settle(rejected(500)) })
+    expect(screen.getByText('取消收藏没有保存，请重试。')).toBeInTheDocument()
+    expect(button).toHaveAttribute('data-on')
+    expect(button).not.toHaveAttribute('data-stamp')
+  })
+
+  it('未接受的无条目添加不会让后来带入的已收藏盖章', async () => {
+    const fetchMock = stubFetch(ok())
+    const user = userEvent.setup()
+    const button = <FavoriteButton urlHash={HASH} title={TITLE} />
+    const view = render(<FavoritesProvider favorites={[]}>{button}</FavoritesProvider>)
+    await user.click(screen.getByRole('button', { name: ADD }))
+    expect(screen.getByRole('button', { name: ADD })).not.toHaveAttribute('data-on')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    view.rerender(<FavoritesProvider favorites={[HASH]}>{button}</FavoritesProvider>)
+    expect(await screen.findByRole('button', { name: REMOVE })).not.toHaveAttribute('data-stamp')
+  })
+
   // 压一下的动画在 data-stamp 出现时播一次；取消时去掉，下次收藏再出现，才会再播
   it('点「收藏」那一下带上 data-stamp，取消时去掉，再收藏又带上', async () => {
     stubFetch(ok({ url_hash: HASH }))
@@ -376,6 +446,48 @@ describe('盖章（M3）', () => {
     await user.click(button)
     await waitFor(() => expect(button).not.toHaveAttribute('data-on'))
     expect(button).not.toHaveAttribute('data-stamp')
+  })
+
+  it('添加失败后同一按钮收到外部已收藏状态，只填墨，不复活旧盖章', async () => {
+    const fetchMock = stubFetch(rejected(500))
+    const user = userEvent.setup()
+    const view = mount()
+    const button = screen.getByRole('button', { name: ADD })
+
+    await user.click(button)
+    await waitFor(() => expectFavoritesReplace([]))
+    expect(button).not.toHaveAttribute('data-on')
+
+    view.rerender(tree([HASH]))
+
+    expect(await screen.findByRole('button', { name: REMOVE })).toBe(button)
+    expect(button).toHaveAttribute('data-on')
+    expect(button).not.toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('添加失败后同链接的另一颗按钮收藏，只有新接受添加的按钮盖章', async () => {
+    const fetchMock = stubFetch(rejected(500))
+    const user = userEvent.setup()
+    render(
+      <FavoritesProvider favorites={[]}>
+        <FavoriteButton itemId="itm-hn-1" urlHash={HASH} title={TITLE} />
+        <FavoriteButton itemId="itm-hn-2" urlHash={HASH} title="同链接的另一期条目" />
+      </FavoritesProvider>,
+    )
+    const first = screen.getByRole('button', { name: ADD })
+    const second = screen.getByRole('button', { name: '收藏：同链接的另一期条目' })
+
+    await user.click(first)
+    await waitFor(() => expectFavoritesReplace([]))
+    fetchMock.mockResolvedValue(ok({ url_hash: HASH }))
+    await user.click(second)
+
+    expect(first).toHaveAttribute('data-on')
+    expect(first).not.toHaveAttribute('data-stamp')
+    expect(second).toHaveAttribute('data-on')
+    expect(second).toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('描线与实心两层都对读屏隐藏', () => {

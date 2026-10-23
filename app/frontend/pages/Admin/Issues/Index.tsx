@@ -84,7 +84,7 @@ export default function Index({ month, month_label, prev_month, next_month, summ
       ) : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
-          <button type="button" className="link-button" disabled={operations.busy(`backfill-${row.period_key}`)} onClick={() => operations.post(`backfill-${row.period_key}`, row.period_key, adminIssueBackfillHref(row.period_key))}>
+          <button data-table-focus="backfill" type="button" className="link-button" disabled={operations.busy(`backfill-${row.period_key}`)} onClick={() => operations.post(`backfill-${row.period_key}`, row.period_key, adminIssueBackfillHref(row.period_key))}>
             <Icon name="refresh-cw" color="currentColor" />
             <span>{operations.busy(`backfill-${row.period_key}`) ? '正在补生成…' : '补生成'}</span>
           </button>
@@ -92,15 +92,15 @@ export default function Index({ month, month_label, prev_month, next_month, summ
           <>
             {row.refetchable_sources.length > 0 ? (
               (manual.running(row.period_key) || operations.busy(`refetch-${row.period_key}`)) ? (
-                <button type="button" className="link-button" disabled>进行中</button>
+                <button data-table-focus="refetch" type="button" className="link-button" disabled>进行中</button>
               ) : (
-                <button type="button" className="link-button" onClick={() => openRefetch(row)}>重抓某源</button>
+                <button data-table-focus="refetch" type="button" className="link-button" onClick={() => openRefetch(row)}>重抓某源</button>
               )
             ) : null}
             {row.kind === 'daily' && row.reasons ? (
-              <button type="button" className="link-button" disabled={!row.reasons.ready || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.label : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>{operations.busy(`reasons-${row.period_key}`) ? '正在提交理由任务…' : '重生成理由'}</button>
+              <button data-table-focus="reasons" type="button" className="link-button" disabled={!row.reasons.ready || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.label : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>{operations.busy(`reasons-${row.period_key}`) ? '正在提交理由任务…' : '重生成理由'}</button>
             ) : null}
-            <Link className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
+            <Link data-table-focus="view" className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
           </>
         )}
       </span>,

@@ -59,14 +59,14 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
       <div className="admin-cell-stack"><span className="chip-outline">{row.publication === 'daily' ? '日刊' : '周刊'}</span><span className="cjk">{row.enabled ? '启用' : '停用'}</span></div>,
       <Health row={row} />,
       <div className="admin-actions">
-        <Link className="link-button" href={adminSourceEditHref(row.id)}>编辑</Link>
-        <Link className="link-button" href={adminSourceRunsHref(row.id)}>记录</Link>
-        <details className="admin-details"><summary>更多操作</summary><div className="admin-actions">
-        <button type="button" className="link-button" disabled={testingIds.has(row.id)} onClick={() => test(row)}>{testingIds.has(row.id) ? '测试中…' : '测试抓取'}</button>
+        <Link data-table-focus="edit" className="link-button" href={adminSourceEditHref(row.id)}>编辑</Link>
+        <Link data-table-focus="runs" className="link-button" href={adminSourceRunsHref(row.id)}>记录</Link>
+        <details className="admin-details"><summary data-table-focus="more">更多操作</summary><div className="admin-actions">
+        <button data-table-focus="test" type="button" className="link-button" disabled={testingIds.has(row.id)} onClick={() => test(row)}>{testingIds.has(row.id) ? '测试中…' : '测试抓取'}</button>
         {row.enabled ? (
-          <button type="button" className="link-button" disabled={operations.busy(row.id)} onClick={() => setDisabling(row)}>{operations.busy(row.id) ? '正在停用…' : '停用'}</button>
+          <button data-table-focus="enablement" type="button" className="link-button" disabled={operations.busy(row.id)} onClick={() => setDisabling(row)}>{operations.busy(row.id) ? '正在停用…' : '停用'}</button>
         ) : (
-          <button type="button" className="link-button" disabled={operations.busy(row.id)} onClick={() => operations.post(row.id, row.name, adminSourceEnablementHref(row.id))}>{operations.busy(row.id) ? '正在启用…' : '启用'}</button>
+          <button data-table-focus="enablement" type="button" className="link-button" disabled={operations.busy(row.id)} onClick={() => operations.post(row.id, row.name, adminSourceEnablementHref(row.id))}>{operations.busy(row.id) ? '正在启用…' : '启用'}</button>
         )}
         </div></details>
       </div>,

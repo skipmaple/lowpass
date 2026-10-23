@@ -9,5 +9,6 @@ export function loadContentFonts(doc: Document = document): void {
   // 照抄属性原文（不读解析成绝对地址的 .href）：与 preload 是同一个 URL，浏览器直接用 preload 下好的那份
   link.setAttribute('href', preload.getAttribute('href') ?? preload.href)
   link.setAttribute('data-content-fonts-applied', '')
-  doc.head.appendChild(link)
+  // preload 在应用样式之前；界面子集后声明，重叠字符仍优先用小文件，不必在正文表中重复声明。
+  preload.after(link)
 }

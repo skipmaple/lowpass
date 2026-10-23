@@ -157,11 +157,11 @@
 
 **Interfaces:** Consumes complete candidate, test evidence and private A9 review; produces branch / commit identity, independent review conclusion, offline acceptance matrix and draft PR URL. No main merge, deployment, paid trial, automatic historical regeneration or production setting changes.
 
-- [ ] **Step 1: 运行完整门禁。** 在主执行者释放共享测试库后 Run `bin/ci`，保存完整退出码与各步骤结果；包括 Ruby style、TypeScript、Vitest、build、安全检查、Rails、系统、seeds 与 `script/first_screen_size` ≤300 KB。失败修复后只重跑受影响检查及必要最终 CI；不跳过、改弱测试或把环境失败写成全绿。
-- [ ] **Step 2: 实际网页人工验收。** 使用本地隔离数据与 stub 结果，登录管理员检查 `/admin/issues` 在375 /390 /1440px 的四状态混合、未配置、空画像、last_assessed 时间、展开 / 收起、待处理过滤与键盘焦点；读者检查新拒写 / 保留历史理由、原文与收藏。保存实际浏览器截图与溢出测量，不生成 PDF，不把 jsdom 当视觉验收。不得对任何真实模型配置点击会收费的操作。
-- [ ] **Step 3: 独立完整 diff 审查。** 使用 requesting-code-review 与 verification-before-completion 工作流；审查者核对 A1–A10、事务与账本顺序、竞态 / 唯一约束、三态所有调用方、所有直接 reason:nil 缺失统计、issue 恢复范围、私密材料是否误加入、范围外配置变化及 UI 证据。Run `rg -n 'where\(reason: nil\)|reason\.nil\?|generate_item!|recover!\(kind: "reasons_missing"' app test`，逐处给出保留或替换依据；修复真实问题并重新验证。
-- [ ] **Step 4: 建立可审阅 PR 并保持未合并。** 最终 `git diff --check` 与 status 只含本变更；提交 / 推送本分支，创建 draft PR，描述具体前后行为、A1–A10 本地结果与未执行实网内容验收的限制。只暴露公共仓库文件与非私密概述；使用 attach_artifact 附到当前 chat。PR 明确“本地候选；不合并、不部署”，不触发 main 自动部署。
-- [ ] **Step 5: 交付并止于本阶段边界。** 报告工作区 / branch / commit、PR URL、完整 CI 与首屏结果、浏览器375 /390 /桌面证据、独立内容审查结论及仍需实网验证的协议遵守 / 内容质量风险。后续若申请发布，另列次数 / 预算 / 模型 / 重试 / 记账 / 停止线取得新授权；发布前补部署与回退执行步骤。启用后回退须停止本轮理由任务、保留 marker 表及 abstained 账本 / CHECK，不回滚删除数据，不将旧代码忽略 marker 视为透明回退。本阶段不执行这些操作。
+- [x] **Step 1: 运行完整门禁。** 在主执行者释放共享测试库后 Run `bin/ci`，保存完整退出码与各步骤结果；包括 Ruby style、TypeScript、Vitest、build、安全检查、Rails、系统、seeds 与 `script/first_screen_size` ≤300 KB。失败修复后只重跑受影响检查及必要最终 CI；不跳过、改弱测试或把环境失败写成全绿。
+- [x] **Step 2: 实际网页人工验收。** 使用本地隔离数据与 stub 结果，登录管理员检查 `/admin/issues` 在375 /390 /1440px 的四状态混合、未配置、空画像、last_assessed 时间、展开 / 收起、待处理过滤与键盘焦点；读者检查新拒写 / 保留历史理由、原文与收藏。保存实际浏览器截图与溢出测量，不生成 PDF，不把 jsdom 当视觉验收。不得对任何真实模型配置点击会收费的操作。
+- [x] **Step 3: 独立完整 diff 审查。** 使用 requesting-code-review 与 verification-before-completion 工作流；审查者核对 A1–A10、事务与账本顺序、竞态 / 唯一约束、三态所有调用方、所有直接 reason:nil 缺失统计、issue 恢复范围、私密材料是否误加入、范围外配置变化及 UI 证据。Run `rg -n 'where\(reason: nil\)|reason\.nil\?|generate_item!|recover!\(kind: "reasons_missing"' app test`，逐处给出保留或替换依据；修复真实问题并重新验证。
+- [x] **Step 4: 建立可审阅 PR 并保持未合并。** 最终 `git diff --check` 与 status 只含本变更；提交 / 推送本分支，创建 draft PR，描述具体前后行为、A1–A10 本地结果与未执行实网内容验收的限制。只暴露公共仓库文件与非私密概述；使用 attach_artifact 附到当前 chat。PR 明确“本地候选；不合并、不部署”，不触发 main 自动部署。
+- [x] **Step 5: 交付并止于本阶段边界。** 报告工作区 / branch / commit、PR URL、完整 CI 与首屏结果、浏览器375 /390 /桌面证据、独立内容审查结论及仍需实网验证的协议遵守 / 内容质量风险。后续若申请发布，另列次数 / 预算 / 模型 / 重试 / 记账 / 停止线取得新授权；发布前补部署与回退执行步骤。启用后回退须停止本轮理由任务、保留 marker 表及 abstained 账本 / CHECK，不回滚删除数据，不将旧代码忽略 marker 视为透明回退。本阶段不执行这些操作。
 
 ## 自审覆盖矩阵
 
@@ -177,3 +177,13 @@
 | §9–10 | Tasks 8–9：前瞻 PRD / 旧决定标注、完整候选未合并PR、阶段边界与保数据回退；命名、返回值、锁与批量接口在本计划固定。 |
 
 自审结论：完整设计各节与 A1–A10 均有任务；无待产品负责人再决定的工程问题。执行后才能勾选成功与宣称完成，离线通过不能宣称新 Prompt 的实网内容质量已经达标。
+
+
+## 本地候选验收结果（2026-10-24）
+
+- Draft PR：[资料不足时允许不写推荐理由 #91](https://github.com/skipmaple/lowpass/pull/91)。保持未合并；无生产部署、历史重生成或新增模型调用。
+- 产品/测试提交 `52efb35c93d5e0f37aad56d84f8d523f03386770` 的完整 `bin/ci` 退出0：605项前端，935 Rails /4251 assertions，108系统 /8692 assertions，均零失败；首屏266.21KB /300KB，类型、风格、安全、构建与seeds通过。使用独立本地测试库；本次结果记录随后只修改完成文档。
+- 实际Chrome375/390/1440px四类混合、上海处理时间、未配置/空画像、待处理、详情展开/Enter收起、Tab/Enter到查看，以及读者静默/保留旧理由/收藏均通过；对应宽度没有横向溢出。独立逐图像素复核通过。减少动效由系统测试覆盖，未宣称实体手机、Windows或OS窗口激活通过。没有PDF。
+- 独立完整diff审查无Critical；已修复两处旧Provider JSON断言，保留原断言并补齐后台三宽度溢出测量。最终门禁另暴露并复现既有邮件测试顺序泄漏，两个发邮件测试类采用Rails标准清理；同一seed23619两文件RED→GREEN和完整935 Rails回归通过，未改生产投递逻辑。
+- A9独立人工审查复用六输入/十组卡，22个来源哈希一致；真实模型协议遵守、事实正确率与无必要拒写率尚无新证据。上下文反驳作用域、热度推断、无必要拒写保留为后续内容评估项，不能把离线通过称作模型或获奖品质达标。
+- 后续发布仍需单独界定范围与授权。任何启用后回退须停止相关任务，保留ReasonAbstention表、abstained账本及CHECK；本阶段未执行生产迁移/回退。

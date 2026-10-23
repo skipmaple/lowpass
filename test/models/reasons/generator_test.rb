@@ -34,12 +34,12 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     with_model_provider do
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", prompt_tokens: 100, completion_tokens: 40))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM", prompt_tokens: 100, completion_tokens: 40))
       outcome = Reasons::Generator.generate!(@issue)
       assert_equal [ 2, 0, 0, false ], [ outcome.generated, outcome.reused, outcome.failed, outcome.skipped ]
     end
     @item.reload
-    assert_equal "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", @item.reason
+    assert_equal "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", @item.reason
     assert_equal "AI / LLM", @item.interest_tag
     assert_not_nil @item.reason_generated_at
     assert_equal 2, ModelCall.where(status: "ok", issue: @issue).count
@@ -56,7 +56,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
         title = JSON.parse(request.body)["messages"].last["content"][/^标题：(.+)$/, 1]
-        { status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", title_zh: titles.fetch(title), summary_zh: "#{title} 的简介译文") }
+        { status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM", title_zh: titles.fetch(title), summary_zh: "#{title} 的简介译文") }
       end
       assert_equal 3, Reasons::Generator.generate!(@issue).generated
       assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2) { |request| JSON.parse(request.body)["max_tokens"] == Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::TITLE_TOKENS }
@@ -71,7 +71,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   # 译文是顺带的：不合规不为它重试、不连累理由；整期重生成这次没译好，也不抹掉上一次的（标题没变，旧译文仍然对得上）
   test "译文不合规只当没有：理由照写；重生成没译好不抹掉旧译文" do
     with_model_provider do
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "A terminal log viewer"))
       assert Reasons::Generator.generate_item!(@item)
       assert_equal [ "AI / LLM", nil ], [ @item.reload.interest_tag, @item.title_zh ]
       assert_equal [ "ok" ], ModelCall.where(item: @item).pluck(:status)

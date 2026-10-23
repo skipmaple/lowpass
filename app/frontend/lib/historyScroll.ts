@@ -65,7 +65,7 @@ export function restoreHistoryScroll(): () => void {
       committedRoute = route(href)
       if (nativeRoute === committedRoute) nativeRoute = null
       // 原生锚点 entry 的 hash 比加密 page.url 新；组件提交按 route 匹配，执行时仍核对完整原生 href。
-      if (!pending || route(pending.href) !== route(href) || frame !== null || !['Daily/Show', 'Weekly/Show'].includes(page.component)) return
+      if (!pending || route(pending.href) !== route(href) || frame !== null || !['Daily/Show', 'Weekly/Show', 'Search/Show'].includes(page.component)) return
       const snapshot = pending
       frame = window.requestAnimationFrame(() => {
         if (pending !== snapshot) return

@@ -76,7 +76,7 @@ describe('reading history snapshot', () => {
     expect(scroll).toHaveBeenCalledTimes(2)
   })
 
-  it.each([['/', 'Daily/Show'], ['/weekly/2026-W36', 'Weekly/Show']])('恢复阅读组件 %s，包含日刊首页', (url, component) => {
+  it.each([['/', 'Daily/Show'], ['/weekly/2026-W36', 'Weekly/Show'], ['/search?q=historyfocus#search-result-0000000000000000000000000', 'Search/Show']])('恢复阅读组件 %s，包含日刊首页与搜索结果', (url, component) => {
     pop(url)
     overwritePosition()
     navigate(url, component)
@@ -114,7 +114,7 @@ describe('reading history snapshot', () => {
   it('非阅读页面、不同 query 或过期 URL 不纠正', () => {
     pop()
     overwritePosition()
-    navigate(daily, 'Search/Show')
+    navigate(daily, 'Settings/Show')
     navigate('/daily/2026-09-08?source=hn')
     expect(frames).toHaveLength(0)
     navigate(daily)

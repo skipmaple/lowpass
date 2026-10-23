@@ -121,6 +121,9 @@ class SearchingTest < ApplicationSystemTestCase
     browser = page.driver.browser
     browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
     visit search_path(q: "terminal")
+    # 多个 headless 会话后目标文档可能未激活；显式模拟 focused/active 页面，验证页面内交接。
+    browser.execute_cdp("Emulation.setFocusEmulationEnabled", enabled: true)
+    assert evaluate_script("document.hasFocus()")
     source = find(".chips button", text: sources(:hn).name)
     execute_script("arguments[0].focus({ preventScroll: true })", source)
     assert_selector ".chips button:focus", text: sources(:hn).name
@@ -137,7 +140,11 @@ class SearchingTest < ApplicationSystemTestCase
     assert_field "搜索", with: "terminal"
     assert_current_path search_path(q: "terminal")
   ensure
-    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    begin
+      browser&.execute_cdp("Emulation.setFocusEmulationEnabled", enabled: false)
+    ensure
+      browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    end
   end
 
   # test 环境默认关掉 CSRF 校验（config/environments/test.rb 的 allow_forgery_protection = false）：

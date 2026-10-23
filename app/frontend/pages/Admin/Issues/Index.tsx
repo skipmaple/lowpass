@@ -15,7 +15,7 @@ import { usePolling } from '@/lib/polling'
 import { useAdminOperations } from '@/lib/operations'
 import { useManualRuns } from '@/lib/runs'
 import { Mixed } from '@/lib/typeset'
-import type { AdminIssueRow, ArchiveNav, FinishedRun, IssueState, ManualRun } from '@/types/lowpass'
+import type { AdminIssueReasons, AdminIssueRow, ArchiveNav, FinishedRun, IssueState, ManualRun } from '@/types/lowpass'
 
 // 期（5.6，画布 admin_issues() 与 admin_dialogs()）：一页一个月，日刊逐天（缺期给「补生成」），周刊按周；
 // 「重抓某源」在对话框里选源；「立即生成今日日刊」已有期时先弹附录 B 的确认（R-3.11）
@@ -43,6 +43,19 @@ function markOf(state: AdminIssueRow['state']) {
   if (state === 'generating') return 'generating'
   if (state === 'missing') return 'missing'
   return 'empty'
+}
+
+function ReasonCounts({ reasons }: { reasons: AdminIssueReasons }) {
+  return (
+    <div className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>
+      {reasons.with_reason > 0 ? <div><Mixed text={`已有理由 ${reasons.with_reason} 条`} /></div> : null}
+      {reasons.abstained > 0 ? <div><Mixed text={`资料不足未写 ${reasons.abstained} 条`} /></div> : null}
+      {reasons.retained > 0 ? <div><Mixed text={`保留旧理由 ${reasons.retained} 条（本次资料不足）`} /></div> : null}
+      {reasons.missing > 0 ? <div><Chip text={`缺 ${reasons.missing} 条`} /></div> : null}
+      {reasons.last_assessed_label ? <div><Mixed text={reasons.last_assessed_label} /></div> : null}
+      {reasons.unready_label ? <div><Mixed text={reasons.unready_label} /></div> : null}
+    </div>
+  )
 }
 
 export default function Index({ month, month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, today_issue_state, active_runs, finished_runs }: AdminIssuesIndexProps) {
@@ -74,14 +87,7 @@ export default function Index({ month, month_label, prev_month, next_month, summ
       </>,
       row.time_label ? <Mixed text={row.time_label} /> : null,
       row.source_marks ? <Mixed text={row.source_marks} /> : null,
-      // 缺 N 条是反白小签（设计 §6.2）；已生成与生成不了的两句都是文楷灰字
-      row.reasons ? (
-        row.reasons.ready && row.reasons.missing > 0 ? (
-          <Chip text={row.reasons.label} />
-        ) : (
-          <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>{row.reasons.label}</span>
-        )
-      ) : null,
+      row.reasons ? <ReasonCounts reasons={row.reasons} /> : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
           <button data-table-focus="backfill" type="button" className="link-button" disabled={operations.busy(`backfill-${row.period_key}`)} onClick={() => operations.post(`backfill-${row.period_key}`, row.period_key, adminIssueBackfillHref(row.period_key))}>
@@ -98,7 +104,7 @@ export default function Index({ month, month_label, prev_month, next_month, summ
               )
             ) : null}
             {row.kind === 'daily' && row.reasons ? (
-              <button data-table-focus="reasons" type="button" className="link-button" disabled={!row.reasons.ready || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.label : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>{operations.busy(`reasons-${row.period_key}`) ? '正在提交理由任务…' : '重生成理由'}</button>
+              <button data-table-focus="reasons" type="button" className="link-button" disabled={!row.reasons.ready || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.unready_label ?? undefined : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>{operations.busy(`reasons-${row.period_key}`) ? '正在提交理由任务…' : '重生成理由'}</button>
             ) : null}
             <Link data-table-focus="view" className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
           </>

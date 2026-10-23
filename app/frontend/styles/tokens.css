@@ -859,7 +859,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .item-title, .item-translation, .item-summary, .item-reason, .item-content--weekly, .source-band-issue, .search-title, .search-snippet { text-autospace: normal; }
 
 /* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
-.item-heading, .search-title, .state-line, .source-band-title { text-wrap: balance; }
+.item-heading, .search-title, .state-line, .source-band-title, .source-original-title { text-wrap: balance; }
 .item-title-tail { display: inline-block; max-inline-size: 100%; overflow-wrap: anywhere; vertical-align: baseline; text-decoration: inherit; }
 .item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
 

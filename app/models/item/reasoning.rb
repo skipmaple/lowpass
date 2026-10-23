@@ -10,6 +10,26 @@ module Item::Reasoning
     scope :reusable_reasons, -> { daily.where.not(reason: nil).without_reason_abstention }
   end
 
+  class_methods do
+    def reason_counts_by_issue(issue_ids)
+      result = issue_ids.index_with { { with_reason: 0, abstained: 0, retained: 0, missing: 0, last_assessed_at: nil } }
+      return result if issue_ids.empty?
+
+      items = visible.daily.where(issue_id: issue_ids).left_joins(:reason_abstention)
+      items.group(:issue_id, Arel.sql("items.reason IS NOT NULL"), Arel.sql("reason_abstentions.id IS NOT NULL")).count.each do |(issue_id, has_reason, marked), count|
+        key = if marked
+          has_reason ? :retained : :abstained
+        elsif has_reason
+          :with_reason
+        end
+        result.fetch(issue_id)[key] = count if key
+      end
+      pending_reasons.where(issue_id: issue_ids).group(:issue_id).count.each { |id, count| result.fetch(id)[:missing] = count }
+      items.group(:issue_id).maximum("reason_abstentions.assessed_at").each { |id, time| result.fetch(id)[:last_assessed_at] = time }
+      result
+    end
+  end
+
   def record_reason_abstention(assessed_at:)
     with_lock do
       marker = ReasonAbstention.find_or_initialize_by(item_id: id)

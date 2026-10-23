@@ -390,7 +390,7 @@ button.chip-outline { min-height: 44px; }
 .search-title { margin: 10px 0 0 0; font-weight: 500; line-height: 1.35; }
 .search-snippet { margin: 6px 0 0 0; max-width: 820px; line-height: 1.7; }
 .search-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin-top: 10px; }
-.search-links > a { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
+.search-links > a, a.field-note { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
 .search-original { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); }
 /* 命中词：2px 墨色下划线（D22），不用颜色块 */
 .hit { text-decoration: underline; text-decoration-color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 4px; }

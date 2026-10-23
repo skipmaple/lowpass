@@ -253,7 +253,7 @@ a.source-tab { cursor: pointer; }
 .source-band-link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 
 /* 板块锚点目录：1px 描边小块横排一行，窄屏横向滚动；底下一条 1px 墨线 */
-.anchors { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--ink); overflow-x: auto; scrollbar-width: none; }
+.anchors { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--ink); overflow-x: auto; scrollbar-width: none; scroll-margin-top: 24px; }
 .anchors::-webkit-scrollbar { display: none; }
 .anchor-chip { display: inline-flex; align-items: center; flex: none; height: 40px; padding: 0 14px; border: 1px solid var(--rule);
                font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
@@ -709,7 +709,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .issue-head-date > span, .source-band-title > span { line-height: inherit !important; }
 .weekly-directory { border-bottom: 1px solid var(--ink); }
 .weekly-directory > summary { min-height: 44px; align-content: center; cursor: pointer; font-family: var(--font-cjk); font-size: var(--fs-15); }
-.weekly-directory > summary:focus-visible, .anchors:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.weekly-directory > summary:focus-visible, .anchors:focus-visible, .anchor-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .weekly-directory .anchors { padding-top: 0; border-bottom: 0; }
 .form-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .interest-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; }

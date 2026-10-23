@@ -7,7 +7,7 @@ import { FAVORITES, favoriteHref, loginHref } from '@/lib/paths'
 
 // 收藏（PRD 5.10）。页面的 props 带着这一页里已收藏链接的 url_hash 列表；书签点一下先改本地状态
 // （R-10.5：不整页刷新、成功不出提示），请求走 fetch（同 lib/search.ts，CSRF 令牌从布局的 meta 读）。
-// 请求结束后把最新的列表写回 Inertia 当前页（router.replaceProp 只改历史里的 props，不发请求）：
+// 请求结束后把最新的列表写回 Inertia 当前页（router.replace 只改当前页与历史，不发请求）：
 // 离开再按后退，恢复出来的页面与服务端一致。读者已经离开这一页、或换页的访问还在路上时不写，没写上的不补（设计 §13）。
 // 页面带来新的列表就以它为准，请求还在路上的那几条除外。失败回滚并提示附录 B 的句子。
 export const COPY = {
@@ -106,10 +106,18 @@ export function FavoritesProvider({ favorites, children }: React.PropsWithChildr
 
   const settle = useCallback((urlHash: string) => {
     busy.current.delete(urlHash)
-    // 读者已经离开这一页就不写了：replaceProp 改的是「当前页」，写过去会盖掉别的页面的列表。
-    // 换页的访问还在路上也不写：Inertia 还在等新页面的分片时，replaceProp 会顶掉那次访问、读者就走不了了。
+    // 读者已经离开这一页就不写了：replace 改的是「当前页」，写过去会盖掉别的页面的列表。
+    // 换页的访问还在路上也不写：Inertia 还在等新页面的分片时，replace 会顶掉那次访问、读者就走不了了。
     // 没写上的这一次不补（设计 §13）
-    if (mounted.current && !leaving.current) router.replaceProp('favorites', [...kept.current])
+    if (mounted.current && !leaving.current) {
+      const favorites = [...kept.current]
+      router.replace({
+        url: window.location.pathname + window.location.search + window.location.hash,
+        props: (current) => ({ ...current, favorites }),
+        preserveScroll: true,
+        preserveState: true,
+      })
+    }
   }, [])
 
   const fail = useCallback(

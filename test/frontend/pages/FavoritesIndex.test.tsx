@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import Index, { type FavoritesIndexProps } from '@/pages/Favorites/Index'
-import { router } from '../support/inertia'
+import { expectFavoritesReplace, router } from '../support/inertia'
 import { favoriteEntry } from '../support/props'
 
 // 收藏页（PRD 5.10、R-10.6、R-10.7）：行沿用搜索结果行；取消后原地留「已取消收藏」与「恢复」。
@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   document.head.innerHTML = ''
   vi.unstubAllGlobals()
-  router.replaceProp.mockClear()
+  router.replace.mockClear()
 })
 
 describe('收藏页的行', () => {
@@ -133,7 +133,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     expect(restore).toHaveAccessibleDescription('已取消收藏')
     expect(fetchMock.mock.calls[0][0]).toBe('/favorites/hash-termlog')
     expect(fetchMock.mock.calls[0][1].method).toBe('DELETE')
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
 
     await userEvent.click(restore)
 
@@ -144,7 +144,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('/favorites')
     expect(fetchMock.mock.calls[1][1].method).toBe('POST')
     expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ undo: 'signed-token' }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', ['hash-termlog']))
+    await waitFor(() => expectFavoritesReplace(['hash-termlog']))
   })
 
   it('取消没保存上：那一行回到已收藏并提示', async () => {
@@ -167,7 +167,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     show()
 
     await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1))
     await userEvent.click(screen.getByRole('button', { name: '恢复' }))
 
     expect(await screen.findByText('收藏没有保存，请重试。')).toBeInTheDocument()
@@ -220,7 +220,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     show()
 
     await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1))
     await userEvent.click(screen.getByRole('button', { name: '恢复' }))
     expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveFocus()
     settle({ ok: false, status: 500, json: async () => ({}) })

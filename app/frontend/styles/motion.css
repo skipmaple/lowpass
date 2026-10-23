@@ -19,16 +19,16 @@
 /* ─── M4 墨线 ─────────────────────────────────────────────────────────── */
 
 /* 链接下划线由 30% 墨加深到实墨；原先悬停才画下划线的几处改成常驻透明下划线，悬停只换颜色，才过渡得起来 */
-a.t, .link-button, .archive-key, .search-original { transition: text-decoration-color var(--dur-1) linear, color var(--dur-1) linear; }
+a.t, .link-button, .archive-key, .search-original { transition: text-decoration-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out); }
 .menu-item, .directory-return, .source-band-link {
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
-  transition: text-decoration-color var(--dur-1) linear, color var(--dur-1) linear;
+  transition: text-decoration-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
 .menu-item:hover, .directory-return:hover { text-decoration-color: var(--ink); }
 .source-band-link:hover { text-decoration-color: var(--paper); }
 
 /* 描边按钮悬停：墨从底部漫满、字转纸色。墨是一层伪元素做纵向缩放（只动 transform），看到的是实墨块，不是渐变 */
-.ctrl:not(.ctrl-off):not(:disabled) { position: relative; isolation: isolate; transition: color var(--dur-1) linear; }
+.ctrl:not(.ctrl-off):not(:disabled) { position: relative; isolation: isolate; transition: color var(--dur-1) var(--ease-out); }
 .ctrl:not(.ctrl-off):not(:disabled)::before {
   content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ink);
   transform: scaleY(0); transform-origin: 50% 100%; transition: transform var(--dur-2) var(--ease-out);
@@ -41,7 +41,7 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
 /* 可选中的控件（来源索引条、分段控件）反白专指选中：未选中项悬停只给名字加 1px 下划线 */
 .source-tab .source-tab-name, .seg-item {
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
-  transition: text-decoration-color var(--dur-1) linear;
+  transition: text-decoration-color var(--dur-1) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .source-tab[data-state="inactive"]:hover .source-tab-name, .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }

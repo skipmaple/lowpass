@@ -35,5 +35,6 @@
   /* 周刊横带：白底墨字，上 2px、下 1px 两条线 */
   .source-band { background: none; color: var(--ink); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); --band-hole: transparent; }
   .source-band span { color: var(--ink) !important; }
+  .source-band .source-band-link { color: var(--ink); }
   footer { break-inside: avoid; }
 }

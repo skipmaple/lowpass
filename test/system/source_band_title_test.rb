@@ -36,7 +36,64 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     end
   end
 
+  test "周刊原文链接打印为墨色，切回屏幕仍为纸色" do
+    original_url = "https://github.com/ruanyf/weekly/blob/master/docs/issue-366.md"
+    issues(:weekly_w36).items.create!(
+      source: sources(:ruanyf), title: "科技爱好者周刊（第 366 期）：慢下来的理由", rank: 1,
+      url: original_url, url_hash: Digest::SHA256.hexdigest(original_url), fetched_at: Time.current,
+      meta: { issue_no: 366, issue_title: "慢下来的理由", degraded: true }
+    )
+    sign_in_with_browser(users(:drew))
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
+    visit weekly_issue_path("2026-W36")
+    assert_selector ".source-band-title", text: sources(:ruanyf).name
+    assert_selector ".source-band-link[href='#{original_url}'][target='_blank']", text: "原文"
+    evaluate_async_script("document.fonts.ready.then(arguments[0])")
+
+    states = {}
+    [ "print", "screen" ].each do |media|
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: media)
+      evaluate_async_script("const done = arguments[0]; requestAnimationFrame(() => requestAnimationFrame(() => done()))")
+      evaluate_async_script("const done = arguments[0]; Promise.all(document.querySelector('.source-band-link').getAnimations().map(animation => animation.finished)).then(() => done())")
+      states[media] = source_band_colors
+    end
+    diagnostic = "实际媒体与颜色 #{states.to_json}"
+    assert_equal [ true, false ], states.fetch("print").values_at("print", "screen"), diagnostic
+    assert_equal [ false, true ], states.fetch("screen").values_at("print", "screen"), diagnostic
+    assert_equal "rgb(29, 29, 27)", states.fetch("print").fetch("band"), diagnostic
+    assert_equal "rgb(232, 227, 218)", states.fetch("screen").fetch("band"), diagnostic
+
+    states.each do |media, state|
+      expected = state.fetch("band")
+      assert_equal expected, state.fetch("link"), "#{media}：原文链接自身应跟随横带颜色；#{diagnostic}"
+      assert_equal expected, state.fetch("text"), "#{media}：原文文字应跟随横带颜色；#{diagnostic}"
+      assert_operator state.fetch("pathStrokes").length, :>, 0, "#{media}：应测量真实箭头 path；#{diagnostic}"
+      state.fetch("pathStrokes").each do |stroke|
+        assert_equal expected, stroke, "#{media}：实际箭头 path stroke 应跟随横带颜色；#{diagnostic}"
+      end
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+  end
+
   private
+    def source_band_colors
+      evaluate_script(<<~JS)
+        (() => {
+          const band = document.querySelector('.source-band')
+          const link = band.querySelector('.source-band-link')
+          return {
+            print: matchMedia('print').matches,
+            screen: matchMedia('screen').matches,
+            band: getComputedStyle(band).color,
+            link: getComputedStyle(link).color,
+            text: getComputedStyle(link.querySelector('span')).color,
+            pathStrokes: [...link.querySelectorAll('svg path')].map(path => getComputedStyle(path).stroke),
+          }
+        })()
+      JS
+    end
+
     def source_title_layout
       evaluate_script(<<~JS)
         (() => {

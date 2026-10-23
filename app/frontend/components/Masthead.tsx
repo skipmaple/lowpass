@@ -184,7 +184,7 @@ export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref,
         <Link href={dailyHref} className="masthead-brand">
           lowpass
         </Link>
-        <nav className="masthead-nav">
+        <nav className="masthead-nav" aria-label="主导航">
           <Nav href={dailyHref} label="日刊" current={active === 'daily'} />
           <Nav href={weeklyHref ?? latestWeeklyHref(props.latest_weekly_key ?? null)} label="周刊" current={active === 'weekly'} />
         </nav>

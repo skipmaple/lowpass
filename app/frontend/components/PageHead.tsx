@@ -61,7 +61,7 @@ export default function PageHead({ big, context, title, top, bottom, tag, nav, c
             <Square href={nav.nextHref} label="后一期" icon="chevron-right" turn="forward" />
           </nav>
         ) : null}
-        {controls ? <nav className="page-nav">{controls}</nav> : null}
+        {controls ? <nav className="page-nav" aria-label="页面导航">{controls}</nav> : null}
       </header>
     </>
   )

@@ -1,5 +1,5 @@
 # 模型输出 → 理由、标签与译文（R-9.3、设计 C4、D25）：先当整段 JSON 解析，不行就取第一个 {…}（不支持 response_format 的端点会夹杂文字）；
-# 20 到 60 字，超长截断、过短判失败；领域名必须是画像里启用的名字，否则判失败（调用方重试）。
+# 归一化后 20 到 60 字，超长或过短都判失败，不截断；领域名必须是画像里启用的名字，否则判失败（调用方重试）。
 # 译文（标题 title_zh、说明 summary_zh）是顺带的：缺了、不含汉字、超过上限都只当没有，不判失败——不能为了译文把理由也重试掉
 module Reasons::Parser
   MIN = 20
@@ -15,8 +15,9 @@ module Reasons::Parser
       reason = json["reason"].to_s.strip.gsub(/\s+/, " ")
       tag = json["interest_tag"].to_s.strip
       raise Invalid, "理由太短（#{reason.length} 字）" if reason.length < MIN
+      raise Invalid, "理由太长（#{reason.length} 字）" if reason.length > MAX
       raise Invalid, "缺领域名" unless allowed_names.include?(tag)
-      Result.new(reason: reason[0, MAX], interest_tag: tag,
+      Result.new(reason: reason, interest_tag: tag,
                  title_zh: translation(json["title_zh"], TITLE_MAX), summary_zh: translation(json["summary_zh"], SUMMARY_MAX))
     end
 

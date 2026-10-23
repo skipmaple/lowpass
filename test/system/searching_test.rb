@@ -117,6 +117,29 @@ class SearchingTest < ApplicationSystemTestCase
     assert_field "搜索", with: "rust"
   end
 
+  test "筛选跨屏宽隐藏控件时接续键盘焦点" do
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
+    visit search_path(q: "terminal")
+    source = find(".chips button", text: sources(:hn).name)
+    execute_script("arguments[0].focus({ preventScroll: true })", source)
+    assert_selector ".chips button:focus", text: sources(:hn).name
+
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 375, height: 900, deviceScaleFactor: 1, mobile: false)
+    assert_selector ".filter-toggle:focus"
+    toggle = find(".filter-toggle")
+    execute_script("arguments[0].focus({ preventScroll: true })", toggle)
+    assert_selector ".filter-toggle:focus"
+
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
+    assert_selector ".filters nav[aria-label='刊物'] .seg-item:first-child:focus", text: "全部"
+    assert_no_selector ".filter-toggle", visible: :all
+    assert_field "搜索", with: "terminal"
+    assert_current_path search_path(q: "terminal")
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
   # test 环境默认关掉 CSRF 校验（config/environments/test.rb 的 allow_forgery_protection = false）：
   # 这一条把它打开，fetch 带的 X-CSRF-Token 才真的被校验，令牌读错了这里就会是 422 而不是 204
   test "点原文记一次 search_click，带 CSRF 令牌" do

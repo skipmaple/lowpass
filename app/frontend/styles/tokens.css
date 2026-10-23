@@ -355,7 +355,7 @@ a.source-tab { cursor: pointer; }
 
 /* 筛选栏：三组「小标 + 控件」横排，底线 1px */
 .filters { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
-.filter-toggle { display: none; }
+/* 展开按钮由 React 的 mobile 条件挂载，避免 CSS 先隐藏造成断点交接前失焦。 */
 .filter-toggle-icon { transition: transform var(--dur-1) var(--ease-move); }
 .filter-toggle-icon[data-open] { transform: rotate(90deg); }
 .filter-group { display: flex; flex-direction: column; gap: 8px; }

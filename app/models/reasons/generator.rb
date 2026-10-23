@@ -1,6 +1,6 @@
 # 给一期日刊生成理由（5.9、设计 §4.3）：一期顺序做，单条重试 2 次；上限到了就停并告警；跨天重复沿用前一期（R-1.11）；
 # 每次调用记一条账本；跑完没有缺理由且预算未耗尽，才收掉「推荐理由缺失」事件。
-# 要译的条目（D25）在同一次调用里拿回译文（HN 与 Hackaday 的标题、GitHub Trending 的简介），跟理由一起写；「缺理由」仍只看理由
+# 译文只搭同次合法 generated 结果；D38 资料不足只记独立判断，补缺排除已合法拒写的条目。
 module Reasons::Generator
   RETRIES = 2
   Outcome = Data.define(:generated, :reused, :abstained, :failed, :skipped)

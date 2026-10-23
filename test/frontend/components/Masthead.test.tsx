@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -150,6 +150,55 @@ describe('Masthead 搜索与账户', () => {
     expect(container.querySelector('.account-avatar')).toHaveAttribute('referrerpolicy', 'no-referrer')
     await userEvent.click(screen.getByRole('button', { name: '账户' }))
     expect(within(screen.getByRole('menu')).getByText('客人')).toBeInTheDocument()
+  })
+
+  it('头像加载失败后露出既有账户图标，账户按钮仍能打开和关闭菜单', async () => {
+    setPageProps({ current_user: currentUser({ avatar_url: 'https://avatars.example/failed.png' }) })
+    render(<Masthead />)
+    const button = screen.getByRole('button', { name: '账户' })
+    const icon = button.querySelector('svg')
+
+    fireEvent.error(button.querySelector('img')!)
+
+    expect(button.querySelector('img')).toBeNull()
+    expect(icon).not.toBeNull()
+    expect(button.querySelector('svg')).toBe(icon)
+    expect(button).toHaveAccessibleName('账户')
+    button.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitem', { name: '账户信息' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(button).toHaveFocus()
+  })
+
+  it('相同失败头像 URL 在 props 更新与菜单开合后不重新加载', async () => {
+    setPageProps({ current_user: currentUser({ avatar_url: 'https://avatars.example/failed.png' }) })
+    const { rerender } = render(<Masthead />)
+    const button = screen.getByRole('button', { name: '账户' })
+    fireEvent.error(button.querySelector('img')!)
+
+    setPageProps({ current_user: currentUser({ avatar_url: 'https://avatars.example/failed.png', display_name: '另一个显示名' }) })
+    rerender(<Masthead />)
+    expect(button.querySelector('img')).toBeNull()
+    await userEvent.click(button)
+    await userEvent.keyboard('{Escape}')
+    expect(button.querySelector('img')).toBeNull()
+  })
+
+  it('头像失败后 props 给出新 URL 时重新显示图片', () => {
+    setPageProps({ current_user: currentUser({ avatar_url: 'https://avatars.example/failed.png' }) })
+    const { rerender } = render(<Masthead />)
+    const button = screen.getByRole('button', { name: '账户' })
+    fireEvent.error(button.querySelector('img')!)
+    expect(button.querySelector('img')).toBeNull()
+
+    setPageProps({ current_user: currentUser({ avatar_url: 'https://avatars.example/new.png' }) })
+    rerender(<Masthead />)
+
+    expect(button.querySelector('img')).toHaveAttribute('src', 'https://avatars.example/new.png')
+    expect(button.querySelector('img')).toHaveAttribute('referrerpolicy', 'no-referrer')
+    expect(button).toHaveAccessibleName('账户')
   })
 
   // role="menu" 的孩子只能是 menuitem：顶部那行邮箱不是，得标 role="none" 摘出去

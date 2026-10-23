@@ -27,7 +27,7 @@ lowpass 长得像一张**每天要读的纸报**：暖黑墨、带纹理的浅�
 | 任何中文，包括夹着数字的短语（9月7日、第 36 周）、来源名后的中文词 | 霞鹜文楷 Screen | Newsreader、Noto Serif SC、等宽 |
 | 源站给的英文：标题、简介、摘要、仓库名、来源名（Hacker News、GitHub Trending） | Newsreader | Bodoni、等宽 |
 | 纯数字与记号：分数、评论数、时间、star、今日新增、序号、发布时间、页码；元数据行里源站给的拉丁短名（语言名、作者名） | Maple Mono NL | 文楷、Newsreader |
-| 报头 LOWPASS、LP 邮戳 | Bodoni Moda 900，40px 以上 | 任何其他位置、任何更小字号 |
+| 报头 LOWPASS、LP 邮戳 | Bodoni Moda 900，桌面 40px、手机 26px | 任何其他位置、其他字号 |
 
 元数据行只放数字、记号、线性图标，以及源站给的拉丁短名（GitHub 语言名、RSS 作者名），都用 Maple；不用 `▲` / `★` 字符，也不用圆点分隔（产品负责人决定，见 `docs/design/notes/2026-09-17-metadata-icons.md`；图标尺寸与间距见 `reference/lowpass-tokens.md`）；中文单位不进元数据；元数据里的日期写成数字（09-07 06:12）。按钮、期头、标题里的日期是中文短语（9月7日），整体用文楷。
 

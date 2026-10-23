@@ -124,4 +124,23 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     assert_operator statements.length, :<=, 3
     assert statements.all? { |sql| sql.include?("GROUP BY") }, statements.inspect
   end
+
+  test "处理结果在统计期间提交时四类仍来自同一快照" do
+    item = items(:hn_one)
+    changed = false
+    listener = ->(*args) do
+      sql = args.last[:sql]
+      if !changed && sql.include?('FROM "items"') && sql.include?("GROUP BY")
+        changed = true
+        item.record_reason_abstention(assessed_at: Time.current)
+      end
+    end
+    counts = nil
+    ActiveSupport::Notifications.subscribed(listener, "sql.active_record") do
+      counts = Item.reason_counts_by_issue([ item.issue_id ]).fetch(item.issue_id)
+    end
+    assert changed
+    assert_equal 1, counts.values_at(:with_reason, :abstained, :retained, :missing).sum
+    assert ReasonAbstention.exists?(item_id: item.id)
+  end
 end

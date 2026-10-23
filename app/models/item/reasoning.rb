@@ -16,16 +16,21 @@ module Item::Reasoning
       return result if issue_ids.empty?
 
       items = visible.daily.where(issue_id: issue_ids).left_joins(:reason_abstention)
-      items.group(:issue_id, Arel.sql("items.reason IS NOT NULL"), Arel.sql("reason_abstentions.id IS NOT NULL")).count.each do |(issue_id, has_reason, marked), count|
+      has_reason = Arel.sql("items.reason IS NOT NULL")
+      marked = Arel.sql("reason_abstentions.id IS NOT NULL")
+      # 与 pending_reasons 同一分区：可见日刊、reason nil、无判断；一次查询避免并发提交使计数漏项。
+      items.group(:issue_id, has_reason, marked).pluck(:issue_id, has_reason, marked, Arel.sql("COUNT(*)"), Arel.sql("MAX(reason_abstentions.assessed_at)")).each do |issue_id, has_reason, marked, count, assessed_at|
         key = if marked
           has_reason ? :retained : :abstained
         elsif has_reason
           :with_reason
+        else
+          :missing
         end
-        result.fetch(issue_id)[key] = count if key
+        row = result.fetch(issue_id)
+        row[key] = count
+        row[:last_assessed_at] = [ row[:last_assessed_at], assessed_at ].compact.max
       end
-      pending_reasons.where(issue_id: issue_ids).group(:issue_id).count.each { |id, count| result.fetch(id)[:missing] = count }
-      items.group(:issue_id).maximum("reason_abstentions.assessed_at").each { |id, time| result.fetch(id)[:last_assessed_at] = time }
       result
     end
   end

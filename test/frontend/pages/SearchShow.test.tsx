@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import type { ActiveVisit, Page, VisitOptions } from '@inertiajs/core'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -36,6 +37,14 @@ function showProps(overrides: Partial<SearchShowProps> = {}): SearchShowProps {
 
 function show(overrides: Partial<SearchShowProps> = {}) {
   return render(<Show {...showProps(overrides)} />)
+}
+
+function filterVisit(): VisitOptions {
+  return router.get.mock.calls[router.get.mock.calls.length - 1][2] ?? {}
+}
+
+function searchResponse(filters: SearchShowProps['filters']): Page<SearchShowProps> {
+  return { component: 'Search/Show', props: { ...showProps({ q: 'kuber', filters }), errors: {} }, url: window.location.pathname + window.location.search, version: null, flash: {}, rescuedProps: [], rememberedState: {} }
 }
 
 const results = (overrides: Partial<SearchShowProps> = {}) =>
@@ -336,11 +345,11 @@ describe('搜索框', () => {
 
     expect(screen.getByRole('link', { name: '周刊' })).toHaveAttribute('href', '/search?q=rust&type=weekly&range=custom')
     await user.click(screen.getByRole('button', { name: 'Hacker News' }))
-    expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&source=src-hn&range=custom', {}, { preserveState: true })
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&source=src-hn&range=custom', {}, expect.objectContaining({ preserveState: true }))
     // 日期框失焦才提交（打字过程中不发请求）
     await user.type(screen.getByLabelText('起始日期'), '2026-09-01')
     await user.tab()
-    expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&from=2026-09-01&range=custom', {}, { preserveState: true })
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&source=src-hn&from=2026-09-01&range=custom', {}, expect.objectContaining({ preserveState: true }))
     expect(input).toHaveValue('  rust  ')
   })
 
@@ -466,6 +475,79 @@ describe('结果行', () => {
 })
 
 describe('排序与分页', () => {
+  it('先点时间再选来源，排序尚未返回时也保留最新排序条件', async () => {
+    const user = userEvent.setup()
+    results({ q: 'kuber', page: 2, pages: 3, total: 41 })
+    // 旧分段的测试替身只是链接；拦住它的浏览器默认导航，仍执行真实控件的 React 点击处理。
+    window.addEventListener('click', (event) => event.preventDefault(), { once: true })
+    await user.click(screen.getByRole('link', { name: '时间' }))
+    await user.click(screen.getByRole('button', { name: 'Hacker News' }))
+
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&source=src-hn&sort=date', {}, expect.objectContaining({ preserveState: true }))
+    expect(router.get).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/search?q=kuber&source=src-hn&sort=date')
+  })
+
+  it('来源还在待确认时，排序和分页链接保留该来源并从第一页开始', async () => {
+    results({ q: 'kuber', page: 2, pages: 3, total: 41 })
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Hacker News' }))
+
+    expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber&source=src-hn&sort=date')
+    expect(screen.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/search?q=kuber&source=src-hn')
+    expect(screen.getByRole('status')).toHaveTextContent('41 条结果')
+    expect(screen.getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
+  })
+
+  it('日期还在待确认时，排序、分页与查询提交使用同一对日期', () => {
+    results({ q: 'kuber', filters: searchFilters({ range: 'custom', from: '2026-08-01' }), page: 2, pages: 3, total: 41 })
+    const to = screen.getByLabelText('结束日期')
+    fireEvent.change(to, { target: { value: '2026-09-08' } })
+    fireEvent.blur(to)
+
+    expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom&sort=date')
+    expect(screen.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom')
+    fireEvent.submit(screen.getByRole('search'))
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&from=2026-08-01&to=2026-09-08&range=custom')
+  })
+
+  it('筛选访问失败后，搜索重试保留待确认条件并从第一页开始', async () => {
+    const user = userEvent.setup()
+    show({ q: 'kuber', state: 'unavailable', filters: searchFilters({ type: 'weekly' }), page: 2 })
+    await user.click(screen.getByRole('button', { name: 'Hacker News' }))
+    const pending = filterVisit()
+    act(() => emitRouterEvent('start'))
+    act(() => {
+      pending.onFinish?.(visitRouterEvent('finish').detail.visit as ActiveVisit)
+      emitRouterEvent('finish')
+    })
+    await user.click(screen.getByRole('button', { name: '重试' }))
+
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&type=weekly&source=src-hn')
+  })
+
+  it('服务端确认与外部导航会同步更新整页导航目标，不能残留旧的待确认来源', async () => {
+    const user = userEvent.setup()
+    const initial = { q: 'kuber', state: 'results' as const, results: [searchResult()], total: 41, page: 2, pages: 3 }
+    const { rerender } = show(initial)
+    await user.click(screen.getByRole('button', { name: 'Hacker News' }))
+    expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber&source=src-hn&sort=date')
+    const pending = filterVisit()
+    act(() => {
+      pending.onSuccess?.(searchResponse(searchFilters()))
+      pending.onFinish?.(visitRouterEvent('finish').detail.visit as ActiveVisit)
+    })
+    expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber&sort=date')
+
+    await user.click(screen.getByRole('button', { name: 'Hacker News' }))
+    act(() => filterVisit().onFinish?.(visitRouterEvent('finish').detail.visit as ActiveVisit))
+    window.history.replaceState({}, '', '/search?q=kuber&type=weekly')
+    rerender(<Show {...showProps({ ...initial, filters: searchFilters({ type: 'weekly' }) })} />)
+    expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber&type=weekly&sort=date')
+    fireEvent.submit(screen.getByRole('search'))
+    expect(router.get).toHaveBeenLastCalledWith('/search?q=kuber&type=weekly')
+  })
+
   it('排序分段：当前项 aria-current，另一项换 sort 并回到第 1 页', () => {
     const { container } = results({ page: 2, pages: 3, total: 41 })
     const count = within(container.querySelector('.search-count') as HTMLElement)

@@ -349,6 +349,57 @@ describe('FavoriteButton', () => {
 })
 
 describe('盖章（M3）', () => {
+  it('添加还在路上时再次点击，保留首次收藏的盖章', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { settle = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    mount()
+
+    const button = screen.getByRole('button', { name: ADD })
+    await user.click(button)
+    expect(button).toHaveAttribute('data-stamp')
+    await user.click(button)
+    expect(button).toHaveAttribute('data-on')
+    expect(button).toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => { settle(ok({ url_hash: HASH })) })
+    expect(button).toHaveAttribute('data-on')
+  })
+
+  it('取消还在路上时再次点击，失败回滚不盖章', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { settle = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    mount([HASH])
+
+    const button = screen.getByRole('button', { name: REMOVE })
+    await user.click(button)
+    await user.click(button)
+    expect(button).not.toHaveAttribute('data-on')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => { settle(rejected(500)) })
+    expect(screen.getByText('取消收藏没有保存，请重试。')).toBeInTheDocument()
+    expect(button).toHaveAttribute('data-on')
+    expect(button).not.toHaveAttribute('data-stamp')
+  })
+
+  it('未接受的无条目添加不会让后来带入的已收藏盖章', async () => {
+    const fetchMock = stubFetch(ok())
+    const user = userEvent.setup()
+    const button = <FavoriteButton urlHash={HASH} title={TITLE} />
+    const view = render(<FavoritesProvider favorites={[]}>{button}</FavoritesProvider>)
+    await user.click(screen.getByRole('button', { name: ADD }))
+    expect(screen.getByRole('button', { name: ADD })).not.toHaveAttribute('data-on')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    view.rerender(<FavoritesProvider favorites={[HASH]}>{button}</FavoritesProvider>)
+    expect(await screen.findByRole('button', { name: REMOVE })).not.toHaveAttribute('data-stamp')
+  })
+
   // 压一下的动画在 data-stamp 出现时播一次；取消时去掉，下次收藏再出现，才会再播
   it('点「收藏」那一下带上 data-stamp，取消时去掉，再收藏又带上', async () => {
     stubFetch(ok({ url_hash: HASH }))
@@ -395,6 +446,48 @@ describe('盖章（M3）', () => {
     await user.click(button)
     await waitFor(() => expect(button).not.toHaveAttribute('data-on'))
     expect(button).not.toHaveAttribute('data-stamp')
+  })
+
+  it('添加失败后同一按钮收到外部已收藏状态，只填墨，不复活旧盖章', async () => {
+    const fetchMock = stubFetch(rejected(500))
+    const user = userEvent.setup()
+    const view = mount()
+    const button = screen.getByRole('button', { name: ADD })
+
+    await user.click(button)
+    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    expect(button).not.toHaveAttribute('data-on')
+
+    view.rerender(tree([HASH]))
+
+    expect(await screen.findByRole('button', { name: REMOVE })).toBe(button)
+    expect(button).toHaveAttribute('data-on')
+    expect(button).not.toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('添加失败后同链接的另一颗按钮收藏，只有新接受添加的按钮盖章', async () => {
+    const fetchMock = stubFetch(rejected(500))
+    const user = userEvent.setup()
+    render(
+      <FavoritesProvider favorites={[]}>
+        <FavoriteButton itemId="itm-hn-1" urlHash={HASH} title={TITLE} />
+        <FavoriteButton itemId="itm-hn-2" urlHash={HASH} title="同链接的另一期条目" />
+      </FavoritesProvider>,
+    )
+    const first = screen.getByRole('button', { name: ADD })
+    const second = screen.getByRole('button', { name: '收藏：同链接的另一期条目' })
+
+    await user.click(first)
+    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', []))
+    fetchMock.mockResolvedValue(ok({ url_hash: HASH }))
+    await user.click(second)
+
+    expect(first).toHaveAttribute('data-on')
+    expect(first).not.toHaveAttribute('data-stamp')
+    expect(second).toHaveAttribute('data-on')
+    expect(second).toHaveAttribute('data-stamp')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('描线与实心两层都对读屏隐藏', () => {

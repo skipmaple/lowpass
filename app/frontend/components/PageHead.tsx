@@ -31,11 +31,11 @@ export default function PageHead({ big, context, title, top, bottom, tag, nav, c
   return (
     <>
       <Head title={title ?? (context ? `${context} · ${big}` : big)} />
-      <header className="page-head">
+      <header className={nav ? 'page-head page-head--issue' : 'page-head'}>
         <div className="issue-head-main">
           {context ? <p className="page-context">{context}</p> : null}
           <div className="issue-head-title">
-            <h1 className="issue-head-date" aria-label={big}><Mixed text={big} font="latin" size="inherit" color="var(--ink)" /></h1>
+            <h1 className="issue-head-date" aria-label={big}><Mixed text={big} font="latin" size="inherit" color="var(--ink)" lineHeight="inherit" /></h1>
             {top || bottom ? (
               <div className="issue-head-stack">
                 {top}
@@ -53,18 +53,16 @@ export default function PageHead({ big, context, title, top, bottom, tag, nav, c
             <Ctrl href={nav.nextHref} label="后一期" icon="chevron-right" side="right" turn="forward" />
           </nav>
         ) : null}
-        {controls ? <nav className="page-nav">{controls}</nav> : null}
+        {/* 手机期导航与日期同属期头：容得下时同行，极窄屏自然退成独立一行。 */}
+        {nav ? (
+          <nav className="issue-nav-mobile" aria-label="期导航">
+            <Square href={nav.prevHref} label="前一期" icon="chevron-left" turn="back" />
+            <Square href={nav.archiveHref} label={nav.archiveLabel ?? '归档'} icon="archive" />
+            <Square href={nav.nextHref} label="后一期" icon="chevron-right" turn="forward" />
+          </nav>
+        ) : null}
+        {controls ? <nav className="page-nav" aria-label="页面导航">{controls}</nav> : null}
       </header>
-
-      {/* 手机上三个 44px 方形图标按钮另起一行排在期头底线下面：
-          375px 宽里 40px 大字加三个文字按钮装不下。画布 page(compact=True) 的 controls 行就是这么排的。 */}
-      {nav ? (
-        <nav className="issue-nav-mobile" aria-label="期导航">
-          <Square href={nav.prevHref} label="前一期" icon="chevron-left" turn="back" />
-          <Square href={nav.archiveHref} label={nav.archiveLabel ?? '归档'} icon="archive" />
-          <Square href={nav.nextHref} label="后一期" icon="chevron-right" turn="forward" />
-        </nav>
-      ) : null}
     </>
   )
 }

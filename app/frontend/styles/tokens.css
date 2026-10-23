@@ -40,6 +40,7 @@ body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: 
 a { color: inherit; text-decoration: none; }
 a.t { text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 a.t:hover { text-decoration-color: var(--ink); }
+a.t:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* Inertia 页面跳转进度条（NProgress）。application.tsx 里 includeCSS: false，
    自己写这份最小样式：墨色细线，没有光晕、没有圆角、没有小圆点/转圈图标。 */
@@ -67,7 +68,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 .account-button { width: 32px; height: 32px; padding: 0; border: 1px solid var(--paper); border-radius: 50%; background: none; color: var(--paper);
                   position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; }
 .account-button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
-.account-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; transition: opacity 160ms ease; }
+.account-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; transition: opacity var(--dur-1) var(--ease-out); }
 .account-avatar--open { opacity: 0; }
 .menu-card { position: absolute; right: 0; top: 44px; width: 220px; background: var(--paper); border: 1px solid var(--ink); padding: 6px 0; z-index: 20; }
 .menu-head { padding: 8px 16px 10px 16px; border-bottom: 1px solid var(--rule); }
@@ -147,8 +148,9 @@ a.t:hover { text-decoration-color: var(--ink); }
    --tab-hole 是插图里「挖空」处的填充：纸上留纸色，反白后填墨色。 */
 .source-tabs { display: flex; padding: 24px 0 0 0; }
 .source-tab { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 18px 24px 18px 18px;
-              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: default;
               --tab-hole: var(--paper); }
+a.source-tab { cursor: pointer; }
 .source-tab + .source-tab { margin-left: -1px; }
 .source-tab[data-state="active"] { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); }
 .source-tab:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -182,7 +184,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px;
              font-family: var(--font-data); font-size: var(--fs-13); line-height: 1.5; color: var(--ink2); }
 .item-metric { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; white-space: nowrap; }
-.item-comments { transition: color 160ms ease; }
+.item-comments { transition: color var(--dur-1) var(--ease-out); }
 .item-comments:hover, .item-comments:focus-visible { color: var(--ink); }
 .item-comments:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
 .item-reason { margin-top: 4px; max-width: 820px; border-left: 2px solid var(--green); padding: 1px 0 1px 12px; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.7; color: var(--ink2); }
@@ -209,7 +211,7 @@ a.t:hover { text-decoration-color: var(--ink); }
   .page-nav { width: 100%; }
   .page-nav .ctrl { height: 44px; flex: 1 1 0; }
 
-  /* 期头底线下面已经有一行按钮，索引条不用再空 24px */
+  /* 手机索引与期头保持紧凑衔接，正文仍保留原有阅读间距。 */
   .source-tabs { padding-top: 16px; }
   .source-tab { flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px 8px; }
   .source-tab-icon { width: 37px; height: 24px; }
@@ -267,22 +269,31 @@ a.t:hover { text-decoration-color: var(--ink); }
                     font-size: var(--fs-13); color: var(--ink2); }
 .directory-return:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 .directory-return:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.source-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; }
+.source-actions .source-foot { margin-right: 0; }
+.source-actions .directory-return { margin-top: 0; margin-bottom: 0; }
+#source-directory:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 
 /* 周刊正文完整展开：不继承日刊摘要的两行裁剪。 */
-.item-content--weekly { display: block; width: 100%; max-width: 72em; overflow-wrap: anywhere; }
+.item-content--weekly { display: block; width: 100%; max-width: 780px; overflow-wrap: anywhere; }
 .item-content--weekly > p { margin: 0; }
-.item-content--weekly > p + p { margin-top: 12px; }
+.item-content--weekly > p + p, .item-content--weekly > .item-media + p { margin-top: 12px; }
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
-.item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 1080px; padding: 8px 0 4px; }
+.item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 780px; padding: 8px 0 4px; }
 .item-media--single { justify-items: center; }
 .item-media--multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .item-media-frame { display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; width: fit-content; max-width: 100%; margin: 0; }
 .item-media-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 640px; }
 .item-media--multiple .item-media-frame { width: 100%; }
 .item-media--multiple .item-media-image { width: 100%; max-height: none; }
+/* 独立缓存给出天然尺寸后，解码前就保留同一比例；源图变更时完整适应框，不裁切或推移正文。 */
+.item-media-frame--sized { width: min(var(--image-width), calc(640px * var(--image-ratio))); aspect-ratio: var(--image-ratio); }
+.item-media-frame--sized .item-media-image { width: 100%; height: 100%; max-height: none; object-fit: contain; }
+.item-media--multiple .item-media-frame--sized { width: 100%; }
 
 @media (max-width: 767px) {
+  .item-media-frame--sized { width: 100%; }
   .item-media--multiple { grid-template-columns: minmax(0, 1fr); }
   .item-media-image { width: 100%; max-height: none; }
 }
@@ -344,8 +355,8 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 筛选栏：三组「小标 + 控件」横排，底线 1px */
 .filters { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
-.filter-toggle { display: none; }
-.filter-toggle-icon { transition: transform 120ms ease; }
+/* 展开按钮由 React 的 mobile 条件挂载，避免 CSS 先隐藏造成断点交接前失焦。 */
+.filter-toggle-icon { transition: transform var(--dur-1) var(--ease-move); }
 .filter-toggle-icon[data-open] { transform: rotate(90deg); }
 .filter-group { display: flex; flex-direction: column; gap: 8px; }
 .filter-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
@@ -380,7 +391,7 @@ button.chip-outline { min-height: 44px; }
 .search-title { margin: 10px 0 0 0; font-weight: 500; line-height: 1.35; }
 .search-snippet { margin: 6px 0 0 0; max-width: 820px; line-height: 1.7; }
 .search-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin-top: 10px; }
-.search-links > a { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
+.search-links > a, a.field-note { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
 .search-original { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); }
 /* 命中词：2px 墨色下划线（D22），不用颜色块 */
 .hit { text-decoration: underline; text-decoration-color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 4px; }
@@ -534,6 +545,7 @@ button.chip-outline { min-height: 44px; }
 .page-context { margin: 0; width: 100%; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
 .issue-head-main { flex-wrap: wrap; min-width: 0; gap: 12px 16px; }
 .issue-head-title { flex-wrap: wrap; gap: 12px 20px; }
+/* 日期行高由期头控制；桌面实测沿用 1.2，Mixed 继承以免额外撑高。 */
 .issue-head-date { line-height: 1.2; overflow-wrap: anywhere; }
 .issue-head-weekday { line-height: 1.4; }
 .page-nav { flex-wrap: wrap; }
@@ -772,6 +784,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .item-translation { max-width: 920px; font-size: var(--fs-16); }
   .item-summary { max-width: 920px; font-size: var(--fs-16); line-height: 1.6; }
   .item-reason { max-width: 920px; font-size: var(--fs-16); line-height: 1.75; }
+  .item-content--weekly, .item-media { max-width: 920px; }
 }
 .management-row-primary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .management-primary-field { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
@@ -780,7 +793,8 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .management-row .admin-actions { gap: 0 16px; }
 .management-row .admin-details { width: auto; }
 .management-row-details > summary { font-family: var(--font-cjk); font-size: var(--fs-13); min-height: 44px; align-content: center; cursor: pointer; }
-.management-row-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.table:focus-visible, .table-row:focus-visible, .management-list:focus-visible, .management-row:focus-visible, .table-empty:focus-visible,
+.table summary:focus-visible, .management-list summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .management-secondary-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px 24px; margin: 0; padding: 8px 0; }
 .management-field-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); margin-bottom: 4px; }
 .management-field-content { margin: 0; min-width: 0; overflow-wrap: anywhere; }
@@ -845,7 +859,8 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .item-title, .item-translation, .item-summary, .item-reason, .item-content--weekly, .source-band-issue, .search-title, .search-snippet { text-autospace: normal; }
 
 /* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
-.item-heading, .search-title, .state-line { text-wrap: balance; }
+.item-heading, .search-title, .state-line, .source-band-title, .source-original-title { text-wrap: balance; }
+.item-title-tail { display: inline-block; max-inline-size: 100%; overflow-wrap: anywhere; vertical-align: baseline; text-decoration: inherit; }
 .item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
 
 /* T3 选区反白：墨底纸字（浏览器的蓝色选区是令牌之外的颜色） */
@@ -896,6 +911,24 @@ details[open] > summary::before { rotate: 90deg; }
 .item-tag { display: inline-flex; vertical-align: baseline; margin-left: 0; padding-top: 0; }
 @media (min-width: 1920px) { .item-heading { max-width: 920px; } }
 
+/* 标题触控（PRD 6.4）：目标至少 44px 高，原生垂直 padding 覆盖换行分片而不改变行距。
+   保留默认 box-decoration-break: slice；clone 会让 WebKit 的均衡换行退化。
+   标题后留 8px，兼顾较高的回退字体，避免扩展侵入下一段上沿；序号与标签保有自己的非链接命中层。打印仍用原几何。 */
+@media screen {
+  .item-title > a.t { position: relative; padding-block: 12px; padding-inline: 0; }
+  .item-rank, .item-tag { position: relative; z-index: 1; }
+  .item-heading { padding-bottom: 8px; }
+}
+
+/* 搜索与收藏的标题由 Mixed / HitText 排出 20px 字形，外层链接仍继承 15px。
+   每个分片上加 17px、下加 12px 原生 padding，补足 44px；不改外层字号，以免改变中文多行的行距。
+   标题后留 8px 保护译文与片段，眉行保持非链接命中。 */
+@media screen {
+  .search-title > a.t { position: relative; padding-block: 17px 12px; padding-inline: 0; }
+  .search-title { padding-bottom: 8px; }
+  .search-eyebrow { position: relative; z-index: 1; }
+}
+
 /* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
 .item-rank, .item-body { align-self: baseline; }
 .item-rank { padding-top: 0; }
@@ -945,11 +978,44 @@ details[open] > summary::before { rotate: 90deg; }
 .daily-source-heading { display: flex; align-items: center; gap: 14px; }
 .daily-source-icon { width: 32px; height: 32px; flex: none; }
 .daily-source h2 { position: relative; margin: 0; font-family: var(--font-latin); font-size: var(--fs-26); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
-.daily-source-content > .issue-body { border-top: 0; }
+.daily-source-content > .issue-body { border-top: 0; margin-top: 0; }
 @media (max-width: 767px) {
   .daily-source + .daily-source { margin-top: 32px; }
   .daily-source-head { padding: 18px 0; }
   .daily-source-heading { gap: 12px; }
   .daily-source-icon { width: 26px; height: 26px; }
   .daily-source h2 { font-size: var(--fs-22); }
+}
+
+/* 手机先进入阅读：期导航留在日期旁，元信息单独一行；仅期详情使用，归档控件不变。 */
+@media screen and (max-width: 767px) {
+  .page-head--issue {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title nav" "meta meta";
+    align-items: center;
+    gap: 4px 8px;
+    padding-top: 12px;
+  }
+  .page-head--issue .issue-head-main, .page-head--issue .issue-head-title { display: contents; }
+  .page-head--issue .issue-head-date { grid-area: title; line-height: 1.2; }
+  .page-head--issue .issue-head-stack {
+    grid-area: meta;
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 12px;
+  }
+  .page-head--issue .issue-head-tag { grid-column: 1 / -1; padding-bottom: 0; }
+  .page-head--issue .issue-nav-mobile { grid-area: nav; justify-self: end; padding-top: 0; }
+  .page-head--issue .page-nav { grid-column: 1 / -1; }
+  .source-tab { min-height: 72px; gap: 4px; padding-top: 8px; padding-bottom: 8px; }
+  .source-tabs-frame + .daily-source { margin-top: 16px; }
+}
+
+/* 320px 的日期与三个按钮不硬挤；日期信息与 44px 操作目标保持完整。 */
+@media screen and (max-width: 359px) {
+  .page-head--issue { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "meta" "nav"; }
+  .page-head--issue .issue-nav-mobile { justify-self: start; }
 }

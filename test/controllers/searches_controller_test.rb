@@ -193,7 +193,18 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ @item.url_hash ], page_props["favorites"]
   end
 
-  # 旧条目库里存着「…read more」：片段先过一遍清洗（PRD 7.5），不把源站的尾巴带进结果
+  test "已存摘要的片段保留代码符号与实体文字" do
+    summary = "变量_用户_名称，目录**/文件.rb、目录**/文件.ts，<T> 与 &lt;value&gt;。"
+    item = index_item("Literal preservation", summary: summary + " …read more")
+
+    get search_path(q: "preservation")
+
+    snippet = page_props["results"].sole["snippet_runs"].map { |run| run["text"] }.join
+    assert_equal summary, snippet
+    assert_equal summary + " …read more", item.reload.summary
+  end
+
+  # 旧条目库里存着「…read more」：片段只清理尾巴（PRD 7.5），保留已经清洗过的正文
   test "片段不带源站附加的阅读更多" do
     index_item("Negative resistance explained", summary: "A look at negative resistance that goes further than expected …read more")
 

@@ -5,6 +5,7 @@ import FavoriteButton from '@/components/FavoriteButton'
 import HitText from '@/components/HitText'
 import Icon from '@/components/Icon'
 import { reportClick } from '@/lib/search'
+import { markSearchResult, searchResultId } from '@/lib/searchFocus'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { HitRun, SearchResult } from '@/types/lowpass'
 
@@ -48,7 +49,7 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
       ) : null}
 
       <div className="search-links">
-        <Link className="t" href={result.where.href}>
+        <Link id={searchResultId(result.item_id)} className="t" href={result.where.href} onBefore={() => markSearchResult(result.item_id)}>
           <Mixed text={`所在期 · ${result.where.label}`} size="var(--fs-13)" color="var(--ink)" />
         </Link>
         <a className="search-original" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report}>

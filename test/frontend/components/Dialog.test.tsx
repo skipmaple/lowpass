@@ -31,6 +31,40 @@ describe('Dialog', () => {
     expect(screen.getByRole('button', { name: '好' })).toBeDisabled()
   })
 
+  it.each([false, true])('busy 恢复后纸卡上的焦点按 Tab 进入按钮（shift=%s）', async (shift) => {
+    const user = userEvent.setup()
+    const props = { text: '确认删除？', cancel: '取消', confirm: '确认删除', onCancel: () => {}, onConfirm: () => {} }
+    const { rerender } = render(<Dialog open busy {...props} />)
+    expect(screen.getByRole('dialog')).toHaveFocus()
+    await user.tab({ shift })
+    expect(screen.getByRole('dialog')).toHaveFocus()
+    rerender(<Dialog open {...props} />)
+    await user.tab({ shift })
+    expect(screen.getByRole('button', { name: shift ? '确认删除' : '取消' })).toHaveFocus()
+  })
+
+  it('另一 form 的同名单选项不会替换当前 form 的首停点', async () => {
+    const user = userEvent.setup()
+    render(<Dialog open text="确认选择？" cancel="取消" confirm="确认" onCancel={() => {}} onConfirm={() => {}}>
+      <form><label><input type="radio" name="source" />第一组</label></form>
+      <form><label><input type="radio" name="source" defaultChecked />第二组</label></form>
+    </Dialog>)
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('radio', { name: '第一组' })).toHaveFocus()
+  })
+
+  it('无名单选项保留独立首停点', async () => {
+    const user = userEvent.setup()
+    render(<Dialog open text="确认选择？" cancel="取消" confirm="确认" onCancel={() => {}} onConfirm={() => {}}>
+      <label><input type="radio" />第一项</label>
+      <label><input type="radio" defaultChecked />第二项</label>
+    </Dialog>)
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('radio', { name: '第一项' })).toHaveFocus()
+  })
+
   // 焦点不能跑到遮罩后面那一页上：走到两头就绕回来
   it('Tab 在纸卡里转圈：最后一个回到第一个，Shift+Tab 反过来', async () => {
     render(<Dialog open text="停用后不再抓取，历史内容保留。确认停用 Hackaday？" cancel="取消" confirm="停用" onCancel={() => {}} onConfirm={() => {}} />)

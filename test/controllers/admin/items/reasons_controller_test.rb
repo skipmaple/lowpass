@@ -5,7 +5,7 @@ class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
 
   test "单条重生成：同步调用一次，成功回日刊页并提示" do
     with_model_provider do
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM"))
       post admin_item_reason_path(items(:hn_one)), headers: { "Referer" => daily_issue_url("2026-09-08") }
     end
     assert_redirected_to daily_issue_url("2026-09-08")

@@ -56,13 +56,17 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
-  it('生成中在列表区说「生成中，约 1 分钟后刷新」，索引条还在', () => {
+  it('生成中保留来源清单，不提供没有正文目标的跳转', () => {
     const { container } = show({
       issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新', time_label: '06:00' }),
     })
 
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
-    expect(screen.getAllByRole('link', { name: /^(Hacker News|GitHub Trending|Hackaday)$/ })).toHaveLength(3)
+    const overview = within(screen.getByRole('list', { name: '来源' }))
+    expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
+    expect(overview.queryAllByRole('link')).toHaveLength(0)
+    expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
+    expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
@@ -82,10 +86,18 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     vi.useRealTimers()
   })
 
-  it('空刊说「本期为空刊，管理员已收到通知」', () => {
-    const { container } = show({ issue: dailyIssue({ state: 'empty', status: '本期为空刊，管理员已收到通知' }) })
+  it('空刊保留每个来源的失败事实，不提供没有正文目标的跳转', () => {
+    const { container } = show({
+      issue: dailyIssue({ state: 'empty', status: '本期为空刊，管理员已收到通知' }),
+      sources: sources.map((entry) => ({ ...entry, state: 'failed' })),
+    })
 
     expect(noticeText(container)).toBe('本期为空刊，管理员已收到通知')
+    const overview = within(screen.getByRole('list', { name: '来源' }))
+    expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News抓取失败', 'GitHub Trending抓取失败', 'Hackaday抓取失败'])
+    expect(overview.queryAllByRole('link')).toHaveLength(0)
+    expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
+    expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
   })
 
   // 已发布的期不在列表区说话，哪怕期头挂着「已于 06:42 修订」这种来历标签
@@ -98,6 +110,41 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 })
 
 describe('连续阅读与来源目录', () => {
+  it('已发布的失败或无新内容来源仍然可以跳到真实正文', () => {
+    show({ sources: [sources[0], { ...sources[1], state: 'failed' }, { ...sources[2], state: 'empty' }] })
+
+    const directory = within(screen.getByRole('navigation', { name: '来源' }))
+    const links = directory.getAllByRole('link')
+    expect(links).toHaveLength(3)
+    for (const link of links) {
+      const target = document.getElementById(link.getAttribute('href')!.slice(1))
+      expect(target).toBeInTheDocument()
+      expect(target).toHaveClass('daily-source')
+    }
+    expect(screen.getByRole('region', { name: 'GitHub Trending' })).toHaveTextContent('本期抓取失败，已通知管理员')
+    expect(screen.getByRole('region', { name: 'Hackaday' })).toHaveTextContent('本期无新内容')
+  })
+
+  it('同一期生成完成后来源清单恢复正文导航', () => {
+    const { rerender } = show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
+    expect(screen.getByRole('list', { name: '来源' })).toBeInTheDocument()
+
+    rerender(<Show issue={dailyIssue()} missing={false} sources={sources} items_by_source={{ 'src-hn': [item()] }} favorites={[]} active_source_id="src-hn" latest_weekly_key="2026-W36" />)
+
+    expect(screen.queryByRole('list', { name: '来源' })).toBeNull()
+    const directory = within(screen.getByRole('navigation', { name: '来源' }))
+    expect(directory.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getByRole('region', { name: 'Hacker News' })).toContainElement(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' }))
+    expect(screen.queryByText('生成中，约 1 分钟后刷新')).toBeNull()
+  })
+
+  it('每栏均可返回来源目录，失败或没有源站外链时也保留入口', () => {
+    show({ sources: [sources[0], { ...sources[1], state: 'failed', home_url: null }, sources[2]] })
+    const returns = screen.getAllByRole('link', { name: '返回来源目录' })
+    expect(returns).toHaveLength(3)
+    for (const link of returns) expect(link).toHaveAttribute('href', '#source-directory')
+  })
+
   it('全部来源按配置顺序同时呈现，目录是到正文的原生锚点', () => {
     show({
       active_source_id: 'src-had',

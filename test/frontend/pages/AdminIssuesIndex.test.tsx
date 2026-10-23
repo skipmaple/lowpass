@@ -89,6 +89,40 @@ describe('Admin/Issues/Index', () => {
     expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/refetch', { source_id: 'src-gh' }, expect.any(Object))
   })
 
+  it('重抓选源的 Tab 首尾跟随当前单选项，箭头改选后仍留在框内', async () => {
+    const user = userEvent.setup()
+    show({ rows: [adminIssueRow({ refetchable_sources: [
+      { id: 'src-hn', name: 'Hacker News' },
+      { id: 'src-gh', name: 'GitHub Trending' },
+      { id: 'src-had', name: 'Hackaday' },
+    ] })] })
+    const opener = screen.getByRole('button', { name: '重抓某源' })
+    await user.click(opener)
+    const dialog = screen.getByRole('dialog')
+    await user.tab({ shift: true })
+    expect(within(dialog).getByRole('radio', { name: 'Hacker News' })).toHaveFocus()
+
+    for (const name of ['GitHub Trending', 'Hackaday']) {
+      await user.keyboard('{ArrowDown}')
+      const selected = within(dialog).getByRole('radio', { name })
+      expect(selected).toBeChecked()
+      expect(selected).toHaveFocus()
+      await user.tab({ shift: true })
+      expect(within(dialog).getByRole('button', { name: `重抓 ${name}` })).toHaveFocus()
+      await user.tab()
+      expect(selected).toHaveFocus()
+      await user.tab()
+      expect(within(dialog).getByRole('button', { name: '取消' })).toHaveFocus()
+      await user.tab()
+      await user.tab()
+      expect(selected).toHaveFocus()
+      expect(selected).toBeChecked()
+    }
+    await user.keyboard('{Escape}')
+    expect(opener).toHaveFocus()
+    expect(router.post).not.toHaveBeenCalled()
+  })
+
   it('立即生成：无期直接 POST；有期先弹附录 B 的确认', async () => {
     show()
     await userEvent.click(screen.getByRole('button', { name: '生成今日日刊' }))

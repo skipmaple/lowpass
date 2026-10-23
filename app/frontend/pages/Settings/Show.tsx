@@ -38,6 +38,17 @@ function Row({ label, children }: React.PropsWithChildren<{ label: string }>) {
   )
 }
 
+// 按 URL 挂载，换头像时重新尝试；provider 外链图不带 Referer，失败沿用无头像时的人像占位。
+function AccountAvatar({ url }: { url: string | null }) {
+  const [failed, setFailed] = useState(false)
+
+  return (
+    <span className="settings-avatar">
+      {url && !failed ? <img src={url} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : <Icon name="user" size={20} />}
+    </span>
+  )
+}
+
 function IdentityRow({ identity }: { identity: SettingsIdentity }) {
   return (
     <Row label={PROVIDER_LABELS[identity.provider]}>
@@ -128,10 +139,7 @@ export default function Show({ user, identities, session }: SettingsShowProps) {
       <p className="operation-feedback">使用另一登录方式时，相同的已验证邮箱会合并到此账户；邮箱不同则切换到另一个账户。</p>
       <div className="settings-rows">
         <Row label="头像与显示名">
-          {/* 头像是 provider 的外链图，referrerPolicy 拦住 Referer（与报头同理） */}
-          <span className="settings-avatar">
-            {user.avatar_url ? <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" /> : <Icon name="user" size={20} />}
-          </span>
+          <AccountAvatar key={user.avatar_url} url={user.avatar_url} />
           <Mixed text={user.display_name} font="latin" size="var(--fs-20)" color="var(--ink)" />
         </Row>
         <Row label="邮箱">

@@ -1,5 +1,5 @@
 # 给一期日刊生成理由（5.9、设计 §4.3）：一期顺序做，单条重试 2 次；上限到了就停并告警；跨天重复沿用前一期（R-1.11）；
-# 每次调用记一条账本；跑完没有缺理由的条目就收掉「推荐理由缺失」事件。
+# 每次调用记一条账本；跑完没有缺理由且预算未耗尽，才收掉「推荐理由缺失」事件。
 # 要译的条目（D25）在同一次调用里拿回译文（HN 与 Hackaday 的标题、GitHub Trending 的简介），跟理由一起写；「缺理由」仍只看理由
 module Reasons::Generator
   RETRIES = 2
@@ -17,8 +17,7 @@ module Reasons::Generator
 
       items.each do |item|
         if Reasons::Budget.exhausted?
-          missing = issue.items.visible.where(reason: nil).count
-          Alerts.reasons_missing!(issue, missing, summary: "本月费用已达上限，缺理由 #{missing} 条")
+          alert_budget_exhausted(issue)
           break
         end
         # 沿用只在补缺时算数：整期重生成（only_missing: false）就是要覆盖旧理由，
@@ -39,19 +38,25 @@ module Reasons::Generator
         end
       end
 
-      Alerts.recover!(kind: "reasons_missing") if issue.items.visible.where(reason: nil).none?
+      if issue.items.visible.where(reason: nil).none?
+        Alerts.recover!(kind: "reasons_missing") unless Reasons::Budget.exhausted?
+      end
       Outcome.new(generated: counts[:generated], reused: counts[:reused], failed: counts[:failed], skipped: false)
     end
 
-    # 单条：最多 1 + RETRIES 次调用，每次都记账；成功写回 items（update!：R-9.7 发布后可补写的字段，走 Searchable 回调无害）
+    # 单条：最多 1 + RETRIES 次调用，每次调用前检查预算、调用后记账；成功写回 items（update!：R-9.7 发布后可补写的字段，走 Searchable 回调无害）
     def generate_item!(item, names: InterestArea.enabled_names, profile: InterestArea.profile_text)
       # 两道前提各自成立：读者页的单条重生成不经过 generate! 的循环，同样不能在画像为空
       # 或月上限到了的时候调模型（终审 F1、F2）
       return false unless Reasons.ready?
-      return false if Reasons::Budget.exhausted?
 
       messages = Reasons::Prompt.messages(item, profile)
       (RETRIES + 1).times do
+        if Reasons::Budget.exhausted?
+          alert_budget_exhausted(item.issue)
+          return false
+        end
+
         started = now_ms
         response = nil
         begin
@@ -75,10 +80,17 @@ module Reasons::Generator
           record(item, "failed", nil, started, e.message)
         end
       end
+      alert_budget_exhausted(item.issue) if Reasons::Budget.exhausted?
       false
     end
 
     private
+      def alert_budget_exhausted(issue)
+        missing = issue.items.visible.where(reason: nil).count
+        summary = missing.positive? ? "本月费用已达上限，缺理由 #{missing} 条" : "本月费用已达上限，已停止生成"
+        Alerts.reasons_missing!(issue, missing, summary: summary)
+      end
+
       # R-1.11 同一条目跨天重复：更早的日刊里同 url_hash 且已有理由的那条。要译的条目（D25）还得是原文相同、
       # 带着译文的那条——前一条早于译文上线，或源站后来改了标题、仓库改了简介，就不沿用，整条重新生成。
       # GitHub 的仓库常常连着几天上榜，简介不变就一直沿用，不重复花钱

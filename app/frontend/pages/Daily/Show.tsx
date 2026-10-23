@@ -56,12 +56,18 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
       {/* 栏尾外链，措辞按第八轮定的「来源名 完整榜单 ↗」；R-8.4 新标签页打开。
           画布 foot_link() 没有下划线——那是栏尾装置，不是正文里的原文链接。
           源的 home_url 算不出来（feed 地址不是 http）时整条不渲染。 */}
-      {source.home_url ? (
-        <a className="source-foot" href={source.home_url} target="_blank" rel="noopener noreferrer">
-          <Mixed text={`${source.name} 完整榜单`} font="latin" size="var(--fs-15)" color="var(--ink)" />
-          <Icon name="arrow-up-right" size={13} />
+      <div className="source-actions">
+        {source.home_url ? (
+          <a className="source-foot" href={source.home_url} target="_blank" rel="noopener noreferrer">
+            <Mixed text={`${source.name} 完整榜单`} font="latin" size="var(--fs-15)" color="var(--ink)" />
+            <Icon name="arrow-up-right" size={13} />
+          </a>
+        ) : null}
+        <a className="directory-return" href="#source-directory">
+          <span aria-hidden="true">↑</span>
+          <span>返回来源目录</span>
         </a>
-      ) : null}
+      </div>
     </>
   )
 }
@@ -69,7 +75,7 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
 function Sources({ sources, itemsBySource, notice, fallbackAnchor }: { sources: SourceSummary[]; itemsBySource: Record<string, Item[]>; notice: string | null; fallbackAnchor?: { sourceId: string; id: string } }) {
   return (
     <>
-      {sources.length > 0 ? <SourceDirectory sources={sources} /> : null}
+      {sources.length > 0 ? <SourceDirectory sources={sources} navigable={!notice} /> : null}
       {notice ? <IssueNotice text={notice} /> : sources.map((source, index) => (
         <DailySourceSection key={source.id} source={source} animate={index > 0} aliasId={fallbackAnchor?.sourceId === source.id ? fallbackAnchor.id : undefined}>
           <SourceBody source={source} items={itemsBySource[source.id] ?? []} />

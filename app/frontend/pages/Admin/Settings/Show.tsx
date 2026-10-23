@@ -222,7 +222,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
           <button type="button" className="btn-primary" disabled={!configured || sending} onClick={sendTestAlert}>
             {sending ? '发送中…' : '发送测试告警'}
           </button>
-          {configured ? null : <span className="field-note">未配置告警渠道，无法发送测试。<a href="#deployment">查看部署配置帮助</a></span>}
+          {configured ? null : <><span className="field-note">未配置告警渠道，无法发送测试。</span><a className="field-note t" href="#deployment">查看部署配置帮助</a></>}
         </div>
         <span role="status" className="field-note">{alertStatus}</span>
       </Section>
@@ -237,7 +237,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
           <button type="button" className="btn-primary" disabled={!backup.configured || backup.active || backingUp} onClick={startBackup}>
             {backup.active || backingUp ? '备份中…' : '立即备份'}
           </button>
-          {backup.configured ? null : <span className="field-note">未配置备份存储，无法立即备份。<a href="#deployment">查看部署配置帮助</a></span>}
+          {backup.configured ? null : <><span className="field-note">未配置备份存储，无法立即备份。</span><a className="field-note t" href="#deployment">查看部署配置帮助</a></>}
         </div>
         <span className="field-note"><Mixed text="每天 03:00 自动备份；保留天数由存储桶的生命周期规则决定。" /></span>
         <span role="status" className="field-note">{backupStatus}</span>

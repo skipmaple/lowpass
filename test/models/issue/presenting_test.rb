@@ -265,6 +265,19 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", issues(:daily_0908).items_by_source.fetch(item.source_id).sole[:title_zh]
   end
 
+  test "已存摘要只去阅读更多尾巴，保留代码符号与实体文字" do
+    summary = "变量_用户_名称，目录**/文件.rb、目录**/文件.ts，<T> 与 &lt;value&gt;。"
+    item = items(:hn_one)
+    item.update!(summary: summary + " …read more")
+    row = nil
+
+    assert_no_changes -> { item.reload.attributes } do
+      row = issues(:daily_0908).items_by_source.fetch(item.source_id).sole
+    end
+
+    assert_equal summary, row[:summary]
+  end
+
   test "日刊条目带简介译文（GitHub Trending）" do
     repo = Item.create!(source: sources(:github), issue: issues(:daily_0908), title: "octo/tool", summary: "A tiny CLI tool", summary_zh: "一个命令行小工具",
                         url: "https://github.com/octo/tool", url_hash: Digest::SHA256.hexdigest("https://github.com/octo/tool"), rank: 1, fetched_at: Time.current)
@@ -292,6 +305,24 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
 
     assert_equal content, item[:content]
     assert_equal 500, item[:summary].length
+  end
+
+  test "既刊正文已丢失代码边界，读出时保留原文与数据库记录" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("发布节奏", section: "本周话题", issue_no: 366)
+    ], issue_no: 366)
+    stored_content = "改成**每月发一个版本**。\n代码是变量_用户_名称。\n写作目录**/文件.rb，配合目录**/文件.ts使用。\n模板里的 <section> 与 &lt;value&gt; 是文字。"
+    item = issue.items.sole
+    item.update!(content: stored_content)
+    row = nil
+
+    assert_no_changes -> { item.reload.attributes } do
+      row = Issue.weekly_props_for("2026-W36")[:sections].sole[:groups].sole[:items].sole
+    end
+
+    assert_equal stored_content, row[:content]
+    assert_equal stored_content, item.reload.content
   end
 
   test "没有期的周仍然给出周次与附录 B 的一句" do

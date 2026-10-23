@@ -122,6 +122,30 @@ describe('键盘翻页', () => {
     directory.remove()
   })
 
+  it('周刊板块目录的开关与锚点获得焦点时，左右键保持在当前刊期', () => {
+    renderHook(() => useArrowTurns('/weekly/2026-W35', '/weekly/2026-W37'))
+    const directory = document.createElement('details')
+    directory.className = 'weekly-directory'
+    directory.open = true
+    directory.innerHTML = '<summary>板块目录</summary><nav class="anchors" aria-label="板块"><a href="#issue-411-cover">封面图</a></nav>'
+    document.body.appendChild(directory)
+
+    try {
+      for (const control of directory.querySelectorAll<HTMLElement>('summary, a')) {
+        control.focus()
+        for (const direction of ['ArrowLeft', 'ArrowRight']) {
+          const event = new KeyboardEvent('keydown', { key: direction, bubbles: true, cancelable: true })
+          control.dispatchEvent(event)
+          expect(event.defaultPrevented).toBe(false)
+          expect(control).toHaveFocus()
+        }
+      }
+      expect(router.visit).not.toHaveBeenCalled()
+    } finally {
+      directory.remove()
+    }
+  })
+
   it('输入框、索引条、菜单、对话框里，按着修饰键或按住不放时不翻', () => {
     const input = document.createElement('input')
     const tablist = document.createElement('div')

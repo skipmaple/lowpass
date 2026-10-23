@@ -5,6 +5,29 @@ class ReadingTest < ApplicationSystemTestCase
   include ContinuousReadingHelpers
   HN_TITLE = "Show HN: A terminal log viewer written in Rust".freeze
 
+  setup do
+    # Capybara 复用 Chrome 标签页；先前测试积累的历史会达到 50 条上限，使新增导航的长度断言失真。
+    page.driver.browser.execute_cdp("Page.resetNavigationHistory")
+  end
+
+  test "栏尾返回目录保持原生历史，键盘可继续选择来源" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    visit daily_issue_path("2026-09-08")
+    within("#source-directory") { click_on sources(:github).name }
+    wait_for_reading_anchor("source-#{sources(:github).id}")
+    history_length = evaluate_script("history.length")
+    within("#source-#{sources(:github).id}") { click_on "返回来源目录" }
+    wait_until { evaluate_script("document.activeElement.id") == "source-directory" }
+    assert_equal "#source-directory", evaluate_script("location.hash")
+    assert_equal history_length + 1, evaluate_script("history.length")
+    page.driver.browser.switch_to.active_element.send_keys(:tab)
+    assert evaluate_script("document.activeElement.matches('#source-directory a:first-child')")
+    page.go_back
+    wait_until { evaluate_script("location.hash") == "#source-#{sources(:github).id}" }
+    assert_selector ".daily-source", count: 3
+  end
+
   test "目录跳转建立独立历史，后退与前进恢复相应来源和阅读位置" do
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))

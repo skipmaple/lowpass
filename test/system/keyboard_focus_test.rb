@@ -1,7 +1,11 @@
 require "application_system_test_case"
 
 class KeyboardFocusTest < ApplicationSystemTestCase
-  setup { sign_in_with_browser(users(:drew)) }
+  setup do
+    # Chrome 标签页复用会积累到历史容量上限，先隔离本例的原生锚点历史。
+    page.driver.browser.execute_cdp("Page.resetNavigationHistory")
+    sign_in_with_browser(users(:drew))
+  end
 
   test "重抓选源的双向 Tab 边界跟随已选来源" do
     visit admin_issues_path(month: "2026-09")

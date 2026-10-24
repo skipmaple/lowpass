@@ -16,6 +16,7 @@ type PageTurn = {
   surface: HTMLElement | null
   incoming: Animation | null
   restore: (() => void) | null
+  stopInput: (() => void) | null
 }
 let active: PageTurn | null = null
 let pendingPage: Page | null = null
@@ -50,7 +51,7 @@ function track(transition: ViewTransition, direction: TurnDirection | null) {
   pendingPage = null
   if (active) completePageTurn(active.token, 'replaced')
   const token = {}
-  active = { token, transition, targetPage, direction, surface: null, incoming: null, restore: null }
+  active = { token, transition, targetPage, direction, surface: null, incoming: null, restore: null, stopInput: null }
   const root = document.documentElement
   root.dataset.vt = 'old'
   if (direction) root.dataset.turn = direction
@@ -73,6 +74,7 @@ function completePageTurn(token: object, reason: Completion): void {
   if (active?.token !== token) return
   const turn = active
   active = null
+  turn.stopInput?.()
   turn.incoming?.cancel()
   turn.restore?.()
   delete document.documentElement.dataset.vtMasthead
@@ -123,6 +125,7 @@ function positionOldDate(date: DOMRect | null): void {
 function startPageTurnPlayback(token: object): void {
   if (active?.token !== token || !active.surface) return
   const turn = active
+  turn.stopInput = listenForPageTurnInput(token)
   positionOldDate(document.querySelector('.issue-head-date')?.getBoundingClientRect() ?? null)
   const roots = document.getAnimations().filter((animation) => (animation.effect as KeyframeEffect | null)?.pseudoElement === '::view-transition-old(root)')
   const native = roots.length === 1 ? roots[0] : null
@@ -148,6 +151,15 @@ function startPageTurnPlayback(token: object): void {
       }
     }, () => completePageTurn(token, 'rejected'))
   }
+}
+
+function listenForPageTurnInput(token: object): () => void {
+  const types = ['pointerdown', 'keydown', 'wheel'] as const
+  const finish = (event: Event) => {
+    if (event.isTrusted) completePageTurn(token, 'input')
+  }
+  types.forEach((type) => document.addEventListener(type, finish, { capture: true, passive: true }))
+  return () => types.forEach((type) => document.removeEventListener(type, finish, true))
 }
 
 export function usePageTurnCommit(page: Page, surface: RefObject<HTMLElement | null>): void {

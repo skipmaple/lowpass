@@ -1,22 +1,31 @@
 import { router } from '@inertiajs/react'
-import type { VisitOptions } from '@inertiajs/core'
-import { useEffect } from 'react'
+import type { Page, VisitOptions } from '@inertiajs/core'
+import { useEffect, useLayoutEffect, type RefObject } from 'react'
 
 import { captureHistoryScroll } from '@/lib/historyScroll'
 import { prefersReducedMotion } from '@/lib/motion'
 
-// 翻页（设计 skill「动效」M2、M8，PRD D34）。前一期 / 后一期是有方向的翻页：报头不动，正文从左或从右滑入；
-// 其余换页面的整页跳转只让正文淡入淡出。用浏览器原生的 View Transitions，经 Inertia 的 viewTransition 选项接进来。
-//
-// 过渡进行中给 <html> 打上 data-vt（motion.css 只在这时给报头、期头大字起 view-transition-name；翻的是整屏快照）：
-// 常驻的 view-transition-name 会让元素自成层叠上下文，报头的头像菜单会被正文里定位的元素盖住，周刊配图的
-// 正片叠底也会失效。Inertia 调 startViewTransition 后立刻同步调这里的回调，旧画面在下一帧才截，标记来得及。
-// 方向写在 data-turn。不支持的浏览器、减少动态效果时直接切换。
-
+// OLD 保留原生视口快照，NEW 在匹配的 React 提交时退出所有命名捕获。
 export type TurnDirection = 'back' | 'forward'
+type Completion = 'finished' | 'input' | 'replaced' | 'unmatched' | 'rejected'
+type PageTurn = {
+  token: object
+  transition: ViewTransition
+  targetPage: Page | null
+  direction: TurnDirection | null
+  surface: HTMLElement | null
+  incoming: Animation | null
+  restore: (() => void) | null
+  stopInput: (() => void) | null
+}
+let active: PageTurn | null = null
+let pendingPage: Page | null = null
+let pendingAmbiguous = false
 
-// 最近一次过渡的记号：连点两次时，前一次的收尾不能摘掉后一次的标记
-let active: object | null = null
+function clearPendingPage(): void {
+  pendingPage = null
+  pendingAmbiguous = false
+}
 
 // 过渡的换页回调要等下一帧才跑，Inertia 处理后退却是一串 promise：读者在这一帧里按了后退，Inertia 先把后退的那一页
 // 换上，过渡回调随后又把刚才要去的那一页换回来——地址是后退后的，页面却停在前一页。后退赶上过渡还没换完页时，
@@ -25,6 +34,13 @@ let swapping: Promise<unknown> | null = null
 let replaying = false
 
 if (typeof window !== 'undefined') {
+  router.on('beforeUpdate', (event) => {
+    if (pendingPage && pendingPage !== event.detail.page) pendingAmbiguous = true
+    pendingPage = event.detail.page
+  })
+  router.on('before', clearPendingPage)
+  router.on('finish', clearPendingPage)
+  router.on('clientVisit', clearPendingPage)
   window.addEventListener('popstate', (event) => {
     if (!replaying) captureHistoryScroll(event)
     if (replaying || !swapping) return
@@ -40,25 +56,135 @@ if (typeof window !== 'undefined') {
 }
 
 function track(transition: ViewTransition, direction: TurnDirection | null) {
+  const targetPage = pendingAmbiguous ? null : pendingPage
+  clearPendingPage()
+  if (active) completePageTurn(active.token, 'replaced')
   const token = {}
-  active = token
-  const done = transition.updateCallbackDone
-  if (done) {
-    swapping = done
-    done.catch(() => {}).finally(() => {
-      if (swapping === done) swapping = null
-    })
-  }
+  active = { token, transition, targetPage, direction, surface: null, incoming: null, restore: null, stopInput: null }
   const root = document.documentElement
-  root.dataset.vt = ''
+  root.dataset.vt = 'old'
   if (direction) root.dataset.turn = direction
   else delete root.dataset.turn
-  transition.finished.finally(() => {
-    if (active !== token) return
-    active = null
-    delete root.dataset.vt
-    delete root.dataset.turn
+
+  const done = transition.updateCallbackDone
+  swapping = done
+  done.then(() => {
+    if (swapping === done) swapping = null
+    if (active?.token === token && !active.surface) completePageTurn(token, 'unmatched')
+  }, () => {
+    if (swapping === done) swapping = null
+    completePageTurn(token, 'rejected')
   })
+  transition.ready.then(() => startPageTurnPlayback(token)).catch(() => completePageTurn(token, 'rejected'))
+  transition.finished.then(() => completePageTurn(token, 'finished'), () => completePageTurn(token, 'rejected'))
+}
+
+function completePageTurn(token: object, reason: Completion): void {
+  if (active?.token !== token) return
+  const turn = active
+  active = null
+  turn.stopInput?.()
+  turn.incoming?.cancel()
+  turn.restore?.()
+  delete document.documentElement.dataset.vtMasthead
+  document.documentElement.style.removeProperty('--vt-masthead-bottom')
+  document.documentElement.style.removeProperty('--vt-date-x')
+  document.documentElement.style.removeProperty('--vt-date-y')
+  delete document.documentElement.dataset.vt
+  delete document.documentElement.dataset.turn
+  if (reason !== 'finished') turn.transition.skipTransition()
+}
+
+function commitPageTurn(page: Page, surface: HTMLElement): void {
+  if (!active || active.targetPage !== page || active.surface) return
+  active.surface = surface
+  active.restore = preparePaper(surface)
+  document.documentElement.dataset.vt = 'new'
+  document.documentElement.dataset.vtMasthead = String(document.querySelector('.masthead') !== null)
+}
+
+// opacity 建立混合组：临时把外层纸面放到正文后面，图片的 multiply 仍以纸色为底。
+function preparePaper(surface: HTMLElement): () => void {
+  const properties = ['opacity', 'background-color', 'background-image', 'background-size', 'background-repeat', 'background-origin', 'background-position']
+  const previous = properties.map((name) => [name, surface.style.getPropertyValue(name), surface.style.getPropertyPriority(name)])
+  const paper = surface.closest<HTMLElement>('.paper')
+  if (paper && paper !== surface) {
+    const style = getComputedStyle(paper)
+    const outer = paper.getBoundingClientRect()
+    const inner = surface.getBoundingClientRect()
+    surface.style.backgroundColor = style.backgroundColor
+    surface.style.backgroundImage = style.backgroundImage
+    surface.style.backgroundSize = style.backgroundSize
+    surface.style.backgroundRepeat = style.backgroundRepeat
+    surface.style.backgroundOrigin = 'border-box'
+    surface.style.backgroundPosition = `${outer.left - inner.left}px ${outer.top - inner.top}px`
+  }
+  surface.style.opacity = '0'
+  return () => previous.forEach(([name, value, priority]) => {
+    if (value) surface.style.setProperty(name, value, priority)
+    else surface.style.removeProperty(name)
+  })
+}
+
+// 报头铺满视口宽；只裁静止的 root group，OLD 子图仍可横移而不会把纸底带回报头。
+function exposeNewMasthead(): void {
+  const header = document.querySelector('.masthead')
+  if (!header) return
+  const bottom = Math.min(window.innerHeight, Math.max(0, header.getBoundingClientRect().bottom))
+  document.documentElement.style.setProperty('--vt-masthead-bottom', `${bottom}px`)
+}
+
+function positionOldDate(date: DOMRect | null): void {
+  if (!date) return
+  document.documentElement.style.setProperty('--vt-date-x', `${date.left}px`)
+  document.documentElement.style.setProperty('--vt-date-y', `${date.top}px`)
+}
+
+function startPageTurnPlayback(token: object): void {
+  if (active?.token !== token || !active.surface) return
+  const turn = active
+  turn.stopInput = listenForPageTurnInput(token)
+  exposeNewMasthead()
+  positionOldDate(document.querySelector('.issue-head-date')?.getBoundingClientRect() ?? null)
+  const roots = document.getAnimations().filter((animation) => (animation.effect as KeyframeEffect | null)?.pseudoElement === '::view-transition-old(root)')
+  const native = roots.length === 1 ? roots[0] : null
+  if (!native?.timeline) {
+    completePageTurn(token, 'rejected')
+    return
+  }
+  const timing = turn.direction
+    ? { duration: 360, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'both' as const }
+    : { duration: 240, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'both' as const }
+  const incoming = new Animation(new KeyframeEffect(turn.surface, [{ opacity: 0 }, { opacity: 1 }], timing), native.timeline)
+  turn.incoming = incoming
+  if (native.startTime !== null) {
+    incoming.startTime = native.startTime
+  } else {
+    // CSSAnimation 在 VT.ready 时仍 pending；同一 UA animation update 为两者设置起点。
+    // 不使用 rAF/定时器自造时钟。原生 ready 之后严格核对，失败就立即显示终态。
+    incoming.play()
+    Promise.all([native.ready, incoming.ready]).then(() => {
+      if (active?.token !== token) return
+      if (native.startTime === null || incoming.startTime !== native.startTime || incoming.timeline !== native.timeline) {
+        completePageTurn(token, 'rejected')
+      }
+    }, () => completePageTurn(token, 'rejected'))
+  }
+}
+
+function listenForPageTurnInput(token: object): () => void {
+  const types = ['pointerdown', 'keydown', 'wheel'] as const
+  const finish = (event: Event) => {
+    if (event.isTrusted) completePageTurn(token, 'input')
+  }
+  types.forEach((type) => document.addEventListener(type, finish, { capture: true, passive: true }))
+  return () => types.forEach((type) => document.removeEventListener(type, finish, true))
+}
+
+export function usePageTurnCommit(page: Page, surface: RefObject<HTMLElement | null>): void {
+  useLayoutEffect(() => {
+    if (surface.current) commitPageTurn(page, surface.current)
+  }, [page, surface])
 }
 
 export function pageTurn(direction: TurnDirection): false | ((transition: ViewTransition) => void) {

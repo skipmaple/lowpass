@@ -135,7 +135,7 @@ class AdminTest < ApplicationSystemTestCase
     Setting.set("model_base_url", "https://model.example/v1")
     Setting.set("model_name", "test-model")
     Reasons::Provider.stubs(:api_key).returns("test-key")
-    stub_request(:post, "https://model.example/v1/chat/completions").to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
+    stub_request(:post, "https://model.example/v1/chat/completions").to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
 
     visit admin_issues_path(month: "2026-09")
     within(:xpath, "//*[@role='row'][.//*[text()='2026-09-08']]") { click_on "重生成理由" }
@@ -143,7 +143,7 @@ class AdminTest < ApplicationSystemTestCase
     perform_enqueued_jobs
 
     visit daily_issue_path("2026-09-08")
-    assert_text "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。"
+    assert_text "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。"
     assert_text "AI / LLM"
     assert_selector ".item-translation", text: "Show HN：一个用 Rust 写的终端日志查看器"
   ensure

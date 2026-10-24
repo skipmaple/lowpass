@@ -20,8 +20,10 @@ module Alerts
     end
 
     # 条件消失：关掉未恢复的事件并各发一条「已恢复」（渠道都没配就只记账）
-    def recover!(kind:, source: nil)
-      AlertEvent.open_for(kind, source).find_each do |event|
+    def recover!(kind:, source: nil, issue: nil)
+      events = AlertEvent.open_for(kind, source)
+      events = events.where(issue: issue) if issue
+      events.find_each do |event|
         event.update!(recovered_at: Time.current)
         DeliverAlertJob.perform_later(event, "recovery") if configured?
       end

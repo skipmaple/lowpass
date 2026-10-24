@@ -1,6 +1,17 @@
 require "test_helper"
 
 class Issue::PresentingTest < ActiveSupport::TestCase
+  test "拒写判断不进入读者props且历史理由仍原样显示" do
+    item = items(:hn_one)
+    item.record_reason_abstention(assessed_at: Time.current)
+    props = -> { item.issue.items_by_source.fetch(item.source_id).find { |entry| entry[:id] == item.id } }
+    assert_equal [ nil, nil, nil, nil ], props.call.values_at(:reason, :interest_tag, :title_zh, :summary_zh)
+    assert_empty props.call.keys & %i[ reason_abstention assessed_at diagnostic decision ]
+    item.update!(reason: "保留历史理由", interest_tag: "前端开发", title_zh: "原有译文")
+    assert_equal [ "保留历史理由", "前端开发", "原有译文" ], props.call.values_at(:reason, :interest_tag, :title_zh)
+    assert_empty props.call.keys & %i[ reason_abstention assessed_at diagnostic decision ]
+  end
+
   test "不同年份的同月同日日刊保留年份供期头和标题使用" do
     assert_equal 2025, Issue.daily_props_for("2025-09-08", issue: nil)[:year]
     assert_equal 2026, Issue.daily_props_for("2026-09-08", issue: nil)[:year]

@@ -20,6 +20,12 @@ type PageTurn = {
 }
 let active: PageTurn | null = null
 let pendingPage: Page | null = null
+let pendingAmbiguous = false
+
+function clearPendingPage(): void {
+  pendingPage = null
+  pendingAmbiguous = false
+}
 
 // 过渡的换页回调要等下一帧才跑，Inertia 处理后退却是一串 promise：读者在这一帧里按了后退，Inertia 先把后退的那一页
 // 换上，过渡回调随后又把刚才要去的那一页换回来——地址是后退后的，页面却停在前一页。后退赶上过渡还没换完页时，
@@ -28,10 +34,13 @@ let swapping: Promise<unknown> | null = null
 let replaying = false
 
 if (typeof window !== 'undefined') {
-  router.on('beforeUpdate', (event) => { pendingPage = event.detail.page })
-  router.on('before', () => { pendingPage = null })
-  router.on('finish', () => { pendingPage = null })
-  router.on('clientVisit', () => { pendingPage = null })
+  router.on('beforeUpdate', (event) => {
+    if (pendingPage && pendingPage !== event.detail.page) pendingAmbiguous = true
+    pendingPage = event.detail.page
+  })
+  router.on('before', clearPendingPage)
+  router.on('finish', clearPendingPage)
+  router.on('clientVisit', clearPendingPage)
   window.addEventListener('popstate', (event) => {
     if (!replaying) captureHistoryScroll(event)
     if (replaying || !swapping) return
@@ -47,8 +56,8 @@ if (typeof window !== 'undefined') {
 }
 
 function track(transition: ViewTransition, direction: TurnDirection | null) {
-  const targetPage = pendingPage
-  pendingPage = null
+  const targetPage = pendingAmbiguous ? null : pendingPage
+  clearPendingPage()
   if (active) completePageTurn(active.token, 'replaced')
   const token = {}
   active = { token, transition, targetPage, direction, surface: null, incoming: null, restore: null, stopInput: null }
@@ -66,7 +75,7 @@ function track(transition: ViewTransition, direction: TurnDirection | null) {
     if (swapping === done) swapping = null
     completePageTurn(token, 'rejected')
   })
-  transition.ready.then(() => startPageTurnPlayback(token), () => completePageTurn(token, 'rejected'))
+  transition.ready.then(() => startPageTurnPlayback(token)).catch(() => completePageTurn(token, 'rejected'))
   transition.finished.then(() => completePageTurn(token, 'finished'), () => completePageTurn(token, 'rejected'))
 }
 

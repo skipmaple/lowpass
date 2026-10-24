@@ -176,6 +176,90 @@ class PageTurnTest < ApplicationSystemTestCase
     page.driver.browser.switch_to.window(original)
   end
 
+  test "服务端 replace 仍提交过渡但不产生 navigate，原生 skip 恢复正文" do
+    visit daily_issue_path("2026-09-08")
+    record_turn
+    initial_length = evaluate_script("history.length")
+    execute_script(<<~JS)
+      window.__navigates=0
+      document.addEventListener('inertia:navigate',()=>window.__navigates++)
+      document.addEventListener('inertia:before',event=>event.detail.visit.replace=true,{once:true})
+      document.querySelector('a[aria-label=搜索]').click()
+    JS
+    wait_until { evaluate_script("window.__turn?.finished") }
+    assert_current_path search_path
+    assert_equal initial_length, evaluate_script("history.length")
+    assert_equal 0, evaluate_script("window.__navigates")
+    assert_equal "new", evaluate_script("window.__turn.phase")
+    assert evaluate_script("!!window.__turn.incoming")
+
+    point = begin_input_turn("input[type=search]")
+    assert_equal "new", point["phase"]
+    execute_script("window.__nativeTurn.skipTransition()")
+    wait_until { evaluate_script("window.__turn?.finished") }
+    assert_nil evaluate_script("document.documentElement.dataset.vt")
+    assert_equal "", evaluate_script("document.querySelector('.sheet-body').style.opacity")
+  end
+
+  test "失效会话重定向 Login 首次挂载仍匹配 Page，无报头也正常收尾" do
+    visit daily_issue_path("2026-09-08")
+    users(:drew).sessions.delete_all
+    record_turn
+    execute_script("document.querySelector('a[aria-label=搜索]').click()")
+    assert_current_path login_path(next: search_path)
+    wait_until { evaluate_script("window.__turn?.finished") }
+    state = evaluate_script("window.__turn")
+    puts "M2_REDIRECT #{state.to_json}"
+    assert_equal "new", state["phase"]
+    assert state["incoming"]
+    assert_nil state["names"][1]
+    assert_nil evaluate_script("document.documentElement.dataset.vt")
+    assert_equal "", evaluate_script("document.querySelector('.login-ground').style.opacity")
+  end
+
+  test "原生 Back 在 swap 前到达仍恢复历史，连续往返保持 URL 和正文一致" do
+    visit search_path
+    find(".masthead-brand").click
+    assert_current_path daily_issue_path("2026-09-08")
+    assert_no_selector "html[data-vt]", visible: :all
+    execute_script("scrollTo(0, 220)")
+    wait_until { evaluate_script("history.state.documentScrollPosition?.top") == evaluate_script("scrollY") }
+    reading = evaluate_script("scrollY")
+    assert_operator reading, :>, 0
+    execute_script(<<~JS)
+      const start = document.startViewTransition.bind(document)
+      window.__backEvents=[]
+      const stop=Event.prototype.stopImmediatePropagation
+      Event.prototype.stopImmediatePropagation=function(){
+        if(this.type==='popstate') window.__backEvents.push({trusted:this.isTrusted,path:location.pathname,phase:document.documentElement.dataset.vt,swapped:!!window.__swapDone})
+        return stop.call(this)
+      }
+      window.addEventListener('popstate',event=>window.__backEvents.push({trusted:event.isTrusted,path:location.pathname,phase:document.documentElement.dataset.vt}),true)
+      document.startViewTransition = callback => {
+        const transition=start(callback)
+        transition.updateCallbackDone.then(()=>window.__swapDone=true)
+        history.back()
+        return transition
+      }
+      document.querySelector('a[aria-label=搜索]').click()
+    JS
+    assert_current_path daily_issue_path("2026-09-08")
+    assert_selector ".daily-source"
+    wait_until { evaluate_script("window.__swapDone") }
+    events = evaluate_script("window.__backEvents")
+    puts "M2_PRESWAP_BACK #{events.to_json}"
+    assert events.any? { |event| event["trusted"] && !event["swapped"] && event["phase"] == "old" }, events.inspect
+    2.times do
+      page.go_back
+      assert_current_path search_path
+      assert_selector "input[type=search]"
+      page.go_forward
+      assert_current_path daily_issue_path("2026-09-08")
+      assert_selector ".daily-source"
+      wait_until { (evaluate_script("scrollY") - reading).abs < 2 }
+    end
+  end
+
   private
     def begin_input_turn(selector, daily: false, prepare: "")
       visit(daily ? search_path : daily_issue_path("2026-09-08"))
@@ -229,6 +313,7 @@ class PageTurnTest < ApplicationSystemTestCase
         const start = document.startViewTransition.bind(document)
         document.startViewTransition = callback => {
           const transition = start(callback)
+          window.__nativeTurn = transition
           transition.ready.then(() => queueMicrotask(() => {
             const s = window.__turn
             const root = document.documentElement
@@ -241,7 +326,7 @@ class PageTurnTest < ApplicationSystemTestCase
             const dateState = () => ({scrollY, rect: document.querySelector('.issue-head-date')?.getBoundingClientRect().toJSON(), groupTransform: getComputedStyle(root, '::view-transition-group(issue-date)').transform})
             const read = a => a && ({start: a.startTime, current: a.currentTime, duration: a.effect.getTiming().duration, pending: a.pending, playState: a.playState, timeline: a.timeline?.constructor.name, timelineTime: a.timeline?.currentTime})
             Object.assign(s, {readyAt: performance.now(), dateAtReady: dateState(), phase: root.dataset.vt,
-              names: [getComputedStyle(root).viewTransitionName, getComputedStyle(document.querySelector('.masthead')).viewTransitionName],
+              names: [getComputedStyle(root).viewTransitionName, document.querySelector('.masthead') ? getComputedStyle(document.querySelector('.masthead')).viewTransitionName : null],
               native: read(old), incoming: read(incoming), sameTimeline: old?.timeline === incoming?.timeline,
               origin: surface.style.backgroundOrigin, position: surface.style.backgroundPosition,
               offset: `${p.left-rect.left}px ${p.top-rect.top}px`, transform: getComputedStyle(surface).transform,

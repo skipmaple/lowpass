@@ -11,9 +11,12 @@ function fakeTransition() {
   let finish!: () => void
   let swapped!: () => void
   let ready!: () => void
-  const finished = new Promise<void>((resolve) => { finish = resolve })
-  const updateCallbackDone = new Promise<void>((resolve) => { swapped = resolve })
-  return { transition: { finished, updateCallbackDone, ready: new Promise<void>((resolve) => { ready = resolve }), skipTransition: vi.fn() } as unknown as ViewTransition, finish, swapped, ready }
+  let rejectReady!: (error: Error) => void
+  let rejectUpdate!: (error: Error) => void
+  let rejectFinished!: (error: Error) => void
+  const finished = new Promise<void>((resolve, reject) => { finish = resolve; rejectFinished = reject })
+  const updateCallbackDone = new Promise<void>((resolve, reject) => { swapped = resolve; rejectUpdate = reject })
+  return { transition: { finished, updateCallbackDone, ready: new Promise<void>((resolve, reject) => { ready = resolve; rejectReady = reject }), skipTransition: vi.fn() } as unknown as ViewTransition, finish, swapped, ready, rejectReady, rejectUpdate, rejectFinished }
 }
 
 function reduceMotion(matches: boolean) {
@@ -295,6 +298,48 @@ describe('native 播放时钟与纸面', () => {
   })
 })
 
+describe('pending native 时钟核验', () => {
+  it.each([100, 101])('真实 startTime=%s 必须严格相同，不接受近似值', async (incomingStart) => {
+    let resolveNative!: () => void
+    let resolveIncoming!: () => void
+    const timeline = {}
+    const native = { effect: { pseudoElement: '::view-transition-old(root)' }, timeline, startTime: null as number | null, ready: new Promise<void>(resolve => { resolveNative = resolve }) }
+    vi.stubGlobal('KeyframeEffect', class {})
+    const animations: { startTime: number | null; play: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> }[] = []
+    vi.stubGlobal('Animation', class {
+      startTime: number | null = null
+      play = vi.fn()
+      cancel = vi.fn()
+      ready = new Promise<void>(resolve => { resolveIncoming = resolve })
+      constructor(_effect: unknown, public timeline: unknown) { animations.push(this) }
+    })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [native] })
+    const target = targetPage()
+    beforeUpdate(target)
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    const surface = document.createElement('div')
+    const ref = { current: surface }
+    const hook = renderHook(() => usePageTurnCommit(target, ref))
+    t.ready()
+    await t.transition.ready
+    expect(animations[0].play).toHaveBeenCalledOnce()
+    surface.style.opacity = '0.4'
+    hook.rerender()
+    expect(surface.style.opacity).toBe('0.4')
+    native.startTime = 100
+    animations[0].startTime = incomingStart
+    resolveNative()
+    resolveIncoming()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(t.transition.skipTransition).toHaveBeenCalledTimes(incomingStart === 100 ? 0 : 1)
+    expect(surface.style.opacity).toBe(incomingStart === 100 ? '0.4' : '')
+    t.finish()
+    await t.transition.finished
+  })
+})
+
 describe('可信输入收尾', () => {
   it('只处理 ready 之后可信 pointerdown/keydown/wheel；不接管任何默认动作', async () => {
     const listeners = vi.spyOn(document, 'addEventListener')
@@ -327,5 +372,101 @@ describe('可信输入收尾', () => {
     expect(event.target.setPointerCapture).not.toHaveBeenCalled()
     t.finish()
     vi.restoreAllMocks()
+  })
+})
+
+
+describe('重叠、取消与拒绝', () => {
+  it('两个 beforeUpdate 在异步解析间交错时拒绝歧义身份，不把最后一个 Page 错配给旧 track', async () => {
+    emitRouterEvent('before')
+    beforeUpdate(targetPage())
+    const wrong = targetPage()
+    beforeUpdate(wrong)
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    const surface = document.createElement('div')
+    renderHook(() => usePageTurnCommit(wrong, { current: surface }))
+    expect(document.documentElement.dataset.vt).toBe('old')
+    expect(surface.style.opacity).not.toBe('0')
+    t.swapped()
+    await t.transition.updateCallbackDone
+    expect(t.transition.skipTransition).toHaveBeenCalledOnce()
+    t.finish()
+  })
+
+  it.each(['before', 'finish', 'clientVisit'] as const)('%s 使未消费 Page 失效，不能遗留到下次 track', async (event) => {
+    beforeUpdate(targetPage())
+    const target = targetPage()
+    beforeUpdate(target)
+    emitRouterEvent(event)
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    const surface = document.createElement('div')
+    renderHook(() => usePageTurnCommit(target, { current: surface }))
+    expect(surface.style.opacity).not.toBe('0')
+    t.swapped()
+    await t.transition.updateCallbackDone
+    expect(t.transition.skipTransition).toHaveBeenCalledOnce()
+    t.finish()
+  })
+
+  it('旧 ready/finished/reject 晚到只清旧 surface，不能摘掉新 token 或背景', async () => {
+    const a = targetPage(), b = targetPage()
+    beforeUpdate(a)
+    const first = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(first.transition)
+    const oldSurface = document.createElement('div')
+    renderHook(() => usePageTurnCommit(a, { current: oldSurface }))
+    expect(oldSurface.style.opacity).toBe('0')
+    beforeUpdate(b)
+    const second = fakeTransition()
+    ;(pageTurn('forward') as (t: ViewTransition) => void)(second.transition)
+    const newSurface = document.createElement('div')
+    renderHook(() => usePageTurnCommit(b, { current: newSurface }))
+    expect(oldSurface.style.opacity).toBe('')
+    first.ready()
+    first.rejectUpdate(new Error('old update cancelled'))
+    first.rejectFinished(new Error('old finish cancelled'))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(document.documentElement.dataset.turn).toBe('forward')
+    expect(newSurface.style.opacity).toBe('0')
+    second.finish()
+    await second.transition.finished
+    expect(newSurface.style.opacity).toBe('')
+  })
+
+  it.each(['rejectReady', 'rejectUpdate', 'rejectFinished'] as const)('%s 收尾无残余标记/opacity0', async (reject) => {
+    const target = targetPage()
+    beforeUpdate(target)
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    const surface = document.createElement('div')
+    renderHook(() => usePageTurnCommit(target, { current: surface }))
+    t[reject](new Error('cancelled'))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(surface.style.opacity).toBe('')
+    expect(document.documentElement.dataset.vt).toBeUndefined()
+    t.finish()
+    t.swapped()
+  })
+
+  it('原生 Animation 构造拒绝也恢复终态，并吸收 ready reaction 的异常', async () => {
+    vi.stubGlobal('Animation', class {})
+    vi.stubGlobal('KeyframeEffect', class { constructor() { throw new Error('unsupported effect') } })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    const target = targetPage()
+    beforeUpdate(target)
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    const surface = document.createElement('div')
+    renderHook(() => usePageTurnCommit(target, { current: surface }))
+    t.ready()
+    await t.transition.ready
+    await Promise.resolve()
+    expect(surface.style.opacity).toBe('')
+    expect(t.transition.skipTransition).toHaveBeenCalledOnce()
+    t.finish()
   })
 })

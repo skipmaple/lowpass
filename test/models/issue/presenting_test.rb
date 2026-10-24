@@ -181,6 +181,46 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal 3, row[:count]
   end
 
+  test "周刊条目全部下架后归档说明无内容，恢复后重新显示主题" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由")
+    ], issue_no: 366)
+    item = issue.items.sole
+    item.update!(hidden: true)
+    row = nil
+
+    assert_no_changes -> { issue.reload.attributes } do
+      row = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    end
+
+    assert_equal "本周无内容", row[:summary]
+    assert_equal 0, row[:count]
+    assert_equal "published", row[:state]
+
+    item.update!(hidden: false)
+    restored = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由", restored[:summary]
+    assert_equal 1, restored[:count]
+  end
+
+  test "周刊重抓清空条目后归档仍有事实说明" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由")
+    ], issue_no: 366)
+    issue.replace_section!(sources(:ruanyf), [], issue_no: 366)
+    row = nil
+
+    assert_no_changes -> { issue.reload.attributes } do
+      row = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    end
+
+    assert_equal "本周无内容", row[:summary]
+    assert_equal 0, row[:count]
+    assert_equal "published", row[:state]
+  end
+
   # weekly_archive_props 原本每期都经 Issue#weekly_sections 单独查一遍（≈2 条查询/有内容的周），
   # 一年最多 53 周就是 N+1。批量改法要做到查询数不随「有内容的周数」增长，摘要字符串跟改之前
   # （上面那条测试、Issue#section_issue_label 的文案）逐字一样。

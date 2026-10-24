@@ -298,6 +298,61 @@ describe('native 播放时钟与纸面', () => {
   })
 })
 
+describe('OLD 纸面给真实新报头让出静止窗口', () => {
+  it.each([104.375, -5, 10000, null])('ready 使用实际报头 bottom=%s，保留小数并限制视口，终态清理', async (bottom) => {
+    vi.stubGlobal('KeyframeEffect', class {})
+    vi.stubGlobal('Animation', class { startTime = null; cancel = vi.fn() })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    const header = document.createElement('header')
+    header.className = 'masthead'
+    if (bottom !== null) document.body.append(header)
+    vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({ bottom } as DOMRect)
+    const target = targetPage()
+    beforeUpdate(target)
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    renderHook(() => usePageTurnCommit(target, { current: document.createElement('div') }))
+    const root = document.documentElement
+    expect(root.style.getPropertyValue('--vt-masthead-bottom')).toBe('')
+    t.ready()
+    await t.transition.ready
+    expect(root.style.getPropertyValue('--vt-masthead-bottom')).toBe(bottom === null ? '' : `${Math.min(innerHeight, Math.max(0, bottom))}px`)
+    t.finish()
+    await t.transition.finished
+    expect(root.style.getPropertyValue('--vt-masthead-bottom')).toBe('')
+    header.remove()
+    vi.restoreAllMocks()
+  })
+
+  it('旧 finished 晚到不清新 token 的裁剪坐标', async () => {
+    vi.stubGlobal('KeyframeEffect', class {})
+    vi.stubGlobal('Animation', class { startTime = null; cancel = vi.fn() })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    const header = document.createElement('header')
+    header.className = 'masthead'
+    document.body.append(header)
+    const rect = vi.spyOn(header, 'getBoundingClientRect')
+    const turns = [fakeTransition(), fakeTransition()]
+    for (const [i, t] of turns.entries()) {
+      rect.mockReturnValue({ bottom: i ? 80.25 : 104.375 } as DOMRect)
+      const target = targetPage()
+      beforeUpdate(target)
+      ;(pageTurn('forward') as (t: ViewTransition) => void)(t.transition)
+      renderHook(() => usePageTurnCommit(target, { current: document.createElement('div') }))
+      t.ready()
+      await t.transition.ready
+    }
+    turns[0].finish()
+    await turns[0].transition.finished
+    expect(document.documentElement.style.getPropertyValue('--vt-masthead-bottom')).toBe('80.25px')
+    turns[1].finish()
+    await turns[1].transition.finished
+    expect(document.documentElement.style.getPropertyValue('--vt-masthead-bottom')).toBe('')
+    header.remove()
+    vi.restoreAllMocks()
+  })
+})
+
 describe('pending native 时钟核验', () => {
   it.each([100, 101])('真实 startTime=%s 必须严格相同，不接受近似值', async (incomingStart) => {
     let resolveNative!: () => void

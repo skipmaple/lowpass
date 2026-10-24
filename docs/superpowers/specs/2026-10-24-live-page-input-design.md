@@ -90,4 +90,3 @@ capture/update 阶段的浏览器渲染暂停早于 ready，不包含在“播�
 待用户决定仅一项：是否采用上述完整可见契约并进入本地候选实现。技术选择均为本提案建议，可在本地验收中被否定；批准不等于功能已经成立，更不授权合并/部署。
 
 依据：本目录 lifecycle-review.md、pointer-capture-review.md、pointer-capture-result.json 和独立结果复核；上一轮 sealed m2-inflight-input-20261024 的真实应用失败、纸面与几何证据。它们不构成对本候选的运行验收。
-

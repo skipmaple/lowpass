@@ -87,6 +87,7 @@ function completePageTurn(token: object, reason: Completion): void {
   turn.incoming?.cancel()
   turn.restore?.()
   delete document.documentElement.dataset.vtMasthead
+  document.documentElement.style.removeProperty('--vt-masthead-bottom')
   document.documentElement.style.removeProperty('--vt-date-x')
   document.documentElement.style.removeProperty('--vt-date-y')
   delete document.documentElement.dataset.vt
@@ -125,6 +126,14 @@ function preparePaper(surface: HTMLElement): () => void {
   })
 }
 
+// 报头铺满视口宽；只裁静止的 root group，OLD 子图仍可横移而不会把纸底带回报头。
+function exposeNewMasthead(): void {
+  const header = document.querySelector('.masthead')
+  if (!header) return
+  const bottom = Math.min(window.innerHeight, Math.max(0, header.getBoundingClientRect().bottom))
+  document.documentElement.style.setProperty('--vt-masthead-bottom', `${bottom}px`)
+}
+
 function positionOldDate(date: DOMRect | null): void {
   if (!date) return
   document.documentElement.style.setProperty('--vt-date-x', `${date.left}px`)
@@ -135,6 +144,7 @@ function startPageTurnPlayback(token: object): void {
   if (active?.token !== token || !active.surface) return
   const turn = active
   turn.stopInput = listenForPageTurnInput(token)
+  exposeNewMasthead()
   positionOldDate(document.querySelector('.issue-head-date')?.getBoundingClientRect() ?? null)
   const roots = document.getAnimations().filter((animation) => (animation.effect as KeyframeEffect | null)?.pseudoElement === '::view-transition-old(root)')
   const native = roots.length === 1 ? roots[0] : null

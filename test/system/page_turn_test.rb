@@ -28,6 +28,8 @@ class PageTurnTest < ApplicationSystemTestCase
       assert_equal state["rects"].first, state["rects"].last
       assert_equal "none", state["transform"]
       assert_equal "border-box", state["origin"]
+      assert_equal "inset(#{state['clip']['headerBottom'].to_i}px 0px 0px)", state["clip"]["root"]
+      assert_equal state["clip"], state["clipAtFirstFrame"]
       assert_equal state["offset"], state["position"]
     end
   ensure
@@ -57,6 +59,29 @@ class PageTurnTest < ApplicationSystemTestCase
       assert_not_nil state["animationReady"]["start"], state.inspect
       assert_equal state["animationReady"]["start"], state["incomingReady"]["start"], state.inspect
       assert state["sameTimeline"], state.inspect
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "报头裁剪固定在父组，页脚翻期的 OLD 横移和独立日期保持" do
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    [ [ "2026-09-08", "ArrowLeft", 24, true ], [ "2026-09-07", "ArrowRight", -24, false ] ].each do |period, arrow, endpoint, footer|
+      visit daily_issue_path(period)
+      execute_script("scrollTo(0,document.documentElement.scrollHeight)") if footer
+      assert_operator evaluate_script("document.querySelector('.masthead').getBoundingClientRect().bottom"), :<=, 0 if footer
+      record_turn
+      execute_script("document.querySelector('.issue-nav a[aria-keyshortcuts=#{arrow}]').click()")
+      wait_until { evaluate_script("window.__turn?.finished") }
+      state = evaluate_script("window.__turn")
+      assert_equal "inset(#{state['clip']['headerBottom'].to_i}px 0px 0px)", state["clip"]["root"]
+      assert_equal state["clip"], state["clipAtFirstFrame"]
+      assert_equal "none", state["clip"]["date"]
+      assert_equal "none", state["clip"]["old"]
+      assert_equal endpoint, state["oldEndpoint"]
+      assert_equal 360, state["native"]["duration"]
+      assert_equal "", evaluate_script("document.documentElement.style.getPropertyValue('--vt-masthead-bottom')")
     end
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
@@ -213,6 +238,8 @@ class PageTurnTest < ApplicationSystemTestCase
     assert_equal "new", state["phase"]
     assert state["incoming"]
     assert_nil state["names"][1]
+    assert_equal "none", state["clip"]["root"]
+    assert_nil state["clip"]["headerBottom"]
     assert_nil evaluate_script("document.documentElement.dataset.vt")
     assert_equal "", evaluate_script("document.querySelector('.login-ground').style.opacity")
   end
@@ -323,10 +350,12 @@ class PageTurnTest < ApplicationSystemTestCase
             const p = paper.getBoundingClientRect()
             const old = document.getAnimations().find(a => a.effect?.pseudoElement === '::view-transition-old(root)')
             const incoming = surface.getAnimations().find(a => a.effect?.target === surface)
+            const clipState = () => ({headerBottom: document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? null, root:getComputedStyle(root,'::view-transition-group(root)').clipPath, old:getComputedStyle(root,'::view-transition-old(root)').clipPath, date:getComputedStyle(root,'::view-transition-group(issue-date)').clipPath})
             const dateState = () => ({scrollY, rect: document.querySelector('.issue-head-date')?.getBoundingClientRect().toJSON(), groupTransform: getComputedStyle(root, '::view-transition-group(issue-date)').transform})
             const read = a => a && ({start: a.startTime, current: a.currentTime, duration: a.effect.getTiming().duration, pending: a.pending, playState: a.playState, timeline: a.timeline?.constructor.name, timelineTime: a.timeline?.currentTime})
             Object.assign(s, {readyAt: performance.now(), dateAtReady: dateState(), phase: root.dataset.vt,
               names: [getComputedStyle(root).viewTransitionName, document.querySelector('.masthead') ? getComputedStyle(document.querySelector('.masthead')).viewTransitionName : null],
+              clip: clipState(), oldEndpoint: old?.effect.getKeyframes().at(-1).transform ? new DOMMatrix(old.effect.getKeyframes().at(-1).transform).m41 : null,
               native: read(old), incoming: read(incoming), sameTimeline: old?.timeline === incoming?.timeline,
               origin: surface.style.backgroundOrigin, position: surface.style.backgroundPosition,
               offset: `${p.left-rect.left}px ${p.top-rect.top}px`, transform: getComputedStyle(surface).transform,
@@ -334,7 +363,7 @@ class PageTurnTest < ApplicationSystemTestCase
             window.__inputReady?.()
             incoming?.ready.then(() => { s.incomingReady = read(incoming) }, () => {})
             old?.ready.then(() => { s.dateAtAnimationReady = dateState(); s.animationReadyAt = performance.now(); s.animationReady = read(old) }, () => {})
-            requestAnimationFrame(t => { s.dateAtFirstFrame = dateState(); s.firstFrameAt = t; s.firstFrameNative = read(old); s.rects.push(JSON.stringify(surface.getBoundingClientRect())) })
+            requestAnimationFrame(t => { s.clipAtFirstFrame = clipState(); s.dateAtFirstFrame = dateState(); s.firstFrameAt = t; s.firstFrameNative = read(old); s.rects.push(JSON.stringify(surface.getBoundingClientRect())) })
           }), error => { window.__turn.error = String(error) })
           transition.finished.then(() => queueMicrotask(() => { window.__turn.finished = true; window.__turn.restored = document.querySelector('.sheet-body, .login-ground').getAttribute('style') }))
           return transition

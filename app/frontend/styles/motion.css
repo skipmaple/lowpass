@@ -81,6 +81,8 @@ html[data-vt] { --vt-duration: var(--dur-2); --vt-easing: var(--ease-out); }
 html[data-vt][data-turn] { --vt-duration: var(--dur-3); --vt-easing: var(--ease-move); }
 ::view-transition, ::view-transition-group(*), ::view-transition-image-pair(*), ::view-transition-old(*), ::view-transition-new(*) { pointer-events: none; }
 ::view-transition-group(*) { animation: none; }
+/* root 纸底也会盖住真实报头；裁剪放在静止父组，不能随 OLD 子图横移。 */
+html[style*="--vt-masthead-bottom"]::view-transition-group(root) { clip-path: inset(var(--vt-masthead-bottom) 0 0); }
 ::view-transition-image-pair(*) { isolation: auto; }
 ::view-transition-old(*) { mix-blend-mode: normal; }
 ::view-transition-old(root), ::view-transition-old(issue-date), ::view-transition-old(masthead) {

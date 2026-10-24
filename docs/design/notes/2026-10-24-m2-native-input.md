@@ -23,3 +23,11 @@ NEW 在最终坐标淡入，不横移；OLD 完整视口沿原方向退出 24px 
 回归覆盖同一 Page 提交、真实 adapter、严格 native timeline/startTime、正文几何、临时纸面相位、可信搜索光标/输入、账户焦点/Escape/拖出取消、正文拖选、收藏、修饰键链接、wheel、触摸 tap/pan cancel，以及 replace、Login redirect、skip、reject、交错 token 和历史。修饰键链接将测试目标换为本机 health，避免外网访问；它只证明原生新窗口默认动作。
 
 原 Tracing Screenshot 探针和原生阳性对照均缺绘制层，不能把那组图当首个实际可见 paint 的通过或失败依据。严格相同起点是机制证据，JS 首 rAF 不是可见 paint。自然首帧旧图/日期、既有周刊真实图片 multiply、全部长短页/页脚与桌面浏览器矩阵由 Task5 独立验收；未通过不得发布。完整 CI 由 root 在独立依赖安全更新 rebase 后执行。
+
+## 报头纸底遮盖修正（独立验收追加）
+
+独立验收发现：即使 OLD masthead 隐藏，OLD root 的纸底仍把真实 NEW 报头染浅。两次真实 Rails 应用自然播放截图确认该问题，375/1440 的报头背景早帧分别为 RGB134,132,127 与99,98,94，正常前后均29,29,27。原始记录保存在本地授权证据 `m2-app-layer-failure/`，不覆盖原报告；截图区间跨多个自然帧，不能据此声称精确首paint已覆盖。
+
+最小修正在 VT.ready 读取新报头实际 bottom（移动端换行报头104px，不能硬编码56px），保留小数并限制于视口0..height。在静止的 root group 上用 inset 裁掉该满宽区域，让真实 NEW 报头可见。OLD root 子图继续±24px退场，裁剪不会跟着移动；独立 OLD日期组不裁。页脚旧报头不在视口时仍读取新报头；Login 无新报头时不裁。裁剪变量随本 token 收尾，旧 token 不得清新 token。该修正沿用已批准可见契约。
+
+修复后同两组实际应用样本保存在 `m2-app-layer-fix/`：baseline、6次自然截图、final 的3个无字报头背景采样点全部保持 RGB29,29,27。新增单元在修复前4失败、修复后相关83通过；双向360/页脚/独立日期/Login裁剪回归通过。精确首paint覆盖仍未成立，不能把这一窄项像素修复扩写成M2总验收。

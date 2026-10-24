@@ -10,9 +10,10 @@ import { router, emitRouterEvent } from '../support/inertia'
 function fakeTransition() {
   let finish!: () => void
   let swapped!: () => void
+  let ready!: () => void
   const finished = new Promise<void>((resolve) => { finish = resolve })
   const updateCallbackDone = new Promise<void>((resolve) => { swapped = resolve })
-  return { transition: { finished, updateCallbackDone, ready: new Promise(() => {}), skipTransition: vi.fn() } as unknown as ViewTransition, finish, swapped }
+  return { transition: { finished, updateCallbackDone, ready: new Promise<void>((resolve) => { ready = resolve }), skipTransition: vi.fn() } as unknown as ViewTransition, finish, swapped, ready }
 }
 
 function reduceMotion(matches: boolean) {
@@ -244,5 +245,52 @@ describe('精确 React 提交', () => {
     expect(t.transition.skipTransition).toHaveBeenCalledTimes(1)
     expect(document.documentElement.dataset.vt).toBeUndefined()
     t.finish()
+  })
+})
+
+
+describe('native 播放时钟与纸面', () => {
+  it.each([['back', 360, 'cubic-bezier(0.65, 0, 0.35, 1)'], [null, 240, 'cubic-bezier(0.2, 0.7, 0.2, 1)']] as const)('方向 %s 使用 OLD root 同一时间轴与起点', async (direction, duration, easing) => {
+    const timeline = { currentTime: 160 }
+    const native = { effect: { pseudoElement: '::view-transition-old(root)' }, timeline, startTime: 100 }
+    vi.stubGlobal('KeyframeEffect', class { constructor(public target: Element, public frames: unknown, public timing: unknown) {} })
+    const animations: { timeline: unknown; startTime: unknown; effect: { frames: unknown; timing: unknown }; cancel: () => void }[] = []
+    vi.stubGlobal('Animation', class {
+      startTime: unknown = null
+      cancel = vi.fn()
+      constructor(public effect: { frames: unknown; timing: unknown }, public timeline: unknown) { animations.push(this) }
+    })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [native] })
+    const target = targetPage()
+    beforeUpdate(target)
+    const t = fakeTransition()
+    const callback = direction ? pageTurn(direction) : crossfadeFor('/search', {}).viewTransition
+    ;(callback as (t: ViewTransition) => void)(t.transition)
+    const paper = document.createElement('div')
+    paper.className = 'paper'
+    paper.style.backgroundColor = 'rgb(232, 227, 218)'
+    const surface = document.createElement('div')
+    surface.style.backgroundPosition = '7px 9px'
+    paper.append(surface)
+    document.body.append(paper)
+    vi.spyOn(paper, 'getBoundingClientRect').mockReturnValue({ left: 5, top: 9 } as DOMRect)
+    vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({ left: 29, top: 90 } as DOMRect)
+    renderHook(() => usePageTurnCommit(target, { current: surface }))
+    expect(surface.style.opacity).toBe('0')
+    expect(surface.style.backgroundPosition).toBe('-24px -81px')
+    t.ready()
+    await t.transition.ready
+    expect(animations).toHaveLength(1)
+    expect(animations[0].timeline).toBe(timeline)
+    expect(animations[0].startTime).toBe(native.startTime)
+    expect(animations[0].effect.frames).toEqual([{ opacity: 0 }, { opacity: 1 }])
+    expect(animations[0].effect.timing).toEqual({ duration, easing, fill: 'both' })
+    t.finish()
+    await t.transition.finished
+    expect(surface.style.opacity).toBe('')
+    expect(surface.style.backgroundPosition).toBe('7px 9px')
+    expect(animations[0].cancel).toHaveBeenCalledOnce()
+    paper.remove()
+    vi.restoreAllMocks()
   })
 })

@@ -72,30 +72,29 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
 
 /* ─── M2 翻页 ─────────────────────────────────────────────────────────── */
 
-/* 名字只在过渡进行中起（lib/pageTurn.ts 的 data-vt）：常驻会让元素自成层叠上下文 */
+/* 只有 OLD 捕获：NEW 正文固定在最终位置，真实 DOM 只做 opacity（pageTurn.ts）。 */
 html[data-vt="old"] { view-transition-name: root; }
-html[data-vt="new"], html[data-vt="new"] .masthead, html[data-vt="new"] .issue-head-date { view-transition-name: none; }
 html[data-vt="old"] .masthead { view-transition-name: masthead; }
 html[data-vt="old"] .issue-head-date { view-transition-name: issue-date; }
-::view-transition-group(*) { animation-duration: var(--dur-2); animation-timing-function: var(--ease-out); }
-/* 报头不动、期头大字原位交替。Inertia 换完页才把滚动归零，旧画面是在滚动后的位置截的：组动画会让报头与日期
-   从「滚动前的位置」滑到顶部，整屏一掠而过（从页脚翻页时上千像素）。组动画关掉，新旧两张快照都画在新位置上 */
-::view-transition-group(masthead), ::view-transition-group(issue-date) { animation: none; }
-::view-transition-old(masthead), ::view-transition-new(masthead) { animation: none; }
-::view-transition-old(issue-date), ::view-transition-new(issue-date) { inline-size: auto; }
-/* 去往没有报头的页面（会话过期回登录页）时，旧报头淡出，不在原处停满一整段再消失 */
-::view-transition-old(masthead):only-child { animation: lp-fade-away var(--dur-2) var(--ease-out) both; }
+html[data-vt="new"], html[data-vt="new"] .masthead, html[data-vt="new"] .issue-head-date { view-transition-name: none; }
+html[data-vt] { --vt-duration: var(--dur-2); --vt-easing: var(--ease-out); }
+html[data-vt][data-turn] { --vt-duration: var(--dur-3); --vt-easing: var(--ease-move); }
+::view-transition, ::view-transition-group(*), ::view-transition-image-pair(*), ::view-transition-old(*), ::view-transition-new(*) { pointer-events: none; }
+::view-transition-group(*) { animation: none; }
+::view-transition-image-pair(*) { isolation: auto; }
+::view-transition-old(*) { mix-blend-mode: normal; }
+::view-transition-old(root), ::view-transition-old(issue-date), ::view-transition-old(masthead) {
+  animation: lp-fade-away var(--vt-duration) var(--vt-easing) both;
+}
+html[data-vt-masthead="true"]::view-transition-old(masthead) { animation: none; opacity: 0; }
+/* 未提供新坐标时保留 UA 的 OLD 位置；只改平移，不给旧日期赋新宽高。 */
+html[style*="--vt-date-x"]::view-transition-group(issue-date) { transform: translate(var(--vt-date-x), var(--vt-date-y)); }
+::view-transition-old(issue-date) { inline-size: auto; }
+html[data-turn="back"]::view-transition-old(root) { animation-name: lp-turn-out-right; }
+html[data-turn="forward"]::view-transition-old(root) { animation-name: lp-turn-out-left; }
 @keyframes lp-fade-away { to { opacity: 0; } }
-/* 前一期：新页从左边进、旧页向右出；后一期相反。位移 24px 加淡入淡出。翻的是整屏快照（root），
-   它就是视口那么大，不随滚动位置位移 */
-html[data-turn="back"]::view-transition-old(root) { animation: lp-turn-out-right var(--dur-3) var(--ease-move) both; }
-html[data-turn="back"]::view-transition-new(root) { animation: lp-turn-in-left var(--dur-3) var(--ease-move) both; }
-html[data-turn="forward"]::view-transition-old(root) { animation: lp-turn-out-left var(--dur-3) var(--ease-move) both; }
-html[data-turn="forward"]::view-transition-new(root) { animation: lp-turn-in-right var(--dur-3) var(--ease-move) both; }
 @keyframes lp-turn-out-right { to { opacity: 0; transform: translateX(24px); } }
 @keyframes lp-turn-out-left { to { opacity: 0; transform: translateX(-24px); } }
-@keyframes lp-turn-in-left { from { opacity: 0; transform: translateX(-24px); } }
-@keyframes lp-turn-in-right { from { opacity: 0; transform: translateX(24px); } }
 
 /* ─── M5 开场 ─────────────────────────────────────────────────────────── */
 

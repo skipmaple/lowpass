@@ -44,7 +44,7 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
           </h2>
           {section.issue_label ? (
             <span className="source-band-issue">
-              <Mixed text={section.issue_label} font="latin" size="var(--fs-15)" color="var(--paper)" />
+              <SourceIssueLabel text={section.issue_label} />
             </span>
           ) : null}
         </div>
@@ -61,6 +61,19 @@ function SourceBand({ section, id }: { section: WeeklySection; id?: string }) {
       </div>
     </div>
   )
+}
+
+// 能放下的主题作为一个阅读单位；长主题仍可在原有宽度内折行。
+function SourceIssueLabel({ text }: { text: string }) {
+  const boundary = text.indexOf(' · ')
+  // 分隔点留在期号组；最后一个空格放在组外，同行时仍有间距。
+  const parts = boundary < 0 ? [text] : [text.slice(0, boundary + 2), text.slice(boundary + 3)]
+  return parts.map((part, index) => (
+    <span key={index}>
+      {index > 0 ? ' ' : null}
+      <Mixed className="source-band-issue-part" text={part} font="latin" size="var(--fs-15)" color="var(--paper)" />
+    </span>
+  ))
 }
 
 // 桌面展开目录，手机先显示入口。原生 details 保留键盘操作与展开状态语义。

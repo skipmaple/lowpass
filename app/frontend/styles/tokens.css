@@ -249,6 +249,7 @@ a.source-tab { cursor: pointer; }
 .source-band-title { margin: 0; font-weight: 400; font-size: var(--fs-32); line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .source-band-meta { display: flex; align-items: center; gap: 16px; flex: none; }
 .source-band-issue { line-height: 1.5; opacity: 0.72; }
+.source-band-issue-part { display: inline-block; max-inline-size: 100%; overflow-wrap: anywhere; vertical-align: baseline; }
 .source-band-link { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--paper); }
 .source-band-link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 
@@ -582,6 +583,9 @@ button.chip-outline { min-height: 44px; }
 .archive-daily .archive-row { grid-template-columns: 24px 120px 90px minmax(0, 1fr); grid-template-areas: 'mark key sub label' '. meta meta meta'; row-gap: 10px; }
 .archive-weekly .archive-label { font-size: var(--fs-20); }
 .archive-meta { overflow-wrap: anywhere; }
+.archive-source-result { display: inline-block; max-inline-size: 100%; vertical-align: baseline; }
+.archive-source-value { white-space: nowrap; }
+.archive-range-date { white-space: nowrap; }
 .dialog { max-height: calc(100dvh - 48px); overflow-y: auto; }
 @media (max-width: 1023px) {
   .source-tab { flex-direction: column; align-items: center; padding: 12px 8px; }
@@ -859,7 +863,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .item-title, .item-translation, .item-summary, .item-reason, .item-content--weekly, .source-band-issue, .search-title, .search-snippet { text-autospace: normal; }
 
 /* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
-.item-heading, .search-title, .state-line, .source-band-title, .source-original-title { text-wrap: balance; }
+.item-heading, .search-title, .state-line, .source-band-title, .source-band-issue, .source-original-title, .archive-weekly .archive-label { text-wrap: balance; }
 .item-title-tail { display: inline-block; max-inline-size: 100%; overflow-wrap: anywhere; vertical-align: baseline; text-decoration: inherit; }
 .item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
 

@@ -1,22 +1,22 @@
 import { router } from '@inertiajs/react'
-import type { VisitOptions } from '@inertiajs/core'
-import { useEffect } from 'react'
+import type { Page, VisitOptions } from '@inertiajs/core'
+import { useEffect, useLayoutEffect, type RefObject } from 'react'
 
 import { captureHistoryScroll } from '@/lib/historyScroll'
 import { prefersReducedMotion } from '@/lib/motion'
 
-// 翻页（设计 skill「动效」M2、M8，PRD D34）。前一期 / 后一期是有方向的翻页：报头不动，正文从左或从右滑入；
-// 其余换页面的整页跳转只让正文淡入淡出。用浏览器原生的 View Transitions，经 Inertia 的 viewTransition 选项接进来。
-//
-// 过渡进行中给 <html> 打上 data-vt（motion.css 只在这时给报头、期头大字起 view-transition-name；翻的是整屏快照）：
-// 常驻的 view-transition-name 会让元素自成层叠上下文，报头的头像菜单会被正文里定位的元素盖住，周刊配图的
-// 正片叠底也会失效。Inertia 调 startViewTransition 后立刻同步调这里的回调，旧画面在下一帧才截，标记来得及。
-// 方向写在 data-turn。不支持的浏览器、减少动态效果时直接切换。
-
+// OLD 保留原生视口快照，NEW 在匹配的 React 提交时退出所有命名捕获。
 export type TurnDirection = 'back' | 'forward'
-
-// 最近一次过渡的记号：连点两次时，前一次的收尾不能摘掉后一次的标记
-let active: object | null = null
+type Completion = 'finished' | 'input' | 'replaced' | 'unmatched' | 'rejected'
+type PageTurn = {
+  token: object
+  transition: ViewTransition
+  targetPage: Page | null
+  direction: TurnDirection | null
+  surface: HTMLElement | null
+}
+let active: PageTurn | null = null
+let pendingPage: Page | null = null
 
 // 过渡的换页回调要等下一帧才跑，Inertia 处理后退却是一串 promise：读者在这一帧里按了后退，Inertia 先把后退的那一页
 // 换上，过渡回调随后又把刚才要去的那一页换回来——地址是后退后的，页面却停在前一页。后退赶上过渡还没换完页时，
@@ -25,6 +25,10 @@ let swapping: Promise<unknown> | null = null
 let replaying = false
 
 if (typeof window !== 'undefined') {
+  router.on('beforeUpdate', (event) => { pendingPage = event.detail.page })
+  router.on('before', () => { pendingPage = null })
+  router.on('finish', () => { pendingPage = null })
+  router.on('clientVisit', () => { pendingPage = null })
   window.addEventListener('popstate', (event) => {
     if (!replaying) captureHistoryScroll(event)
     if (replaying || !swapping) return
@@ -40,25 +44,48 @@ if (typeof window !== 'undefined') {
 }
 
 function track(transition: ViewTransition, direction: TurnDirection | null) {
+  const targetPage = pendingPage
+  pendingPage = null
+  if (active) completePageTurn(active.token, 'replaced')
   const token = {}
-  active = token
-  const done = transition.updateCallbackDone
-  if (done) {
-    swapping = done
-    done.catch(() => {}).finally(() => {
-      if (swapping === done) swapping = null
-    })
-  }
+  active = { token, transition, targetPage, direction, surface: null }
   const root = document.documentElement
-  root.dataset.vt = ''
+  root.dataset.vt = 'old'
   if (direction) root.dataset.turn = direction
   else delete root.dataset.turn
-  transition.finished.finally(() => {
-    if (active !== token) return
-    active = null
-    delete root.dataset.vt
-    delete root.dataset.turn
+
+  const done = transition.updateCallbackDone
+  swapping = done
+  done.then(() => {
+    if (swapping === done) swapping = null
+    if (active?.token === token && !active.surface) completePageTurn(token, 'unmatched')
+  }, () => {
+    if (swapping === done) swapping = null
+    completePageTurn(token, 'rejected')
   })
+  transition.ready.catch(() => completePageTurn(token, 'rejected'))
+  transition.finished.then(() => completePageTurn(token, 'finished'), () => completePageTurn(token, 'rejected'))
+}
+
+function completePageTurn(token: object, reason: Completion): void {
+  if (active?.token !== token) return
+  const turn = active
+  active = null
+  delete document.documentElement.dataset.vt
+  delete document.documentElement.dataset.turn
+  if (reason !== 'finished') turn.transition.skipTransition()
+}
+
+function commitPageTurn(page: Page, surface: HTMLElement): void {
+  if (!active || active.targetPage !== page || active.surface) return
+  active.surface = surface
+  document.documentElement.dataset.vt = 'new'
+}
+
+export function usePageTurnCommit(page: Page, surface: RefObject<HTMLElement | null>): void {
+  useLayoutEffect(() => {
+    if (surface.current) commitPageTurn(page, surface.current)
+  }, [page, surface])
 }
 
 export function pageTurn(direction: TurnDirection): false | ((transition: ViewTransition) => void) {

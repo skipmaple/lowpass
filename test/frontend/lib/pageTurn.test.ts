@@ -1,8 +1,9 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { crossfadeFor, ignoresArrow, pageTurn, useArrowTurns } from '@/lib/pageTurn'
-import { router } from '../support/inertia'
+import { crossfadeFor, ignoresArrow, pageTurn, useArrowTurns, usePageTurnCommit } from '@/lib/pageTurn'
+import type { Page } from '@inertiajs/core'
+import { router, emitRouterEvent } from '../support/inertia'
 
 // 翻页（设计说明 2026-10-14 M2、M8）：方向写在 <html data-turn>，过渡进行中有 <html data-vt>，结束就摘掉
 
@@ -11,7 +12,7 @@ function fakeTransition() {
   let swapped!: () => void
   const finished = new Promise<void>((resolve) => { finish = resolve })
   const updateCallbackDone = new Promise<void>((resolve) => { swapped = resolve })
-  return { transition: { finished, updateCallbackDone } as unknown as ViewTransition, finish, swapped }
+  return { transition: { finished, updateCallbackDone, ready: new Promise(() => {}), skipTransition: vi.fn() } as unknown as ViewTransition, finish, swapped }
 }
 
 function reduceMotion(matches: boolean) {
@@ -34,7 +35,7 @@ describe('pageTurn', () => {
 
     ;(callback as (t: ViewTransition) => void)(transition)
     expect(document.documentElement.dataset.turn).toBe('back')
-    expect(document.documentElement.dataset.vt).toBe('')
+    expect(document.documentElement.dataset.vt).toBe('old')
 
     finish()
     await transition.finished
@@ -206,5 +207,42 @@ describe('过渡换页未完成时的后退', () => {
     window.dispatchEvent(new PopStateEvent('popstate', { state: { page: 'search' } }))
     expect(seen).toEqual([{ page: 'search' }])
     window.removeEventListener('popstate', inertia)
+  })
+})
+
+const targetPage = () => ({ url: '/search', component: 'Search/Index', props: {}, version: null } as Page)
+function beforeUpdate(page: Page) {
+  emitRouterEvent('beforeUpdate', new CustomEvent('beforeUpdate', { detail: { page } }))
+}
+
+describe('精确 React 提交', () => {
+  it('beforeUpdate 只记录身份；同 URL 克隆不能提交，同一个对象首次 layout effect 同步提交', async () => {
+    const target = targetPage()
+    beforeUpdate(target)
+    expect(document.documentElement.dataset.vt).toBeUndefined()
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    const surface = document.createElement('div')
+    const ref = { current: surface }
+    const hook = renderHook(({ page }) => usePageTurnCommit(page, ref), { initialProps: { page: { ...target } } })
+    expect(document.documentElement.dataset.vt).toBe('old')
+    hook.rerender({ page: target })
+    expect(document.documentElement.dataset.vt).toBe('new')
+    hook.rerender({ page: target })
+    hook.unmount()
+    expect(document.documentElement.dataset.vt).toBe('new')
+    t.finish()
+    await t.transition.finished
+  })
+
+  it('update 完成还没有匹配 Page 时跳过原生过渡', async () => {
+    beforeUpdate(targetPage())
+    const t = fakeTransition()
+    ;(pageTurn('back') as (t: ViewTransition) => void)(t.transition)
+    t.swapped()
+    await t.transition.updateCallbackDone
+    expect(t.transition.skipTransition).toHaveBeenCalledTimes(1)
+    expect(document.documentElement.dataset.vt).toBeUndefined()
+    t.finish()
   })
 })

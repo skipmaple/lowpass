@@ -10,20 +10,25 @@ import { expect, vi } from 'vitest'
 type PageProps = Record<string, unknown>
 
 let pageProps: PageProps = {}
+let explicitPage = false
 let currentPage = { props: pageProps, url: '/', component: 'Test', version: null } as Page
 
 // 页面组件的持久布局（Show.layout）从 usePage 拿页脚要的字段，测试渲染前先把整份 props 摆进来
 export function setPageProps(props: PageProps) {
   pageProps = props
+  explicitPage = false
   currentPage = { ...currentPage, props } as Page
 }
 
 export function setPage(page: Page) {
+  explicitPage = true
   currentPage = page
   pageProps = page.props
 }
 
 export function usePage<T = PageProps>() {
+  const url = window.location.pathname + window.location.search + window.location.hash
+  if (!explicitPage && currentPage.url !== url) currentPage = { ...currentPage, url }
   return currentPage as unknown as Page & { props: T }
 }
 

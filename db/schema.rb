@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -226,7 +226,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
     t.index ["created_at"], name: "index_model_calls_on_created_at"
     t.index ["issue_id"], name: "index_model_calls_on_issue_id"
     t.check_constraint "length(error_summary::text) <= 200", name: "model_calls_error_summary_len"
-    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text, 'invalid'::character varying::text])", name: "model_calls_status"
+    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying, 'failed'::character varying, 'timed_out'::character varying, 'invalid'::character varying, 'abstained'::character varying]::text[])", name: "model_calls_status"
+  end
+
+  create_table "reason_abstentions", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "item_id", limit: 25, null: false
+    t.datetime "assessed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["item_id"], name: "index_reason_abstentions_on_item_id", unique: true
+    t.check_constraint "length(id::text) = 25", name: "reason_abstentions_id_len"
+    t.check_constraint "length(item_id::text) = 25", name: "reason_abstentions_item_id_len"
   end
 
   create_table "search_clicks", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -362,6 +372,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
   add_foreign_key "items", "sources"
   add_foreign_key "model_calls", "issues", on_delete: :nullify
   add_foreign_key "model_calls", "items", on_delete: :nullify
+  add_foreign_key "reason_abstentions", "items", on_delete: :cascade
   add_foreign_key "search_clicks", "items", on_delete: :cascade
   add_foreign_key "search_records", "issues", on_delete: :cascade
   add_foreign_key "search_records", "items", on_delete: :cascade

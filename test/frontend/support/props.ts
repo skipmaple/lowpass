@@ -235,8 +235,12 @@ export function adminRunRow(overrides: Partial<AdminRunRow> = {}): AdminRunRow {
 }
 
 // 后台期列表一行（5.6，Issue::Administering#admin_rows）
+export function adminIssueReasons(overrides: Partial<NonNullable<AdminIssueRow['reasons']>> = {}): NonNullable<AdminIssueRow['reasons']> {
+  return { with_reason: 30, abstained: 0, retained: 0, missing: 0, ready: true, unready_label: null, last_assessed_label: null, ...overrides }
+}
+
 export function adminIssueRow(overrides: Partial<AdminIssueRow> = {}): AdminIssueRow {
-  return { kind: 'daily', period_key: '2026-09-08', state: 'published', state_label: '已发布', time_label: '06:12', source_marks: 'HN 10 · GH 10 · HAD 10', refetchable_sources: [{ id: 'src-hn', name: 'Hacker News' }, { id: 'src-gh', name: 'GitHub Trending' }], reasons: { label: '已生成', missing: 0, ready: true }, ...overrides }
+  return { kind: 'daily', period_key: '2026-09-08', state: 'published', state_label: '已发布', time_label: '06:12', source_marks: 'HN 10 · GH 10 · HAD 10', refetchable_sources: [{ id: 'src-hn', name: 'Hacker News' }, { id: 'src-gh', name: 'GitHub Trending' }], reasons: overrides.kind === 'weekly' ? null : adminIssueReasons(), ...overrides }
 }
 
 // 后台用户列表一行（5.6，User.admin_rows）

@@ -1,16 +1,16 @@
 # 给一期日刊生成理由（5.9、设计 §4.3）：一期顺序做，单条重试 2 次；上限到了就停并告警；跨天重复沿用前一期（R-1.11）；
 # 每次调用记一条账本；跑完没有缺理由且预算未耗尽，才收掉「推荐理由缺失」事件。
-# 要译的条目（D25）在同一次调用里拿回译文（HN 与 Hackaday 的标题、GitHub Trending 的简介），跟理由一起写；「缺理由」仍只看理由
+# 译文只搭同次合法 generated 结果；D38 资料不足只记独立判断，补缺排除已合法拒写的条目。
 module Reasons::Generator
   RETRIES = 2
-  Outcome = Data.define(:generated, :reused, :failed, :skipped)
+  Outcome = Data.define(:generated, :reused, :abstained, :failed, :skipped)
 
   class << self
     def generate!(issue, only_missing: true)
-      return Outcome.new(generated: 0, reused: 0, failed: 0, skipped: true) unless Reasons.ready?
+      return Outcome.new(generated: 0, reused: 0, abstained: 0, failed: 0, skipped: true) unless Reasons.ready?
 
-      items = issue.items.visible.ranked.includes(:source, :issue).to_a
-      items = items.select { |item| item.reason.nil? } if only_missing
+      items = only_missing ? issue.items.pending_reasons : issue.items.visible.daily
+      items = items.ranked.includes(:source, :issue).to_a
       names = InterestArea.enabled_names
       profile = InterestArea.profile_text
       counts = Hash.new(0)
@@ -24,11 +24,12 @@ module Reasons::Generator
         # 跨天重复的那几条也得真的重新生成，不然这个按钮对它们没有效果（R-9.7）
         if only_missing && (previous = previous_reason(item))
           store(item, previous)
+          Reasons.recover_if_complete(issue)
           counts[:reused] += 1
           next
         end
         begin
-          counts[generate_item!(item, names: names, profile: profile) ? :generated : :failed] += 1
+          counts[generate_item!(item, names: names, profile: profile)] += 1
         rescue Reasons::Provider::Rejected, Reasons::Provider::Limited => e
           # 密钥被拒绝 / 被限流：后面每一条都会一样，本期到此为止（记账在 generate_item! 里已经写过）。
           # 429 不在条内重试，也不在期内接着打——仓库不变量「429 / 403 不追加重试」（设计 C11）
@@ -38,33 +39,28 @@ module Reasons::Generator
         end
       end
 
-      if issue.items.visible.where(reason: nil).none?
-        Alerts.recover!(kind: "reasons_missing") unless Reasons::Budget.exhausted?
-      end
-      Outcome.new(generated: counts[:generated], reused: counts[:reused], failed: counts[:failed], skipped: false)
+      Reasons.recover_if_complete(issue)
+      Outcome.new(generated: counts[:generated], reused: counts[:reused], abstained: counts[:abstained], failed: counts[:failed], skipped: false)
     end
 
     # 单条：最多 1 + RETRIES 次调用，每次调用前检查预算、调用后记账；成功写回 items（update!：R-9.7 发布后可补写的字段，走 Searchable 回调无害）
     def generate_item!(item, names: InterestArea.enabled_names, profile: InterestArea.profile_text)
       # 两道前提各自成立：读者页的单条重生成不经过 generate! 的循环，同样不能在画像为空
       # 或月上限到了的时候调模型（终审 F1、F2）
-      return false unless Reasons.ready?
+      return :failed unless Reasons.ready?
 
       messages = Reasons::Prompt.messages(item, profile)
       (RETRIES + 1).times do
         if Reasons::Budget.exhausted?
           alert_budget_exhausted(item.issue)
-          return false
+          return :failed
         end
 
         started = now_ms
-        response = nil
+        response = result = nil
         begin
           response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item))
           result = Reasons::Parser.parse(response.text, names)
-          record(item, "ok", response, started)
-          store(item, result)
-          return true
         rescue Reasons::Parser::Invalid => e
           record(item, "invalid", response, started, e.message)
         rescue Reasons::Provider::Rejected => e
@@ -79,14 +75,28 @@ module Reasons::Generator
         rescue Reasons::Provider::Error => e
           record(item, "failed", nil, started, e.message)
         end
+        # 解析与真实请求账本先完成；业务持久化异常不能触发另一次模型请求。
+        if result
+          if result.decision == "insufficient_evidence"
+            record(item, "abstained", response, started)
+            item.record_reason_abstention(assessed_at: Time.current)
+            Reasons.recover_if_complete(item.issue)
+            return :abstained
+          else
+            record(item, "ok", response, started)
+            store(item, result)
+            Reasons.recover_if_complete(item.issue)
+            return :generated
+          end
+        end
       end
       alert_budget_exhausted(item.issue) if Reasons::Budget.exhausted?
-      false
+      :failed
     end
 
     private
       def alert_budget_exhausted(issue)
-        missing = issue.items.visible.where(reason: nil).count
+        missing = issue.items.pending_reasons.count
         summary = missing.positive? ? "本月费用已达上限，缺理由 #{missing} 条" : "本月费用已达上限，已停止生成"
         Alerts.reasons_missing!(issue, missing, summary: summary)
       end
@@ -95,8 +105,7 @@ module Reasons::Generator
       # 带着译文的那条——前一条早于译文上线，或源站后来改了标题、仓库改了简介，就不沿用，整条重新生成。
       # GitHub 的仓库常常连着几天上榜，简介不变就一直沿用，不重复花钱
       def previous_reason(item)
-        previous = Item.joins(:issue).where(url_hash: item.url_hash, issues: { kind: "daily" }).where("issues.period_key < ?", item.issue.period_key)
-                       .where.not(reason: nil)
+        previous = Item.reusable_reasons.where(url_hash: item.url_hash).where("issues.period_key < ?", item.issue.period_key)
         previous = previous.where(title: item.title).where.not(title_zh: nil) if item.translate_title?
         previous = previous.where(summary: item.summary).where.not(summary_zh: nil) if item.translate_summary?
         previous.order("issues.period_key DESC").first
@@ -106,10 +115,7 @@ module Reasons::Generator
       # 理由与标签每次覆盖（R-9.7）；译文只写这一次真有的：整期重生成时这次没译好，不抹掉上一次的
       # （原文没变，旧译文仍然对得上）；不要这种译文的条目一律不写，哪怕前一条来自要译的源
       def store(item, generated)
-        attributes = { reason: generated.reason, interest_tag: generated.interest_tag, reason_generated_at: Time.current }
-        attributes[:title_zh] = generated.title_zh if item.translate_title? && generated.title_zh
-        attributes[:summary_zh] = generated.summary_zh if item.translate_summary? && generated.summary_zh
-        item.update!(attributes)
+        item.store_generated_reason(generated, generated_at: Time.current)
       end
 
       def record(item, status, response, started, error = nil)

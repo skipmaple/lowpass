@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import Index from '@/pages/Admin/Issues/Index'
 import { router, setPageProps } from '../support/inertia'
-import { adminIssueRow } from '../support/props'
+import { adminIssueReasons, adminIssueRow } from '../support/props'
 
 // 期（5.6，画布 admin_issues() 与 admin_dialogs()）
 
@@ -147,11 +147,11 @@ describe('Admin/Issues/Index', () => {
   })
 
   it('日刊行的理由格与整期重生成', async () => {
-    show({ rows: [adminIssueRow({ reasons: { label: '缺 3 条', missing: 3, ready: true } }), adminIssueRow({ period_key: '2026-09-07', reasons: { label: '已生成', missing: 0, ready: true } })] })
+    show({ rows: [adminIssueRow({ reasons: adminIssueReasons({ missing: 3 }) }), adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons() })] })
     const rows = screen.getAllByRole('row')
     // 缺 N 条是反白小签（设计 §6.2）：文字在墨色块里，Mixed 会把中文与数字切成几段，按 textContent 断言
     expect(reasonChip(rows[1])?.textContent).toBe('缺 3 条')
-    expect(within(rows[2]).getByText('已生成')).toBeInTheDocument()
+    expect(within(rows[2]).getAllByRole('cell')[5]).toHaveTextContent('已有理由 30 条')
     expect(reasonChip(rows[2])).toBeNull()
     await userEvent.click(within(rows[1]).getByRole('button', { name: '重生成理由' }))
     expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/reasons', {}, expect.any(Object))
@@ -160,18 +160,41 @@ describe('Admin/Issues/Index', () => {
   it('生成不了时理由格写明、按钮禁用（看 ready 不看文案）；周刊行没有理由格', () => {
     show({
       rows: [
-        adminIssueRow({ reasons: { label: '未配置模型供应商', missing: 10, ready: false } }),
-        adminIssueRow({ period_key: '2026-09-07', reasons: { label: '兴趣画像为空', missing: 10, ready: false } }),
+        adminIssueRow({ reasons: adminIssueReasons({ missing: 10, ready: false, unready_label: '未配置模型供应商' }) }),
+        adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons({ missing: 10, ready: false, unready_label: '兴趣画像为空' }) }),
         adminIssueRow({ kind: 'weekly', period_key: '2026-W36', reasons: null }),
       ],
     })
     const rows = screen.getAllByRole('row')
     expect(within(rows[1]).getByText('未配置模型供应商')).toBeInTheDocument()
     expect(within(rows[1]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
-    // 生成不了的时候那一格不是「缺 N 条」，也就不该反白
-    expect(reasonChip(rows[2])).toBeNull()
+    // 准备状态不覆盖真实缺失；只有缺失数量使用反白签。
+    expect(reasonChip(rows[2])?.textContent).toBe('缺 10 条')
     expect(within(rows[2]).getByText('兴趣画像为空')).toBeInTheDocument()
     expect(within(rows[2]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
     expect(within(rows[3]).queryByRole('button', { name: '重生成理由' })).toBeNull()
   })
+
+  it('shows four real reason counts and separate readiness', () => {
+    show({ rows: [adminIssueRow({ reasons: adminIssueReasons({ with_reason: 3, abstained: 2, retained: 1, missing: 4, ready: false, unready_label: '未配置模型供应商', last_assessed_label: '最后处理 2026-10-23 09:30' }) })] })
+    const row = screen.getAllByRole('row')[1]
+    const cell = within(row).getAllByRole('cell')[5]
+    for (const text of ['已有理由 3 条', '资料不足未写 2 条', '保留旧理由 1 条（本次资料不足）', '缺 4 条', '最后处理 2026-10-23 09:30', '未配置模型供应商']) {
+      expect(cell).toHaveTextContent(text)
+    }
+    expect(reasonChip(row)?.textContent).toBe('缺 4 条')
+    expect(within(row).getByRole('button', { name: '重生成理由' })).toBeDisabled()
+    expect(within(row).getByRole('button', { name: '重生成理由' })).toHaveAttribute('title', '未配置模型供应商')
+  })
+
+  it('excludes legal abstentions from pending issues', async () => {
+    show({ rows: [
+      adminIssueRow({ period_key: '2026-09-08', reasons: adminIssueReasons({ with_reason: 0, abstained: 3, retained: 2 }) }),
+      adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons({ missing: 1 }) }),
+    ] })
+    await userEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
+    expect(screen.queryByText('2026-09-08')).toBeNull()
+    expect(screen.getByText('2026-09-07')).toBeInTheDocument()
+  })
+
 })

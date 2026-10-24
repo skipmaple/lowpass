@@ -36,4 +36,15 @@ class Reasons::BudgetTest < ActiveSupport::TestCase
   test "没有调用记录时，月费用仍是 BigDecimal（sum 在空表上回落到 Integer 0）" do
     assert_instance_of BigDecimal, Reasons::Budget.month_cost
   end
+
+  test "合法拒写在上海日月边界计入次数费用与状态页" do
+    travel_to sh("2026-10-01 00:10") do
+      ModelCall.create!(status: "abstained", cost: "0.2", created_at: sh("2026-10-01 00:00"))
+      ModelCall.create!(status: "abstained", cost: "0.3", created_at: sh("2026-09-30 23:59"))
+      assert_equal BigDecimal("0.2"), Reasons::Budget.month_cost
+      assert_equal 1, Reasons::Budget.today_calls
+      assert_equal 1, Reasons::Budget.month_calls
+      assert_equal [ 1, 1, "0.2" ], Reasons::Status.props.values_at(:month_calls, :today_calls, :month_cost)
+    end
+  end
 end

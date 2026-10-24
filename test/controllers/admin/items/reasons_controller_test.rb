@@ -5,7 +5,7 @@ class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
 
   test "单条重生成：同步调用一次，成功回日刊页并提示" do
     with_model_provider do
-      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供前端开发读者考察调试流程。", interest_tag: "AI / LLM"))
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM"))
       post admin_item_reason_path(items(:hn_one)), headers: { "Referer" => daily_issue_url("2026-09-08") }
     end
     assert_redirected_to daily_issue_url("2026-09-08")
@@ -56,5 +56,34 @@ class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
                                url_hash: Digest::SHA256.hexdigest("https://ruanyf.example/1"), rank: 1, fetched_at: Time.current)
     with_model_provider { post admin_item_reason_path(weekly_item) }
     assert_response :not_found
+  end
+
+  test "合法拒写使用真实终态提示和审计并保护旧理由" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+      item = items(:hn_one)
+      post admin_item_reason_path(item)
+      assert_equal "资料不足，未生成理由", flash[:notice]
+      assert_nil flash[:alert]
+      assert_equal({ "outcome" => "abstained", "retained_reason" => false }, AuditLog.last.payload)
+      item.update!(reason: "历史理由")
+      post admin_item_reason_path(item)
+      assert_equal "本次资料不足，保留旧理由", flash[:notice]
+      assert_equal "历史理由", item.reload.reason
+      assert_equal({ "outcome" => "abstained", "retained_reason" => true }, AuditLog.last.payload)
+    end
+  end
+
+  test "实际失败与被拒绝请求记失败审计，预检和隐藏条目不记成功" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 401, body: "no")
+      post admin_item_reason_path(items(:hn_one))
+      assert_equal "failed", AuditLog.sole.payload.fetch("outcome")
+      assert_nil flash[:notice]
+      assert_match(/重生成失败/, flash[:alert])
+      items(:hn_one).update!(hidden: true)
+      assert_no_difference("ModelCall.count") { post admin_item_reason_path(items(:hn_one)) }
+      assert_response :not_found
+    end
   end
 end

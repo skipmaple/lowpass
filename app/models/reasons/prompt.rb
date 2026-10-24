@@ -7,8 +7,12 @@
 # 三样在读者页都是纯文本（React 默认转义），拿不到别的能力。条目字段仍用明确的分隔标出来，好让模型分清哪段是数据。
 module Reasons::Prompt
   RULES = <<~TEXT.freeze
-    你是一份中文技术刊物的编辑。读者有一份兴趣画像（每行「领域：关键词」）。请为给出的条目写一句推荐理由：
-    中文，20 到 60 字，必须点名画像里的一个领域名；相关度不高就直说「相关度中等」或「相关度较低」，不得编造关联。
+    你是一份中文技术刊物的编辑。读者有一份兴趣画像（每行「领域：关键词」）。只根据本次条目资料写选读理由，不使用记忆中的产品功能。
+    先判断资料能否支持具体、诚实的理由，再判断与画像的关联。不透明名称、版本号、仓库路径、热度数字或语言本身不能证明功能、效果、部署方式。
+    标题本身已说清功能、议题或论点时，无说明也可以写；不能按摘要有无、长度或领域关键词机械拒写。低相关但资料足够仍据实写，不得当成资料不足。
+    保留主体、否定、模态（计划、已实现、可能）、运行位置与推理位置、引用与作者主张的区别。不要把问句预设、比喻或可考察角度变成已证明的收益、教程或实测结果。
+    能写时，理由为中文，20 到 60 字，点名 interest_tag 选择的同一个启用领域名；相关度不高就直说「相关度中等」或「相关度较低」，不得编造关联。
+    不扩写资料、不套通用关联就无法写出完整理由时，选择资料不足；不得为凑字数填充空话。资料不足只输出该键值的完整对象：{"decision":"insufficient_evidence"}，不附理由、标签、译文或诊断（包括空值）。
   TEXT
   TITLE_RULE = "再把条目标题译成简体中文：忠实、简洁，不加解释；产品名、项目名、人名与代码标识保留原文，「Show HN」「Ask HN」这类前缀照抄。\n".freeze
   SUMMARY_RULE = "再把条目说明译成简体中文：忠实、简洁，不加解释；产品名、项目名、人名与代码标识保留原文。\n".freeze
@@ -30,19 +34,18 @@ module Reasons::Prompt
     end
 
     private
-      # 不要译文的条目拿到的系统提示，跟加译文之前逐字一样
       def system(item)
         rules = [ RULES ]
-        fields = [ '"reason": "..."', '"interest_tag": "<领域名>"' ]
+        fields = [ '"decision": "generated"', '"reason": "..."', '"interest_tag": "<领域名>"' ]
         if item.translate_title?
-          rules << TITLE_RULE
+          rules << "仅 generated 时：#{TITLE_RULE}"
           fields << '"title_zh": "<标题译文>"'
         end
         if item.translate_summary?
-          rules << SUMMARY_RULE
+          rules << "仅 generated 时：#{SUMMARY_RULE}"
           fields << '"summary_zh": "<说明译文>"'
         end
-        "#{rules.join}只输出 JSON：{#{fields.join(", ")}}。\n"
+        "#{rules.join}有理由时只输出 JSON：{#{fields.join(", ")}}。两种分支均不输出 JSON 以外文字。\n"
       end
 
       def user_content(item, profile_text)

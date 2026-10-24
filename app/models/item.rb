@@ -1,5 +1,5 @@
 class Item < ApplicationRecord
-  include Searchable
+  include Searchable, Item::Reasoning
 
   belongs_to :source
   belongs_to :issue

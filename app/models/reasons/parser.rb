@@ -7,18 +7,26 @@ module Reasons::Parser
   TITLE_MAX = 300
   SUMMARY_MAX = 500
   Invalid = Class.new(StandardError)
-  Result = Data.define(:reason, :interest_tag, :title_zh, :summary_zh)
+  Result = Data.define(:decision, :reason, :interest_tag, :title_zh, :summary_zh)
 
   class << self
     def parse(text, allowed_names)
       json = extract(text.to_s)
-      reason = json["reason"].to_s.strip.gsub(/\s+/, " ")
-      tag = json["interest_tag"].to_s.strip
+      if json["decision"] == "insufficient_evidence"
+        raise Invalid, "拒写包含额外字段" unless json.keys == [ "decision" ]
+        return Result.new(decision: "insufficient_evidence", reason: nil, interest_tag: nil, title_zh: nil, summary_zh: nil)
+      end
+      raise Invalid, "缺少或未知 decision" unless json["decision"] == "generated"
+      raise Invalid, "理由必须为字符串" unless json["reason"].is_a?(String)
+
+      reason = json["reason"].strip.gsub(/\s+/, " ")
+      tag = json["interest_tag"]
       raise Invalid, "理由太短（#{reason.length} 字）" if reason.length < MIN
       raise Invalid, "理由太长（#{reason.length} 字）" if reason.length > MAX
-      raise Invalid, "缺领域名" unless allowed_names.include?(tag)
-      raise Invalid, "理由未点名领域" unless allowed_names.any? { |name| reason.include?(name.strip.gsub(/\s+/, " ")) }
-      Result.new(reason: reason, interest_tag: tag,
+      raise Invalid, "缺领域名" unless tag.is_a?(String) && allowed_names.include?(tag)
+      raise Invalid, "理由须含汉字" unless reason.match?(/\p{Han}/)
+      raise Invalid, "理由未点名领域" unless reason.include?(tag.strip.gsub(/\s+/, " "))
+      Result.new(decision: "generated", reason: reason, interest_tag: tag,
                  title_zh: translation(json["title_zh"], TITLE_MAX), summary_zh: translation(json["summary_zh"], SUMMARY_MAX))
     end
 

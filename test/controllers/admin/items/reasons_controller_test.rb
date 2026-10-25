@@ -3,6 +3,16 @@ require "test_helper"
 class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as(users(:drew)) }
 
+  test "理由错误提示不会被较新的翻译账本覆盖" do
+    item = items(:hn_one)
+    ModelCall.create!(item: item, issue: item.issue, status: "invalid", error_summary: "理由验收失败", created_at: 1.minute.ago)
+    ModelCall.create!(item: item, issue: item.issue, status: "invalid", purpose: "translation", operation_key: SecureRandom.uuid,
+      input_field: "title", input_digest: "a" * 64, error_summary: "译文验收失败")
+    Reasons::Generator.stubs(:generate_item!).returns(:failed)
+    with_model_provider { post admin_item_reason_path(item) }
+    assert_equal "重生成失败：理由验收失败", flash[:alert]
+  end
+
   test "单条重生成：同步调用一次，成功回日刊页并提示" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM"))

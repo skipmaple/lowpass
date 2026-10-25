@@ -19,6 +19,7 @@ class ModelCall < ApplicationRecord
   scope :stale, -> { where(created_at: ...RETENTION.ago) }
 
   def self.cleanup(batch_size: 500)
+    ModelOperationStop.where(expires_at: ..Time.current).delete_all
     loop { break if stale.limit(batch_size).delete_all.zero? }
   end
 end

@@ -7,10 +7,10 @@ module Reasons::Budget
     def today_calls = ModelCall.where(created_at: day_range).count
     def exhausted? = cap.positive? && month_cost >= cap
 
-    def cost_for(prompt_tokens, completion_tokens)
+    def cost_for(prompt_tokens, completion_tokens, input_price: nil, output_price: nil)
       per_million = BigDecimal("1000000")
-      (BigDecimal(prompt_tokens.to_i) / per_million * decimal(Setting.get("model_input_price")) +
-        BigDecimal(completion_tokens.to_i) / per_million * decimal(Setting.get("model_output_price"))).round(4)
+      (BigDecimal(prompt_tokens.to_i) / per_million * decimal(input_price || Setting.get("model_input_price")) +
+        BigDecimal(completion_tokens.to_i) / per_million * decimal(output_price || Setting.get("model_output_price"))).round(4)
     end
 
     private

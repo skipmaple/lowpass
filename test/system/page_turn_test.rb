@@ -173,36 +173,19 @@ class PageTurnTest < ApplicationSystemTestCase
 
   test "正文拖选保留原生选择，收藏与修饰键原文链接保留默认结果" do
     items(:hn_one).update!(summary: "Readable native selection keeps this text intact during the page turn.")
-    point = begin_input_turn(".item-summary", daily: true, prepare: <<~JS)
-      window.__drag = {events:[]}
-      const summary = document.querySelector('.item-summary')
-      const readSelection = () => {
-        const selection = getSelection()
-        return {text:selection.toString(),type:selection.type,anchor:selection.anchorNode?.parentElement?.className,anchorOffset:selection.anchorOffset,focus:selection.focusNode?.parentElement?.className,focusOffset:selection.focusOffset}
-      }
-      window.__readDrag = () => ({...window.__drag,selection:readSelection(),rect:summary.getBoundingClientRect().toJSON(),fonts:document.fonts.status})
-      for (const type of ['pointerdown','pointermove','pointerup','selectstart','selectionchange']) document.addEventListener(type,event=>{
-        window.__drag.events.push({type,trusted:event.isTrusted,time:performance.now(),x:event.clientX,y:event.clientY,button:event.button,buttons:event.buttons,target:event.target.className,selection:readSelection()})
-      },true)
-    JS
-    mouse("mouseMoved", point, "none", 0)
-    mouse("mousePressed", point, "left", 1)
-    mouse("mouseMoved", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 1)
-    mouse("mouseReleased", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 0)
-    selected = evaluate_script("getSelection().toString()")
-    selection_record = evaluate_script("JSON.stringify({point:#{point.to_json},immediate:#{selected.to_json},...window.__readDrag(),input:window.__input})")
-    puts "M2_SELECTION #{selection_record}"
-    if selected.empty?
-      # 只在失败时采集无过渡对照；原手势的失败值和断言保持不变。
-      { single: [ 100 ], continuous: [ 30, 60, 100 ] }.each do |label, offsets|
-        mouse("mousePressed", point, "left", 1)
-        offsets.each { |offset| mouse("mouseMoved", { "x" => point["x"] + offset, "y" => point["y"] }, "left", 1) }
-        mouse("mouseReleased", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 0)
-        puts "M2_SELECTION_CONTROL #{label} #{evaluate_script('JSON.stringify(window.__readDrag())')}"
-      end
+    # 奇数版心会产生半像素文字坐标；覆盖CI滚动条两侧的奇偶宽度。
+    [ 1385, 1400 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1400, deviceScaleFactor: 1, mobile: false)
+      point = begin_input_turn(".item-summary", daily: true)
+      mouse("mousePressed", point, "left", 1)
+      mouse("mouseMoved", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 1)
+      mouse("mouseReleased", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 0)
+      selected = evaluate_script("getSelection().toString()")
+      assert_not_empty selected, "#{width}px #{point.inspect} #{input_record}"
+      assert_includes items(:hn_one).summary, selected
+      assert_trusted_input("pointerdown")
     end
-    assert_not_empty selected, selection_record
-    assert_trusted_input("pointerdown")
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
 
     point = begin_input_turn(".favorite-button", daily: true)
     mouse("mousePressed", point, "left", 1)
@@ -223,6 +206,8 @@ class PageTurnTest < ApplicationSystemTestCase
       page.driver.browser.close
     end
     page.driver.browser.switch_to.window(original)
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "服务端 replace 仍提交过渡但不产生 navigate，原生 skip 恢复正文" do
@@ -335,7 +320,8 @@ class PageTurnTest < ApplicationSystemTestCase
     end
 
     def mouse(type, point, button, buttons)
-      page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: type, x: point["x"], y: point["y"], button: button, buttons: buttons, clickCount: 1)
+      # 原生拖选会取整复查按下点；整数横坐标避免复查落到相邻字符边界。
+      page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: type, x: point["x"].round, y: point["y"], button: button, buttons: buttons, clickCount: 1)
     end
 
     def touch(type, point = nil)

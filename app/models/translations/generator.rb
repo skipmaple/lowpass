@@ -16,7 +16,7 @@ module Translations::Generator
         break if stopped
 
         counts[generate_target(issue, target, operation, reassess: reassess)] += 1
-        stopped = ModelRequests.stop_reason(operation)
+        stopped = ModelRequests.valid_operation?(operation) ? ModelRequests.stop_reason(operation) : "expired"
       end
       if stopped.nil? && Reasons::Budget.exhausted?
         ModelRequests.synchronize { stopped = ModelRequests.halt(operation, "budget") if Reasons::Budget.exhausted? }

@@ -241,6 +241,39 @@ class Translations::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "处理途中到期会明确停止，不请求剩余冻结目标" do
+    other = Item.create!(@item.attributes.except("id").merge("url_hash" => "c" * 64, "title" => "Another English story", "rank" => 2))
+    operation = ModelRequests.operation(issued_at: 7.days.ago + 10.seconds)
+    targets = [ @item.translation_target, other.translation_target ]
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do
+        travel 11.seconds
+        { status: 200, body: reply(text: "本次已发请求的合规译文") }
+      end
+      outcome = generate(operation: operation, targets: targets)
+      assert_equal "expired", outcome.stop_reason
+      assert_equal 1, outcome.translated
+      assert_nil other.reload.title_zh
+      assert_requested stub, times: 1
+      assert_equal 1, ModelCall.count
+    end
+  end
+
+  test "重试前到期仍说明停止原因且不追加请求" do
+    operation = ModelRequests.operation(issued_at: 7.days.ago + 10.seconds)
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do
+        travel 11.seconds
+        { status: 200, body: reply(text: "English only") }
+      end
+      outcome = generate(operation: operation)
+      assert_equal "expired", outcome.stop_reason
+      assert_requested stub, times: 1
+      assert_nil @item.reload.title_zh
+      assert_equal [ "invalid" ], ModelCall.pluck(:status)
+    end
+  end
+
   private
     def generate(operation: ModelRequests.operation, targets: [ @item.translation_target ], reassess: false)
       Translations::Generator.generate!(@issue, operation: operation, targets: targets, reassess: reassess)

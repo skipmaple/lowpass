@@ -60,4 +60,58 @@ class IndependentTranslationsTest < ApplicationSystemTestCase
     assert_text "独立补齐的中文标题"
     assert_nil item.reload.reason
   end
+  test "预览非JSON失败在桌面和375px可读且取消后焦点返回" do
+    with_model_provider do
+      sign_in_with_browser(users(:drew))
+      [ 1400, 375 ].each do |width|
+        page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+        visit admin_issues_path(month: "2026-09")
+        page.execute_script(<<~JS)
+          const originalFetch = window.fetch.bind(window);
+          window.fetch = (input, options) => String(input).includes('/translations/new')
+            ? Promise.resolve(new Response('<html>private upstream diagnostics</html>', { status: 200 }))
+            : originalFetch(input, options);
+        JS
+        row = find('[data-table-row-key="daily-2026-09-08"]')
+        row.click_on "补齐译文"
+        within('[role="dialog"]') do
+          assert_text "预览响应无法读取，请重新打开确认"
+          assert_no_text "Unexpected token"
+          assert_no_text "private upstream"
+          assert_button "提交补全", disabled: true
+          assert page.evaluate_script("document.documentElement.scrollWidth <= innerWidth")
+          save_screenshot(Rails.root.join("tmp/screenshots/translation-preview-error-#{width}.png"))
+          page.driver.browser.switch_to.active_element.send_keys(:escape)
+        end
+        assert_no_selector '[role="dialog"]'
+        assert_equal "translations", page.evaluate_script("document.activeElement.dataset.tableFocus")
+      end
+      assert_equal 0, ModelCall.count
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "真实会话失效后的预览提示登录并保持确认禁用" do
+    with_model_provider do
+      sign_in_with_browser(users(:drew))
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 375, height: 900, deviceScaleFactor: 1, mobile: false)
+      visit admin_issues_path(month: "2026-09")
+      assert_button "补齐译文", disabled: false
+      Session.where(user: users(:drew)).delete_all
+      find('[data-table-row-key="daily-2026-09-08"]').click_on "补齐译文"
+      within('[role="dialog"]') do
+        assert_text "登录状态已失效，请刷新后重试"
+        assert_button "提交补全", disabled: true
+        save_screenshot(Rails.root.join("tmp/screenshots/translation-preview-expired-session-375.png"))
+        click_on "取消"
+      end
+      assert_equal 0, ModelCall.count
+      assert_no_enqueued_jobs(only: GenerateTranslationsJob)
+      visit admin_issues_path(month: "2026-09")
+      assert_current_path login_path, ignore_query: true
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
 end

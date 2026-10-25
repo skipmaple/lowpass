@@ -252,4 +252,35 @@ describe('Admin/Issues/Index', () => {
     expect(opener).toHaveFocus()
   })
 
+  it.each([
+    ['网络中断', () => Promise.reject(new TypeError('Failed to fetch: private proxy diagnostics')), '网络连接失败，请重新打开确认'],
+    ['非JSON响应', () => Promise.resolve(new Response('<html>upstream response</html>', { status: 200 })), '预览响应无法读取，请重新打开确认'],
+    ['不完整数据', () => Promise.resolve(new Response('null', { status: 200 })), '预览不完整，请重新打开确认'],
+    ['空凭据', () => Promise.resolve(new Response(JSON.stringify({ token: '', target_count: 1 }), { status: 200 })), '预览不完整，请重新打开确认'],
+  ])('%s有可恢复的中文反馈且不能提交', async (_label, response, message) => {
+    vi.stubGlobal('fetch', vi.fn(response))
+    show({ rows: [adminIssueRow({ translations: { pending: 1, preserved: 0, ready: true, unready_label: null } })] })
+    const opener = screen.getByRole('button', { name: '补齐译文' })
+    await userEvent.click(opener)
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message)
+    expect(dialog).not.toHaveTextContent(/Failed to fetch|Unexpected token|upstream response|private proxy/)
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    expect(opener).toHaveFocus()
+    expect(router.post).not.toHaveBeenCalled()
+  })
+
+  it('会话失效重定向有登录提示，不解析登录HTML也不能提交', async () => {
+    const response = new Response('<html>login</html>', { status: 200 })
+    Object.defineProperties(response, { redirected: { value: true }, url: { value: 'https://lowpass.test/login?next=%2Fadmin%2Fissues' } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    show({ rows: [adminIssueRow({ translations: { pending: 1, preserved: 0, ready: true, unready_label: null } })] })
+    await userEvent.click(screen.getByRole('button', { name: '补齐译文' }))
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('登录状态已失效，请刷新后重试')
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    expect(router.post).not.toHaveBeenCalled()
+  })
+
 })

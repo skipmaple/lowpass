@@ -60,3 +60,11 @@ iPhone生产黑屏、真实Windows Chrome、M2首次呈现帧/自然pending历�
 I1修复提交 `eafbf17dc9bd082ad2c95aa506230742180fda50` 上完整 `bin/ci` 再次全绿：632项前端、994项Rails/4581断言、133项系统/9922断言；首屏267.54KiB，安全/依赖/seeds全部通过，3m58.30s。最终日志 `offline-evidence/final-fixed-ci.log`。审查报告评价的是be294ff；I1之后以两条RED→GREEN回归及完整CI确认修复，没有宣称审查者重审了修复。两个Minor明确递延。
 
 仅保留本地托管worktree与提交，不推送、不建PR、不合并、不部署、零真实模型请求、未执行生产历史补全。本次独立测试PG容器验收后清理，原用户数据库不启动、不改动。原冻结60项audit哈希仍为 `2e7bda1dab4a222afafc829649d1b5737b3c7226123431a5e990f33a002f5772`；八项全局目标保持未完成。
+
+## 本地反馈跟进（基于 f21b1ff）
+
+上文两个Minor记录的是当时状态；本次跟进修复M1/M2，不改已封存的历史证据。M1补齐途中到期的`expired`返回值与初始到期job的停止日志，保留原有七天期限、固定操作键和请求前到期检查。M2把网络、非JSON、无效预览与登录失效映射为附录B的中文恢复提示；空token不能确认，原生错误与响应正文不直接展示。
+
+回归先复现后修复：预览5项RED，修复后该文件19项通过；generator/job合计3项RED，修复后20 tests / 101 assertions通过。系统回归4 tests / 58 assertions，含1400/375px非JSON反馈、取消焦点返回及真实本地Session删除后的登录重定向。此处375px是本地Chrome模拟视口，不是iPhone实机证明。新证据在本会话visualizations根的`translation-feedback-followup-20261025/`，旧目录保持封存。
+
+本次增量独立只读复查：0 Critical、0 Important、0 Minor；未重复审查旧整支实现。随后完整`bin/ci`于隔离PG18环境通过：637项前端、997项Rails/4594断言、135项系统/9945断言，类型、体积、安全、依赖与seeds全绿，用时3m58.03s；完整日志`translation-feedback-followup-20261025/full-ci.log`。结论仍仅为本地候选通过，未执行实网模型、生产写入、推送或发布，全局缺口保持开放。

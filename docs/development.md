@@ -545,3 +545,11 @@ Actions 页面的「Run workflow」可以手动重发。只认本仓库 main 上
 - 要「部署前本人批准」：仓库 Settings → Environments → production 勾 Required reviewers，工作流不用改。
   只加「Deployment branches: main」挡不住上面那种 fork PR：`workflow_run` 触发的 job 本来就跑在默认分支上。
 - 与本机手动 `kamal deploy` 互不冲突：Kamal 的锁保证同一时间只有一次部署；CI 里排队的部署不取消。
+
+### 独立译文补全（D39，本地候选）
+
+供应商就绪即可翻译，不要求兴趣画像。后台刊物管理在现有理由格追加“缺译文/保留原文”，补齐译文先获取只读签名预览；重评默认关闭，目标零不可提交。确认只表示排队成功，刷新查看结果，不会重生成理由。历史补全只能显式指定一期；部署、访问、tick和旧理由任务不会扫描旧刊。
+
+新增TranslationPreservation与ModelOperationStop，ModelCall含purpose/operation_key/input_field/input_digest。费用与次数总计包含理由和翻译，理由专属查询限定purpose=reason。共享PG advisory门忙时保留原操作重排，原签发7天后过期；不得以重新入队刷新期限。合法结果先留账，再短事务保存；业务失败不得当成网络失败重调。操作终止表随现有ModelCall.cleanup清理，不增加tick任务。
+
+本地证据见 `superpowers/plans/2026-10-25-independent-translations-acceptance.md`。本轮模型只用WebMock桩，无法据此宣布真实语义质量或生产补全成功。若未来回退，应保留新表、marker和账本并先停止相应任务；旧代码不了解新终态，不能用删记录的办法恢复旧行为。

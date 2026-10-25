@@ -33,6 +33,8 @@ class ReasonAbstentionSystemTest < ApplicationSystemTestCase
         [ "已有理由 1 条", "资料不足未写 1 条", "保留旧理由 1 条（本次资料不足）", "缺 1 条", "最后处理 2026-09-09 09:30" ].each { |text| assert_text text }
         assert_no_overflow
         find("button[data-table-focus='reasons']").send_keys(:tab)
+        assert_selector "button[data-table-focus='translations']:focus"
+        find("button[data-table-focus='translations']").send_keys(:tab)
         assert_selector "a[data-table-focus='view']:focus"
         find("a[data-table-focus='view']").send_keys(:enter)
       end
@@ -63,6 +65,8 @@ class ReasonAbstentionSystemTest < ApplicationSystemTestCase
     viewport(390)
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
     items(:hn_one).record_reason_abstention(assessed_at: Time.current)
+    # 本例只核对理由终态；缺译文本身应在D39的待处理测试中保留。
+    @issue.items.where(title_zh: nil).update_all(title_zh: "已有合规译文")
     visit admin_issues_path(kind: "daily", month: "2026-09")
     row = find("[data-table-row-key='daily-2026-09-08']")
     row.find("summary", text: "刊物详情").click

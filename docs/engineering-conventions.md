@@ -70,7 +70,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 留存夹，不是稍后读队列（PRD 5.10、D26）。设计见 `docs/superpowers/specs/2026-09-30-favorites-design.md`。
 
 - 一条收藏按链接的 `url_hash` 认，`(user_id, url_hash)` 唯一（D27）。收藏时把条目抄成快照，**不引用条目行**：管理员重抓是整栏先删后插，
-  条目 id 全换。收藏页渲染时按（刊物、周期键、来源、`url_hash`）现查条目还在不在（`Favorite.live_items`），在就用它现在的译文与条目锚点。
+  条目 id 全换。收藏页渲染时按（刊物、周期键、来源、`url_hash`）现查条目还在不在（`Favorite.live_items`），在则使用条目锚点；标题/简介分别与收藏原文精确匹配时才取当前后补译文，否则保留该字段快照译文（D39）。
 - 取消是真删，服务端不留「已取消」的行。删的同时回一张签名凭据（`Favorite::Undoing`，`MessageVerifier`，一天有效，只认本人），
   收藏页的「恢复」凭它把同一条原样插回去；凭据参数 `undo` 在 `filter_parameters` 里，不进请求日志。
 - 书签的两个动作（`POST /favorites`、`DELETE /favorites/:url_hash`）是 fetch + JSON，不是 Inertia 访问；未登录回 401 而不是 302。
@@ -207,3 +207,9 @@ prek 不引入。
 ## Coding style
 
 Before editing or reviewing code, read STYLE.md.
+
+## D39 独立译文候选（2026-10-25）
+
+完整契约见 `superpowers/specs/2026-10-25-independent-translations-design.md`。理由同次译文不合规仍只忽略，不采用失败/拒写响应译文；另一次独立翻译最多3次/字段/操作，不依赖画像或理由。当前为本地候选，未获真实调用/部署/生产历史补全授权。
+
+`ModelRequests`统一PG session advisory门：uncached读取锁、预算、额度，冻结配置后请求与记账，短Item事务复查指纹；锁顺序先advisory后Item，网络不持行事务。Busy只重排同键同签发时间，7天终止；旧理由参数翻译目标为空。无请求终止存在ModelOperationStop而非假账本。签名预览15分钟，绑定用户/期/重评选项/字段指纹，POST只消费凭据；自动仅入队时上海当日新id，历史不自动扫。

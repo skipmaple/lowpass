@@ -185,6 +185,7 @@ class PageTurnTest < ApplicationSystemTestCase
         window.__drag.events.push({type,trusted:event.isTrusted,time:performance.now(),x:event.clientX,y:event.clientY,button:event.button,buttons:event.buttons,target:event.target.className,selection:readSelection()})
       },true)
     JS
+    mouse("mouseMoved", point, "none", 0)
     mouse("mousePressed", point, "left", 1)
     mouse("mouseMoved", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 1)
     mouse("mouseReleased", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 0)
@@ -334,7 +335,7 @@ class PageTurnTest < ApplicationSystemTestCase
     end
 
     def mouse(type, point, button, buttons)
-      page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: type, x: point["x"], y: point["y"], button: button, buttons: buttons, clickCount: type == "mouseMoved" ? 0 : 1)
+      page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: type, x: point["x"], y: point["y"], button: button, buttons: buttons, clickCount: 1)
     end
 
     def touch(type, point = nil)

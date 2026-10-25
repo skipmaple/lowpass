@@ -52,11 +52,15 @@ module ModelRequests
     def record(item, status, response, started, error = nil, purpose:, operation:, configuration:, field: nil, input_digest: nil)
       prompt = response&.prompt_tokens.to_i
       completion = response&.completion_tokens.to_i
-      ModelCall.create!(issue_id: item.issue_id, item_id: item.id, status: status, purpose: purpose,
+      attributes = { issue_id: item.issue_id, item_id: item.id, status: status, purpose: purpose,
         operation_key: operation.fetch("key"), input_field: field, input_digest: input_digest,
         prompt_tokens: prompt, completion_tokens: completion,
         cost: Reasons::Budget.cost_for(prompt, completion, input_price: configuration.input_price, output_price: configuration.output_price),
-        duration_ms: now_ms - started, error_summary: error&.slice(0, 200))
+        duration_ms: now_ms - started, error_summary: error&.slice(0, 200) }
+      # 重抓可能在网络期间删除原行。短事务失败后脱开可空外键留账，不重发模型请求。
+      ModelCall.transaction(requires_new: true) { ModelCall.create!(attributes) }
+    rescue ActiveRecord::InvalidForeignKey
+      ModelCall.create!(attributes.merge(item_id: nil, issue_id: nil))
     end
 
     def now_ms = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)

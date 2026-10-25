@@ -51,5 +51,7 @@ module Item::Translating
       association(:translation_preservations).reset
       true
     end
+  rescue ActiveRecord::RecordNotFound
+    false
   end
 end

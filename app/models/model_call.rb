@@ -8,6 +8,13 @@ class ModelCall < ApplicationRecord
 
   validates :status, inclusion: { in: STATUSES }
   validates :error_summary, length: { maximum: 200 }, allow_nil: true
+  validates :purpose, inclusion: { in: %w[ reason translation ] }
+  validates :operation_key, length: { maximum: 36 }, allow_nil: true
+  with_options if: -> { purpose == "translation" } do
+    validates :operation_key, presence: true
+    validates :input_field, inclusion: { in: %w[ title summary ] }
+    validates :input_digest, format: { with: /\A[0-9a-f]{64}\z/ }
+  end
 
   scope :stale, -> { where(created_at: ...RETENTION.ago) }
 

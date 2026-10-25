@@ -7,7 +7,8 @@ class Admin::Items::ReasonsController < Admin::BaseController
     # 单条这条路同样受月上限约束（终审 F2）：上限到了就一条也不生成，附录 B 的句子
     return redirect_back_or_to(back, alert: "本月费用已达上限，已停止生成") if Reasons::Budget.exhausted?
 
-    case Reasons::Generator.generate_item!(item)
+    operation = ModelRequests.operation
+    case Reasons::Generator.generate_item!(item, operation: operation)
     when :generated
       Audit.record("item.regenerate_reason", "Item##{item.id}", outcome: "generated")
       redirect_back_or_to back, notice: "已重生成"
@@ -21,6 +22,10 @@ class Admin::Items::ReasonsController < Admin::BaseController
       reason = ModelCall.where(item: item, purpose: "reason").order(:created_at, :id).last&.error_summary.presence || "输出不合规"
       redirect_back_or_to back, alert: "重生成失败：#{reason}"
     end
+  rescue ModelRequests::Busy
+    GenerateItemReasonJob.perform_later(item, operation)
+    Audit.record("item.regenerate_reason", "Item##{item.id}", outcome: "queued", operation_key: operation.fetch("key"))
+    redirect_back_or_to back, notice: "已提交理由任务，刷新查看结果"
   rescue Reasons::Provider::Rejected, Reasons::Provider::Limited => e
     Audit.record("item.regenerate_reason", "Item##{item.id}", outcome: "failed", error: e.class.name.demodulize)
     redirect_back_or_to back, alert: "重生成失败：#{e.message}"

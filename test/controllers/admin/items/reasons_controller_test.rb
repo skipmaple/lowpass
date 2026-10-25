@@ -40,6 +40,16 @@ class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "请求门忙时只排该条且沿用原操作" do
+    seen = nil
+    Reasons::Generator.stubs(:generate_item!).with { |item, operation:| seen = operation; item == items(:hn_one) }.raises(ModelRequests::Busy)
+    with_model_provider do
+      assert_enqueued_with(job: GenerateItemReasonJob, args: ->(args) { args == [ items(:hn_one), seen ] }) { post admin_item_reason_path(items(:hn_one)) }
+    end
+    assert_equal "已提交理由任务，刷新查看结果", flash[:notice]
+    assert_equal "queued", AuditLog.sole.payload.fetch("outcome")
+  end
+
   # 供应商配好了但画像是空的：调了也是每条判「缺领域名」，白花钱（终审 F1）
   test "画像为空：提示兴趣画像为空，不调模型" do
     with_model_provider do

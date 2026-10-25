@@ -306,13 +306,13 @@ class Issue::DailyTest < ActiveSupport::TestCase
     issue = Issue.generate_daily!("2026-09-27")
     Source.enabled.daily.find_each { |s| s.fetch_runs.create!(issue: issue, trigger: "scheduled", attempt: 1, status: "failed") unless s == sources(:hn) }
     sources(:hn).fetch_now(issue, trigger: "scheduled")
-    assert_enqueued_with(job: GenerateReasonsJob, args: [ issue ]) { issue.finalize!(reason: "complete") }
+    assert_enqueued_with(job: GenerateReasonsJob, args: ->(args) { args.first == issue && args[1] && args.last.fetch("translation_targets").empty? && ModelRequests.valid_operation?(args.last.fetch("operation")) }) { issue.finalize!(reason: "complete") }
 
     empty = Issue.generate_daily!("2026-09-28")
     Source.enabled.daily.find_each { |s| s.fetch_runs.create!(issue: empty, trigger: "scheduled", attempt: 1, status: "failed") }
     assert_no_enqueued_jobs(only: GenerateReasonsJob) { empty.finalize!(reason: "complete") }
 
-    assert_enqueued_with(job: GenerateReasonsJob, args: [ issue ]) { Issue.regenerate_source!(issue, sources(:hn)) }
+    assert_enqueued_with(job: GenerateReasonsJob, args: ->(args) { args.first == issue && args[1] && args.last.fetch("translation_targets").empty? && ModelRequests.valid_operation?(args.last.fetch("operation")) }) { Issue.regenerate_source!(issue, sources(:hn)) }
   end
 
   # D19 周刊条目没有推荐理由：重抓周刊源同样走 revise!，那一支不能入队生成理由——

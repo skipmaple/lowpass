@@ -26,8 +26,12 @@ module Reasons::Provider
     def configured? = base_url.present? && model_name.present? && key_configured?
 
     def configuration
-      Configuration.new(base_url: base_url.to_s.dup.freeze, model_name: model_name.to_s.dup.freeze, api_key: api_key.to_s.dup.freeze,
-        input_price: Setting.get("model_input_price").to_s.dup.freeze, output_price: Setting.get("model_output_price").to_s.dup.freeze)
+      keys = %w[ model_base_url model_name model_input_price model_output_price ]
+      stored = Setting.where(key: keys).pluck(:key, :value).to_h
+      # 一个SQL快照配合后台整组事务，避免请求冻结到两版端点/模型/价格的混合值。
+      snapshot = keys.index_with { |key| (stored[key].presence || Setting::DEFAULTS.fetch(key)).to_s.dup.freeze }
+      Configuration.new(base_url: snapshot.fetch("model_base_url"), model_name: snapshot.fetch("model_name"), api_key: api_key.to_s.dup.freeze,
+        input_price: snapshot.fetch("model_input_price"), output_price: snapshot.fetch("model_output_price"))
     end
 
     # 基础地址自动追加 /chat/completions；完整端点、查询或片段会改变拼接语义。

@@ -73,6 +73,30 @@ class ModelRequestsTest < ActiveSupport::TestCase
     end
   end
 
+  test "读取快照途中整组配置提交时只使用同一版本" do
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      changed = false
+      listener = ->(*args) do
+        if !changed && args.last[:sql].include?('FROM "settings"')
+          changed = true
+          Setting.transaction do
+            Setting.set("model_base_url", "https://next.example/v1")
+            Setting.set("model_name", "next-model")
+            Setting.set("model_input_price", "100")
+            Setting.set("model_output_price", "200")
+          end
+        end
+      end
+      config = nil
+      ActiveSupport::Notifications.subscribed(listener, "sql.active_record") { config = Reasons::Provider.configuration }
+      assert changed
+      assert_equal [ "https://model.example/v1", "test-model", "1", "10" ], config.to_h.values_at(:base_url, :model_name, :input_price, :output_price)
+      assert_equal [ "https://next.example/v1", "next-model", "100", "200" ], Reasons::Provider.configuration.to_h.values_at(:base_url, :model_name, :input_price, :output_price)
+    end
+  end
+
   test "请求门内预算读取不复用其他连接写入前的查询缓存" do
     config = ApplicationRecord.connection_db_config.configuration_hash
     other = PG.connect(host: config[:host], port: config[:port], dbname: config[:database], user: config[:username], password: config[:password], gssencmode: "disable")

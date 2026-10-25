@@ -46,3 +46,11 @@ iPhone生产黑屏、真实Windows Chrome、M2首次呈现帧/自然pending历�
 ## 完整 CI（独立审查前）
 
 命令：`CI=1 DATABASE_URL=<隔离库> env -u RAILS_ENV -u RACK_ENV bin/ci`，2026-10-25本地运行，3m59.98s全绿。632前端/992 Rails/133系统，安全检查、依赖审计、seeds及267.54KiB首屏门禁均通过。日志为 `independent-translations-implementation-20261025/offline-evidence/task6-ci-corrected.log`；该目录位于本会话既有visualizations证据根。旧失败日志同时保留，不覆盖为成功。独立整支审查尚待完成，候选未发布。
+
+## 独立审查与单次修复
+
+审查范围734c78c..be294ff，gpt-6-astra/high独立只读：0 Critical、1 Important、2 Minor。I1指出逐字段配置读取/保存可混搭两个版本。两条回归先实际失败（旧地址配新模型/价格；保存中断留下新地址），改为单次SQL读取完整配置、后台整组短事务保存后，134项定向测试/789断言通过。随后在修复提交上执行完整CI，不重复派审。
+
+递延Minor：M1途中授权到期虽安全停请求，但停止原因/日志不完整；M2网络/JSON预览失败可能显示浏览器原生错误，确认仍禁用且可取消。没有将它们描述为已修复。
+
+审查未判定的三类证据保留未完成：真实语义/实网耗时；生产迁移部署/账单/历史补全；iPhone/Windows/M2全局缺口。它们均不由本轮本地通过替代。完整审查报告在本会话证据目录 `independent-translations-implementation-20261025/independent-review.md`。

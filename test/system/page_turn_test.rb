@@ -253,7 +253,7 @@ class PageTurnTest < ApplicationSystemTestCase
     assert_equal "", evaluate_script("document.querySelector('.login-ground').style.opacity")
   end
 
-  test "原生 Back 在 swap 前到达仍恢复历史，连续往返保持 URL 和正文一致" do
+  test "受控 swap 前原生 Back 仍恢复历史，连续往返保持 URL 和正文一致" do
     visit search_path
     find(".masthead-brand").click
     assert_current_path daily_issue_path("2026-09-08")
@@ -265,23 +265,33 @@ class PageTurnTest < ApplicationSystemTestCase
     execute_script(<<~JS)
       const start = document.startViewTransition.bind(document)
       window.__backEvents=[]
+      const backArrived = new Promise(resolve => { window.__releaseSwap = resolve })
       const stop=Event.prototype.stopImmediatePropagation
       Event.prototype.stopImmediatePropagation=function(){
-        if(this.type==='popstate') window.__backEvents.push({trusted:this.isTrusted,path:location.pathname,phase:document.documentElement.dataset.vt,swapped:!!window.__swapDone})
+        if(this.type==='popstate') {
+          window.__backEvents.push({trusted:this.isTrusted,path:location.pathname,phase:document.documentElement.dataset.vt,swapped:!!window.__swapDone})
+          if(this.isTrusted) window.__releaseSwap()
+        }
         return stop.call(this)
       }
-      window.addEventListener('popstate',event=>window.__backEvents.push({trusted:event.isTrusted,path:location.pathname,phase:document.documentElement.dataset.vt}),true)
+      window.addEventListener('popstate',event=>{
+        window.__backEvents.push({trusted:event.isTrusted,path:location.pathname,phase:document.documentElement.dataset.vt})
+        if(event.isTrusted) window.__releaseSwap()
+      },true)
       document.startViewTransition = callback => {
-        const transition=start(callback)
+        // 只控制竞态入口：等真实Back到达才允许swap，不改变原生动画时长。
+        const transition=start(async () => { await backArrived; return callback() })
         transition.updateCallbackDone.then(()=>window.__swapDone=true)
+        transition.finished.then(()=>window.__backTurnFinished=true)
         history.back()
         return transition
       }
       document.querySelector('a[aria-label=搜索]').click()
     JS
+    wait_until { evaluate_script("window.__swapDone && window.__backTurnFinished") }
     assert_current_path daily_issue_path("2026-09-08")
     assert_selector ".daily-source"
-    wait_until { evaluate_script("window.__swapDone") }
+    wait_until { (evaluate_script("scrollY") - reading).abs < 2 }
     events = evaluate_script("window.__backEvents")
     puts "M2_PRESWAP_BACK #{events.to_json}"
     assert events.any? { |event| event["trusted"] && !event["swapped"] && event["phase"] == "old" }, events.inspect

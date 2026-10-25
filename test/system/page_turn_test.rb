@@ -173,11 +173,25 @@ class PageTurnTest < ApplicationSystemTestCase
 
   test "正文拖选保留原生选择，收藏与修饰键原文链接保留默认结果" do
     items(:hn_one).update!(summary: "Readable native selection keeps this text intact during the page turn.")
-    point = begin_input_turn(".item-summary", daily: true)
+    point = begin_input_turn(".item-summary", daily: true, prepare: <<~JS)
+      window.__drag = {events:[]}
+      const summary = document.querySelector('.item-summary')
+      const readSelection = () => {
+        const selection = getSelection()
+        return {text:selection.toString(),type:selection.type,anchor:selection.anchorNode?.parentElement?.className,anchorOffset:selection.anchorOffset,focus:selection.focusNode?.parentElement?.className,focusOffset:selection.focusOffset}
+      }
+      window.__readDrag = () => ({...window.__drag,selection:readSelection(),rect:summary.getBoundingClientRect().toJSON(),fonts:document.fonts.status})
+      for (const type of ['pointerdown','pointermove','pointerup','selectstart','selectionchange']) document.addEventListener(type,event=>{
+        window.__drag.events.push({type,trusted:event.isTrusted,time:performance.now(),x:event.clientX,y:event.clientY,target:event.target.className,selection:readSelection()})
+      },true)
+    JS
     mouse("mousePressed", point, "left", 1)
     mouse("mouseMoved", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 1)
     mouse("mouseReleased", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 0)
-    assert_not_empty evaluate_script("getSelection().toString()"), input_record
+    selected = evaluate_script("getSelection().toString()")
+    selection_record = evaluate_script("JSON.stringify({point:#{point.to_json},immediate:#{selected.to_json},...window.__readDrag(),input:window.__input})")
+    puts "M2_SELECTION #{selection_record}"
+    assert_not_empty selected, selection_record
     assert_trusted_input("pointerdown")
 
     point = begin_input_turn(".favorite-button", daily: true)

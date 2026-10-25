@@ -182,7 +182,7 @@ class PageTurnTest < ApplicationSystemTestCase
       }
       window.__readDrag = () => ({...window.__drag,selection:readSelection(),rect:summary.getBoundingClientRect().toJSON(),fonts:document.fonts.status})
       for (const type of ['pointerdown','pointermove','pointerup','selectstart','selectionchange']) document.addEventListener(type,event=>{
-        window.__drag.events.push({type,trusted:event.isTrusted,time:performance.now(),x:event.clientX,y:event.clientY,target:event.target.className,selection:readSelection()})
+        window.__drag.events.push({type,trusted:event.isTrusted,time:performance.now(),x:event.clientX,y:event.clientY,button:event.button,buttons:event.buttons,target:event.target.className,selection:readSelection()})
       },true)
     JS
     mouse("mousePressed", point, "left", 1)
@@ -191,6 +191,15 @@ class PageTurnTest < ApplicationSystemTestCase
     selected = evaluate_script("getSelection().toString()")
     selection_record = evaluate_script("JSON.stringify({point:#{point.to_json},immediate:#{selected.to_json},...window.__readDrag(),input:window.__input})")
     puts "M2_SELECTION #{selection_record}"
+    if selected.empty?
+      # 只在失败时采集无过渡对照；原手势的失败值和断言保持不变。
+      { single: [ 100 ], continuous: [ 30, 60, 100 ] }.each do |label, offsets|
+        mouse("mousePressed", point, "left", 1)
+        offsets.each { |offset| mouse("mouseMoved", { "x" => point["x"] + offset, "y" => point["y"] }, "left", 1) }
+        mouse("mouseReleased", { "x" => point["x"] + 100, "y" => point["y"] }, "left", 0)
+        puts "M2_SELECTION_CONTROL #{label} #{evaluate_script('JSON.stringify(window.__readDrag())')}"
+      end
+    end
     assert_not_empty selected, selection_record
     assert_trusted_input("pointerdown")
 

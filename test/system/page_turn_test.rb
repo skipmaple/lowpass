@@ -334,7 +334,7 @@ class PageTurnTest < ApplicationSystemTestCase
     end
 
     def mouse(type, point, button, buttons)
-      page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: type, x: point["x"], y: point["y"], button: button, buttons: buttons, clickCount: 1)
+      page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: type, x: point["x"], y: point["y"], button: button, buttons: buttons, clickCount: type == "mouseMoved" ? 0 : 1)
     end
 
     def touch(type, point = nil)

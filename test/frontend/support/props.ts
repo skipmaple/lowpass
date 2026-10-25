@@ -250,7 +250,7 @@ export function adminUserRow(overrides: Partial<AdminUserRow> = {}): AdminUserRo
 
 // 设置页「推荐理由」一节的用量与配置（④，Reasons::Status#props）
 export function reasonsStatus(overrides: Partial<ReasonsStatus> = {}): ReasonsStatus {
-  return { currency: '', has_nonzero_costs: false, configured: false, key_configured: false, base_url: '', model_name: '', input_price: '0', output_price: '0', monthly_cap: '0', month_calls: 0, month_cost: '0.0', today_calls: 0, ...overrides }
+  return { currency: '', has_nonzero_costs: false, configured: false, key_configured: false, base_url: '', model_name: '', input_price: '0', output_price: '0', monthly_cap: '0', month_calls: 0, month_reason_calls: 0, month_translation_calls: 0, month_cost: '0.0', today_calls: 0, ...overrides }
 }
 
 // 设置页「备份」一节（P3，Backup::Status#props）：默认是一个 BACKUP_* 都没配、还没备份过

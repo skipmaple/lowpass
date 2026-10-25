@@ -1,6 +1,7 @@
 # 设置页「推荐理由」一节的 props（设计 §6.1）：配置、密钥状态、本月 / 今日用量；数字都给字符串或整数，前端直接画
 module Reasons::Status
   def self.props
+    calls = Reasons::Budget.month_calls_by_purpose
     {
       configured: Reasons::Provider.configured?,
       key_configured: Reasons::Provider.key_configured?,
@@ -11,7 +12,9 @@ module Reasons::Status
       monthly_cap: Setting.get("model_monthly_cap"),
       currency: Setting.get("model_currency"),
       has_nonzero_costs: ModelCall.where.not(cost: 0).exists?,
-      month_calls: Reasons::Budget.month_calls,
+      month_calls: calls.values.sum,
+      month_reason_calls: calls.fetch("reason", 0),
+      month_translation_calls: calls.fetch("translation", 0),
       month_cost: Reasons::Budget.month_cost.to_s("F"),
       today_calls: Reasons::Budget.today_calls
     }

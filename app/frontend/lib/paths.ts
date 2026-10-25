@@ -90,3 +90,4 @@ export const ADMIN_BACKUP = '/admin/backup'
 export const ADMIN_INTEREST_AREAS = '/admin/interest_areas'
 export const adminInterestAreaHref = (id: string) => `${ADMIN_INTEREST_AREAS}/${id}`
 export const adminIssueReasonsHref = (periodKey: string) => `${ADMIN_ISSUES}/${periodKey}/reasons`
+export const adminIssueTranslationsHref = (periodKey: string) => `${ADMIN_ISSUES}/${periodKey}/translations`

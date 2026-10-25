@@ -5,6 +5,18 @@ module Item::Translating
     has_many :translation_preservations
   end
 
+  class_methods do
+    def translation_counts_by_issue(issue_ids)
+      counts = issue_ids.index_with { { pending: 0, preserved: 0 } }
+      visible.where(issue_id: issue_ids).includes(:source, :issue, :translation_preservations).each do |item|
+        if item.translation_field && item.public_send("#{item.translation_field}_zh").blank?
+          counts.fetch(item.issue_id)[item.needs_translation? ? :pending : :preserved] += 1
+        end
+      end
+      counts
+    end
+  end
+
   def translation_field
     return unless !hidden? && issue.kind == "daily" && issue.published?
 

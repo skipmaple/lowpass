@@ -33,10 +33,17 @@ module Issue::Administering
         sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
         reason_counts = Item.reason_counts_by_issue(issues.values.map(&:id))
+        translation_counts = Item.translation_counts_by_issue(issues.values.map(&:id))
+        translations_ready = Translations.ready?
+        translation_state = { ready: translations_ready, unready_label: translations_ready ? nil : Translations.unready_label }
         # 一页最多 31 行，能不能生成是整页一样的：算一次带下去，别每行再查一遍 settings 与 interest_areas
         ready = Reasons.ready?
         unready_label = ready ? nil : Reasons.unready_label
-        (first..last).to_a.reverse.map { |date| admin_daily_row(date.iso8601, issues[date.iso8601], sources, counts, reason_counts, ready: ready, unready_label: unready_label) }
+        (first..last).to_a.reverse.map do |date|
+          issue = issues[date.iso8601]
+          admin_daily_row(date.iso8601, issue, sources, counts, reason_counts, ready: ready, unready_label: unready_label).merge(
+            translations: issue&.published? ? translation_counts.fetch(issue.id).merge(translation_state) : nil)
+        end
       end
 
       def admin_daily_row(key, issue, sources, counts, reason_counts, ready:, unready_label:)

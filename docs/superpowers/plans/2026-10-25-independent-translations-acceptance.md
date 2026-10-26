@@ -93,3 +93,14 @@ PR #94首次远端运行`40202970662`的扫描、lint和普通测试通过；系
 后续远端运行`40206072002`确认原生拖选修正通过Linux；另一条Back测试失败：实际可信popstate已到NEW，原用例没有保证“swap前到达”的前置条件。测试现仅用真实可信Back释放swap门，保留原生动画时长和两轮往返；它证明受控竞态，不替代自然pending历史取消验收。外部100ms延迟探针使原采样方式先实际失败，受控门通过；延迟未加入永久测试或产品。
 
 此次窄范围独立审查为0 Critical/1 Important：URL/正文断言早于swap，阻断replay的实际负控仍绿。按意见把首次恢复的URL、正文及阅读滚动位置检查移到updateCallbackDone和原生finished之后、任何后续Back/Forward之前。修复后阻断replay的负控真实失败（1项/7断言，缺少日刊正文），正常延迟Back正控1项/16断言全绿，整份翻页测试11项/196断言及定向Rubocop通过。此为主代理RED/GREEN确认，没有声称审查者重审修复；无效负控和历史失败日志全部保留。产品源码仍与`48a916a`相同；PR #94继续保持草稿，最新远端结果以其精确提交回执为准。
+
+
+## 2026-10-26 桌面窗口增量与动态减动效修复
+
+用户确认解锁后，实际Mac Chrome155.0.8059.85、1270×846 CSS/DPR2中完成账户/Escape、搜索组合筛选与返回结果焦点、收藏取消/恢复、32条完整周刊静态原图验收。按标签页采集得到真实OLD/NEW叠层的240/360ms自然画面，包含长空刊互换、日期宽度变化与页脚；一组混入准备访问的采样明确invalid并保留。无gate历史样本有可信OLD popstate和实际replay，页脚URL/正文/预存5007px位置恢复。固定25条native wheel中有ready+6.2ms、native.pending=true/startTime=null/current0的可信NEW wheel，随后清理和滚动930px；无同事件bubble证据，不将此独立扩写成同步清理或单次滚动量的证明。pointer样本没有命中pending，不计中部光标。自然帧仍有采样间隙，首个物理呈现帧、原237.879ms等待、Windows、完整Task5等边界保持未验。
+
+新增证据独立复查为0 Critical/1 Important/0 Minor。Important确认：Ctrl/Square在render时固化pageTurn，动态开启reduce后缓存函数被crossfadeFor提前放过。预先reduce加载的样本不能覆盖动态变化。改为在Inertia公开onBefore访问边界读取偏好与方向，公共跨页入口按当前reduce显式关闭过渡。动态关闭reduce也恢复360ms方向，而非缓存false退成240ms普通跨页；无新增视觉规则、时间档或依赖。
+
+36项前端定向测试中，旧实现先有2项真实失败；系统回归正确选择可见的375/1440导航后先复现“应0次实际1次VT”和“应360ms实际240ms”（2 failures/0 errors），首次选择器错误日志保留、不当作RED行为证明。修复后整份翻页13项/218断言、类型检查通过。完整bin/ci在隔离PG18上通过：638前端、997Rails/4594断言、137系统/9978断言，首屏267.57KB、安全/依赖/seeds全部通过，1m24.42s。新空目录production构建145文件与该CI对应产物逐字节一致；实际Chrome复验动态开启为0次VT，关闭后360ms，测试媒体覆盖已恢复。独立报告评价修复前状态；后续由root RED/GREEN、全套CI与真实Chrome验证修复，不声称审查者重审修复。
+
+证据分别封存在本会话visualizations根的`desktop-chrome-acceptance-20261026/`（修复前与独立审查）和`desktop-reduce-fix-20261026/`（红绿/CI/新构建/实窗）。本轮零真实模型调用、无生产历史补全/合并/部署；手机仍按用户要求跳过，原冻结60与八项总目标未完成。

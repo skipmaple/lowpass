@@ -194,13 +194,13 @@ export function pageTurn(direction: TurnDirection): false | ((transition: ViewTr
 
 // 其余整页跳转（换了路径的 GET 访问）：正文淡入淡出。保留状态的访问、局部刷新、轮询、预取、表单提交不做，
 // 自己带了过渡回调的访问（前一期 / 后一期）原样放过。Inertia 把这里的返回值盖在访问自带的选项上，
-// 所以不该管的时候必须返回空对象，不能写 viewTransition: false。
+// 除当前减少动态效果需明确关闭过渡外，不该管的访问必须返回空对象。
 // <Link> 默认把 viewTransition: false 一路传进访问，所以 false 不算「调用方要求不做」：只认回调与 true。
 export function crossfadeFor(href: string, options: VisitOptions): { viewTransition?: VisitOptions['viewTransition'] } {
+  if (prefersReducedMotion()) return { viewTransition: false }
   if (typeof options.viewTransition === 'function' || options.viewTransition === true) return {}
   if ((options.method ?? 'get') !== 'get') return {}
   if (options.preserveState || options.async || options.prefetch || (options.only?.length ?? 0) > 0) return {}
-  if (prefersReducedMotion()) return {}
   if (new URL(href, window.location.href).pathname === window.location.pathname) return {}
   return { viewTransition: (transition: ViewTransition) => track(transition, null) }
 }

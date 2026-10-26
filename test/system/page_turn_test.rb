@@ -6,6 +6,52 @@ class PageTurnTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
   end
 
+  test "已挂载的期导航在动态开启减少效果后不启动原生过渡" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    [ 375, 1440 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "no-preference" } ])
+      visit daily_issue_path("2026-09-08")
+      assert_selector ".issue-head-date", text: "9月8日"
+      execute_script(<<~JS)
+        const original = document.startViewTransition.bind(document)
+        window.__dynamicTurns = 0
+        document.startViewTransition = (...args) => { window.__dynamicTurns++; return original(...args) }
+      JS
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+      assert evaluate_script("matchMedia('(prefers-reduced-motion: reduce)').matches")
+      find(".issue-nav a[aria-keyshortcuts=ArrowLeft], .issue-nav-mobile a[aria-keyshortcuts=ArrowLeft]").click
+      assert_current_path daily_issue_path("2026-09-07")
+      assert_selector ".issue-head-date", text: "9月7日"
+      assert_equal 0, evaluate_script("window.__dynamicTurns"), "#{width}px 的已挂载控件必须按当前减动效偏好直接换页"
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "已挂载的期导航在动态关闭减少效果后恢复带方向的翻期" do
+    Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
+    [ 375, 1440 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+      visit daily_issue_path("2026-09-08")
+      assert_selector ".issue-head-date", text: "9月8日"
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "no-preference" } ])
+      assert_not evaluate_script("matchMedia('(prefers-reduced-motion: reduce)').matches")
+      record_turn
+      find(".issue-nav a[aria-keyshortcuts=ArrowLeft], .issue-nav-mobile a[aria-keyshortcuts=ArrowLeft]").click
+      wait_until { evaluate_script("window.__turn?.finished") }
+      assert_current_path daily_issue_path("2026-09-07")
+      state = evaluate_script("window.__turn")
+      assert_equal 360, state.dig("native", "duration"), "#{width}px 应恢复翻期而非普通跨页"
+      assert_equal 24, state["oldEndpoint"]
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
   test "NEW 不捕获且正文固定，OLD 与真实正文共用 native 起点" do
     [ 375, 1440 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)

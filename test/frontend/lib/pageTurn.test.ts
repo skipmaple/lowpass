@@ -102,7 +102,16 @@ describe('crossfadeFor', () => {
 
   it('减少动态效果时不做', () => {
     reduceMotion(true)
-    expect(crossfadeFor('/weekly', {})).toEqual({})
+    expect(crossfadeFor('/weekly', {})).toEqual({ viewTransition: false })
+  })
+
+  it('访问时开启减少动态效果会禁用已创建的过渡回调', () => {
+    reduceMotion(false)
+    const renderedTurn = pageTurn('back')
+    expect(renderedTurn).toBeTypeOf('function')
+
+    reduceMotion(true)
+    expect(crossfadeFor('/daily/2026-09-07', { viewTransition: renderedTurn })).toEqual({ viewTransition: false })
   })
 })
 

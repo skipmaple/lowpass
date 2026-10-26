@@ -115,6 +115,37 @@ describe('收藏页的行', () => {
 })
 
 describe('取消与恢复（R-10.7、AC-10.4）', () => {
+  it('取消时保留书签墨层；请求仍在途时恢复也立即可用', async () => {
+    let finishRemove: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(new Promise((resolve) => { finishRemove = resolve }))
+      .mockResolvedValueOnce(ok({ url_hash: 'hash-termlog' }))
+    vi.stubGlobal('fetch', fetchMock)
+    show()
+
+    const mark = screen.getByRole('button', { name: `取消收藏：${TITLE}` })
+    const ink = mark.querySelector('.favorite-ink')
+    expect(ink).not.toBeNull()
+    await userEvent.click(mark)
+
+    const restore = screen.getByRole('button', { name: '恢复' })
+    expect(restore).toBe(mark)
+    expect(restore.querySelector('.favorite-ink')).toBe(ink)
+    expect(restore).not.toHaveAttribute('data-on')
+    expect(restore).not.toHaveAttribute('data-stamp')
+    expect(restore).toHaveAccessibleDescription('已取消收藏')
+    expect(restore).toHaveFocus()
+    await userEvent.click(restore)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    finishRemove(ok({ undo: 'signed-token' }, 200))
+    await waitFor(() => expectFavoritesReplace(['hash-termlog']))
+    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toBe(mark)
+    expect(mark.querySelector('.favorite-ink')).toBe(ink)
+    expect(mark).toHaveAttribute('data-on')
+    expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ undo: 'signed-token' }))
+  })
+
   it('取消后那一行原地留下「已取消收藏」与「恢复」，恢复凭取消时拿到的凭据', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(ok({ undo: 'signed-token' }, 200))

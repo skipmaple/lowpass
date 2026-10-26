@@ -39,7 +39,7 @@ function Row({ entry }: { entry: FavoriteEntry }) {
   const was = useRef(kept)
   const statusId = useId()
 
-  // 取消与恢复会把读者刚按的那个控件换掉：焦点跟到换上来的那个，不掉回 body（PRD 6.4）。
+  // 同一个书签控件在取消后提供恢复；两态沿用原来的焦点跟随限制（PRD 6.4）。
   // 只在读者还在这一行时跟（焦点在行里，或者随换掉的控件掉回了 body）：请求失败回滚时读者可能已经去了别处，不拽回来
   useEffect(() => {
     const active = document.activeElement
@@ -79,16 +79,10 @@ function Row({ entry }: { entry: FavoriteEntry }) {
           <span>原文</span>
           <Icon name="arrow-up-right" size={12} />
         </a>
-        {kept ? (
-          <FavoriteButton ref={markRef} className="search-mark" urlHash={entry.url_hash} title={entry.title} />
-        ) : (
-          <span className="favorite-removed search-mark">
-            <span id={statusId}>已取消收藏</span>
-            <button ref={restoreRef} type="button" className="link-button" aria-describedby={statusId} onClick={() => favorites?.restore(entry.url_hash)}>
-              恢复
-            </button>
-          </span>
-        )}
+        <span className={`favorite-controls search-mark${kept ? '' : ' favorite-removed'}`}>
+          {!kept ? <span id={statusId}>已取消收藏</span> : null}
+          <FavoriteButton ref={kept ? markRef : restoreRef} urlHash={entry.url_hash} title={entry.title} undo={{ describedBy: statusId }} />
+        </span>
       </div>
     </article>
   )

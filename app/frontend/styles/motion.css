@@ -60,9 +60,10 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
 /* ─── M3 盖章 ─────────────────────────────────────────────────────────── */
 
 /* 描线一层常在；实心那层叠在上面，用 clip-path 从底部涨满；收藏的那一下按钮轻压（0.92 → 1） */
-.favorite-button { position: relative; }
+.favorite-button { position: relative; transition-property: color; }
 .favorite-line, .favorite-ink { display: block; }
 .favorite-ink { position: absolute; left: 50%; top: 50%; translate: -50% -50%; clip-path: inset(100% 0 0 0); transition: clip-path var(--dur-2) var(--ease-out); }
+.favorite-restore .favorite-ink { left: auto; right: 13px; translate: 0 -50%; }
 .favorite-ink svg, .favorite-ink svg path { fill: currentColor; }
 .favorite-button[data-on] .favorite-ink { clip-path: inset(0 0 0 0); }
 /* tokens.css 里「data-on 时整个 svg 填墨」那条留给旧结构；描线那层不填，墨只由实心层带出来 */

@@ -123,6 +123,39 @@ class FavoritingTest < ApplicationSystemTestCase
     end
   end
 
+  test "减少动态时取消恢复不产生布局过渡，墨层保留在同一个控件" do
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+    with_viewport(375, 812) do
+      Favorite.keep(users(:drew), items(:hn_one))
+      visit favorites_path
+      assert_selector ".favorite-button[data-on]"
+      execute_script(<<~JS)
+        window.favoriteControl = document.querySelector('.favorite-button');
+        window.favoriteInk = favoriteControl.querySelector('.favorite-ink');
+        window.favoriteTransitions = [];
+        favoriteControl.addEventListener('transitionrun', (event) => {
+          if (event.target === favoriteControl) favoriteTransitions.push(event.propertyName);
+        });
+      JS
+
+      find("button[aria-label='取消收藏：#{TITLE}']").click
+      assert_selector "button[aria-label='恢复']"
+      wait_for_favorite_requests(1)
+      evaluate_async_script("const done=arguments[0];requestAnimationFrame(()=>requestAnimationFrame(done))")
+      assert evaluate_script("favoriteInk.isConnected && favoriteControl === document.querySelector('.favorite-button')")
+      assert_empty evaluate_script("favoriteTransitions.filter(name => !['color','text-decoration-color'].includes(name))")
+
+      click_on "恢复"
+      wait_for_favorite_requests(2)
+      assert_selector ".favorite-button[data-on]"
+      evaluate_async_script("const done=arguments[0];requestAnimationFrame(()=>requestAnimationFrame(done))")
+      assert evaluate_script("favoriteInk === document.querySelector('.favorite-ink')")
+      assert_empty evaluate_script("favoriteTransitions.filter(name => !['color','text-decoration-color'].includes(name))")
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
+  end
+
   private
     # 无头 Chrome 的窗口宽度收不到 500px 以下（resize_to(375, 812) 实际得到 500）：
     # 要在手机宽度的视口里量，用 CDP 把设备尺寸定住，量完清掉

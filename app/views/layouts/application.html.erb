@@ -37,10 +37,13 @@
     <%= vite_client_tag %>
     <%= vite_react_refresh_tag %>
     <%= vite_stylesheet_tag "application" %>
-    <%= vite_typescript_tag "application.tsx" %>
+    <%= render "shared/startup_guard" %>
+    <%= vite_typescript_tag "application.tsx", data: { startup_entry: true } %>
   </head>
 
   <body>
     <%= yield %>
+    <%= render "shared/startup_recovery", hidden: true %>
+    <noscript><%= render "shared/startup_recovery", hidden: false %></noscript>
   </body>
 </html>

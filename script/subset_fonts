@@ -40,6 +40,7 @@ MAPLE = os.path.join(ROOT, "vendor/fonts/MapleMonoNL-Regular.woff2")
 
 # 每页都有的外壳（报头、页脚、期头、提示）与日刊页、登录页、错误页：首屏要的字
 PRIMARY = [
+    "app/views/shared/_startup_recovery.html.erb",
     "app/frontend/components/Layout.tsx",
     "app/frontend/components/Masthead.tsx",
     "app/frontend/components/Footer.tsx",

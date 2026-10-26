@@ -52,6 +52,11 @@ a.t:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .sheet { width: 100%; min-height: 100dvh; box-sizing: border-box; }
 .sheet-body { width: 100%; max-width: 1240px; box-sizing: border-box; margin: 0 auto; padding: 0 40px 28px; }
 
+/* 应用入口失败时仍能由服务端 HTML 提供一个原生重载动作；迟到的应用一旦挂载就让回正文。 */
+.startup-recovery.sheet-body { padding-top: 64px; padding-bottom: 64px; }
+.startup-recovery h1 { margin: 0 0 24px; font-size: var(--fs-22); font-weight: 400; line-height: 1.6; }
+#app:not(:empty) ~ .startup-recovery { display: none; }
+
 /* 报头黑带。尺寸写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
 .masthead { box-sizing: border-box; height: 80px; padding: 0 max(40px, calc((100% - 1160px) / 2)); background: var(--ink); display: flex; align-items: center; justify-content: space-between; }
 .masthead-left { display: flex; align-items: center; gap: 40px; }
@@ -142,6 +147,7 @@ a.t:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
         border: 1px solid var(--ink); background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink);
         white-space: nowrap; cursor: pointer; }
 .ctrl-off { border-color: var(--rule); color: var(--ink2); cursor: default; }
+.ctrl:not(.ctrl-off):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .ctrl-square { width: 44px; height: 44px; padding: 0; }
 
 /* 来源索引条：并排等宽，当前项反白成墨块，其余 1px 描边；相邻两条共用一条边。

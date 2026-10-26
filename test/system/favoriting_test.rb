@@ -138,11 +138,21 @@ class FavoritingTest < ApplicationSystemTestCase
         });
       JS
 
-      find("button[aria-label='取消收藏：#{TITLE}']").click
+      find("button[aria-label='取消收藏：#{TITLE}']").send_keys(:space)
       assert_selector "button[aria-label='恢复']"
       wait_for_favorite_requests(1)
       evaluate_async_script("const done=arguments[0];requestAnimationFrame(()=>requestAnimationFrame(done))")
       assert evaluate_script("favoriteInk.isConnected && favoriteControl === document.querySelector('.favorite-button')")
+      assert evaluate_script(<<~JS), "焦点轮廓不能压住恢复文字"
+        (() => {
+          const button = favoriteControl.getBoundingClientRect();
+          const label = favoriteControl.querySelector('.favorite-restore-label').getBoundingClientRect();
+          const style = getComputedStyle(favoriteControl), offset = parseFloat(style.outlineOffset);
+          return favoriteControl.matches(':focus-visible') && style.outlineStyle !== 'none' &&
+            button.left - offset <= label.left && button.right + offset >= label.right &&
+            button.top - offset <= label.top && button.bottom + offset >= label.bottom;
+        })()
+      JS
       assert_empty evaluate_script("favoriteTransitions.filter(name => !['color','text-decoration-color'].includes(name))")
 
       click_on "恢复"

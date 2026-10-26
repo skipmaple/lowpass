@@ -19,6 +19,27 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal PAPER, style(".source-band svg", "color")
   end
 
+  test "原生 Tab 跳过不可用翻期控件，可用链接使用墨色可见焦点" do
+    [ 375, 1440 ].each do |width|
+      render_fragment(<<~HTML, width: width)
+        <div style="padding: 60px">
+          <a class="ctrl" href="#previous">前一期</a>
+          <span class="ctrl ctrl-off" role="link" aria-disabled="true">后一期</span>
+          <a class="ctrl" href="#archive">归档</a>
+        </div>
+      HTML
+
+      [ "前一期", "归档" ].each do |label|
+        page.driver.browser.action.send_keys(:tab).perform
+        assert_equal label, evaluate_script("document.activeElement.textContent")
+        assert_equal INK, style(".ctrl:focus-visible", "outline-color")
+        assert_equal "2px", style(".ctrl:focus-visible", "outline-width")
+        assert_equal "solid", style(".ctrl:focus-visible", "outline-style")
+        assert_equal "2px", style(".ctrl:focus-visible", "outline-offset")
+      end
+    end
+  end
+
   test "Q2 折叠目录没有默认三角，换成会转的 chevron" do
     render_fragment(%(<details class="weekly-directory"><summary>板块目录</summary><p>x</p></details>))
 

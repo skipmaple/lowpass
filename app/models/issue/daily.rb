@@ -57,7 +57,7 @@ module Issue::Daily
   # R-1.5 重抓成功：整栏已经换过了，这里记修订时间，并改写这一栏固化下来的结果。
   # with_lock 拿最新的 source_states 再 merge：不同栏各自重抓可能前后脚落地，不加锁的话
   # 后写的会拿着自己读进来的旧值覆盖掉别的栏刚提交的结果（跟 Issue::Finalization#finalize! 一样）。
-  def revise!(source, run)
+  def revise!(source, run, written_ids: [])
     with_lock do
       update!(revised_at: Time.current, state: "published", published_at: published_at || Time.current,
         source_states: source_states.merge(source.id => run.item_count.to_i.zero? ? "empty" : "ok"))
@@ -65,7 +65,7 @@ module Issue::Daily
     # 5.7 重抓让空刊有了内容：revise! 已经把期置回 published，把之前的空刊事件也收掉
     Alerts.recover!(kind: "issue_empty")
     # 重抓来的新条目没有理由，补缺；周刊条目本来就不生成理由（D19），那一支不入队
-    GenerateReasonsJob.perform_later(self) if kind == "daily"
+    GenerateReasonsJob.perform_later(self, true, Translations.automatic_context(self, item_ids: written_ids)) if kind == "daily"
   end
 
   def timed_out?

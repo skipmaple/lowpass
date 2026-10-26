@@ -125,20 +125,38 @@ Hacker News 经 Algolia（`hn.algolia.com`），RSS 看 feed 里还有没有那�
 
 ## 推荐理由
 
-设计见 `docs/superpowers/specs/2026-09-14-p2-reasons-design.md`。接入层只认 OpenAI 兼容的 chat completions：在 `/admin/settings`「推荐理由」一节填接口地址（如 `https://api.openai.com/v1`、`https://api.deepseek.com/v1`，本地 Ollama 是 `http://localhost:11434/v1`）、模型名、每百万 token 的输入 / 输出单价与月费用上限（0 = 不限）；密钥只从环境读：
+现行契约见PRD §5.7/§5.9、D25/D37/D38与 `docs/superpowers/specs/2026-10-23-reason-abstention-design.md`；`2026-09-14-p2-reasons-design.md` 保留历史设计，被后续决定取代的部分不能作为当前规则。D38已获本地候选实现/离线验收授权，以下新增拒写行为为候选契约，不据此声明已实现、验收或部署。
+
+接入层只认OpenAI兼容chat completions。既有运维配置在 `/admin/settings` 填API基础地址、模型名、每百万token输入/输出单价与月费用上限（0=不限），密钥只从环境读；本次不更改任何模型/端点/价格/上限/token预算，也不授权调用本地或远端模型：
 
 ```
 MODEL_API_KEY=…
 ```
 
-三样齐了才生成：日刊发布后入队 `GenerateReasonsJob`，一期顺序做，单条 20 秒超时、重试 2 次，缺领域名判失败；跨天重复的条目沿用前一期理由。
-Hacker News 与 Hackaday（RSS 日刊源）的标题、GitHub Trending 的仓库简介在同一次调用里顺带拿回中文译文（PRD D25，`items.title_zh` / `items.summary_zh`），读者页排在各自原文下方；不多一次调用，译文不合规只当没有，不影响理由。D25 上线前已经发布的期没有译文：到后台期页对那一期点「重生成理由」就连同译文一起补上（整期覆盖，理由也会重写，一期约 30 次调用）。
-后台期页每期显示「已生成 / 缺 N 条」并可「重生成理由」（整期覆盖）；读者页不提供重生成入口，避免误触产生模型费用。受保护的单条重生成后端接口仍保留给管理流程。
-账本在 `model_calls`（`ModelCall.order(created_at: :desc).limit(20)`），保留 90 天；月费用到上限就停止生成并告警一次。
-发布 30 分钟后仍缺理由会告警（③ 的「推荐理由缺失」）。初始兴趣画像由 `bin/rails db:seed` 建，后台可增删改。
+模型地址、模型名、密钥与启用画像齐备才处理。日刊发布后入队GenerateReasonsJob，一期顺序做，单条20秒超时；技术失败首次后最多重试2次，每次真实请求前查月预算，401/403/429不追加重试且整期停止。新候选Prompt先判断已有资料能否支撑诚实理由，再判断相关性，不新增URL/全文/检索/核验调用；摘要空缺不等于资料不足，只有名称/热度不能据以推导功能。generated严格20–60字符、不截断、含汉字，正文点名标签对应的启用领域；另一合法完整对象只有 `{"decision":"insufficient_evidence"}`，附带任何字段、缺/未知decision或技术失败不能当作不足。
+
+正常发布/重抓后的only_missing共用Item.pending_reasons：可见日刊、reason为nil且无ReasonAbstention。合法拒写只建/更新独立marker的UTC assessed_at，立即结束本条；Item全部字段和updated_at、Issue保持不变，有旧理由/标签/译文/生成时间者照常保留。marker与Item同寿命、不回填历史，不因90天账本清理失效。合法generated在Item锁内原子写入内容并删marker；失败保留旧内容与marker。重抓delete_all由数据库FK CASCADE删除旧判断，新item_id重新评估；下架后恢复仍保留原判断。
+
+D25译文只随同次合法generated保存：HN与Hackaday/RSS日刊译标题，GitHub Trending译英文简介；标题/简介的原文保留，译文仅按需要且合规时接受，限300/500字符并须有汉字。不合规译文不连累理由、不单独重试，本次没有新译文保留旧值；拒写/失败不单独保存或串用译文。D25以前的期不自动补；显式重生成是重新评估，结果可能生成、合法不足或失败，不能保证补齐译文。
+
+跨日复用只选更早日刊中同url_hash、有理由且无marker的旧条目；仍满足D25同原文与合规译文条件，否则重新生成。拒写判断不跨日复制；有marker的旧理由可供历史阅读，但不能继续传播。改画像/模型设置不自动改历史或清marker；管理员显式单条/整期重生成会重评估可见日刊条目，不因marker跳过，仍受预算约束。本次阶段不执行真实历史重生成。
+
+后台期页四类互斥显示“已有理由N条”“资料不足未写M条”“保留旧理由L条（本次资料不足）”“缺K条”，总和为可见日刊条目数；零可省略。未配置供应商/空画像的事实和按钮原因独立保留，待处理筛选只因K>0或其他既有故障命中。最后不足判断时间按上海时区显示“最后处理”，不冒充reason_generated_at。单条结果为“已重生成”“资料不足，未生成理由”“本次资料不足，保留旧理由”或真实失败，并按现有审计路径记实际结果；整期提交只说明任务已开始。读者无重生成入口、空标签、假译文、拒写诊断或新核验标识；历史内容、原文和收藏继续可用。
+
+账本在model_calls，每次真实请求一条，保留90天。模型校验与数据库CHECK同时支持ok/failed/timed_out/invalid/abstained；合法不足用abstained，真实usage、配置单价、耗时照记，error_summary空，不计生成成功或失败。invalid/超时后再拒写保留前面的账本；无请求不建账本。真实账本先写，再做独立业务事务，随后业务异常不能抹掉实际费用，也不能转为解析失败再次调用模型。
+
+发布满30分钟且ready后，tick只检查统一pending，不自动请求模型；预算摘要也从同一范围取数。推荐理由事件只在本期零pending且月预算未耗尽时恢复本期已有事件，不能误关别期或尚未解除的预算事件。真正被预算拦住或失败耗尽预算仍按D37立即告警；最后一个合法generated/abstained完成且无需后续请求不额外制造预算终止。初始画像仍由既有种子建立，后台可维护。
 **已经存在的数据库要手动跑一次 `bin/rails db:seed`**：`bin/setup` 与 Kamal 的 `db:prepare` 只在新建数据库时播种，
 老库里的 `interest_areas` 是空的。画像里没有启用的领域就不生成（不调模型、不记费用），
 后台期页那一格与两个「重生成」都会写「兴趣画像为空」。
+
+### D38候选的本地验收与后续启用
+
+第一阶段交付完整本地候选、离线证据与未合并PR，Prompt、严格Parser、独立判断、记账/重试、后台与告警一起交付；不得把旧生产Prompt与新Parser拆开发版。自动测试只用fixtures、Provider stub / WebMock，不连接模型或源站。六条已有真实输入与十组正反语义卡保持在私密任务材料中，沿用既有框架，由非Prompt作者独立离线审查；不改旧试验记录、不公开卡片正文，不把人工预期写成实网模型通过。网页用375/390px及桌面实际浏览器、键盘与减少动效验收，不生成PDF；完整bin/ci与300KB首屏门禁通过才能报告本地候选通过。
+
+本轮无新的真实模型调用授权；已用完的12次试验额度不延续。后续若申请实网内容试验，须重新列次数、预算、模型、重试、记账副作用与停止线并取得授权；生产启用另行授权，完成必要实网内容验收前保持未发布，不宣称内容质量达标。不合并main、不部署、不改生产配置，也不自动重生成历史。
+
+启用后的应用回退须先停止本轮理由任务，并明确保留记录与人工处理范围。保留reason_abstentions表、marker及abstained账本/CHECK，不通过数据库回滚、删marker或删新状态让旧代码继续运行；旧应用忽略marker可能重复收费或误告警，代码退回不是透明回退。具体部署/回退执行步骤在发布候选确定并获授权后补齐，本阶段不执行。
 
 ## 备份
 
@@ -527,3 +545,11 @@ Actions 页面的「Run workflow」可以手动重发。只认本仓库 main 上
 - 要「部署前本人批准」：仓库 Settings → Environments → production 勾 Required reviewers，工作流不用改。
   只加「Deployment branches: main」挡不住上面那种 fork PR：`workflow_run` 触发的 job 本来就跑在默认分支上。
 - 与本机手动 `kamal deploy` 互不冲突：Kamal 的锁保证同一时间只有一次部署；CI 里排队的部署不取消。
+
+### 独立译文补全（D39，本地候选）
+
+供应商就绪即可翻译，不要求兴趣画像。后台刊物管理在现有理由格追加“缺译文/保留原文”，补齐译文先获取只读签名预览；重评默认关闭，目标零不可提交。确认只表示排队成功，刷新查看结果，不会重生成理由。历史补全只能显式指定一期；部署、访问、tick和旧理由任务不会扫描旧刊。
+
+新增TranslationPreservation与ModelOperationStop，ModelCall含purpose/operation_key/input_field/input_digest。费用与次数总计包含理由和翻译，理由专属查询限定purpose=reason。共享PG advisory门忙时保留原操作重排，原签发7天后过期；不得以重新入队刷新期限。合法结果先留账，再短事务保存；业务失败不得当成网络失败重调。操作终止表随现有ModelCall.cleanup清理，不增加tick任务。
+
+本地证据见 `superpowers/plans/2026-10-25-independent-translations-acceptance.md`。本轮模型只用WebMock桩，无法据此宣布真实语义质量或生产补全成功。若未来回退，应保留新表、marker和账本并先停止相应任务；旧代码不了解新终态，不能用删记录的办法恢复旧行为。

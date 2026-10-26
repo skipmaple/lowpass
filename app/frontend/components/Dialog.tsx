@@ -11,6 +11,7 @@ export type DialogProps = React.PropsWithChildren<{
   cancel: string
   confirm: string
   busy?: boolean
+  confirmDisabled?: boolean
   returnFocus?: () => HTMLElement | null
   onCancel: () => void
   onConfirm: () => void
@@ -31,7 +32,7 @@ function tabStops(paper: HTMLElement | null): HTMLElement[] {
   })
 }
 
-export default function Dialog({ open, text, cancel, confirm, busy = false, returnFocus, onCancel, onConfirm, children }: DialogProps) {
+export default function Dialog({ open, text, cancel, confirm, busy = false, confirmDisabled = false, returnFocus, onCancel, onConfirm, children }: DialogProps) {
   const paperRef = useRef<HTMLDivElement>(null)
   const initialFocusRef = useRef<HTMLButtonElement>(null)
   // 问句既是看得见的标题也是纸卡的名字：aria-labelledby 指过去，读屏读到的和眼睛看到的是同一段
@@ -100,7 +101,7 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, retu
           <button type="button" className="ctrl" ref={initialFocusRef} disabled={busy} onClick={onCancel}>
             {cancel}
           </button>
-          <button type="button" className="btn-primary" disabled={busy} onClick={onConfirm}>
+          <button type="button" className="btn-primary" disabled={busy || confirmDisabled} onClick={onConfirm}>
             {confirm}
           </button>
         </div>

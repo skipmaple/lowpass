@@ -1,10 +1,10 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import Index from '@/pages/Admin/Issues/Index'
 import { router, setPageProps } from '../support/inertia'
-import { adminIssueRow } from '../support/props'
+import { adminIssueReasons, adminIssueRow } from '../support/props'
 
 // 期（5.6，画布 admin_issues() 与 admin_dialogs()）
 
@@ -37,6 +37,7 @@ function show(overrides: Record<string, unknown> = {}) {
 afterEach(() => {
   router.post.mockClear()
   router.reload.mockClear()
+  vi.unstubAllGlobals()
 })
 
 // 「理由」格里的反白小签（第 6 格）。整行找会撞上状态格里同样是墨色方块的 Mark
@@ -147,11 +148,11 @@ describe('Admin/Issues/Index', () => {
   })
 
   it('日刊行的理由格与整期重生成', async () => {
-    show({ rows: [adminIssueRow({ reasons: { label: '缺 3 条', missing: 3, ready: true } }), adminIssueRow({ period_key: '2026-09-07', reasons: { label: '已生成', missing: 0, ready: true } })] })
+    show({ rows: [adminIssueRow({ reasons: adminIssueReasons({ missing: 3 }) }), adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons() })] })
     const rows = screen.getAllByRole('row')
     // 缺 N 条是反白小签（设计 §6.2）：文字在墨色块里，Mixed 会把中文与数字切成几段，按 textContent 断言
     expect(reasonChip(rows[1])?.textContent).toBe('缺 3 条')
-    expect(within(rows[2]).getByText('已生成')).toBeInTheDocument()
+    expect(within(rows[2]).getAllByRole('cell')[5]).toHaveTextContent('已有理由 30 条')
     expect(reasonChip(rows[2])).toBeNull()
     await userEvent.click(within(rows[1]).getByRole('button', { name: '重生成理由' }))
     expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/reasons', {}, expect.any(Object))
@@ -160,18 +161,126 @@ describe('Admin/Issues/Index', () => {
   it('生成不了时理由格写明、按钮禁用（看 ready 不看文案）；周刊行没有理由格', () => {
     show({
       rows: [
-        adminIssueRow({ reasons: { label: '未配置模型供应商', missing: 10, ready: false } }),
-        adminIssueRow({ period_key: '2026-09-07', reasons: { label: '兴趣画像为空', missing: 10, ready: false } }),
+        adminIssueRow({ reasons: adminIssueReasons({ missing: 10, ready: false, unready_label: '未配置模型供应商' }) }),
+        adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons({ missing: 10, ready: false, unready_label: '兴趣画像为空' }) }),
         adminIssueRow({ kind: 'weekly', period_key: '2026-W36', reasons: null }),
       ],
     })
     const rows = screen.getAllByRole('row')
     expect(within(rows[1]).getByText('未配置模型供应商')).toBeInTheDocument()
     expect(within(rows[1]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
-    // 生成不了的时候那一格不是「缺 N 条」，也就不该反白
-    expect(reasonChip(rows[2])).toBeNull()
+    // 准备状态不覆盖真实缺失；只有缺失数量使用反白签。
+    expect(reasonChip(rows[2])?.textContent).toBe('缺 10 条')
     expect(within(rows[2]).getByText('兴趣画像为空')).toBeInTheDocument()
     expect(within(rows[2]).getByRole('button', { name: '重生成理由' })).toBeDisabled()
     expect(within(rows[3]).queryByRole('button', { name: '重生成理由' })).toBeNull()
   })
+
+  it('shows four real reason counts and separate readiness', () => {
+    show({ rows: [adminIssueRow({ reasons: adminIssueReasons({ with_reason: 3, abstained: 2, retained: 1, missing: 4, ready: false, unready_label: '未配置模型供应商', last_assessed_label: '最后处理 2026-10-23 09:30' }) })] })
+    const row = screen.getAllByRole('row')[1]
+    const cell = within(row).getAllByRole('cell')[5]
+    for (const text of ['已有理由 3 条', '资料不足未写 2 条', '保留旧理由 1 条（本次资料不足）', '缺 4 条', '最后处理 2026-10-23 09:30', '未配置模型供应商']) {
+      expect(cell).toHaveTextContent(text)
+    }
+    expect(reasonChip(row)?.textContent).toBe('缺 4 条')
+    expect(within(row).getByRole('button', { name: '重生成理由' })).toBeDisabled()
+    expect(within(row).getByRole('button', { name: '重生成理由' })).toHaveAttribute('title', '未配置模型供应商')
+  })
+
+  it('excludes legal abstentions from pending issues', async () => {
+    show({ rows: [
+      adminIssueRow({ period_key: '2026-09-08', reasons: adminIssueReasons({ with_reason: 0, abstained: 3, retained: 2 }) }),
+      adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons({ missing: 1 }) }),
+    ] })
+    await userEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
+    expect(screen.queryByText('2026-09-08')).toBeNull()
+    expect(screen.getByText('2026-09-07')).toBeInTheDocument()
+  })
+
+  it('只有保留原文仍能进入重评，零目标不能确认，画像为空不影响翻译', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'normal', target_count: 0 }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'reassess', target_count: 2 }) })
+    vi.stubGlobal('fetch', fetcher)
+    show({ rows: [adminIssueRow({ reasons: adminIssueReasons({ ready: false, unready_label: '兴趣画像为空' }), translations: { pending: 0, preserved: 2, ready: true, unready_label: null } })] })
+    const opener = screen.getByRole('button', { name: '补齐译文' })
+    expect(opener).toBeEnabled()
+    await userEvent.click(opener)
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('可能产生额外模型费用')
+    await waitFor(() => expect(dialog).toHaveTextContent('本次处理 0 条'))
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: '重新评估保留原文的条目' }))
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeEnabled())
+    await userEvent.click(within(dialog).getByRole('button', { name: '提交补全' }))
+    expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/translations', { token: 'reassess' }, expect.any(Object))
+    // 提交时按钮禁用，焦点应留在对应行，而非丢到 BODY。
+    expect(opener.closest('[data-table-row-key]')).toHaveFocus()
+  })
+
+  it('预览加载可取消，较慢旧选项响应不能覆盖新预览', async () => {
+    let resolveOld!: (value: unknown) => void
+    const old = new Promise((resolve) => { resolveOld = resolve })
+    const fetcher = vi.fn().mockReturnValueOnce(old).mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'new', target_count: 3 }) })
+    vi.stubGlobal('fetch', fetcher)
+    show({ rows: [adminIssueRow({ translations: { pending: 1, preserved: 2, ready: true, unready_label: null } })] })
+    await userEvent.click(screen.getByRole('button', { name: '补齐译文' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: '取消' })).toBeEnabled()
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    await userEvent.click(within(dialog).getByRole('checkbox'))
+    await waitFor(() => expect(dialog).toHaveTextContent('本次处理 3 条'))
+    await act(async () => { resolveOld({ ok: true, json: async () => ({ token: 'old', target_count: 1 }) }); await old })
+    await userEvent.click(within(dialog).getByRole('button', { name: '提交补全' }))
+    expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/translations', { token: 'new' }, expect.any(Object))
+  })
+
+  it('缺译文计入待处理，保留原文不算故障，预览失败明确可取消', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }))
+    show({ rows: [
+      adminIssueRow({ translations: { pending: 1, preserved: 0, ready: true, unready_label: null } }),
+      adminIssueRow({ period_key: '2026-09-07', translations: { pending: 0, preserved: 2, ready: true, unready_label: null } }),
+    ] })
+    await userEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
+    expect(screen.getByText('2026-09-08')).toBeInTheDocument()
+    expect(screen.queryByText('2026-09-07')).toBeNull()
+    const opener = screen.getByRole('button', { name: '补齐译文' })
+    await userEvent.click(opener)
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('无法获取预览（403），请重新打开确认')
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    expect(opener).toHaveFocus()
+  })
+
+  it.each([
+    ['网络中断', () => Promise.reject(new TypeError('Failed to fetch: private proxy diagnostics')), '网络连接失败，请重新打开确认'],
+    ['非JSON响应', () => Promise.resolve(new Response('<html>upstream response</html>', { status: 200 })), '预览响应无法读取，请重新打开确认'],
+    ['不完整数据', () => Promise.resolve(new Response('null', { status: 200 })), '预览不完整，请重新打开确认'],
+    ['空凭据', () => Promise.resolve(new Response(JSON.stringify({ token: '', target_count: 1 }), { status: 200 })), '预览不完整，请重新打开确认'],
+  ])('%s有可恢复的中文反馈且不能提交', async (_label, response, message) => {
+    vi.stubGlobal('fetch', vi.fn(response))
+    show({ rows: [adminIssueRow({ translations: { pending: 1, preserved: 0, ready: true, unready_label: null } })] })
+    const opener = screen.getByRole('button', { name: '补齐译文' })
+    await userEvent.click(opener)
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message)
+    expect(dialog).not.toHaveTextContent(/Failed to fetch|Unexpected token|upstream response|private proxy/)
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    expect(opener).toHaveFocus()
+    expect(router.post).not.toHaveBeenCalled()
+  })
+
+  it('会话失效重定向有登录提示，不解析登录HTML也不能提交', async () => {
+    const response = new Response('<html>login</html>', { status: 200 })
+    Object.defineProperties(response, { redirected: { value: true }, url: { value: 'https://lowpass.test/login?next=%2Fadmin%2Fissues' } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    show({ rows: [adminIssueRow({ translations: { pending: 1, preserved: 0, ready: true, unready_label: null } })] })
+    await userEvent.click(screen.getByRole('button', { name: '补齐译文' }))
+    const dialog = screen.getByRole('dialog')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('登录状态已失效，请刷新后重试')
+    expect(within(dialog).getByRole('button', { name: '提交补全' })).toBeDisabled()
+    expect(router.post).not.toHaveBeenCalled()
+  })
+
 })

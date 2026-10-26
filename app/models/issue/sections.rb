@@ -1,9 +1,10 @@
 module Issue::Sections
   extend ActiveSupport::Concern
+  WrittenSection = Data.define(:written_ids, :dropped_count)
 
   # 整栏（日刊）与整节（周刊的阮一峰）都是这一个写法：先删这个源的旧条目，再整批写新的，别的源不受影响；
   # 传了 issue_no 就只删同一期号的旧条目（同一周两期各占一节，互不覆盖，R41），不传则整源替换。
-  # 返回没能落成行的条目数（同源重复地址），调用方计进 dropped_count。
+  # 返回本次实际写入的 id 与没能落成行的条目数（同源重复地址）。
   def replace_section!(source, entries, issue_no: nil)
     transaction do
       scope = items.where(source: source)
@@ -15,7 +16,7 @@ module Issue::Sections
 
   # R-2.8 周刊的 RSS 节只追加：这一节可能已经发布了几天，整节重写会把周初的条目挤掉（源配置的
   # count 封顶），也会换掉还活着的条目 id，等于事后改写已发布的期（R-1.4）。已经入库的地址跳过，
-  # 新的接在这一源现有的 rank 后面。返回跳过的条目数。
+  # 新的接在这一源现有的 rank 后面。返回本次写入 id 与跳过数。
   def append_section!(source, entries)
     transaction do
       stored = items.where(source: source).pluck(:url_hash).to_set
@@ -40,6 +41,6 @@ module Issue::Sections
         # 被替换掉的旧条目的索引行随 items 的删除级联消失
         Search::Record.index_items!(rows.map { |row| row[:id] })
       end
-      entries.size - rows.size
+      WrittenSection.new(written_ids: rows.map { |row| row.fetch(:id) }, dropped_count: entries.size - rows.size)
     end
 end

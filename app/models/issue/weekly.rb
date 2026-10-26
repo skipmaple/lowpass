@@ -151,9 +151,9 @@ module Issue::Weekly
     transaction do
       kept = entries.select(&:valid?)
       deduped = if append
-        append_section!(source, kept)
+        append_section!(source, kept).dropped_count
       else
-        replace_section!(source, kept, issue_no: issue_no)
+        replace_section!(source, kept, issue_no: issue_no).dropped_count
       end
 
       # 周刊有节就有内容（R-2.7 一条都没有不建期），降级 stub 也算数：degraded 记在条目的 meta 里。

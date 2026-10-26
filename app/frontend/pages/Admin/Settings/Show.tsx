@@ -285,6 +285,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
         <div className="reasons-usage">
           <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / 上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : `${reasons.monthly_cap} ${reasons.currency || '未指定币种'}`}`} />
           <Mixed text={`今日 ${reasons.today_calls} 次`} />
+          <Mixed text={`本月理由 ${reasons.month_reason_calls} 次 · 翻译 ${reasons.month_translation_calls} 次`} />
         </div>
       </Section>
       <Section title="部署配置帮助" id="deployment">

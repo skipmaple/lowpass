@@ -70,8 +70,12 @@ class Scheduler
       return unless Reasons.ready?
 
       Issue.daily.where(state: "published", period_key: PeriodKey.daily(@now)).where(published_at: ..(@now - Reasons::MISSING_AFTER)).find_each do |issue|
-        missing = issue.items.visible.where(reason: nil).count
-        Alerts.reasons_missing!(issue, missing) if missing.positive?
+        missing = issue.items.pending_reasons.count
+        if missing.positive?
+          Alerts.reasons_missing!(issue, missing)
+        else
+          Reasons.recover_if_complete(issue)
+        end
       end
     end
 

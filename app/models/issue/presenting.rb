@@ -198,7 +198,10 @@ module Issue::Presenting
         sources = Source.where(id: rows.map { |row| row[1] }).ordered.index_by(&:id)
         by_issue = rows.group_by { |issue_id, *| issue_id }
 
-        ids.index_with { |id| { summary: archive_summary(by_issue[id] || [], sources), count: counts.fetch(id, 0) } }
+        ids.index_with do |id|
+          summary = archive_summary(by_issue[id] || [], sources)
+          { summary: summary.presence || "本周无内容", count: counts.fetch(id, 0) }
+        end
       end
 
       # 阮一峰几条 entry 共用一个 issue_no，拼「源名 第 X 期 · 标题」；RSS 源没有 issue_no，

@@ -94,6 +94,19 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "一个用 Rust 写的终端日志查看器。", entry["summary_zh"]
   end
 
+  test "收藏译文按标题简介分别匹配原文且快照不变" do
+    @item.update!(summary: "Old description", title_zh: "收藏时的标题", summary_zh: "收藏时的简介")
+    favorite = Favorite.keep(users(:drew), @item)
+    before = favorite.attributes
+    @item.update!(title: "Different English title", title_zh: "新标题译文", summary_zh: "后补的旧简介译文")
+    get favorites_path
+    assert_equal [ "收藏时的标题", "后补的旧简介译文" ], page_props["entries"].sole.values_at("title_zh", "summary_zh")
+    @item.update!(title: TITLE, title_zh: "后补的旧标题译文", summary: "Different summary", summary_zh: "新简介译文")
+    get favorites_path
+    assert_equal [ "后补的旧标题译文", "收藏时的简介" ], page_props["entries"].sole.values_at("title_zh", "summary_zh")
+    assert_equal before, favorite.reload.attributes
+  end
+
   # AC-10.3 重抓把条目行换掉、新内容不含这条链接：收藏仍在，用收藏时的快照；所在期打开那一栏，不带条目锚点
   test "条目被重抓换掉后，收藏行用快照" do
     @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器", summary_zh: "一个用 Rust 写的终端日志查看器。")

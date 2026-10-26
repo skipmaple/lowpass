@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_074100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -223,10 +223,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
     t.string "item_id", limit: 25
     t.integer "prompt_tokens", default: 0, null: false
     t.string "status", limit: 10, null: false
+    t.string "purpose", limit: 11, default: "reason", null: false
+    t.string "operation_key", limit: 36
+    t.string "input_field", limit: 7
+    t.string "input_digest", limit: 64
     t.index ["created_at"], name: "index_model_calls_on_created_at"
     t.index ["issue_id"], name: "index_model_calls_on_issue_id"
+    t.index ["operation_key", "purpose", "item_id", "input_field"], name: "index_model_calls_on_operation_target"
     t.check_constraint "length(error_summary::text) <= 200", name: "model_calls_error_summary_len"
-    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text, 'invalid'::character varying::text])", name: "model_calls_status"
+    t.check_constraint "length(input_digest::text) <= 64", name: "model_calls_input_digest_len"
+    t.check_constraint "length(input_field::text) <= 7", name: "model_calls_input_field_len"
+    t.check_constraint "length(operation_key::text) <= 36", name: "model_calls_operation_key_len"
+    t.check_constraint "length(purpose::text) <= 11", name: "model_calls_purpose_len"
+    t.check_constraint "purpose::text <> 'translation'::text OR operation_key IS NOT NULL AND length(operation_key::text) > 0 AND input_field IS NOT NULL AND (input_field::text = ANY (ARRAY['title'::character varying::text, 'summary'::character varying::text])) AND input_digest IS NOT NULL AND input_digest::text ~ '^[0-9a-f]{64}$'::text", name: "model_calls_translation_target"
+    t.check_constraint "purpose::text = ANY (ARRAY['reason'::character varying::text, 'translation'::character varying::text])", name: "model_calls_purpose"
+    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text, 'invalid'::character varying::text, 'abstained'::character varying::text])", name: "model_calls_status"
+  end
+
+  create_table "model_operation_stops", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "operation_key", limit: 36, null: false
+    t.string "reason", limit: 8, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_model_operation_stops_on_expires_at"
+    t.index ["operation_key"], name: "index_model_operation_stops_on_operation_key", unique: true
+    t.check_constraint "length(id::text) >= 1 AND length(id::text) <= 25", name: "model_operation_stops_id_len"
+    t.check_constraint "length(operation_key::text) >= 1 AND length(operation_key::text) <= 36", name: "model_operation_stops_operation_key_len"
+    t.check_constraint "length(reason::text) >= 1 AND length(reason::text) <= 8", name: "model_operation_stops_reason_len"
+    t.check_constraint "reason::text = ANY (ARRAY['budget'::character varying, 'rejected'::character varying, 'limited'::character varying]::text[])", name: "model_operation_stops_reason"
+  end
+
+  create_table "reason_abstentions", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "item_id", limit: 25, null: false
+    t.datetime "assessed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["item_id"], name: "index_reason_abstentions_on_item_id", unique: true
+    t.check_constraint "length(id::text) = 25", name: "reason_abstentions_id_len"
+    t.check_constraint "length(item_id::text) = 25", name: "reason_abstentions_item_id_len"
   end
 
   create_table "search_clicks", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -336,6 +371,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
     t.check_constraint "publication::text = ANY (ARRAY['daily'::character varying::text, 'weekly'::character varying::text])", name: "sources_publication"
   end
 
+  create_table "translation_preservations", id: { type: :string, limit: 25 }, force: :cascade do |t|
+    t.string "item_id", limit: 25, null: false
+    t.string "field", limit: 7, null: false
+    t.string "input_digest", limit: 64, null: false
+    t.datetime "assessed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["item_id", "field"], name: "index_translation_preservations_on_item_id_and_field", unique: true
+    t.check_constraint "field::text = ANY (ARRAY['title'::character varying::text, 'summary'::character varying::text])", name: "translation_preservations_field"
+    t.check_constraint "input_digest::text ~ '^[0-9a-f]{64}$'::text", name: "translation_preservations_digest"
+    t.check_constraint "length(field::text) <= 7", name: "translation_preservations_field_len"
+    t.check_constraint "length(id::text) <= 25", name: "translation_preservations_id_len"
+    t.check_constraint "length(input_digest::text) <= 64", name: "translation_preservations_input_digest_len"
+    t.check_constraint "length(item_id::text) <= 25", name: "translation_preservations_item_id_len"
+  end
+
   create_table "users", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.string "avatar_url", limit: 2048
     t.datetime "created_at", null: false
@@ -362,9 +413,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_090000) do
   add_foreign_key "items", "sources"
   add_foreign_key "model_calls", "issues", on_delete: :nullify
   add_foreign_key "model_calls", "items", on_delete: :nullify
+  add_foreign_key "reason_abstentions", "items", on_delete: :cascade
   add_foreign_key "search_clicks", "items", on_delete: :cascade
   add_foreign_key "search_records", "issues", on_delete: :cascade
   add_foreign_key "search_records", "items", on_delete: :cascade
   add_foreign_key "search_records", "sources"
   add_foreign_key "sessions", "users", on_delete: :cascade
+  add_foreign_key "translation_preservations", "items", on_delete: :cascade
 end

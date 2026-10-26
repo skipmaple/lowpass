@@ -75,4 +75,18 @@ class Admin::IssuesControllerTest < ActionDispatch::IntegrationTest
     get admin_issues_path
     assert_response :forbidden
   end
+
+  test "四类新props保留未配置事实，周刊不带理由状态" do
+    items(:hn_one).record_reason_abstention(assessed_at: Time.utc(2026, 9, 8, 1))
+    travel_to Time.utc(2026, 9, 9, 4) do
+      get admin_issues_path
+    end
+    assert_response :success
+    daily = page_props["rows"].find { |row| row["period_key"] == "2026-09-08" }
+    assert_equal [ 0, 1, 0, 0, false ], daily["reasons"].values_at("with_reason", "abstained", "retained", "missing", "ready")
+    assert_equal "未配置模型供应商", daily["reasons"]["unready_label"]
+    assert_equal "最后处理 2026-09-08 09:00", daily["reasons"]["last_assessed_label"]
+    assert_not daily["reasons"].key?("label")
+    assert page_props["rows"].select { |row| row["kind"] == "weekly" }.none? { |row| row.key?("reasons") }
+  end
 end

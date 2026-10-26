@@ -1,4 +1,5 @@
 require "net/http"
+require "timeout"
 
 # 模型接入层（ADR T8、设计 §4.4、C1）：只认 OpenAI 兼容的 chat completions——地址与模型名在后台，密钥只从环境读。
 # 单条 20 秒（R-9.8）；401 / 403 是密钥被拒绝、429 是被限流（都不追加重试，本期不再继续），其余失败可重试；
@@ -9,8 +10,10 @@ module Reasons::Provider
   Rejected = Class.new(Error)
   Limited = Class.new(Error)
   Response = Data.define(:text, :prompt_tokens, :completion_tokens)
+  Configuration = Data.define(:base_url, :model_name, :api_key, :input_price, :output_price)
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 20
+  REQUEST_TIMEOUT = 20
   MAX_BYTES = 64 * 1024
   ERROR_BYTES = 200            # 非 2xx 时只留一段摘要（error_summary 列也是 200）
   LOCAL_HOSTS = %w[ localhost 127.0.0.1 ].freeze
@@ -21,6 +24,15 @@ module Reasons::Provider
     def api_key = ENV["MODEL_API_KEY"].to_s
     def key_configured? = api_key.present?
     def configured? = base_url.present? && model_name.present? && key_configured?
+
+    def configuration
+      keys = %w[ model_base_url model_name model_input_price model_output_price ]
+      stored = Setting.where(key: keys).pluck(:key, :value).to_h
+      # 一个SQL快照配合后台整组事务，避免请求冻结到两版端点/模型/价格的混合值。
+      snapshot = keys.index_with { |key| (stored[key].presence || Setting::DEFAULTS.fetch(key)).to_s.dup.freeze }
+      Configuration.new(base_url: snapshot.fetch("model_base_url"), model_name: snapshot.fetch("model_name"), api_key: api_key.to_s.dup.freeze,
+        input_price: snapshot.fetch("model_input_price"), output_price: snapshot.fetch("model_output_price"))
+    end
 
     # 基础地址自动追加 /chat/completions；完整端点、查询或片段会改变拼接语义。
     # https；本机的 http 也行（本地 Ollama）。
@@ -37,26 +49,29 @@ module Reasons::Provider
       "地址必须是 https"
     end
 
-    def chat(messages, temperature: 0.3, max_tokens: 200)
+    def chat(messages, temperature: 0.3, max_tokens: 200, configuration: nil)
+      config = configuration || self.configuration
       # 纵深防御：地址在存进 settings 时已经校验过一次，这里发请求之前再看一眼——
       # 别的写入路径（console、迁移、以后的导入）绕不过这一道
-      raise Error, "地址不合法" unless valid_base_url?(base_url)
+      raise Error, "地址不合法" unless valid_base_url?(config.base_url)
 
-      uri = URI("#{base_url.sub(%r{/+\z}, "")}/chat/completions")
+      uri = URI("#{config.base_url.sub(%r{/+\z}, "")}/chat/completions")
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.is_a?(URI::HTTPS)
       http.open_timeout = OPEN_TIMEOUT
       http.read_timeout = READ_TIMEOUT
-      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "Authorization" => "Bearer #{api_key}", "User-Agent" => Adapters::Http::USER_AGENT)
-      request.body = { model: model_name, messages: messages, temperature: temperature, max_tokens: max_tokens, response_format: { type: "json_object" } }.to_json
+      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "Authorization" => "Bearer #{config.api_key}", "User-Agent" => Adapters::Http::USER_AGENT)
+      request.body = { model: config.model_name, messages: messages, temperature: temperature, max_tokens: max_tokens, response_format: { type: "json_object" } }.to_json
       # 块形式：响应体边读边截（同 Adapters::Http#read_capped），上限之前就停手，
       # 不先把一个几百 KB 的回复整段读进内存再裁
-      http.request(request) do |response|
-        case response
-        when Net::HTTPSuccess then return parse(read_capped(response))
-        when Net::HTTPUnauthorized, Net::HTTPForbidden then raise Rejected, "密钥被拒绝（#{response.code}）"
-        when Net::HTTPTooManyRequests then raise Limited, "模型服务限流（429）"
-        else raise Error, "模型服务 #{response.code}: #{read_head(response, ERROR_BYTES)}"[0, ERROR_BYTES]
+      Timeout.timeout(REQUEST_TIMEOUT, TimedOut, "模型请求超过截止时间") do
+        http.request(request) do |response|
+          case response
+          when Net::HTTPSuccess then return parse(read_capped(response))
+          when Net::HTTPUnauthorized, Net::HTTPForbidden then raise Rejected, "密钥被拒绝（#{response.code}）"
+          when Net::HTTPTooManyRequests then raise Limited, "模型服务限流（429）"
+          else raise Error, "模型服务 #{response.code}: #{read_head(response, ERROR_BYTES)}"[0, ERROR_BYTES]
+          end
         end
       end
     rescue Timeout::Error => e

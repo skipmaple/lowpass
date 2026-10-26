@@ -131,7 +131,8 @@ html[data-first-load] .search-row, html[data-first-load] .settings-rows, html[da
 
 /* ─── M7 弹层 ─────────────────────────────────────────────────────────── */
 
-.menu-card { animation: lp-unfold var(--dur-1) var(--ease-out); }
+/* 展开时让裁切与输入命中同步更新，避免已显示的菜单项漏接点击。 */
+.menu-card { will-change: contents; animation: lp-unfold var(--dur-1) var(--ease-out); }
 .dialog-shade { animation: lp-fade var(--dur-2) var(--ease-out); }
 .dialog { animation: lp-settle var(--dur-2) var(--ease-out); }
 .toast { animation: lp-drop var(--dur-2) var(--ease-out); }

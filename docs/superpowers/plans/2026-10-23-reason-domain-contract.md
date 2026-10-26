@@ -1,5 +1,7 @@
 # 推荐理由正文领域校验实施计划
 
+> **2026-10-23后续决定注记：** 本文保留当时对既有R-9.3的解释与实施记录；其中“正文可含任一合法领域、允许与标签不同”的结论，现被产品负责人批准的D38完整方案明确取代。新候选要求正文点名标签对应的启用领域、含汉字，且采用显式generated / insufficient_evidence分支。以下旧Architecture、Review Focus与已勾选步骤不能作为当前相反预期；现行契约以PRD §5.9、D37/D38与 `../specs/2026-10-23-reason-abstention-design.md` 为准。新实施计划为 `2026-10-23-reason-abstention.md`；这里只加历史取代注记，不重写当时记录，也不代表新候选已测试或部署。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 补齐既有 R-9.3 的正文领域名校验，让只有合法标签、正文没有画像领域名的响应进入既有有限重试。

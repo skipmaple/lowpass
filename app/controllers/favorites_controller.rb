@@ -76,9 +76,9 @@ class FavoritesController < ApplicationController
         where: { label: favorite.where_label, href: where_href(favorite, item) },
         url: favorite.url,
         title: favorite.title,
-        title_zh: item&.title_zh.presence || favorite.title_zh,
+        title_zh: (item&.title == favorite.title ? item&.title_zh.presence : nil) || favorite.title_zh,
         snippet: Search::Highlighter.excerpt(SummaryCleaner.stored(favorite.summary)),
-        summary_zh: item&.summary_zh.presence || favorite.summary_zh
+        summary_zh: (item&.summary == favorite.summary ? item&.summary_zh.presence : nil) || favorite.summary_zh
       }
     end
 

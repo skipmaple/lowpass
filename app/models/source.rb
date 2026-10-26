@@ -53,7 +53,7 @@ class Source < ApplicationRecord
     HOME_URLS[adapter] || feed_home_url
   end
 
-  # 译文跟推荐理由一次生成，周刊没有理由（D19）也就没有译文：周刊的 RSS 源不算
+  # 日刊字段翻译资格（D25/D39）；周刊的 RSS 源不参与同次译文或独立补缺
   def translates_titles?
     publication == "daily" && TRANSLATED_TITLES.include?(adapter)
   end

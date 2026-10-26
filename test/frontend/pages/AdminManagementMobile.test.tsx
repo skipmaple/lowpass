@@ -7,7 +7,7 @@ import Sources from '@/pages/Admin/Sources/Index'
 import Runs from '@/pages/Admin/Sources/Runs'
 import Users from '@/pages/Admin/Users/Index'
 import { setPageProps } from '../support/inertia'
-import { adminIssueRow, adminSourceRow, adminRunRow, adminUserRow } from '../support/props'
+import { adminIssueReasons, adminIssueRow, adminSourceRow, adminRunRow, adminUserRow } from '../support/props'
 
 beforeEach(() => {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
@@ -66,4 +66,13 @@ it('手机用户保留身份、角色和邮箱，把登录元数据收起', asyn
   expect(details).not.toHaveAttribute('open')
   await userEvent.click(within(row).getByText('登录详情'))
   expect(details).toHaveTextContent('Google · GitHub')
+})
+
+
+it('手机刊物详情呈现四类真实计数与最后处理时间', async () => {
+  render(<Issues month="2026-09" month_label="2026 年 9 月" prev_month={null} next_month={null} summary="" kind="all" rows={[adminIssueRow({ reasons: adminIssueReasons({ with_reason: 1, abstained: 2, retained: 3, missing: 4, last_assessed_label: '最后处理 2026-09-08 09:30' }) })]} today_issue_exists={true} today_period_key="2026-09-08" today_issue_state="published" active_runs={[]} finished_runs={[]} />)
+  const details = screen.getByText('刊物详情').closest('details')!
+  await userEvent.click(screen.getByText('刊物详情'))
+  for (const text of ['已有理由 1 条', '资料不足未写 2 条', '保留旧理由 3 条（本次资料不足）', '缺 4 条', '最后处理 2026-09-08 09:30']) expect(details).toHaveTextContent(text)
+  expect(screen.getAllByRole('button', { name: '重生成理由' })).toHaveLength(1)
 })

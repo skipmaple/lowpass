@@ -5,7 +5,7 @@ class Admin::Issues::ReasonsControllerTest < ActionDispatch::IntegrationTest
 
   test "整期重生成：入队 only_missing=false、记审计、提示" do
     with_model_provider do
-      assert_enqueued_with(job: GenerateReasonsJob, args: [ issues(:daily_0908), false ]) { post admin_issue_reasons_path("2026-09-08") }
+      assert_enqueued_with(job: GenerateReasonsJob, args: ->(args) { args.first(2) == [ issues(:daily_0908), false ] && args.last.fetch("translation_targets").empty? && ModelRequests.valid_operation?(args.last.fetch("operation")) }) { post admin_issue_reasons_path("2026-09-08") }
     end
     assert_redirected_to admin_issues_path
     assert_equal "2026-09-08 · 已开始重生成理由", flash[:notice]

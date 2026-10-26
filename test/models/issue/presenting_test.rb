@@ -1,6 +1,17 @@
 require "test_helper"
 
 class Issue::PresentingTest < ActiveSupport::TestCase
+  test "拒写判断不进入读者props且历史理由仍原样显示" do
+    item = items(:hn_one)
+    item.record_reason_abstention(assessed_at: Time.current)
+    props = -> { item.issue.items_by_source.fetch(item.source_id).find { |entry| entry[:id] == item.id } }
+    assert_equal [ nil, nil, nil, nil ], props.call.values_at(:reason, :interest_tag, :title_zh, :summary_zh)
+    assert_empty props.call.keys & %i[ reason_abstention assessed_at diagnostic decision ]
+    item.update!(reason: "保留历史理由", interest_tag: "前端开发", title_zh: "原有译文")
+    assert_equal [ "保留历史理由", "前端开发", "原有译文" ], props.call.values_at(:reason, :interest_tag, :title_zh)
+    assert_empty props.call.keys & %i[ reason_abstention assessed_at diagnostic decision ]
+  end
+
   test "不同年份的同月同日日刊保留年份供期头和标题使用" do
     assert_equal 2025, Issue.daily_props_for("2025-09-08", issue: nil)[:year]
     assert_equal 2026, Issue.daily_props_for("2026-09-08", issue: nil)[:year]
@@ -168,6 +179,46 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
 
     assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由 / 命令行周报", row[:summary]
     assert_equal 3, row[:count]
+  end
+
+  test "周刊条目全部下架后归档说明无内容，恢复后重新显示主题" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由")
+    ], issue_no: 366)
+    item = issue.items.sole
+    item.update!(hidden: true)
+    row = nil
+
+    assert_no_changes -> { issue.reload.attributes } do
+      row = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    end
+
+    assert_equal "本周无内容", row[:summary]
+    assert_equal 0, row[:count]
+    assert_equal "published", row[:state]
+
+    item.update!(hidden: false)
+    restored = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由", restored[:summary]
+    assert_equal 1, restored[:count]
+  end
+
+  test "周刊重抓清空条目后归档仍有事实说明" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由")
+    ], issue_no: 366)
+    issue.replace_section!(sources(:ruanyf), [], issue_no: 366)
+    row = nil
+
+    assert_no_changes -> { issue.reload.attributes } do
+      row = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    end
+
+    assert_equal "本周无内容", row[:summary]
+    assert_equal 0, row[:count]
+    assert_equal "published", row[:state]
   end
 
   # weekly_archive_props 原本每期都经 Issue#weekly_sections 单独查一遍（≈2 条查询/有内容的周），

@@ -235,8 +235,12 @@ export function adminRunRow(overrides: Partial<AdminRunRow> = {}): AdminRunRow {
 }
 
 // 后台期列表一行（5.6，Issue::Administering#admin_rows）
+export function adminIssueReasons(overrides: Partial<NonNullable<AdminIssueRow['reasons']>> = {}): NonNullable<AdminIssueRow['reasons']> {
+  return { with_reason: 30, abstained: 0, retained: 0, missing: 0, ready: true, unready_label: null, last_assessed_label: null, ...overrides }
+}
+
 export function adminIssueRow(overrides: Partial<AdminIssueRow> = {}): AdminIssueRow {
-  return { kind: 'daily', period_key: '2026-09-08', state: 'published', state_label: '已发布', time_label: '06:12', source_marks: 'HN 10 · GH 10 · HAD 10', refetchable_sources: [{ id: 'src-hn', name: 'Hacker News' }, { id: 'src-gh', name: 'GitHub Trending' }], reasons: { label: '已生成', missing: 0, ready: true }, ...overrides }
+  return { kind: 'daily', period_key: '2026-09-08', state: 'published', state_label: '已发布', time_label: '06:12', source_marks: 'HN 10 · GH 10 · HAD 10', refetchable_sources: [{ id: 'src-hn', name: 'Hacker News' }, { id: 'src-gh', name: 'GitHub Trending' }], reasons: overrides.kind === 'weekly' ? null : adminIssueReasons(), ...overrides }
 }
 
 // 后台用户列表一行（5.6，User.admin_rows）
@@ -246,7 +250,7 @@ export function adminUserRow(overrides: Partial<AdminUserRow> = {}): AdminUserRo
 
 // 设置页「推荐理由」一节的用量与配置（④，Reasons::Status#props）
 export function reasonsStatus(overrides: Partial<ReasonsStatus> = {}): ReasonsStatus {
-  return { currency: '', has_nonzero_costs: false, configured: false, key_configured: false, base_url: '', model_name: '', input_price: '0', output_price: '0', monthly_cap: '0', month_calls: 0, month_cost: '0.0', today_calls: 0, ...overrides }
+  return { currency: '', has_nonzero_costs: false, configured: false, key_configured: false, base_url: '', model_name: '', input_price: '0', output_price: '0', monthly_cap: '0', month_calls: 0, month_reason_calls: 0, month_translation_calls: 0, month_cost: '0.0', today_calls: 0, ...overrides }
 }
 
 // 设置页「备份」一节（P3，Backup::Status#props）：默认是一个 BACKUP_* 都没配、还没备份过

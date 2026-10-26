@@ -851,6 +851,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 /* 恢复立即可点；书签保留在右端，既有墨层能退完，不与文字叠在一起。 */
 .favorite-button.favorite-restore { width: auto; gap: 12px; padding-right: 13px; }
 .favorite-restore:hover .favorite-restore-label { text-decoration-color: var(--ink); }
+.favorite-restore:focus-visible { outline-offset: 2px; }
 @media (max-width: 767px) {
   .item-row { grid-template-columns: minmax(0, 1fr) 31px; grid-template-areas: "rank mark" "body body"; align-items: center; }
   .item-mark { margin-top: -12px; margin-bottom: -12px; }

@@ -15,7 +15,8 @@ require "zlib"
 
 BUILD = File.expand_path("../public/vite", __dir__)
 BUDGET_KB = 300
-ENTRIES = %w[ entrypoints/application.tsx pages/Daily/Show.tsx ].freeze
+ENTRY = "entrypoints/application.tsx".freeze
+DAILY = "pages/Daily/Show.tsx".freeze
 STYLES = %w[ entrypoints/application.css ].freeze
 FONTS = %w[
   fonts/lxgw-wenkai-screen-ui.woff2
@@ -38,7 +39,10 @@ end
 gzipped = ->(name) { Zlib.gzip(File.binread(File.join(BUILD, name)), level: Zlib::BEST_COMPRESSION).bytesize }
 raw = ->(name) { File.size(File.join(BUILD, name)) }
 
-scripts = ENTRIES.each_with_object([]) { |entry, found| collect.call(entry, found) }.sort
+# 日刊独立成片时计入它；随入口合并后，字节已经包含在入口的静态依赖里。
+scripts = collect.call(ENTRY, [])
+collect.call(DAILY, scripts) if manifest.key?(DAILY)
+scripts.sort!
 rows = scripts.map { |name| [ "JS #{name}", gzipped.call(name) ] }
 rows += STYLES.map { |key| manifest.fetch(key)["file"] }.map { |name| [ "CSS #{name}", gzipped.call(name) ] }
 rows += FONTS.map { |key| manifest.fetch(key)["file"] }.map { |name| [ "字体 #{name}", raw.call(name) ] }

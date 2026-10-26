@@ -1,8 +1,7 @@
 import { Head, usePage } from '@inertiajs/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type * as React from 'react'
 
-import { usePageTurnCommit } from '@/lib/pageTurn'
 import Icon from '@/components/Icon'
 import { Sunrise } from '@/components/Illustration'
 import { authCallbackHref, authHref } from '@/lib/paths'
@@ -56,13 +55,10 @@ function ProviderForm({ provider, next }: { provider: AuthProvider; next: string
 }
 
 export default function Show({ providers, next }: LoginShowProps) {
-  const page = usePage<SharedProps>()
-  const { flash } = page.props
-  const surface = useRef<HTMLElement>(null)
-  usePageTurnCommit(page, surface)
+  const { flash } = usePage<SharedProps>().props
 
   return (
-    <main className="paper login-ground" ref={surface}>
+    <main className="paper login-ground">
       <Head title="登录" />
       <div className="login-card">
         <div className="login-band">

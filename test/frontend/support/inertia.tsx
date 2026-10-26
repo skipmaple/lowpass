@@ -1,4 +1,4 @@
-import type { Page, ClientSideVisitOptions } from '@inertiajs/core'
+import type { ClientSideVisitOptions } from '@inertiajs/core'
 import { useEffect, useState } from 'react'
 import type * as React from 'react'
 import { expect, vi } from 'vitest'
@@ -10,30 +10,18 @@ import { expect, vi } from 'vitest'
 type PageProps = Record<string, unknown>
 
 let pageProps: PageProps = {}
-let explicitPage = false
-let currentPage = { props: pageProps, url: '/', component: 'Test', version: null } as Page
 
 // 页面组件的持久布局（Show.layout）从 usePage 拿页脚要的字段，测试渲染前先把整份 props 摆进来
 export function setPageProps(props: PageProps) {
   pageProps = props
-  explicitPage = false
-  currentPage = { ...currentPage, props } as Page
-}
-
-export function setPage(page: Page) {
-  explicitPage = true
-  currentPage = page
-  pageProps = page.props
 }
 
 export function usePage<T = PageProps>() {
-  const url = window.location.pathname + window.location.search + window.location.hash
-  if (!explicitPage && currentPage.url !== url) currentPage = { ...currentPage, url }
-  return currentPage as unknown as Page & { props: T }
+  return { props: pageProps as T, url: window.location.pathname + window.location.search + window.location.hash, component: 'Test', version: null }
 }
 
 // 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」；后台表单提交也走 spy（post/patch）
-type RouterEvent = 'start' | 'finish' | 'before' | 'navigate' | 'beforeUpdate' | 'clientVisit'
+type RouterEvent = 'start' | 'finish' | 'before' | 'navigate'
 type RouterListener = (event: Event) => void
 const routerListeners = new Map<RouterEvent, Set<RouterListener>>()
 // start / finish / before 都带公开 visit.url；默认表示普通搜索访问。
@@ -44,7 +32,7 @@ export function visitRouterEvent(name: 'start' | 'finish' | 'before', { url = '/
 export function emitRouterEvent(event: RouterEvent, detail?: Event) {
   const value = detail ?? (event === 'navigate'
     ? new CustomEvent(event, { detail: { page: { url: window.location.pathname + window.location.search + window.location.hash } } })
-    : (event === 'beforeUpdate' || event === 'clientVisit') ? new CustomEvent(event, { detail: { page: currentPage } }) : visitRouterEvent(event))
+    : visitRouterEvent(event))
   routerListeners.get(event)?.forEach((listener) => listener(value))
 }
 

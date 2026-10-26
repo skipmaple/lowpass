@@ -301,7 +301,7 @@ describe('reading history snapshot', () => {
     let swapped!: () => void
     const updateCallbackDone = new Promise<void>(resolve => { swapped = resolve })
     const finished = Promise.resolve()
-    const transition = { updateCallbackDone, finished, ready: new Promise(() => {}), skipTransition: vi.fn() } as unknown as ViewTransition
+    const transition = { updateCallbackDone, finished } as unknown as ViewTransition
     ;(pageTurn('forward') as (transition: ViewTransition) => void)(transition)
     const state = { page: new ArrayBuffer(4), documentScrollPosition: { top: 1255, left: 7 } }
     history.replaceState(state, '', daily)
@@ -320,7 +320,7 @@ describe('reading history snapshot', () => {
   it('VT 等待中的新输入取消 snapshot，合成重放不能重新启用它', async () => {
     let swapped!: () => void
     const updateCallbackDone = new Promise<void>(resolve => { swapped = resolve })
-    const transition = { updateCallbackDone, finished: Promise.resolve(), ready: new Promise(() => {}), skipTransition: vi.fn() } as unknown as ViewTransition
+    const transition = { updateCallbackDone, finished: Promise.resolve() } as unknown as ViewTransition
     ;(pageTurn('forward') as (transition: ViewTransition) => void)(transition)
     const state = { page: new ArrayBuffer(4), documentScrollPosition: { top: 1255, left: 7 } }
     history.replaceState(state, '', daily)

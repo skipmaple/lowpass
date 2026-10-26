@@ -6,32 +6,23 @@ import { router } from '@inertiajs/react'
 // navigate 在首次加载、每次访问与前进后退都会触发；首次加载的路径就是起点，所以不会抢走整页加载时的焦点。
 export function focusMainOnNavigate(): () => void {
   let path = window.location.pathname
-  let inputEpoch = 0
-  const inputTypes = ['pointerdown', 'keydown', 'wheel'] as const
-  const onInput = (event: Event) => { if (event.isTrusted) inputEpoch += 1 }
-  inputTypes.forEach((type) => document.addEventListener(type, onInput, { capture: true, passive: true }))
 
-  const stopNavigate = router.on('navigate', (event) => {
+  return router.on('navigate', (event) => {
     const url = new URL(event.detail.page.url, window.location.origin)
     if (url.pathname === path) return
 
     path = url.pathname
-    const navigationInputEpoch = inputEpoch
     // navigate 在新页的 props 交给 React 时触发，等这一帧画完再找标题
     window.requestAnimationFrame(() => {
       // 等待期间可能再次换页，或读者已经进入新页的输入框；自动聚焦不能盖过这两种操作。
       const main = document.getElementById('main-content')
       const active = document.activeElement
       const focusedInPage = active !== main && main?.contains(active)
-      if (window.location.pathname === url.pathname && navigationInputEpoch === inputEpoch && !focusedInPage) {
+      if (window.location.pathname === url.pathname && !focusedInPage) {
         focusMain(url.hash)
       }
     })
   })
-  return () => {
-    stopNavigate()
-    inputTypes.forEach((type) => document.removeEventListener(type, onInput, true))
-  }
 }
 
 export function focusMain(hash = ''): void {

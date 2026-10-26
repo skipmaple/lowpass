@@ -220,7 +220,7 @@ class MotionTest < ApplicationSystemTestCase
     moving = anims.select { |a| a["pseudo"].match?(/group\((masthead|issue-date)\)/) && a["transforms"].any? { |t| t != "none" } }
     assert_empty moving, "报头与期头大字的组不该有位移动画：#{moving.inspect}"
     assert_includes anims.map { |a| [ a["pseudo"], a["name"] ] }, [ "::view-transition-old(root)", "lp-turn-out-right" ]
-    assert_empty anims.select { |a| a["pseudo"] == "::view-transition-new(root)" }, "NEW 不进入命名捕获"
+    assert_includes anims.map { |a| [ a["pseudo"], a["name"] ] }, [ "::view-transition-new(root)", "lp-turn-in-left" ]
   end
 
   # 终审：报头导航这类普通 <Link> 换页也要淡入淡出（Inertia 的 Link 默认带 viewTransition: false）

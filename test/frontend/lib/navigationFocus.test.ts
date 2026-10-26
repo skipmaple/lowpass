@@ -64,28 +64,6 @@ describe('focusMainOnNavigate', () => {
     expect(document.activeElement).toBe(input)
   })
 
-  it('原生输入已接管报头菜单时撤销待执行的自动焦点；合成输入不取消', () => {
-    stop()
-    const listeners = vi.spyOn(document, 'addEventListener')
-    stop = focusMainOnNavigate()
-    const frames: FrameRequestCallback[] = []
-    vi.mocked(window.requestAnimationFrame).mockImplementation((callback) => { frames.push(callback); return frames.length })
-    const menu = document.createElement('button')
-    menu.setAttribute('role', 'menuitem')
-    document.body.prepend(menu)
-    navigate('/search')
-    document.dispatchEvent(new Event('pointerdown'))
-    const inputListener = listeners.mock.calls.find(([type]) => type === 'pointerdown')?.[1] as EventListener | undefined
-    inputListener?.({ isTrusted: true } as Event)
-    menu.focus()
-    frames[0](0)
-    expect(document.activeElement).toBe(menu)
-    navigate('/weekly')
-    document.dispatchEvent(new Event('pointerdown'))
-    frames[1](0)
-    expect(document.activeElement).toBe(document.querySelector('h1'))
-  })
-
   it('等待渲染期间再次换页，旧页的回调不再移动焦点', () => {
     const frames: FrameRequestCallback[] = []
     vi.mocked(window.requestAnimationFrame).mockImplementation((callback) => {

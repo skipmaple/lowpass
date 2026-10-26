@@ -283,7 +283,10 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
         {model.conflicted ? <p role="status" className="field-note">服务端设置已有变化，请核对恢复的草稿后保存。</p> : null}
         <div className="kv-row"><span className="kv-key">密钥</span><div className="kv-value"><span className="cjk" style={{ fontSize: 'var(--fs-15)', color: reasons.key_configured ? 'var(--ink)' : 'var(--ink2)' }}>{reasons.key_configured ? '已配置' : '未配置'}</span></div></div>
         <div className="reasons-usage">
-          <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / 上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : `${reasons.monthly_cap} ${reasons.currency || '未指定币种'}`}`} />
+          <span>
+            <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / `} />
+            <Mixed text={`上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : `${reasons.monthly_cap} ${reasons.currency || '未指定币种'}`}`} nowrap={Number(reasons.monthly_cap) === 0} />
+          </span>
           <Mixed text={`今日 ${reasons.today_calls} 次`} />
           <Mixed text={`本月理由 ${reasons.month_reason_calls} 次 · 翻译 ${reasons.month_translation_calls} 次`} />
         </div>

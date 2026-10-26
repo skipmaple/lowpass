@@ -80,6 +80,47 @@ class StateReadabilityTest < ApplicationSystemTestCase
     end
   end
 
+  test "长备份存储地址完整换行，不撑宽设置页或藏住地址" do
+    storage = "0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com/lowpass-backup/daily"
+    with_backup_config(BackupTestHelpers::BACKUP_ENV.merge("BACKUP_BUCKET_URL" => "https://#{storage}")) do
+      sign_in_with_browser(users(:drew))
+      visit admin_settings_path
+      assert_selector "#backup .kv-value", text: storage
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+
+      states = [ 320, 375, 390, 481, 600, 768, 1024, 1440, 1920, 2560 ].map do |width|
+        viewport(width)
+        evaluate_async_script("requestAnimationFrame(()=>requestAnimationFrame(arguments[0]))")
+        evaluate_script(<<~JS)
+          (() => {
+            const value = document.querySelector('#backup .kv-value')
+            const box = value.getBoundingClientRect()
+            const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT)
+            const glyphs = []
+            for (let node; (node = walker.nextNode());) {
+              const range = document.createRange()
+              range.selectNodeContents(node)
+              glyphs.push(...Array.from(range.getClientRects()).filter(rect => rect.width > 0).map(rect => ({left: rect.left, right: rect.right})))
+            }
+            return { width: innerWidth, documentWidth: document.documentElement.scrollWidth, text: value.textContent,
+              left: box.left, right: box.right, glyphs }
+          })()
+        JS
+      end
+      puts "SETTINGS_LONG_STORAGE #{states.to_json}"
+      states.each do |state|
+        diagnostic = "#{state.fetch('width')}px：#{state.to_json}"
+        assert_equal storage, state.fetch("text"), diagnostic
+        assert_not_empty state.fetch("glyphs"), diagnostic
+        assert_operator state.fetch("documentWidth"), :<=, state.fetch("width"), diagnostic
+        state.fetch("glyphs").each do |glyph|
+          assert_operator glyph.fetch("left"), :>=, state.fetch("left") - 1, diagnostic
+          assert_operator glyph.fetch("right"), :<=, state.fetch("right") + 1, diagnostic
+        end
+      end
+    end
+  end
+
   private
     def viewport(width)
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1000, deviceScaleFactor: 1, mobile: false)

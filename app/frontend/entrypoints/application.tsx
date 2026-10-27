@@ -7,7 +7,8 @@ import { markFirstLoad } from '@/lib/motion'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
 import { crossfadeFor } from '@/lib/pageTurn'
 
-// 常用阅读页随入口加载，避免应用启动后再串行等待页面分片；其他页面仍按需加载。
+// 登录与常用阅读页随入口加载，避免应用启动后再串行等待页面分片；其他页面仍按需加载。
+import '@/pages/Login/Show'
 import '@/pages/Daily/Show'
 import '@/pages/Weekly/Show'
 

@@ -306,8 +306,10 @@ module Issue::Presenting
             props[:meta] = props[:meta].merge("emphasis_positions" => emphasis) if emphasis
             quotes = HistoricalWeeklyQuotes.current.ranges_for(item: item, issue: self, source: source)
             props[:meta] = props[:meta].merge("quote_ranges" => quotes) if quotes
+            references = HistoricalWeeklyReferenceLinks.current.links_for(item: item, issue: self, source: source)
+            props[:meta] = props[:meta].merge("reference_links" => references) if references
             if content = HistoricalParagraphBoundaries.current.content_for(item: item, issue: self, source: source, meta: props[:meta])
-              props[:meta] = props[:meta].except("quote_ranges", "emphasis_positions") if content != props[:content]
+              props[:meta] = props[:meta].except("quote_ranges", "emphasis_positions", "reference_links") if content != props[:content]
               props[:content] = content
             end
             props

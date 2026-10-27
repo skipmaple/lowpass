@@ -67,7 +67,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
 
   return (
     <form className="search-head" role="search" onSubmit={submit}>
-      <div className="search-field">
+      <div className={draft.length ? 'search-field search-field--has-clear' : 'search-field'}>
         <Icon name="search" size={24} />
         <label className="sr-only" htmlFor="search-query">搜索</label>
         <input

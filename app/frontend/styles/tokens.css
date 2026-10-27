@@ -341,15 +341,16 @@ a.source-tab { cursor: pointer; }
 
 /* 期头：搜索图标 + 文楷 32 输入框 + 反白按钮，底线 2px（与 .page-head 同一条线） */
 .search-head { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
-.search-field { flex: 1 1 320px; display: flex; align-items: center; gap: 16px; min-width: 0; }
-.search-input { flex: 1 1 auto; min-width: 0; min-height: 44px; border: 0; padding: 0; background: transparent; color: var(--ink);
+.search-field { position: relative; flex: 1 1 320px; display: flex; align-items: center; gap: 16px; min-width: 0; }
+.search-input { flex: 1 1 auto; box-sizing: border-box; min-width: 0; min-height: 44px; border: 0; padding: 0; background: transparent; color: var(--ink);
                 font-family: var(--font-cjk); font-size: var(--fs-32); line-height: 1.2; }
 .search-input::placeholder { color: var(--ink2); font-size: var(--fs-20); }
 /* 隐藏 Chrome / Safari 自带的清除叉，改用右侧有明确名称与 44px 目标的 .search-clear。 */
 .search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .search-input:focus { outline: none; }
 .search-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
-.search-clear { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+.search-field--has-clear .search-input { padding-right: 52px; }
+.search-clear { position: absolute; right: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
                 border: 0; background: transparent; cursor: pointer; }
 .search-clear:disabled { display: none; }
 .search-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }

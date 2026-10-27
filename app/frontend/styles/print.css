@@ -23,6 +23,7 @@
   .daily-source .item-row { color: var(--ink) !important; }
   .daily-source h2, .print-source-name { margin: 18pt 0 6pt; font-family: var(--font-latin); font-weight: 600; font-size: var(--fs-20); break-after: avoid; }
   .weekly-section-head { break-after: avoid; }
+  .item-content--weekly .weekly-reference { display: inline; min-height: 0; line-height: inherit; }
   .archive-row { break-inside: avoid; }
   .item-row { break-inside: avoid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; }
   /* 打印页宽落在手机断点里：那里的 align-items: center 会让序号沉到条目中间，这里拉回与标题首行同一条基线 */

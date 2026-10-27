@@ -290,6 +290,8 @@ a.source-tab { cursor: pointer; }
 .item-content--weekly > blockquote { margin: 0; padding: 0 0 0 16px; border-left: 1px solid var(--rule); }
 .item-content--weekly > blockquote > p { margin: 0; }
 .item-content--weekly > blockquote > p + p { margin-top: 12px; }
+.item-content--weekly .weekly-reference { display: inline-block; max-width: 100%; min-height: 44px; line-height: 44px; vertical-align: baseline; }
+.item-content--weekly .weekly-reference-group { white-space: nowrap; }
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
 .item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 60px 16px; width: 100%; max-width: 780px; padding: 8px 0 48px; }

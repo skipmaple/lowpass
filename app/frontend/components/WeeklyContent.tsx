@@ -75,9 +75,49 @@ function WeeklyMedia({ item, indices }: { item: Item; indices?: number[] }) {
   )
 }
 
-function Paragraph({ text, emphasized }: { text: string; emphasized: boolean }) {
-  const copy = <Mixed text={text} font="latin" size="var(--fs-15)" color={emphasized ? 'var(--ink)' : 'var(--ink2)'} weight={emphasized ? 600 : 500} lineHeight={1.8} />
+type ReferenceLink = [number, number, number, string]
+
+function Paragraph({ text, emphasized, links = [], skip = 0 }: { text: string; emphasized: boolean; links?: ReferenceLink[]; skip?: number }) {
+  const characters = Array.from(text)
+  let cursor = 0
+  const mixed = (value: string) => <Mixed text={value} font="latin" size="var(--fs-15)" color={emphasized ? 'var(--ink)' : 'var(--ink2)'} weight={emphasized ? 600 : 500} lineHeight={1.8} />
+  const copy = links.length ? <>{links.map(([, rawStart, rawEnd, href], index) => {
+    const start = rawStart - skip, end = rawEnd - skip
+    let preceding = characters.slice(cursor, start).join('')
+    const label = characters.slice(start, end).join('')
+    const opening = end - start <= 10 && /[（(【「『“‘]$/.test(preceding) ? preceding.slice(-1) : ''
+    if (opening) preceding = preceding.slice(0, -1)
+    const next = links[index + 1]?.[1] !== undefined ? links[index + 1][1] - skip : characters.length
+    let suffixEnd = end
+    if (end - start <= 10) {
+      while (suffixEnd < next && suffixEnd - end < 4 && /^[，。！？：；、）】」』”’]$/.test(characters[suffixEnd])) suffixEnd++
+    }
+    const suffix = characters.slice(end, suffixEnd).join('')
+    cursor = end
+    const context = characters.slice(Math.max(0, start - 24), start).join('').trim()
+    const reference = <a className="t weekly-reference" href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label}（${context ? `${context}；` : ''}新标签页）`}>{mixed(label)}</a>
+    if (suffix) cursor = suffixEnd
+    return <Fragment key={`${start}-${end}`}>{mixed(preceding)}{opening || suffix ? <span className="weekly-reference-group">{mixed(opening)}{reference}{mixed(suffix)}</span> : reference}</Fragment>
+  })}{mixed(characters.slice(cursor).join(''))}</> : mixed(text)
   return <p>{emphasized ? <strong>{copy}</strong> : copy}</p>
+}
+
+function referenceLinks(item: Item, paragraphs: string[], quotes: [number, number][]): ReferenceLink[] {
+  const links = item.meta.reference_links
+  if (!item.content || item.content.length >= 50_000 || !Array.isArray(links) || links.length > 128) return []
+  const valid = Array.from(links).every((link, i, values) => {
+    if (!Array.isArray(link) || link.length !== 4) return false
+    const [paragraph, start, end, href] = link
+    if (!Number.isInteger(paragraph) || !Number.isInteger(start) || !Number.isInteger(end) || paragraph < 0 || paragraph >= paragraphs.length) return false
+    if (start < 0 || start >= end || end > Array.from(paragraphs[paragraph]).length || typeof href !== 'string' || href.length > 2048) return false
+    if (i > 0 && (paragraph < values[i - 1][0] || (paragraph === values[i - 1][0] && start < values[i - 1][2]))) return false
+    if (quotes.some(([first, last]) => paragraph >= first && paragraph < last) && start < (paragraphs[paragraph].startsWith('> ') ? 2 : 1)) return false
+    try {
+      const url = new URL(href)
+      return ['http:', 'https:'].includes(url.protocol) && Boolean(url.hostname) && !url.username && !url.password
+    } catch { return false }
+  })
+  return valid ? links : []
 }
 
 function quoteRanges(item: Item, paragraphs: string[], positions: number[] | undefined, emphasis: Set<number>): [number, number][] {
@@ -105,6 +145,8 @@ export default function WeeklyContent({ item }: { item: Item }) {
     && Array.from(item.meta.emphasis_positions).every((position, index, values) => Number.isInteger(position) && position >= 0 && position < paragraphs.length && (index === 0 || position > values[index - 1]))
     ? new Set(item.meta.emphasis_positions) : new Set<number>()
   const quotes = quoteRanges(item, paragraphs, positions, emphasis)
+  const links = referenceLinks(item, paragraphs, quotes)
+  const linksAt = (index: number) => links.filter(([paragraph]) => paragraph === index)
   const starts = new Map(quotes)
   const covered = new Set(quotes.flatMap(([start, end]) => Array.from({ length: end - start - 1 }, (_, i) => start + i + 1)))
   const paragraphAt = (index: number) => {
@@ -112,11 +154,11 @@ export default function WeeklyContent({ item }: { item: Item }) {
     if (end !== undefined) {
       return <blockquote key={index}>{paragraphs.slice(index, end).map((text, offset) => {
         const quote = text.replace(/^> ?/, '')
-        return quote ? <Paragraph key={index + offset} text={quote} emphasized={false} /> : null
+        return quote ? <Paragraph key={index + offset} text={quote} emphasized={false} links={linksAt(index + offset)} skip={text.startsWith('> ') ? 2 : 1} /> : null
       })}</blockquote>
     }
     if (covered.has(index)) return null
-    return <Paragraph key={index} text={paragraphs[index]} emphasized={emphasis.has(index)} />
+    return <Paragraph key={index} text={paragraphs[index]} emphasized={emphasis.has(index)} links={linksAt(index)} />
   }
   if (positions) {
     const groups = new Map<number, number[]>()

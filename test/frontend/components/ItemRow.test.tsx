@@ -468,6 +468,53 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect([...content.querySelectorAll('blockquote p')].map((node) => node.textContent)).toEqual(['第一段。', '第二段。'])
   })
 
+  it('正文中的来源链接保留原句、可键盘访问并支持引用段', () => {
+    const meta = { quote_ranges: [[1, 2]], reference_links: [[0, 3, 5, 'https://example.com/a'], [1, 4, 6, 'https://example.com/b']] } as unknown as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '🙂 看站点。\n> 查看代码。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const content = container.querySelector('.item-content--weekly')!
+    expect(content.textContent).toBe('🙂 看站点。查看代码。')
+    const links = content.querySelectorAll('a')
+    expect([...links].map((a) => [a.textContent, a.getAttribute('href')])).toEqual([['站点', 'https://example.com/a'], ['代码', 'https://example.com/b']])
+    expect(links[1].closest('blockquote')).not.toBeNull()
+    expect(links[0]).toHaveAttribute('target', '_blank')
+    expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('短链接后的中文闭合标点与链接组成不换行的排版单元', () => {
+    const meta = { reference_links: [[0, 2, 4, 'https://example.com/code']] } as unknown as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '（看代码），接下来。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const group = container.querySelector('.weekly-reference-group')!
+    expect(group.textContent).toBe('代码），')
+    expect(group.querySelector('a')).toHaveTextContent('代码')
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('（看代码），接下来。')
+  })
+
+  it('短链接前的括号不留在上一行', () => {
+    const meta = { reference_links: [[0, 1, 3, 'https://example.com/code']] } as unknown as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '（代码）', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('.weekly-reference-group')).toHaveTextContent('（代码）')
+    expect(container.querySelector('.weekly-reference-group a')).toHaveTextContent('代码')
+  })
+
+  it('同段落重复的链接名带上不同上下文，便于读屏区分', () => {
+    const meta = { reference_links: [[0, 1, 3, 'https://example.com/a'], [0, 4, 6, 'https://example.com/b']] } as unknown as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '甲代码乙代码', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const labels = [...container.querySelectorAll('.weekly-reference')].map((link) => link.getAttribute('aria-label'))
+    expect(labels).toHaveLength(2)
+    expect(labels[0]).not.toBe(labels[1])
+  })
+
+  it.each([
+    [[0, 0, 2, 'javascript:alert(1)']], [[0, 0, 9, 'https://example.com/']],
+    [[0, 1, 2, 'https://example.com/'], [0, 0, 2, 'https://example.com/']],
+    [[0, 0, 2, 'https://user:pass@example.com/']],
+  ])('不可信的正文链接 %j 退回纯文字', (...links) => {
+    const meta = { reference_links: links } as unknown as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '正文', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('.item-content--weekly a')).toBeNull()
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('正文')
+  })
+
   it.each([{ ranges: [[0, 5]] }, { ranges: [[1, 1]] }, { ranges: [[1, 3], [2, 4]] }, { ranges: [[1, 3.5]] }, { ranges: [[1, '3']] }, { ranges: [[0, 3]] }, { ranges: [[1, 4], [0, 1]] }])('不可信的引用位置 $ranges 回退为原正文', ({ ranges }) => {
     const meta = { quote_ranges: ranges } as unknown as ItemMeta
     const { container } = render(<ItemRow item={item({ content: '引言。\n> 第一段。\n>\n> 第二段。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)

@@ -39,6 +39,8 @@ module Adapters
         meta[:emphasis_positions] = emphasis if emphasis
         quotes = QuoteRanges.for(body: item[:summary], content: content)
         meta[:quote_ranges] = quotes if quotes
+        links = ReferenceLinks.for(body: item[:summary], content: content, issue_no: number)
+        meta[:reference_links] = links if links
         resolved_images = item[:image_urls].map { |href| image_url(href, number) }
         image_urls = resolved_images.compact.uniq
         meta[:image_urls] = image_urls if image_urls.any?

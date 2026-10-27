@@ -299,7 +299,10 @@ module Issue::Presenting
         degraded: section[:degraded],
         original_url: section_original_url(section),
         groups: section[:sections].map do |(name, list)|
-          { name: name, anchor: list.first.anchor, items: list.map { |item| item_props(item, image_dimensions: dimensions) } }
+          { name: name, anchor: list.first.anchor, items: list.map do |item|
+            positions = HistoricalImagePositions.current.positions_for(item: item, issue: self, source: source)
+            item_props(item, image_dimensions: dimensions, historical_positions: positions)
+          end }
         end
       }
     end
@@ -324,7 +327,7 @@ module Issue::Presenting
     # url_hash 给书签用：收藏按链接认（D27），页面的 favorites 列的就是它；
     # title_zh 是 HN 与 Hackaday 标题的中文译文、summary_zh 是 GitHub Trending 简介的中文译文（D25），
     # 跟推荐理由同一次生成，没生成前是 nil。
-    def item_props(item, image_dimensions: nil)
+    def item_props(item, image_dimensions: nil, historical_positions: nil)
       props = {
         id: item.id,
         url_hash: item.url_hash,
@@ -338,7 +341,7 @@ module Issue::Presenting
         author: item.author,
         published_at: item.published_at&.iso8601,
         rank: item.rank,
-        meta: item.meta,
+        meta: historical_positions ? item.meta.merge("image_positions" => historical_positions) : item.meta,
         image_dimensions: (image_dimensions || {}).slice(*Array(item.meta["image_urls"]).grep(String)),
         reason: item.reason,
         interest_tag: item.interest_tag

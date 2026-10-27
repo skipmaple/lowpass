@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+# 用经独立核对的固定版本原文和只读快照生成候选，不联网、不写数据库。
+require_relative "../config/environment"
+require "json"
+
+abort "usage: historical_weekly_image_index GIT_REPOSITORY SNAPSHOT COMMIT SOURCE_SHA256" unless ARGV.size == 4
+repository, snapshot_path, commit, sha256 = ARGV
+snapshot = JSON.parse(File.read(snapshot_path))
+result = HistoricalWeeklyImageIndex.generate(repository: repository, snapshot: snapshot, source_commit: commit, source_sha256: sha256)
+puts JSON.pretty_generate(result)

@@ -32,6 +32,20 @@ class HistoricalWeeklyOrderTest < ApplicationSystemTestCase
         row = find("#item-#{item.id}")
         assert_selector "#item-#{item.id} .item-media img", count: 1, visible: :all
         assert_equal %w[p img p], row.all(".item-content--weekly p, .item-media img", visible: :all).map(&:tag_name)
+        original = row.find("a.item-media-original")
+        assert_equal "查看历史图片顺序配图的原图（新标签页）", original["aria-label"]
+        assert_equal image_url, original[:href]
+        geometry = original.evaluate_script(<<~JS)
+          (() => {
+            const link = this.getBoundingClientRect(), image = this.closest('figure').querySelector('img').getBoundingClientRect()
+            const next = this.closest('.item-media').nextElementSibling.getBoundingClientRect()
+            return { width: link.width, height: link.height, imageBottom: image.bottom, linkTop: link.top, linkBottom: link.bottom, nextTop: next.top }
+          })()
+        JS
+        assert_operator geometry.fetch("width"), :>=, 44
+        assert_operator geometry.fetch("height"), :>=, 44
+        assert_operator geometry.fetch("linkTop"), :>=, geometry.fetch("imageBottom") - 0.5
+        assert_operator geometry.fetch("nextTop"), :>=, geometry.fetch("linkBottom")
         assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0, "#{width}px 横向溢出"
       end
       HistoricalImagePositions.stubs(:current).returns(HistoricalImagePositions.new(paths: []))
@@ -40,6 +54,55 @@ class HistoricalWeeklyOrderTest < ApplicationSystemTestCase
       assert_equal %w[p p img], row.all(".item-content--weekly p, .item-media img", visible: :all).map(&:tag_name)
       assert_equal before, [ issue.reload.attributes, item.reload.attributes, Favorite.count ]
       assert_not item.meta.key?("image_positions")
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "同一段落的多张图各有可触达的原图入口，不盖住图与后文" do
+    sign_in_with_browser(users(:drew))
+    issue = issues(:weekly_w36)
+    source = sources(:ruanyf)
+    image_base = "http://127.0.0.1:#{Capybara.current_session.server.port}/icon.png"
+    images = [ "#{image_base}?one", "#{image_base}?two" ]
+    url = "https://example.com/multiple-images"
+    item = issue.items.create!(source: source, title: "多图", rank: 2, section: "图片", url: url,
+      url_hash: Digest::SHA256.hexdigest(url), fetched_at: Time.current,
+      content: "图片介绍。\n图片说明。", meta: { issue_no: 416, image_urls: images, image_positions: [ 1, 1 ] })
+    ImageDimension.stubs(:enqueue_for)
+
+    [ 320, 375, 768, 1440 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      visit weekly_issue_path(issue.period_key)
+      row = find("#item-#{item.id}")
+      links = row.all("a.item-media-original")
+      assert_equal images, links.map { |link| link[:href] }
+      links.each_with_index do |link, index|
+        assert_equal "查看多图配图 #{index + 1}的原图（新标签页）", link["aria-label"]
+        assert_equal "_blank", link[:target]
+        assert_equal "noopener noreferrer", link[:rel]
+        geometry = link.evaluate_script(<<~JS)
+          (() => {
+            const r = this.getBoundingClientRect(), image = this.closest('figure').querySelector('img').getBoundingClientRect()
+            const after = this.closest('.item-media').nextElementSibling.getBoundingClientRect()
+            return { width: r.width, height: r.height, top: r.top, bottom: r.bottom, imageBottom: image.bottom, afterTop: after.top }
+          })()
+        JS
+        assert_operator geometry.fetch("width"), :>=, 44
+        assert_operator geometry.fetch("height"), :>=, 44
+        assert_operator geometry.fetch("top"), :>=, geometry.fetch("imageBottom") - 0.5
+        assert_operator geometry.fetch("afterTop"), :>=, geometry.fetch("bottom")
+      end
+      if width <= 767
+        assert_operator links[1].evaluate_script("this.closest('figure').getBoundingClientRect().top"), :>=, links[0].evaluate_script("this.getBoundingClientRect().bottom")
+      end
+      if width == 1440
+        execute_script("arguments[0].focus()", row.find(".item-title a"))
+        page.driver.browser.switch_to.active_element.send_keys(:tab)
+        assert_selector "#item-#{item.id} .item-media-original:focus"
+        assert_equal "solid", evaluate_script("getComputedStyle(document.activeElement).outlineStyle")
+      end
+      assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0
     end
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")

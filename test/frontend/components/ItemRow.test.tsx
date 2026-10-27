@@ -512,6 +512,17 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(container.querySelector('.item-media')).toHaveClass('item-media--single')
   })
 
+  it('周刊配图提供独立的原图入口，失败后不残留失效入口', () => {
+    const url = 'https://cdn.example.com/detail.webp'
+    render(<ItemRow item={item({ title: '细节图', meta: { image_urls: [url] } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const link = screen.getByRole('link', { name: '查看细节图配图的原图（新标签页）' })
+    expect(link).toHaveAttribute('href', url)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    fireEvent.error(screen.getByRole('img', { name: '细节图配图' }))
+    expect(screen.queryByRole('link', { name: '查看细节图配图的原图（新标签页）' })).toBeNull()
+  })
+
   it('图片加载失败时移除破图，全部失败后收起媒体区域', () => {
     const { container } = render(
       <ItemRow

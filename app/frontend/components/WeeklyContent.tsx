@@ -1,6 +1,7 @@
 import type * as React from 'react'
 import { Fragment, useState } from 'react'
 
+import Icon from '@/components/Icon'
 import { Mixed } from '@/lib/typeset'
 import type { Item } from '@/types/lowpass'
 
@@ -30,6 +31,7 @@ function WeeklyImage({ item, url, index, total, onError }: { item: Item; url: st
   const size = item.image_dimensions?.[url]
   const known = size && [size.width, size.height].every((value) => Number.isInteger(value) && value > 0 && value <= 100_000) ? size : undefined
   const geometry = known ? { '--image-width': `${known.width}px`, '--image-ratio': known.width / known.height } as React.CSSProperties : undefined
+  const label = `${item.title}配图${total > 1 ? ` ${index + 1}` : ''}`
 
   return (
     <figure className={`item-media-frame${known ? ' item-media-frame--sized' : ''}${known && !loaded ? ' item-media-frame--loading' : ''}`} style={geometry}>
@@ -38,13 +40,18 @@ function WeeklyImage({ item, url, index, total, onError }: { item: Item; url: st
         src={url}
         width={known?.width}
         height={known?.height}
-        alt={`${item.title}配图${total > 1 ? ` ${index + 1}` : ''}`}
+        alt={label}
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
         onLoad={() => setLoaded(true)}
         onError={onError}
       />
+      <figcaption>
+        <a className="item-media-original t" href={url} target="_blank" rel="noopener noreferrer" aria-label={`查看${label}的原图（新标签页）`}>
+          原图 <Icon name="arrow-up-right" size={12} />
+        </a>
+      </figcaption>
     </figure>
   )
 }

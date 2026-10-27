@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# bin/rails runner script/historical_excerpt_fingerprints SNAPSHOT EVIDENCE_DIR
+# 离线重建已核对的展示指纹；不请求网络、不保存摘要或数据库 ID。
+require "digest"
+require "json"
+require "rss"
+
+snapshot_path, evidence_dir = ARGV
+expected = {
+  "lowpass-hackaday-current.xml" => "8764ecbd38d66662a9b9721ac518e1db6bb6989de24d67c3ed8d614e75dcd38b",
+  "lowpass-wp-hiding-virtualization-from-other-software.json" => "db7f771db515a03cada15d81c00e70063f26293f815e64a81d32747af7d1395d",
+  "lowpass-wp-hairy-armor-for-combat-robot-its-not-terrible.json" => "b2b1686d690ee9d4b8ad924788fc4a116b460e1c4726cbc8faed25634fdceed4",
+  "lowpass-wp-building-a-swashplate-less-helicoper-rotor.json" => "d596d30e0528c8de419074c10ca9ce713db318e5a92ffad3ffe0f76f7908f5b3"
+}.freeze
+expected.each do |file, digest|
+  raise "source digest mismatch" unless Digest::SHA256.file(File.join(evidence_dir, file)).hexdigest == digest
+end
+rows = JSON.parse(File.read(snapshot_path))
+raise "unexpected snapshot" unless rows.is_a?(Array) && rows.size == 7 && rows.map { |row| row["rank"] } == (1..7).to_a &&
+  rows.all? { |row| row["period"] == "2026-10-27" && row["source_adapter"] == "rss" && row["source_name"] == "Hackaday" } &&
+  rows.map { |row| row.values_at("issue_id", "source_id") }.uniq.one? && rows.map { |row| row["item_id"] }.uniq.size == 7
+feed = RSS::Parser.parse(File.read(File.join(evidence_dir, "lowpass-hackaday-current.xml")), false)
+sources = feed.items.map { |item| { title: item.title, url: item.link, excerpt: item.description.to_s } }
+expected.keys.grep(/\.json\z/).each do |file|
+  objects = JSON.parse(File.read(File.join(evidence_dir, file)))
+  raise "ambiguous source" unless objects.one?
+  object = objects.first
+  sources << { title: Nokogiri::HTML.fragment(object.fetch("title").fetch("rendered")).text,
+    url: object.fetch("link"), excerpt: object.fetch("excerpt").fetch("rendered") }
+end
+fingerprints = rows.map do |row|
+  matches = sources.select { |source| source[:title] == row["title"] && source[:url] == row["url"] }
+  raise "source identity mismatch" unless matches.one?
+  excerpt = matches.first.fetch(:excerpt)
+  markers = Nokogiri::HTML.fragment(excerpt).css("a.read-more").select { |link| link.text == "…read more" }
+  raise "excerpt mismatch" unless markers.one? && SummaryCleaner.clean(excerpt) == "#{row.fetch('summary')} …"
+  identity = row.values_at("period", "issue_id", "source_id", "item_id", "rank", "title", "url", "summary")
+  Digest::SHA256.hexdigest(JSON.generate(identity))
+end
+raise "duplicate identity" unless fingerprints.uniq.size == 7
+puts fingerprints

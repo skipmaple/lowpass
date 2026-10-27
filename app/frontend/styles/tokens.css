@@ -990,6 +990,10 @@ details[open] > summary::before { rotate: 90deg; }
 .daily-source-anchor { position: absolute; top: 0; width: 0; height: 0; scroll-margin-top: 24px; }
 .daily-source-rule { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--ink); transform-origin: left center; }
 .daily-source-heading { display: flex; align-items: center; gap: 14px; }
+.daily-source:focus { outline: none; }
+@media screen {
+  .daily-source:focus-visible .daily-source-heading { outline: 2px solid var(--ink); outline-offset: 4px; }
+}
 .daily-source-icon { width: 32px; height: 32px; flex: none; }
 .daily-source h2 { position: relative; margin: 0; font-family: var(--font-latin); font-size: var(--fs-26); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 .daily-source-content > .issue-body { border-top: 0; margin-top: 0; }

@@ -25,6 +25,30 @@ function imagePositions(item: Item, paragraphs: string[]): number[] | undefined 
   }
 }
 
+function WeeklyImage({ item, url, index, total, onError }: { item: Item; url: string; index: number; total: number; onError: () => void }) {
+  const [loaded, setLoaded] = useState(false)
+  const size = item.image_dimensions?.[url]
+  const known = size && [size.width, size.height].every((value) => Number.isInteger(value) && value > 0 && value <= 100_000) ? size : undefined
+  const geometry = known ? { '--image-width': `${known.width}px`, '--image-ratio': known.width / known.height } as React.CSSProperties : undefined
+
+  return (
+    <figure className={`item-media-frame${known ? ' item-media-frame--sized' : ''}${known && !loaded ? ' item-media-frame--loading' : ''}`} style={geometry}>
+      <img
+        className="item-media-image"
+        src={url}
+        width={known?.width}
+        height={known?.height}
+        alt={`${item.title}配图${total > 1 ? ` ${index + 1}` : ''}`}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onLoad={() => setLoaded(true)}
+        onError={onError}
+      />
+    </figure>
+  )
+}
+
 function WeeklyMedia({ item, indices }: { item: Item; indices?: number[] }) {
   const [failed, setFailed] = useState<ReadonlySet<number>>(() => new Set())
   const imageUrls = Array.isArray(item.meta.image_urls)
@@ -37,26 +61,9 @@ function WeeklyMedia({ item, indices }: { item: Item; indices?: number[] }) {
 
   return (
     <div className={visible.length > 1 ? 'item-media item-media--multiple' : 'item-media item-media--single'}>
-      {visible.map(({ url, index }) => {
-        const size = item.image_dimensions?.[url]
-        const known = size && [size.width, size.height].every((value) => Number.isInteger(value) && value > 0 && value <= 100_000) ? size : undefined
-        const geometry = known ? { '--image-width': `${known.width}px`, '--image-ratio': known.width / known.height } as React.CSSProperties : undefined
-        return (
-          <figure className={`item-media-frame${known ? ' item-media-frame--sized' : ''}`} style={geometry} key={`${url}-${index}`}>
-            <img
-              className="item-media-image"
-              src={url}
-              width={known?.width}
-              height={known?.height}
-              alt={`${item.title}配图${imageUrls.length > 1 ? ` ${index + 1}` : ''}`}
-              loading="lazy"
-              decoding="async"
-              referrerPolicy="no-referrer"
-              onError={() => setFailed((current) => new Set(current).add(index))}
-            />
-          </figure>
-        )
-      })}
+      {visible.map(({ url, index }) => (
+        <WeeklyImage key={JSON.stringify([url, index])} item={item} url={url} index={index} total={imageUrls.length} onError={() => setFailed((current) => new Set(current).add(index))} />
+      ))}
     </div>
   )
 }

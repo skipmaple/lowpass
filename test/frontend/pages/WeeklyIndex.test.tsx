@@ -39,6 +39,22 @@ describe('周刊归档', () => {
     expect(rows(container).map((row) => row.getAttribute('href'))).toEqual(['/weekly/2026-W36', '/weekly/2026-W35'])
   })
 
+  it('同周的各期标题独立呈现，标题内的斜杠不被拆开', () => {
+    const first = '阮一峰科技爱好者周刊 第 412 期 · 禁止 issue / PR'
+    const second = '阮一峰科技爱好者周刊 第 413 期 · 再见 React Native'
+    const week = archiveWeek({ summary: `${first} / ${second}`, summary_parts: [
+      { source: '阮一峰科技爱好者周刊', label: '第 412 期 · 禁止 issue / PR' },
+      { source: '阮一峰科技爱好者周刊', label: '第 413 期 · 再见 React Native' },
+    ] })
+    const { container } = index({ weeks: [week] })
+
+    const row = rows(container)[0]
+    expect(row.querySelectorAll('.archive-label-part')).toHaveLength(2)
+    expect(row.querySelectorAll('.archive-label-part')[0]).toHaveTextContent(first)
+    expect(row.querySelectorAll('.archive-label-part')[1]).toHaveTextContent(second)
+    expect(row).toHaveAttribute('href', '/weekly/2026-W36')
+  })
+
   it('已发布：实心记号、周次、日期范围、各源期号与条数', () => {
     const { container } = index()
 
@@ -69,7 +85,7 @@ describe('周刊归档', () => {
     })
 
     const colorOf = (row: HTMLElement) =>
-      (row.querySelector('.archive-label span span') as HTMLElement | null)?.style.color
+      (row.querySelector('.archive-label-source span') as HTMLElement | null)?.style.color
 
     expect(colorOf(rows(container)[0])).toBe('var(--ink)')
     expect(colorOf(rows(container)[1])).toBe('var(--ink2)')

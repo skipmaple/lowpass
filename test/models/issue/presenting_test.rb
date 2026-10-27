@@ -248,12 +248,15 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
 
     weeks = props[:weeks].index_by { |week| week[:period_key] }
     assert_equal "阮一峰科技爱好者周刊 第 365 期 · 上一期的主题", weeks["2026-W34"][:summary]
+    assert_equal [ { source: "阮一峰科技爱好者周刊", label: "第 365 期 · 上一期的主题" } ], weeks["2026-W34"][:summary_parts]
     assert_equal 1, weeks["2026-W34"][:count]
     assert_equal "独立开发周刊", weeks["2026-W35"][:summary]
     assert_equal 2, weeks["2026-W35"][:count]
     assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由 / 命令行周报", weeks["2026-W36"][:summary]
+    assert_equal [ { source: "阮一峰科技爱好者周刊", label: "第 366 期 · 慢下来的理由" }, { source: "命令行周报", label: nil } ], weeks["2026-W36"][:summary_parts]
     assert_equal 3, weeks["2026-W36"][:count]
     assert_equal "本周无内容", weeks["2026-W37"][:summary]
+    assert_equal [], weeks["2026-W37"][:summary_parts]
     assert_nil weeks["2026-W37"][:count]
   end
 

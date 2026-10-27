@@ -40,6 +40,7 @@ export default function Icon({
 }) {
   return (
     <MorphIcon
+      className="ui-icon"
       icon={ICONS[name]}
       size={size}
       color={color}

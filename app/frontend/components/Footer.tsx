@@ -27,7 +27,7 @@ function Stamp() {
       strokeWidth={1.6}
       aria-hidden="true"
       focusable="false"
-      style={{ display: 'block', flex: 'none', stroke: 'var(--ink)' }}
+      style={{ display: 'block', flex: 'none', stroke: 'currentColor' }}
     >
       <circle cx="32" cy="32" r="29" />
       <circle cx="32" cy="32" r="23" strokeDasharray="3 3" strokeWidth="1" />
@@ -38,7 +38,7 @@ function Stamp() {
         fontSize="15"
         fontWeight="900"
         stroke="none"
-        style={{ fontFamily: 'var(--font-brand)', fill: 'var(--ink)' }}
+        style={{ fontFamily: 'var(--font-brand)', fill: 'currentColor' }}
       >
         LP
       </text>

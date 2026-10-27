@@ -161,6 +161,24 @@ describe('原生片段返回搜索结果', () => {
 })
 
 describe('搜索导航的加载提示', () => {
+  it('已有结果时用加载提示替换旧计数，结果和排序仍留在原处', () => {
+    const { container } = results()
+    const count = container.querySelector('.search-count')!
+    const row = container.querySelector('.search-row')!
+    expect(count).toHaveTextContent('1 条结果')
+
+    act(() => emitRouterEvent('start'))
+    expect(screen.getByRole('status')).toHaveTextContent('正在搜索…')
+    expect(screen.getByRole('status')).toHaveClass('sr-only')
+    expect(count).toHaveTextContent('正在搜索…')
+    expect(count).not.toHaveTextContent('1 条结果')
+    expect(container.querySelector('.search-row')).toBe(row)
+    expect(within(count as HTMLElement).getByRole('link', { name: '时间' })).toBeInTheDocument()
+
+    act(() => emitRouterEvent('finish'))
+    expect(count).toHaveTextContent('1 条结果')
+  })
+
   it('进入所在期时保留原结果计数，只有搜索访问才宣告加载', () => {
     results()
     act(() => emitRouterEvent('start', visitRouterEvent('start', { url: '/weekly/2026-W36' })))

@@ -755,10 +755,21 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .admin-form-row { width: 100%; gap: 16px; }
   .admin-form-row > .field { width: 100% !important; }
 }
-/* 高对比（forced-colors）：背景都被换成 Canvas，平时靠墨色底反白的选中态就和其余项一样了，补一圈系统色描边；
+/* 高对比（forced-colors）：背景都被换成 Canvas，平时靠墨色底反白的选中态就和其余项一样了，用内侧系统色描边标记选中，外侧描边保留给键盘焦点；
    边框颜色也会被统一改写，透明的占位下划线会显形，这里改成不画边、用等宽的内边距占位。 */
 @media (forced-colors: active) {
-  .source-tab[data-state="active"], .seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"] { outline: 3px solid CanvasText; outline-offset: -5px; }
+  .ui-icon, .editorial-art { stroke: currentColor; }
+  .editorial-art [fill="var(--paper)"] { fill: Canvas; }
+  .editorial-art [fill="var(--green)"] { fill: CanvasText; }
+  .source-art [fill="var(--paper)"], .source-art [fill="var(--band-hole)"] { fill: Canvas; }
+  .source-art [fill="var(--ink)"], .source-art [fill="var(--green)"] { fill: currentColor; }
+  :is(.source-tab[data-state="active"], .seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"]) { position: relative; }
+  :is(.source-tab[data-state="active"], .seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"])::after {
+    content: ""; position: absolute; inset: 4px; border: 3px solid CanvasText; pointer-events: none;
+  }
+  :is(.source-tab[data-state="active"], .seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"]):focus-visible {
+    outline: 2px solid CanvasText; outline-offset: 2px; z-index: 1;
+  }
   .masthead-nav a:not([aria-current="page"]) { border-bottom-style: none; padding-bottom: 3px !important; }
 }
 

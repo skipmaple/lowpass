@@ -480,6 +480,19 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('历史图文位置、引用与正文链接同时存在时各自保持原文顺序', () => {
+    const meta = {
+      image_urls: ['https://cdn.example.com/1.webp', 'https://cdn.example.com/2.webp', 'https://cdn.example.com/3.webp'],
+      image_positions: [1, 4, 4], quote_ranges: [[1, 3]],
+      reference_links: [[3, 2, 4, 'https://example.com/demo']],
+    } as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '开场。\n> 引用一。\n> 引用二。\n查看演示。\n结尾。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const content = container.querySelector('.item-content--weekly')!
+    expect([...content.children].map((node) => node.matches('.item-media') ? `图片${node.querySelectorAll('img').length}` : node.tagName)).toEqual(['P', '图片1', 'BLOCKQUOTE', 'P', '图片2', 'P'])
+    expect(content.querySelector('blockquote')).toHaveTextContent('引用一。引用二。')
+    expect(content.querySelector('.weekly-reference')).toHaveTextContent('演示')
+  })
+
   it('短链接后的中文闭合标点与链接组成不换行的排版单元', () => {
     const meta = { reference_links: [[0, 2, 4, 'https://example.com/code']] } as unknown as ItemMeta
     const { container } = render(<ItemRow item={item({ content: '（看代码），接下来。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)

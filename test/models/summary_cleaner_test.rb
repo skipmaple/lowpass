@@ -126,17 +126,52 @@ class SummaryCleanerTest < ActiveSupport::TestCase
     assert_equal 200, SummaryCleaner.preview("字" * 300).length
   end
 
-  # Hackaday 的 RSS 摘要末尾带一个 class="read-more" 的链接，文字是「…read more」：那是源站的导航，不是摘要（PRD 7.5）
-  test "去掉源站附加的阅读更多链接" do
+  test "源站明确标记截断的摘要保留省略号但不保留阅读更多" do
+    html = %(Learning a new language can be difficult <a class="read-more" href="/x">&#8230;read more</a>)
+
+    assert_equal "Learning a new language can be difficult …", SummaryCleaner.clean(html)
+    assert_equal "已存的未完成摘要…", SummaryCleaner.stored("已存的未完成摘要 …read more")
+    assert_equal "内容完整。", SummaryCleaner.clean(%(内容完整。<a class="more-link" href="/x">Continue reading</a>))
+    assert_equal "内容完整。", SummaryCleaner.clean(%(内容完整。<a class="read-more" href="/x">…read more</a>))
+    assert_equal "内容完整。", SummaryCleaner.stored("内容完整。 …read more")
+    assert_equal "", SummaryCleaner.clean(%(<a class="read-more" href="/x">…read more</a>))
+  end
+
+  test "正文中途的阅读更多不添加截断标记，完整正文保持原有清洗" do
+    html = %(<p>Alpha <a class="read-more">…read more</a></p><p>Beta continues.</p>)
+
+    assert_equal "Alpha Beta continues.", SummaryCleaner.clean(html)
+    assert_equal "Alpha Beta continues.", SummaryCleaner.content(html)
+    assert_equal "OneTwo…", SummaryCleaner.clean(%(One<a class="read-more">…read more</a>Two<a class="read-more">…read more</a>))
+  end
+
+  test "代码片段中的句末标点也能识别为完整句子" do
+    html = %(A complete <code>sentence.</code><a class="read-more">…read more</a>)
+
+    assert_equal "A complete sentence.", SummaryCleaner.clean(html)
+  end
+
+  test "Markdown 句末标点和不会显示的图片不误导截断判断" do
+    [ "**This is complete.**", "*Complete sentence!*", "[Complete sentence.](https://example.com)" ].each do |text|
+      html = %(#{text} <a class="read-more">…read more</a>)
+      assert_not SummaryCleaner.clean(html).end_with?("…"), text
+    end
+
+    assert_equal "", SummaryCleaner.clean(%(![leading](https://example.com/a.png) <a class="read-more">…read more</a>))
+    assert_equal "Partial …", SummaryCleaner.clean(%(Partial <a class="read-more">…read more</a> ![image](https://example.com/a.png)))
+  end
+
+  # Hackaday 的导航文字移除，源站明确的未完标记保留（PRD 7.5）。
+  test "去掉阅读更多链接并保留源站的截断标记" do
     html = %(<div><img src="x.jpg"></div>The progression of the web browser. Today <a href="https://hackaday.com/x/" class="read-more">&#8230;read more</a>)
-    assert_equal "The progression of the web browser. Today", SummaryCleaner.clean(html)
+    assert_equal "The progression of the web browser. Today …", SummaryCleaner.clean(html)
     assert_equal "Keep going", SummaryCleaner.clean(%(Keep going <a class="more-link" href="/x">Continue reading</a>))
   end
 
-  # 已发布的旧条目库里存着清洗过的「…read more」；只去结尾这一种，正文里的不动
-  test "已存摘要结尾的…read more 去掉，别处的不动" do
-    assert_equal "so too does the", SummaryCleaner.clean("so too does the …read more")
-    assert_equal "Today", SummaryCleaner.clean("Today …Read More ")
+  # 已发布的旧条目如果还留有这一尾巴，展示时保留它明确指示的未完状态。
+  test "已存摘要结尾的阅读更多去掉，省略号保留，别处的不动" do
+    assert_equal "so too does the…", SummaryCleaner.clean("so too does the …read more")
+    assert_equal "Today…", SummaryCleaner.clean("Today …Read More ")
     assert_equal "Why you should read more books", SummaryCleaner.clean("Why you should read more books")
     assert_equal "…read more in the middle stays", SummaryCleaner.clean("…read more in the middle stays")
   end

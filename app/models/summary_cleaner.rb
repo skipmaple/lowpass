@@ -22,7 +22,9 @@ class SummaryCleaner
 
   # 源站附加的「阅读更多」链接不是摘要（PRD 7.5）：Hackaday 用 a.read-more，WordPress 默认主题用 a.more-link
   READ_MORE = "a.read-more, a.more-link".freeze
-  # 已发布的旧条目库里存着清洗过的「…read more」：读出时只去结尾这一种（期发布后不改库）
+  READ_MORE_MARKER = /\A[[:space:]]*(?:…|\.{3})[[:space:]]*read[[:space:]]+more[[:space:]]*\z/i
+  COMPLETE_ENDING = /[.!?。！？…]["'”’）)\]】」』]*[[:space:]]*\z/
+  # 旧条目可能存着「…read more」；移除链接文案，保留源站明确的省略号（期发布后不改库）
   READ_MORE_TAIL = /[[:space:]]*…[[:space:]]*read more[[:space:]]*\z/i
 
   class << self
@@ -36,9 +38,9 @@ class SummaryCleaner
       truncate(paragraphs(text), CONTENT_LIMIT) if text
     end
 
-    # 已存摘要的代码边界已经丢失；展示只去源站的已知尾巴，保留其余纯文本。
+    # 已存摘要的代码边界已经丢失；展示只处理源站的已知尾巴，保留其余纯文本。
     def stored(text)
-      text.sub(READ_MORE_TAIL, "") if text
+      remove_read_more_tail(text) if text
     end
 
     def preview(text)
@@ -47,8 +49,8 @@ class SummaryCleaner
 
     private
       def normalize(text)
-        s = strip_markdown(strip_html(protect_code(text)))
-        CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip.sub(READ_MORE_TAIL, "")
+        s = strip_markdown(strip_html(protect_code(text), preserve_excerpt_marker: true))
+        remove_read_more_tail(CGI.unescapeHTML(s).gsub(/[[:space:]]+/, " ").strip)
       end
 
       def paragraphs(text)
@@ -128,10 +130,34 @@ class SummaryCleaner
         text.codepoints.map { |codepoint| "&amp;##{codepoint};" }.join
       end
 
-      def strip_html(text)
+      def strip_html(text, preserve_excerpt_marker: false)
         fragment = Nokogiri::HTML.fragment(text)
-        fragment.css(READ_MORE).each(&:remove)
+        links = fragment.css(READ_MORE)
+        tail = links.last if preserve_excerpt_marker
+        links.each { |link| link.remove unless link == tail }
+        if tail
+          following = CGI.unescapeHTML(strip_markdown(tail.xpath("following::text()").map(&:text).join))
+          preceding = CGI.unescapeHTML(strip_markdown(tail.xpath("preceding::text()").map(&:text).join))
+          if following.blank? && tail.text.match?(READ_MORE_MARKER) && incomplete_excerpt?(preceding)
+            tail.replace("…")
+          else
+            tail.remove
+          end
+        end
         fragment.text
+      end
+
+      def remove_read_more_tail(text)
+        if text.match?(READ_MORE_TAIL)
+          prefix = text.sub(READ_MORE_TAIL, "")
+          incomplete_excerpt?(prefix) ? "#{prefix}…" : prefix
+        else
+          text
+        end
+      end
+
+      def incomplete_excerpt?(text)
+        text.present? && !text.match?(COMPLETE_ENDING)
       end
 
       def strip_markdown(text)

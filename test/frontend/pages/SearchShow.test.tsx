@@ -184,6 +184,7 @@ describe('搜索状态', () => {
     // PRD 6.4 标题层级：页面的 h1 是「搜索」（视觉上隐藏，读屏器能读到），结果标题才是 h2
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('搜索')
     expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveAttribute('placeholder', '搜标题、摘要或来源。拼写不准也可以。')
+    expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveAccessibleDescription('搜标题、摘要或来源。拼写不准也可以。')
     // 「最新日刊 · 2026年9月8日」经 Mixed 拆成多个相邻 <span>，jsdom 的可访问名计算会把落在段边界上的
     // 空格吃掉（最新日刊·2026年9月8日），可见渲染与 textContent 都不受影响；用正则容忍空格差异。
     expect(screen.getByRole('link', { name: /^最新日刊\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08')
@@ -270,6 +271,7 @@ describe('搜索状态', () => {
     show({ q: 'a', state: 'unsupported' })
     const input = screen.getByRole('searchbox', { name: '搜索' }) as HTMLInputElement
     expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription(/请输入至少 2 个字母.*搜标题、摘要或来源/)
     expect(input).toHaveAccessibleDescription(/至少 2 个字母.*C、C\+\+、C#/)
     input.blur()
 

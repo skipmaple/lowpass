@@ -354,6 +354,7 @@ a.source-tab { cursor: pointer; }
                 border: 0; background: transparent; cursor: pointer; }
 .search-clear:disabled { display: none; }
 .search-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
+.search-hint { display: none; }
 .search-note { flex-basis: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 /* 反白按钮（画布 btn(primary=True)）：40px 墨块，纸色文楷 15 */
 .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px;
@@ -362,7 +363,7 @@ a.source-tab { cursor: pointer; }
 .btn-primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* 筛选栏：三组「小标 + 控件」横排，底线 1px */
-.filters { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
+.filters { display: flex; gap: 20px 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
 /* 展开按钮由 React 的 mobile 条件挂载，避免 CSS 先隐藏造成断点交接前失焦。 */
 .filter-toggle-icon { transition: transform var(--dur-1) var(--ease-move); }
 .filter-toggle-icon[data-open] { transform: rotate(90deg); }
@@ -410,11 +411,18 @@ button.chip-outline { min-height: 44px; }
 .search-entry { padding-top: 24px; }
 .search-notice { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 0 8px 0; }
 
+@media (max-width: 600px) {
+  .search-head { row-gap: 8px; }
+  .search-input::placeholder { opacity: 0; }
+  .search-hint { display: block; flex-basis: 100%; box-sizing: border-box; padding-left: 40px;
+                 font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); line-height: 1.5; }
+}
+
 @media (max-width: 480px) {
   .search-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 24px 0 16px 0; }
   .search-field { gap: 8px; }
   .search-input { font-size: var(--fs-20); }
-  .search-input::placeholder { font-size: var(--fs-15); }
+  .search-hint { grid-column: 1 / -1; padding-left: 32px; }
   .search-note { grid-column: 1 / -1; }
   .btn-primary { height: 44px; }
   .filter-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 8px 0;

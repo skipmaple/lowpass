@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "period": "2026-W38",
+  "issue_no": 412,
+  "source_commit": "7f89820fa715b2e3d77b3f4d9c3316b58e25411b",
+  "source_sha256": "7e6c967c508e898bbd7ebae88f521e7f6c10324e28204e27f2a242bfbda2113d",
+  "entries": [
+    {
+      "lookup_sha256": "3023ccc07d03d2b36ed8472ba89086137ac5d498e017594c3b0e33a9b94fec08",
+      "rank": 2,
+      "identity_sha256": "f62e0e02f362e8bc74e81db62b8583a0b359ba1353e37f81f20c289dda508c7d",
+      "offsets": [
+        104,
+        261,
+        340,
+        372,
+        559,
+        591,
+        719,
+        763,
+        809,
+        923,
+        1022
+      ]
+    },
+    {
+      "lookup_sha256": "c5e7636e7ed8b4a1779847369ad2c01ad494c33eaf84d3b8b373e20297727887",
+      "rank": 4,
+      "identity_sha256": "0899b066774f7f2f42cd92d3000a4e3ca32f5c8208fcbe88ca6535a79c872189",
+      "offsets": [
+        166,
+        233,
+        363,
+        495,
+        693
+      ]
+    },
+    {
+      "lookup_sha256": "09caec9f02a016aeba9b56a0f4d46245086fbd09ca0f43b9f45980ad04b5aae9",
+      "rank": 5,
+      "identity_sha256": "e10f1d4d030ae425ef7ad51f82ed68a9c1057887d8aac6abf17e7e3bdaed7ba2",
+      "offsets": [
+        90,
+        172,
+        338
+      ]
+    },
+    {
+      "lookup_sha256": "07281a078d390c74bf26028453a32997b106e6e1bb167b88ec18a49d73168bb1",
+      "rank": 6,
+      "identity_sha256": "2b793ae151f8c4784bd9d3a044b172fb2eeebcdf5e9e902dd8316622601df3d8",
+      "offsets": [
+        94,
+        284,
+        435
+      ]
+    },
+    {
+      "lookup_sha256": "4a4af3c2fcfdede5906c9b096582a930263182abbabed52aad521afd0279d9ea",
+      "rank": 7,
+      "identity_sha256": "47a67968d68325bfb137720e8e5423e4c034be14c9b5148febdee4a73811d8a1",
+      "offsets": [
+        165
+      ]
+    },
+    {
+      "lookup_sha256": "58aef174d1f8dd0bf01bfda6a2dd218d6452d1c32f9ef9dbafd14f066f5ffde2",
+      "rank": 9,
+      "identity_sha256": "3a09eef482f1c64559a9c41264b5fa0660501102c850e9976f79b2702bcc0aab",
+      "offsets": [
+        157,
+        274
+      ]
+    },
+    {
+      "lookup_sha256": "b5d8c67799bbff10450474e6b8b20b0242255ed63e2fb6244d5403403944a46d",
+      "rank": 10,
+      "identity_sha256": "1058a83d3e9560a8bfbc20c5b07a87bdcea81dfff6cba9477e0147478231a168",
+      "offsets": [
+        95
+      ]
+    },
+    {
+      "lookup_sha256": "cfff790ea0fbb9571c4cad981e12d2cd05ad485352ee2d671cc4364d16bd981f",
+      "rank": 26,
+      "identity_sha256": "fb6a92b63b9b5ef254feb9f7ca36948410348dda67e106b39ec23d43c47fa8d0",
+      "offsets": [
+        72,
+        157
+      ]
+    },
+    {
+      "lookup_sha256": "a0cb12e7f61a6024fe4d49f5a5d4a10954a9ab58d5a72f7ee30f2e10e856911d",
+      "rank": 27,
+      "identity_sha256": "03e7baf24c7fe76517ae8eab0b1d7264a8e43b9414d1bc90a71c714ada5eaafc",
+      "offsets": [
+        185,
+        327,
+        386,
+        495,
+        542,
+        624,
+        709,
+        815,
+        859,
+        1027
+      ]
+    },
+    {
+      "lookup_sha256": "122398a76391d2ab9062bfc8f194eb7eda48b39038e60a9d40ffa702e574adae",
+      "rank": 28,
+      "identity_sha256": "a4fa23a517837ab72d92288ea61b7fe97450e55799008352bbdbcb030e76145e",
+      "offsets": [
+        60,
+        136,
+        203
+      ]
+    },
+    {
+      "lookup_sha256": "9903fa7107f7add1f414765acd011a53b562d8dda604ca6a782b3da2bcea8181",
+      "rank": 29,
+      "identity_sha256": "2da80f9bfb70e0040fcefe56580b93d4a1d1e413bda27da02d7cf5d9430c57fb",
+      "offsets": [
+        75
+      ]
+    },
+    {
+      "lookup_sha256": "e6ec285f5f43deca11edd9b2ca410e970142e6ceeb8112f0c7dba728b42c9197",
+      "rank": 30,
+      "identity_sha256": "c959cc9b079b1001c8c6c87166c72dc6a3b7c2d06e2089aa44ffa060bd071700",
+      "offsets": [
+        118,
+        215
+      ]
+    },
+    {
+      "lookup_sha256": "ec3eb2654ccf8b9f7bdf27a29a186c384ba4c7019afefd28fff0676686c75547",
+      "rank": 31,
+      "identity_sha256": "5f2d5edb94f37a717817eaa558d9fbf67c06f200716b67235bac9e573fa8fafa",
+      "offsets": [
+        205
+      ]
+    },
+    {
+      "lookup_sha256": "ab3bf21f12ccd9ae9a1d6bf67561e16809c3da1a6190dbf612d2e3d975cc7ea2",
+      "rank": 32,
+      "identity_sha256": "054491fb8269a7c04f56cb239534a8c802aab4e5b31cbc91be5542519bfeff55",
+      "offsets": [
+        173,
+        266
+      ]
+    }
+  ]
+}

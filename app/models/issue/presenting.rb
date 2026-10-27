@@ -301,7 +301,11 @@ module Issue::Presenting
         groups: section[:sections].map do |(name, list)|
           { name: name, anchor: list.first.anchor, items: list.map do |item|
             positions = HistoricalImagePositions.current.positions_for(item: item, issue: self, source: source)
-            item_props(item, image_dimensions: dimensions, historical_positions: positions)
+            props = item_props(item, image_dimensions: dimensions, historical_positions: positions)
+            if content = HistoricalParagraphBoundaries.current.content_for(item: item, issue: self, source: source, meta: props[:meta])
+              props[:content] = content
+            end
+            props
           end }
         end
       }

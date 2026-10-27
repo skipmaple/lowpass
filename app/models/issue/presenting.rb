@@ -338,7 +338,7 @@ module Issue::Presenting
         title: item.title,
         title_zh: item.title_zh,
         url: item.url,
-        summary: SummaryCleaner.stored(item.summary),
+        summary: HistoricalExcerptMarkers.current.summary_for(item: item, issue: self) || SummaryCleaner.stored(item.summary),
         summary_zh: item.summary_zh,
         content: item.content,
         section: item.section,

@@ -181,7 +181,7 @@ module Issue::Presenting
           # 周维度的「没有」只有一种文案与记号（本周无内容 · 描边方块）：不分「没有这一期」与
           # 「这一期是空刊」，缺期的叉留给日刊（archive_day）
           state: issue&.state || "empty"
-        }.merge(issue ? summaries.fetch(issue.id) : { summary: "本周无内容", count: nil })
+        }.merge(issue ? summaries.fetch(issue.id) : { summary: "本周无内容", summary_parts: [], count: nil })
       end
 
       # 一年最多 53 周：每期都单独经 Issue#weekly_sections 查一遍是 N+1。这里用三条定长查询
@@ -199,21 +199,21 @@ module Issue::Presenting
         by_issue = rows.group_by { |issue_id, *| issue_id }
 
         ids.index_with do |id|
-          summary = archive_summary(by_issue[id] || [], sources)
-          { summary: summary.presence || "本周无内容", count: counts.fetch(id, 0) }
+          parts = archive_summary_parts(by_issue[id] || [], sources)
+          summary = parts.map { |part| [ part[:source], part[:label] ].compact.join(" ") }.join(" / ")
+          { summary: summary.presence || "本周无内容", summary_parts: parts, count: counts.fetch(id, 0) }
         end
       end
 
       # 阮一峰几条 entry 共用一个 issue_no，拼「源名 第 X 期 · 标题」；RSS 源没有 issue_no，
       # 只留源名（跟 Issue#section_issue_label 是同一套文案，这里批量算，不能反过来调用实例方法）
-      def archive_summary(rows, sources)
+      def archive_summary_parts(rows, sources)
         rows.group_by { |_, source_id, issue_no, _| [ source_id, issue_no ] }
           .sort_by { |(source_id, issue_no), _| source = sources.fetch(source_id); [ source.sort_order, source.name, issue_no.to_i ] }
           .map do |(source_id, issue_no), group_rows|
             label = [ "第 #{issue_no} 期", group_rows.first[3].presence ].compact.join(" · ") if issue_no.present?
-            [ sources.fetch(source_id).name, label ].compact.join(" ")
+            { source: sources.fetch(source_id).name, label: label }
           end
-          .join(" / ")
       end
 
       def month_nav(target, month, earliest, today)

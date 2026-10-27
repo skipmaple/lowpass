@@ -318,6 +318,9 @@ a.source-tab { cursor: pointer; }
 .archive-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .archive-sub { grid-area: sub; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
 .archive-label { grid-area: label; min-width: 0; }
+.archive-weekly .archive-label-part { display: block; text-wrap: pretty; overflow-wrap: anywhere; }
+.archive-weekly .archive-label-part + .archive-label-part { margin-top: 4px; }
+.archive-weekly .archive-label-source { display: inline-block; max-width: 100%; overflow-wrap: anywhere; vertical-align: baseline; }
 .archive-meta { grid-area: meta; }
 
 @media (max-width: 480px) {

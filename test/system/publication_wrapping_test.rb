@@ -92,6 +92,37 @@ class PublicationWrappingTest < ApplicationSystemTestCase
     assert_date_units "2026-W40", "9月28日 至 10月4日"
   end
 
+  test "同周多期独立换行且整周仍是一个链接" do
+    combined = weekly("2026-W38", 412, "禁止 issue / PR", count: 1)
+    add_items combined, sources(:ruanyf), 1, section: "文章", meta: { issue_no: 413, issue_title: "再见了，React Native" }
+    sign_in_with_browser(users(:drew))
+
+    [ 320, 375, 768, 1024, 1440 ].each do |width|
+      render_page weekly_issues_path(year: "2026"), width: width, target: ".archive-label-part"
+      row = find(".archive-row[href='#{weekly_issue_path('2026-W38')}']")
+      labels = row.all(".archive-label-part")
+      assert_equal [ "阮一峰科技爱好者周刊 第 412 期 · 禁止 issue / PR", "阮一峰科技爱好者周刊 第 413 期 · 再见了，React Native" ], labels.map(&:text)
+      source_layout = text_layout(".archive-row[href='#{weekly_issue_path('2026-W38')}'] .archive-label-part:nth-child(2) .archive-label-source")
+      assert_equal [ "阮一峰科技爱好者周刊" ], source_layout.fetch("lines"), "#{width}px 来源名应保持为一个阅读单位"
+      assert_operator labels[0].rect.y + labels[0].rect.height, :<, labels[1].rect.y, "#{width}px 标题之间需要留白"
+      assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0, "#{width}px 横向溢出"
+      assert_equal weekly_issue_path("2026-W38"), URI(row[:href]).path
+    end
+
+    sources(:ruanyf).update!(name: "超长来源" * 20)
+    render_page weekly_issues_path(year: "2026"), width: 320, target: ".archive-label-source"
+    layout = text_layout(".archive-row[href='#{weekly_issue_path('2026-W38')}'] .archive-label-source")
+    assert_equal "超长来源" * 20, layout.fetch("text")
+    assert_no_overflow layout
+
+    sources(:ruanyf).update!(name: "阮一峰科技爱好者周刊")
+    combined.items.each { |item| item.update!(meta: item.meta.merge("issue_title" => "W" * 80)) }
+    render_page weekly_issues_path(year: "2026"), width: 320, target: ".archive-label-part"
+    layout = text_layout(".archive-row[href='#{weekly_issue_path('2026-W38')}'] .archive-label-part")
+    assert_includes layout.fetch("text"), "W" * 80
+    assert_no_overflow layout
+  end
+
   test "长来源状态和跨年日期完整可读且不横向溢出" do
     issue = daily("2026-10-23")
     issue.update!(source_states: { sources(:hn).id => "empty", sources(:github).id => "failed", sources(:hackaday).id => "no_backfill" })

@@ -23,7 +23,7 @@ export type WeeklySection = { source: WeeklySource; issue_no: number | null; iss
 export type ArchiveNav = { key: string; label: string } | null;
 export type ArchiveMark = IssueState | "missing";
 export type ArchiveDay = { period_key: string; date_label: string; weekday: string; state: ArchiveMark; published_label: string | null; source_marks: string | null };
-export type ArchiveWeek = { period_key: string; week_label: string; range_label: string; state: ArchiveMark; summary: string; count: number | null };
+export type ArchiveWeek = { period_key: string; week_label: string; range_label: string; state: ArchiveMark; summary: string; summary_parts?: { source: string; label: string | null }[]; count: number | null };
 
 // 页脚在每个页面都要的两样（R51）
 export type FooterData = { daily_time: string; latest_weekly_key: string | null; latest_daily_key?: string | null };

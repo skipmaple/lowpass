@@ -22,6 +22,7 @@ export type WeeklyIndexProps = FooterData & {
 
 function Row({ week }: { week: ArchiveWeek }) {
   const published = week.state === 'published'
+  const labels = week.summary_parts?.length ? week.summary_parts : [{ source: week.summary, label: null }]
 
   return (
     <Link className="archive-row" href={weeklyHref(week.period_key)}>
@@ -36,9 +37,12 @@ function Row({ week }: { week: ArchiveWeek }) {
         ))}
       </span>
       <span className="archive-label">
-        {week.summary ? (
-          <Mixed text={week.summary} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
-        ) : null}
+        {labels.map(({ source, label }, index) => source ? (
+          <span className="archive-label-part" key={index}>
+            <Mixed className="archive-label-source" text={source} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
+            {label ? <> <Mixed text={label} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} /></> : null}
+          </span>
+        ) : null)}
       </span>
       <span className="archive-meta">{week.count ? <Mixed text={`${week.count} 条`} /> : null}</span>
     </Link>

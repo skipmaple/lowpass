@@ -308,6 +308,68 @@ describe('按 hash 定位', () => {
     expect(scroll).toHaveBeenCalledTimes(1)
     expect(scroll.mock.contexts[0]).toBe(document.getElementById(encodeURIComponent('issue-366-文章')))
   })
+
+  it('搜索链接优先定位和聚焦目标条目', () => {
+    const id = '000000000000000000000000a'
+    window.history.replaceState({}, '', `/weekly/2026-W36?section=${encodeURIComponent('issue-366-文章')}#item-${id}`)
+    show({ sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id, title: '目标文章' })] })] })] })
+    vi.runAllTimers()
+    const target = document.getElementById(`item-${id}`)
+    expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts.slice(-1)[0]).toBe(target)
+    expect(target).toHaveFocus()
+  })
+
+  it('旧条目已经被重抓时，回退到 URL 指定且当前仍存在的板块', () => {
+    const oldId = '000000000000000000000000a'
+    window.history.replaceState({}, '', `/weekly/2026-W36?section=${encodeURIComponent('issue-366-文章')}#item-${oldId}`)
+    show({ sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id: 'new', title: '更新后文章' })] })] })] })
+    vi.runAllTimers()
+    const alias = document.getElementById(`item-${oldId}`)!
+    expect(alias).toHaveAttribute('aria-hidden', 'true')
+    expect(alias.closest('section')).toHaveAttribute('id', encodeURIComponent('issue-366-文章'))
+    expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts.slice(-1)[0]).toBe(alias)
+  })
+
+  it('不存在或非法的回退板块不会制造虚假落点', () => {
+    const oldId = '000000000000000000000000a'
+    window.history.replaceState({}, '', `/weekly/2026-W36?section=unknown#item-${oldId}`)
+    show()
+    vi.runAllTimers()
+    expect(document.getElementById(`item-${oldId}`)).toBeNull()
+  })
+
+  it.each([false, true])('RSS 周刊和降级页的失效条目回退到源节头（降级=%s）', (degraded) => {
+    const oldId = '000000000000000000000000a'
+    window.history.replaceState({}, '', `/weekly/2026-W36?section=source-src-feed#item-${oldId}`)
+    show({ sections: [weeklySection({
+      source: { id: 'src-feed', name: '命令行周报', adapter: 'rss', home_url: 'https://w.example/' }, issue_no: null,
+      degraded, groups: [weeklyGroup({ name: null, anchor: 'source-src-feed', items: [item({ id: 'new', title: '新的条目' })] })],
+    })] })
+    vi.runAllTimers()
+    const alias = document.getElementById(`item-${oldId}`)
+    expect(alias).toHaveAttribute('aria-hidden', 'true')
+    expect(alias?.nextElementSibling).toHaveAttribute('id', 'source-src-feed')
+    expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts.slice(-1)[0]).toBe(alias)
+  })
+
+  it('浏览器已有阅读位置快照时不重置位置或抢走焦点', () => {
+    const id = '000000000000000000000000a'
+    window.history.replaceState({ documentScrollPosition: { top: 600, left: 0 } }, '', `/weekly/2026-W36?section=issue-366-文章#item-${id}`)
+    show({ sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id })] })] })] })
+    vi.runAllTimers()
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
+    expect(document.getElementById(`item-${id}`)).not.toHaveFocus()
+  })
+
+  it('读者已经聚焦其他控件时不抢走焦点', () => {
+    const id = '000000000000000000000000a'
+    window.history.replaceState({}, '', `/weekly/2026-W36?section=issue-366-文章#item-${id}`)
+    show({ sections: [weeklySection({ groups: [weeklyGroup({ name: '文章', anchor: 'issue-366-文章', items: [item({ id })] })] })] })
+    const button = screen.getByRole('button', { name: /收藏/ })
+    button.focus()
+    vi.runAllTimers()
+    expect(button).toHaveFocus()
+  })
 })
 
 it('单条板块与标题重复时只保留一个标题，保留两种深链与返回目录', () => {

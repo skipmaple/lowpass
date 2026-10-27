@@ -32,7 +32,7 @@ class Favorite < ApplicationRecord
         {
           url: item.url, title: item.title, title_zh: item.title_zh, summary: item.summary, summary_zh: item.summary_zh,
           source_id: item.source_id, publication: item.issue.kind, period_key: item.issue.period_key, section: item.section,
-          # 周刊的落点跟搜索结果的所在期是同一个值（Item#anchor）；日刊落到条目本身，渲染时现查
+          # 周刊的板块锚点作为条目消失后的回退；实际条目 id 渲染时现查。
           anchor: (item.anchor.slice(0, ANCHOR_LIMIT) if item.issue.kind == "weekly")
         }
       end

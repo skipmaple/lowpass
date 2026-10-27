@@ -105,12 +105,12 @@ class SearchesController < ApplicationController
       }
     end
 
-    # 所在期（设计 6.3）：日刊带 ?source= 切到那一栏并落到条目锚点；周刊落到板块的稳定锚点（Item#anchor）
+    # 所在期直达条目；重抓换掉条目时，日刊回退来源，周刊回退原板块。
     def where_href(record)
       if record.daily?
         daily_issue_path(record.period_key, source: record.source_id, anchor: "item-#{record.item_id}")
       else
-        weekly_issue_path(record.period_key, anchor: record.anchor)
+        weekly_issue_path(record.period_key, section: record.anchor, anchor: "item-#{record.item_id}")
       end
     end
 end

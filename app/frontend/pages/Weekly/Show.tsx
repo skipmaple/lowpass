@@ -132,7 +132,7 @@ function Items({ group, section, heading }: { group: WeeklyGroup; section: Weekl
   )
 }
 
-function Group({ group, section, directory }: { group: WeeklyGroup; section: WeeklySection; directory: string }) {
+function Group({ group, section, directory, aliasId }: { group: WeeklyGroup; section: WeeklySection; directory: string; aliasId?: string }) {
   // RSS 周刊源没有板块：直接接条目，列表区顶上一条 1px 墨线
   if (!group.name) {
     return (
@@ -144,6 +144,7 @@ function Group({ group, section, directory }: { group: WeeklyGroup; section: Wee
 
   return (
     <section id={anchorId(group.anchor)}>
+      {aliasId ? <span id={aliasId} className="weekly-anchor-alias" aria-hidden="true" /> : null}
       {group.items.length === 1 && group.items[0].title === group.name ? (
         <Items group={group} section={section} heading="h3" />
       ) : (
@@ -176,15 +177,15 @@ function Degraded({ section }: { section: WeeklySection }) {
   )
 }
 
-function Section({ section }: { section: WeeklySection }) {
+function Section({ section, fallback }: { section: WeeklySection; fallback?: { anchor: string; aliasId?: string } }) {
   const directory = `directory-${section.source.id}-${section.issue_no ?? 0}`
   const named = section.groups.filter((group) => group.name)
-  // 没有板块的节（RSS 周刊源、降级 stub）的落点是这一节的头：Item#anchor 给这些条目的锚点是 source-<源 id>，
-  // 搜索结果的所在期链接指向它（设计 6.3）
+  // RSS 周刊源与降级 stub 没有板块，旧链接及失效条目的回退落在源节头。
   const head = section.groups.find((group) => !group.name)
 
   return (
     <>
+      {fallback?.aliasId && (section.degraded || !section.groups.some((group) => group.name && group.anchor === fallback.anchor)) ? <span id={fallback.aliasId} className="weekly-anchor-alias" aria-hidden="true" /> : null}
       <SourceBand section={section} id={head ? anchorId(head.anchor) : undefined} />
       {section.degraded ? (
         <Degraded section={section} />
@@ -192,7 +193,7 @@ function Section({ section }: { section: WeeklySection }) {
         <>
           {named.length > 0 ? <Anchors groups={named} id={directory} /> : null}
           {section.groups.map((group) => (
-            <Group key={group.anchor} group={group} section={section} directory={directory} />
+            <Group key={group.anchor} group={group} section={section} directory={directory} aliasId={fallback?.anchor === group.anchor ? fallback.aliasId : undefined} />
           ))}
         </>
       )}
@@ -201,7 +202,13 @@ function Section({ section }: { section: WeeklySection }) {
 }
 
 export default function Show({ issue, sections, favorites }: WeeklyShowProps) {
-  useScrollToHash(issue.period_key)
+  const { url } = usePage()
+  const requestedSection = new URL(url, 'https://lowpass.invalid').searchParams.get('section')
+  const hash = typeof window === 'undefined' ? '' : window.location.hash.slice(1)
+  const itemHash = /^item-[a-z0-9]{25}$/.test(hash)
+  const fallback = itemHash ? sections.flatMap((section) => section.groups.map((group) => ({ section, group }))).find(({ group }) => group.anchor === requestedSection) : undefined
+  const missingItem = itemHash && !sections.some((section) => !section.degraded && section.groups.some((group) => group.items.some((item) => `item-${item.id}` === hash)))
+  useScrollToHash(issue.period_key, fallback ? anchorId(fallback.group.anchor) : undefined, true)
   useArrowTurns(issue.prev_key ? weeklyHref(issue.prev_key) : null, issue.next_key ? weeklyHref(issue.next_key) : null)
   return (
     <FavoritesProvider favorites={favorites}>
@@ -221,7 +228,7 @@ export default function Show({ issue, sections, favorites }: WeeklyShowProps) {
       {sections.length === 0 ? (
         <IssueNotice text={issue.status ?? ''} />
       ) : (
-        sections.map((section) => <Section key={`${section.source.id}-${section.issue_no ?? 0}`} section={section} />)
+        sections.map((section) => <Section key={`${section.source.id}-${section.issue_no ?? 0}`} section={section} fallback={fallback?.section === section ? { anchor: fallback.group.anchor, aliasId: missingItem ? hash : undefined } : undefined} />)
       )}
     </FavoritesProvider>
   )

@@ -181,7 +181,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
   const copy = item.summary
 
   return (
-    <article className="item-row" id={`item-${item.id}`}>
+    <article className={`item-row${weekly ? ' item-row--weekly' : ''}`} id={`item-${item.id}`} tabIndex={weekly ? -1 : undefined}>
       <span className="item-rank">{rank}</span>
 
       <div className="item-body">

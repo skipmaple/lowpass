@@ -33,6 +33,7 @@ class SearchFilterRaceTest < ApplicationSystemTestCase
     end
 
     def overlapped? = @mutex.synchronize { @overlapped }
+    def pending? = @mutex.synchronize { @active.positive? }
 
     def call(env)
       tracked = false
@@ -78,6 +79,26 @@ class SearchFilterRaceTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
     ensure
       Capybara.app = @original_app
+    end
+  end
+
+  test "已有结果切换排序时加载提示替换计数且不推移结果" do
+    [ 320, 375, 768, 1440 ].each do |width|
+      at_width(width)
+      visit search_path(q: "terminal")
+      assert_selector ".search-row"
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      before = evaluate_script("document.querySelector('.search-row').getBoundingClientRect().top")
+
+      @overlapping_searches.arm
+      find(".search-count").click_on "时间"
+      wait_until { @overlapping_searches.pending? }
+      assert_selector ".search-count", text: "正在搜索…"
+      assert_no_selector ".search-loading", visible: true
+      assert_in_delta before, evaluate_script("document.querySelector('.search-row').getBoundingClientRect().top"), 0.5, "#{width}px 加载时结果不移动"
+      @overlapping_searches.finish
+      assert_current_path search_path(q: "terminal", sort: "date")
+      assert_selector ".search-count", text: "条结果"
     end
   end
 

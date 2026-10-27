@@ -98,7 +98,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
 }
 
 // 结果计数（PRD 6.2 明确要求的计数）与排序分段（F-17）同一行
-function CountLine({ total, q, draft }: { total: number; q: string; draft: FilterDraft }) {
+function CountLine({ total, q, draft, loading }: { total: number; q: string; draft: FilterDraft; loading: boolean }) {
   const { filters } = draft
   const options = [
     { label: '相关度', href: hrefOf(q, { ...filters, sort: 'relevance' }), active: filters.sort === 'relevance', preserveState: true, onBefore: () => { draft.change({ sort: 'relevance' }); return false } },
@@ -107,7 +107,7 @@ function CountLine({ total, q, draft }: { total: number; q: string; draft: Filte
 
   return (
     <div className="search-count">
-      <span aria-hidden="true"><Mixed text={`${total} 条结果`} size="var(--fs-13)" color="var(--ink2)" /></span>
+      <span aria-hidden="true"><Mixed text={loading ? '正在搜索…' : `${total} 条结果`} size="var(--fs-13)" color="var(--ink2)" /></span>
       <Seg label="排序" options={options} />
     </div>
   )
@@ -174,7 +174,7 @@ function Body(props: SearchShowProps & { navigationQuery: string; filterDraft: F
     case 'results':
       return (
         <>
-          <CountLine total={total} q={props.navigationQuery} draft={props.filterDraft} />
+          <CountLine total={total} q={props.navigationQuery} draft={props.filterDraft} loading={props.loading} />
           <div className="search-results">
             {results.map((result) => (
               <SearchResultRow key={result.item_id} result={result} q={q} />
@@ -239,7 +239,7 @@ export default function Show(props: SearchShowProps) {
       <h1 ref={headingRef} className="sr-only" tabIndex={-1}>搜索</h1>
       <SearchHead draft={draft} setDraft={setDraft} filters={filterDraft.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} autoFocus={!returnTarget} />
       <SearchFilters q={navigationQuery} draft={filterDraft} sourceOptions={props.source_options} datePresets={props.date_presets} />
-      <div id="search-status" className={loading ? 'search-loading' : notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
+      <div id="search-status" className={loading && props.state !== 'results' ? 'search-loading' : !loading && notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
       <Body {...props} navigationQuery={navigationQuery} filterDraft={filterDraft} onModifyQuery={modifyQuery} loading={loading} />
     </FavoritesProvider>
   )

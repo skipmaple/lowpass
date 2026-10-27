@@ -125,7 +125,7 @@ export default function Show({ issue, missing, sources, items_by_source, favorit
     <FavoritesProvider favorites={favorites}>
       <IssueHead issue={issue} archiveHref={DAILY_ARCHIVE} hrefFor={dailyHref} />
 
-      {/* R-1.6 缺期没有来源索引条，列表区只有「本期未生成」那一句 */}
+      {/* 没有记录时不展示来源目录；今日未到生成时间则说明计划时间。 */}
       {missing ? (
         <IssueNotice text={notice ?? ''}>
           <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_ARCHIVE}>{latest_daily_key ? '阅读最新日刊' : '查看日刊归档'}</Link>

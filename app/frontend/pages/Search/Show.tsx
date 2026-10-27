@@ -80,7 +80,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
           onChange={(event) => setDraft(event.target.value)}
           placeholder={COPY.placeholder}
           aria-invalid={unsupported || undefined}
-          aria-describedby={unsupported ? 'search-status' : undefined}
+          aria-describedby={unsupported ? 'search-status search-hint' : 'search-hint'}
           autoComplete="off"
           autoFocus={autoFocus}
         />
@@ -91,6 +91,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
       <button type="submit" className="btn-primary" disabled={loading}>
         搜索
       </button>
+      <span id="search-hint" className="search-hint" aria-hidden="true">{COPY.placeholder}</span>
       {truncated ? <span className="search-note">{COPY.truncated}</span> : null}
     </form>
   )

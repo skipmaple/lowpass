@@ -173,6 +173,10 @@ a.source-tab { cursor: pointer; }
 
 /* 条目：序号与阅读列；桌面标签锚定整行末端，标题、摘要仍保持舒适行长。 */
 .item-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+.item-row--weekly { scroll-margin-top: 24px; }
+.item-row--weekly:focus { outline: none; }
+.item-row--weekly:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.weekly-anchor-alias { display: block; height: 0; scroll-margin-top: 24px; }
 .item-rank { grid-area: rank; padding-top: 5px; text-align: right; font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
 .item-body { grid-area: body; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .item-heading { display: block; min-width: 0; max-width: 780px; }

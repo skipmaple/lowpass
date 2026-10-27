@@ -82,12 +82,16 @@ class FavoritesController < ApplicationController
       }
     end
 
-    # 所在期（同搜索结果）：日刊带 ?source= 切到那一栏，条目还在就落到它；周刊落到板块锚点
+    # 周刊的实时条目仍在收藏时的板块，才直达条目；否则保留收藏时的板块落点。
     def where_href(favorite, item)
       if favorite.publication == "daily"
         daily_issue_path(favorite.period_key, source: favorite.source_id, anchor: ("item-#{item.id}" if item))
       else
-        weekly_issue_path(favorite.period_key, anchor: favorite.anchor)
+        if item && item.anchor.slice(0, Favorite::ANCHOR_LIMIT) == favorite.anchor
+          weekly_issue_path(favorite.period_key, section: favorite.anchor, anchor: "item-#{item.id}")
+        else
+          weekly_issue_path(favorite.period_key, anchor: favorite.anchor)
+        end
       end
     end
 end

@@ -80,7 +80,7 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_nil entries.fetch(weekly.id)["title_zh"]
   end
 
-  test "周刊条目的所在期落到周刊页的板块锚点" do
+  test "周刊搜索结果直达条目，并携带板块以便条目被替换时回退" do
     weekly = index_item("Rust weekly note", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
                         meta: { "issue_no" => 366, "anchor" => "工具" })
 
@@ -89,11 +89,11 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     entry = page_props["results"].sole
     assert_equal weekly.id, entry["item_id"]
     assert_equal "2026年 · 第 36 周 · 工具", entry["where"]["label"]
-    assert_equal weekly_issue_path("2026-W36", anchor: "issue-366-工具"), entry["where"]["href"]
+    assert_equal weekly_issue_path("2026-W36", section: "issue-366-工具", anchor: "item-#{weekly.id}"), entry["where"]["href"]
     assert_nil entry["snippet_runs"]
   end
 
-  test "RSS 周刊条目的所在期落到源节头" do
+  test "RSS 周刊条目的所在期直达条目，并可回退源节头" do
     feed = Source.create!(name: "命令行周报", adapter: "rss", publication: "weekly", sort_order: 2, config: { feed_url: "https://w.example/feed" })
     weekly = index_item("Rust in a feed weekly", issue: issues(:weekly_w36), source: feed, published_at: Time.utc(2026, 9, 3, 4))
 
@@ -102,7 +102,7 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     entry = page_props["results"].sole
     assert_equal weekly.id, entry["item_id"]
     assert_equal "2026年 · 第 36 周", entry["where"]["label"]
-    assert_equal weekly_issue_path("2026-W36", anchor: "source-#{feed.id}"), entry["where"]["href"]
+    assert_equal weekly_issue_path("2026-W36", section: "source-#{feed.id}", anchor: "item-#{weekly.id}"), entry["where"]["href"]
   end
 
   test "AC-4.7 地址参数往返：关键词与全部筛选恢复" do

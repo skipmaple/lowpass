@@ -48,7 +48,7 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, page_props["pages"]
   end
 
-  test "周刊收藏的所在期落到板块锚点（AC-10.8）" do
+  test "周刊收藏直达仍在原板块的条目，并携带板块回退" do
     weekly = index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具", summary: "一个用 Rust 写的代码编辑器。",
                         meta: { "issue_no" => 366, "anchor" => "工具" })
     Favorite.keep(users(:drew), weekly)
@@ -59,8 +59,35 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "weekly", entry["publication"]
     assert_equal "阮一峰科技爱好者周刊", entry["source_name"]
     assert_equal "2026年 · 第 36 周 · 工具", entry.dig("where", "label")
-    assert_equal weekly_issue_path("2026-W36", anchor: "issue-366-工具"), entry.dig("where", "href")
+    assert_equal weekly_issue_path("2026-W36", section: "issue-366-工具", anchor: "item-#{weekly.id}"), entry.dig("where", "href")
     assert_equal "一个用 Rust 写的代码编辑器。", entry["snippet"]
+  end
+
+  test "周刊收藏条目不存在或移动板块时仍指向收藏时的板块" do
+    weekly = index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
+      meta: { "issue_no" => 366, "anchor" => "工具" })
+    favorite = Favorite.keep(users(:drew), weekly)
+    expected = weekly_issue_path("2026-W36", anchor: "issue-366-工具")
+    weekly.update!(section: "文章", meta: { "issue_no" => 366, "anchor" => "文章" })
+    get favorites_path
+    assert_equal expected, page_props["entries"].sole.dig("where", "href")
+    weekly.destroy!
+    get favorites_path
+    assert_equal expected, page_props["entries"].sole.dig("where", "href")
+    assert_equal "工具", favorite.reload.section
+  end
+
+  test "周刊重抓后同一链接仍在原板块时定位新条目" do
+    weekly = index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
+      meta: { "issue_no" => 366, "anchor" => "工具" })
+    favorite = Favorite.keep(users(:drew), weekly)
+    url = weekly.url
+    issues(:weekly_w36).replace_section!(sources(:ruanyf), [ Adapters::Entry.new(title: "Zed", url: url, rank: 1,
+      section: "工具", meta: { issue_no: 366, anchor: "工具" }) ], issue_no: 366)
+    live = Favorite.live_items([ favorite ])[favorite.live_key]
+    assert_not_equal weekly.id, live.id
+    get favorites_path
+    assert_equal weekly_issue_path("2026-W36", section: "issue-366-工具", anchor: "item-#{live.id}"), page_props["entries"].sole.dig("where", "href")
   end
 
   test "摘要片段不超过 160 字" do

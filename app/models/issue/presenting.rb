@@ -279,7 +279,7 @@ module Issue::Presenting
 
   # R-2.5 一节 = 一个源的一期：源、该源自己的期号与标题、原文链接、按板块分组的条目。
   # 板块锚点是稳定的 slug（Item#anchor：阮一峰 issue-<期号>-<板块>，RSS 源 source-<源 id>），
-  # 搜索结果的「所在期」链接指向同一个值（设计 6.3），所以不能再按位置编号。
+  # 搜索和收藏的「所在期」用它作为回退落点，旧板块链接也依赖它，因此不能再按位置编号。
   # D19：周刊条目不生成推荐理由，条目字段与日刊同一套（reason 与 interest_tag 一直是空的）。
   def weekly_section_props
     sections = weekly_sections

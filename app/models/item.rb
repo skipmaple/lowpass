@@ -25,7 +25,7 @@ class Item < ApplicationRecord
     source.translates_summaries? && summary.present? && !summary.match?(/\p{Han}/)
   end
 
-  # 周刊页板块的落点（R-2.5 目录）也是搜索结果「所在期」链接的 fragment，Issue::Presenting 与 Search::Record
+  # 周刊页板块的落点（R-2.5 目录）也是搜索和收藏「所在期」的回退落点，Issue::Presenting 与 Search::Record
   # 共用这一处。阮一峰的板块 slug 由适配器按 GitHub 的锚点算法算好放在 meta.anchor；同一周两期各占一节
   # （R41）时带上期号，两节里同名板块才不撞。没有板块的源（RSS 周刊源、降级 stub）落到这一节的头上。
   def anchor

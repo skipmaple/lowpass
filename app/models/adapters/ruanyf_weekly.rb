@@ -34,6 +34,8 @@ module Adapters
 
       def entry(item, parsed, number, rank)
         meta = { issue_no: number, issue_title: parsed[:title], anchor: anchor(item[:section]) }
+        emphasis = ParagraphEmphasis.for(body: item[:summary], content: SummaryCleaner.content(item[:summary]))
+        meta[:emphasis_positions] = emphasis if emphasis
         resolved_images = item[:image_urls].map { |href| image_url(href, number) }
         image_urls = resolved_images.compact.uniq
         meta[:image_urls] = image_urls if image_urls.any?

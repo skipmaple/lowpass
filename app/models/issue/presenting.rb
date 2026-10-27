@@ -302,6 +302,8 @@ module Issue::Presenting
           { name: name, anchor: list.first.anchor, items: list.map do |item|
             positions = HistoricalImagePositions.current.positions_for(item: item, issue: self, source: source)
             props = item_props(item, image_dimensions: dimensions, historical_positions: positions)
+            emphasis = HistoricalWeeklyEmphasis.current.positions_for(item: item, issue: self, source: source, verified_image_positions: positions)
+            props[:meta] = props[:meta].merge("emphasis_positions" => emphasis) if emphasis
             if content = HistoricalParagraphBoundaries.current.content_for(item: item, issue: self, source: source, meta: props[:meta])
               props[:content] = content
             end

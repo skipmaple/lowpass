@@ -18,6 +18,17 @@ class Adapters::RssTest < ActiveSupport::TestCase
     end
   end
 
+  test "Hackaday 的截断提示在入刊和展示后仍然可见" do
+    feed = RSS::Parser.parse(file_fixture("rss/hackaday.xml").read, false)
+    item = feed.items.find { |candidate| candidate.title.include?("GNU Radio Companion") }
+    entry = Adapters::Rss.new(sources(:hackaday)).send(:normalize, item, Time.current)
+    summary = entry.to_item_attributes(source: sources(:hackaday), issue: issues(:daily_0908)).fetch(:summary)
+
+    assert_match(/Today …\z/, summary)
+    assert_equal summary, SummaryCleaner.stored(summary)
+    assert_no_match(/read more/i, summary)
+  end
+
   test "Atom：缺发布时间用抓取时间并标记" do
     source = Source.new(name: "x", adapter: "rss", publication: "daily", config: { feed_url: "https://example.com/atom", count: 10, window_hours: 24 * 365 * 10 })
     entries = Adapters::Rss.new(source).fetch

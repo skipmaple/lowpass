@@ -37,7 +37,7 @@ class HistoricalWeeklyReferenceLinksTest < ActiveSupport::TestCase
 
   test "第 415 期索引的引用逐条对应固定原文，失配条目不入索引" do
     root = Rails.root.join("test/fixtures/files/ruanyf")
-    source = root.join("issue-415-reference.md").read
+    source = root.join("reference-415-sample.txt").read
     # 测试样本仅规范原文行尾空白；原始文件的哈希和来源见设计笔记。
     assert_equal "b8731938a386ba2a99bc150c7ae9e68ec0b4a7dbcc046d2f645ef4e0076c0abd", Digest::SHA256.hexdigest(source)
     items = Adapters::RuanyfWeekly::Markdown.parse(source)[:sections].flat_map { |section| section[:items] }

@@ -34,6 +34,8 @@
     <%# 正文字体声明不挡首屏：先 preload，lib/contentFonts.ts 启动时挂成样式表（设计说明 2026-10-14 D3） %>
     <link rel="preload" as="style" href="<%= vite_asset_path "fonts-content.css" %>" data-content-fonts>
 
+    <%= search_page_preload_tag %>
+
     <%= vite_client_tag %>
     <%= vite_react_refresh_tag %>
     <%= vite_stylesheet_tag "application" %>

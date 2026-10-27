@@ -274,7 +274,7 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
     const { container } = show()
     expect(scroll).not.toHaveBeenCalled()
 
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
 
     expect(scroll).toHaveBeenCalledTimes(1)
     expect(scroll.mock.contexts[0]).toBe(container.querySelector('#item-itm-hn-1'))
@@ -283,20 +283,20 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
   it('旧 source 查询参数定位来源，条目 hash 优先于 source', () => {
     window.history.replaceState({}, '', '/daily/2026-09-08?source=src-gh')
     const { container, unmount } = show()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
     expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts[0]).toBe(container.querySelector('#source-src-gh'))
     unmount()
     vi.mocked(Element.prototype.scrollIntoView).mockClear()
     window.history.replaceState({}, '', '/daily/2026-09-08?source=src-gh#item-itm-hn-1')
     const next = show()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
     expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts[0]).toBe(next.container.querySelector('#item-itm-hn-1'))
   })
 
   it('重抓后条目锚点已不存在时回到旧链接指定的来源栏首', () => {
     window.history.replaceState({}, '', '/daily/2026-09-08?source=src-gh#item-replaced')
     const { container } = show()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
     const fallback = container.querySelector('#item-replaced')
     expect(fallback?.closest('.daily-source')).toBe(container.querySelector('#source-src-gh'))
     expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts[0]).toBe(fallback)
@@ -305,7 +305,7 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
   it('历史页面已完成初始化时不重新执行锚点定位，由 Inertia 恢复阅读位置', () => {
     window.history.replaceState({ documentScrollPosition: { top: 450, left: 0 } }, '', '/daily/2026-09-08?source=src-gh')
     show()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
     expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
   })
 
@@ -314,7 +314,7 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
     const scroll = vi.mocked(Element.prototype.scrollIntoView)
 
     show()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
 
     expect(scroll).not.toHaveBeenCalled()
   })
@@ -325,7 +325,7 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
 
     const { unmount } = show()
     unmount()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
 
     expect(scroll).not.toHaveBeenCalled()
   })

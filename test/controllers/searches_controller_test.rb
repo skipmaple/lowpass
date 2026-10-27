@@ -64,6 +64,22 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert entry["snippet_runs"].any? { |run| run["hit"] }
   end
 
+  test "日刊搜索结果带已有标题译文，与理由是否存在无关" do
+    @item.update!(title_zh: "用 Rust 编写的 Kubernetes 控制器", reason: nil)
+    get search_path(q: "kuber rust")
+    assert_equal "用 Rust 编写的 Kubernetes 控制器", page_props["results"].sole["title_zh"]
+  end
+
+  test "日刊搜索结果带已有简介译文；周刊不显示日刊译文" do
+    daily = index_item("Rust application", source: sources(:github), summary: "A helpful application", summary_zh: "一个实用的应用程序")
+    weekly = index_item("Rust weekly note", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具")
+    weekly.update_columns(title_zh: "不应展示的周刊译文")
+    get search_path(q: "rust")
+    entries = page_props["results"].index_by { |entry| entry["item_id"] }
+    assert_equal "一个实用的应用程序", entries.fetch(daily.id)["summary_zh"]
+    assert_nil entries.fetch(weekly.id)["title_zh"]
+  end
+
   test "周刊条目的所在期落到周刊页的板块锚点" do
     weekly = index_item("Rust weekly note", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
                         meta: { "issue_no" => 366, "anchor" => "工具" })

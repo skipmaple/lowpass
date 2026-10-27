@@ -60,6 +60,25 @@ class IndependentTranslationsTest < ApplicationSystemTestCase
     assert_text "独立补齐的中文标题"
     assert_nil item.reload.reason
   end
+
+  test "搜索结果显示已补齐的译文" do
+    item = items(:hn_one)
+    item.update!(title_zh: "一个用 Rust 写的终端日志查看器", reason: nil)
+    Search::Record.rebuild!
+    sign_in_with_browser(users(:drew))
+
+    [ 320, 1440 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      visit search_path(q: "terminal")
+      within find("#search-result-#{item.id}").ancestor("article") do
+        assert_selector ".search-title + .item-translation", text: "一个用 Rust 写的终端日志查看器"
+        assert_link item.title, href: item.url
+      end
+      assert page.evaluate_script("document.documentElement.scrollWidth <= innerWidth")
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
   test "预览非JSON失败在桌面和375px可读且取消后焦点返回" do
     with_model_provider do
       sign_in_with_browser(users(:drew))

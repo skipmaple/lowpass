@@ -165,11 +165,13 @@ export function searchResult(overrides: Partial<SearchResult> = {}): SearchResul
       { text: 'netes operator in ', hit: false },
       { text: 'Rust', hit: true },
     ],
+    title_zh: null,
     snippet_runs: [
       { text: 'Build a ', hit: false },
       { text: 'Kubernetes', hit: true },
       { text: ' operator with the Rust SDK', hit: false },
     ],
+    summary_zh: null,
     ...overrides,
   }
 }

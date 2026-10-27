@@ -4,13 +4,14 @@ import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
 import HitText from '@/components/HitText'
 import Icon from '@/components/Icon'
+import { Translation } from '@/components/ItemRow'
 import { reportClick } from '@/lib/search'
 import { markSearchResult, searchResultId } from '@/lib/searchFocus'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { HitRun, SearchResult } from '@/types/lowpass'
 
 // 结果行（R-4.6、画布 search_row()）：眉行「刊物反白签 · 来源名 · 所在期 · 日期」，标题与摘要片段带命中下划线，
-// 底行「所在期 · …」与「原文 ↗」，右端是书签（PRD 5.10）。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
+// 已有日刊译文紧跟对应原文；底行「所在期 · …」与「原文 ↗」，右端是书签（PRD 5.10）。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
 // 所在期是站内直链，不计。
 
 const LABELS: Record<SearchResult['publication'], string> = { daily: '日刊', weekly: '周刊' }
@@ -41,12 +42,14 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
           <HitText runs={result.title_runs} size="var(--fs-20)" color="var(--ink)" />
         </a>
       </h2>
+      {result.publication === 'daily' && result.title_zh ? <Translation text={result.title_zh} /> : null}
 
       {result.snippet_runs ? (
         <p className="search-snippet" lang={latinLang(runText(result.snippet_runs))}>
           <HitText runs={result.snippet_runs} size="var(--fs-15)" color="var(--ink2)" />
         </p>
       ) : null}
+      {result.publication === 'daily' && result.snippet_runs && result.summary_zh ? <Translation text={result.summary_zh} /> : null}
 
       <div className="search-links">
         <Link id={searchResultId(result.item_id)} className="t" href={result.where.href} onBefore={() => markSearchResult(result.item_id)}>

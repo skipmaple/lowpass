@@ -7,7 +7,8 @@
    排在包后面：unicode-range 重叠时后声明的先用，界面固定文案的字
    从那几个小文件里取，首屏不必为「前一期 · 归档」落进七八个分片（PRD N-1 首屏 300 KB）。它还声明了：
    Maple Mono NL Regular 的子集（原件 vendor/fonts/MapleMonoNL-Regular.woff2，subframe7536/maple-font v7.9 官方
-   woff2，SIL OFL 1.1）与报头 LOWPASS、LP 邮戳用的 Bodoni Moda 900（只留这几个字母）。 */
+   woff2，SIL OFL 1.1）与报头 LOWPASS、LP 邮戳用的 Bodoni Moda 900（只留这几个字母）。
+   期头日期的 16 个文楷字形另随 CSS 内联，普通字库迟到也沿用相同的字宽和基线。 */
 
 @import "@fontsource-variable/newsreader";
 @import "./fonts-subset.css";

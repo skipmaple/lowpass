@@ -992,7 +992,10 @@ details[open] > summary::before { rotate: 90deg; }
 .daily-source-heading { display: flex; align-items: center; gap: 14px; }
 .daily-source:focus { outline: none; }
 @media screen {
-  .daily-source:focus-visible .daily-source-heading { outline: 2px solid var(--ink); outline-offset: 4px; }
+  .daily-source:focus .daily-source-heading { outline: 2px solid var(--ink); outline-offset: 4px; }
+  @supports selector(:focus-visible) {
+    .daily-source:focus:not(:focus-visible) .daily-source-heading { outline: none; }
+  }
 }
 .daily-source-icon { width: 32px; height: 32px; flex: none; }
 .daily-source h2 { position: relative; margin: 0; font-family: var(--font-latin); font-size: var(--fs-26); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }

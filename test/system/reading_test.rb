@@ -165,6 +165,17 @@ class ReadingTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
   end
 
+  test "鼠标选择来源不留下键盘焦点框" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    source = sources(:github)
+    visit daily_issue_path("2026-09-08")
+    within("#source-directory") { click_on source.name }
+    wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
+    assert_not evaluate_script("document.activeElement.matches(':focus-visible')")
+    assert_equal "none", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
+  end
+
   test "三个来源连续可读，目录跳转保留之前的内容" do
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")

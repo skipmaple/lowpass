@@ -460,6 +460,37 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(container.querySelector('.item-content--weekly')).toHaveTextContent('摘要。')
   })
 
+  it('引用用语义区块呈现，去掉标记并保留分段和图文顺序', () => {
+    const meta = { image_urls: ['https://cdn.example.com/1.webp'], image_positions: [1], quote_ranges: [[1, 4]] } as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '引言。\n> 第一段。\n>\n> 第二段。\n正文。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const content = container.querySelector('.item-content--weekly')!
+    expect([...content.children].map((node) => node.matches('.item-media') ? '图片' : node.tagName)).toEqual(['P', '图片', 'BLOCKQUOTE', 'P'])
+    expect([...content.querySelectorAll('blockquote p')].map((node) => node.textContent)).toEqual(['第一段。', '第二段。'])
+  })
+
+  it.each([{ ranges: [[0, 5]] }, { ranges: [[1, 1]] }, { ranges: [[1, 3], [2, 4]] }, { ranges: [[1, 3.5]] }, { ranges: [[1, '3']] }, { ranges: [[0, 3]] }, { ranges: [[1, 4], [0, 1]] }])('不可信的引用位置 $ranges 回退为原正文', ({ ranges }) => {
+    const meta = { quote_ranges: ranges } as unknown as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '引言。\n> 第一段。\n>\n> 第二段。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('blockquote')).toBeNull()
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('引言。> 第一段。>> 第二段。')
+  })
+
+  it('图片落在引用内部时整体回退，避免改变图文位置', () => {
+    const meta = { image_urls: ['https://cdn.example.com/1.webp'], image_positions: [2], quote_ranges: [[1, 4]] } as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '引言。\n> 第一段。\n>\n> 第二段。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('blockquote')).toBeNull()
+    expect(container.querySelector('.item-content--weekly img')).toBeInTheDocument()
+  })
+
+  it('嵌套引用或强调位置冲突时保留原文', () => {
+    const nested = render(<ItemRow item={item({ content: '> > 嵌套引用', meta: { quote_ranges: [[0, 1]] } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(nested.container.querySelector('blockquote')).toBeNull()
+    nested.unmount()
+    const overlap = render(<ItemRow item={item({ content: '> 引用', meta: { quote_ranges: [[0, 1]], emphasis_positions: [0] } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(overlap.container.querySelector('blockquote')).toBeNull()
+    expect(overlap.container.querySelector('strong')).toHaveTextContent('> 引用')
+  })
+
   it('同段落边界的配图同行，末尾图和全条目编号都保持原顺序', () => {
     const { container } = render(
       <ItemRow

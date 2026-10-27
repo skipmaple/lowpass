@@ -349,6 +349,30 @@ class DesignRulesTest < ApplicationSystemTestCase
     end
   end
 
+  test "周刊单图与正文左缘对齐，窄图和宽图均不超出阅读列" do
+    [ 375, 768, 1440 ].each do |width|
+      [ 240, 512, 1200 ].each do |image_width|
+        render_fragment(<<~HTML, width: width)
+          <div class="item-body">
+            <div class="item-content--weekly"><p>正文</p></div>
+            <div class="item-media item-media--single">
+              <figure class="item-media-frame item-media-frame--sized" style="--image-width:#{image_width}px;--image-ratio:1.5"></figure>
+            </div>
+          </div>
+        HTML
+        bounds = evaluate_script(<<~JS)
+          (() => {
+            const text = document.querySelector('.item-content--weekly').getBoundingClientRect()
+            const image = document.querySelector('.item-media-frame').getBoundingClientRect()
+            return { textLeft: text.left, imageLeft: image.left, imageRight: image.right, textRight: text.right }
+          })()
+        JS
+        assert_in_delta bounds["textLeft"], bounds["imageLeft"], 0.5, "#{width}px / #{image_width}px：图文左缘"
+        assert_operator bounds["imageRight"], :<=, bounds["textRight"] + 0.5
+      end
+    end
+  end
+
   test "D2 打印时配图不叠底，报头是白底墨字" do
     render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header><img class="item-media-image" alt="">), media: "print")
 

@@ -108,6 +108,74 @@ class ReadingTest < ApplicationSystemTestCase
     assert_operator evaluate_script("scrollY"), :>, 500
   end
 
+  test "来源焦点只标记标题并在高对比模式和窄屏可见" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    source = sources(:github)
+
+    [ [ 375, false ], [ 1440, false ], [ 1440, true ] ].each do |width, forced_colors|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "forced-colors", value: forced_colors ? "active" : "none" } ])
+      visit daily_issue_path("2026-09-08")
+      find("#source-directory a[href='#source-#{source.id}']").send_keys(:enter)
+      wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
+      state = evaluate_script(<<~JS)
+        (() => {
+          const section = document.activeElement
+          const heading = section.querySelector('.daily-source-heading')
+          const rect = heading.getBoundingClientRect()
+          const sectionStyle = getComputedStyle(section)
+          const headingStyle = getComputedStyle(heading)
+          return { focusVisible: section.matches(':focus-visible'), sectionOutline: sectionStyle.outlineStyle,
+            headingOutline: headingStyle.outlineStyle, headingWidth: headingStyle.outlineWidth,
+            headingColor: headingStyle.outlineColor, textColor: headingStyle.color,
+            visible: rect.top >= 6 && rect.bottom <= innerHeight - 6 && rect.left >= 6 && rect.right <= innerWidth - 6 }
+        })()
+      JS
+
+      assert state.fetch("focusVisible"), state.inspect
+      assert_equal "none", state.fetch("sectionOutline"), state.inspect
+      assert_equal "solid", state.fetch("headingOutline"), state.inspect
+      assert_equal "2px", state.fetch("headingWidth"), state.inspect
+      assert_equal state.fetch("textColor"), state.fetch("headingColor"), state.inspect
+      assert state.fetch("visible"), state.inspect
+      page.driver.browser.switch_to.active_element.send_keys(:tab)
+      assert evaluate_script("document.activeElement.matches('#source-#{source.id} .item-title a')")
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
+  end
+
+  test "来源保持键盘焦点时打印不显示交互焦点框" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    source = sources(:github)
+    visit daily_issue_path("2026-09-08")
+    find("#source-directory a[href='#source-#{source.id}']").send_keys(:enter)
+    wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
+    assert_equal "solid", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
+
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "print")
+    assert_equal "none", evaluate_script("getComputedStyle(document.activeElement).outlineStyle")
+    assert_equal "none", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "screen")
+    assert_equal "solid", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+  end
+
+  test "鼠标选择来源不留下键盘焦点框" do
+    prepare_continuous_issue
+    sign_in_with_browser(users(:drew))
+    source = sources(:github)
+    visit daily_issue_path("2026-09-08")
+    within("#source-directory") { click_on source.name }
+    wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
+    assert_not evaluate_script("document.activeElement.matches(':focus-visible')")
+    assert_equal "none", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
+  end
+
   test "三个来源连续可读，目录跳转保留之前的内容" do
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")

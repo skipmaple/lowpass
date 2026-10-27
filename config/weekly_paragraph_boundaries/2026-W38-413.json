@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "period": "2026-W38",
+  "issue_no": 413,
+  "source_commit": "0f914dff7cecdfa71072d03d7fd44aa527bd4b06",
+  "source_sha256": "91f0d22d03e3319c7e779528518e2825572f749cef251c0f3c1fad8e03eaedf7",
+  "entries": [
+    {
+      "lookup_sha256": "ba21e744633ff815e450a0e1f6d324a78f82907800acb174a398f4e3b7580d23",
+      "rank": 3,
+      "identity_sha256": "b411e483601b3099fb457b215b86397111c43883431d025faa7dd669cec1514e",
+      "offsets": [
+        75,
+        199,
+        407,
+        474,
+        604,
+        730,
+        855,
+        1037,
+        1263,
+        1390,
+        1460
+      ]
+    },
+    {
+      "lookup_sha256": "0ad6273637f969efff9a4104f1ec6772324ea4f2037ce78ba953b9e569abbc99",
+      "rank": 4,
+      "identity_sha256": "742c28e59ab4ab03eaeb168c81d9044446c8f6745a88c513c844e68bcd8d3974",
+      "offsets": [
+        57,
+        157,
+        287,
+        468,
+        616
+      ]
+    },
+    {
+      "lookup_sha256": "92c14b0d91ca03c28f505a77d332b900d79a42e4710073c310b3e2ebaa046fc0",
+      "rank": 5,
+      "identity_sha256": "354ff93a72a3db2323ab026648ddb7ec669e3111e7b88dd91a2d7e0cd0c877a5",
+      "offsets": [
+        109,
+        362,
+        470,
+        653,
+        805
+      ]
+    },
+    {
+      "lookup_sha256": "2bd5c58f40316b780f0d51284b74c4eb1a31c6de61b85cd426ce814025734d02",
+      "rank": 26,
+      "identity_sha256": "3b5aef5632a8776c1693baeea2becc8bc9841cfd3cbf750b8a9d3d24280554bb",
+      "offsets": [
+        116,
+        210,
+        298
+      ]
+    },
+    {
+      "lookup_sha256": "a024054942ae83f3e2a5386fe6f72903bba550413285727c3fd92c3ca7991541",
+      "rank": 27,
+      "identity_sha256": "d66626b5288375f2ea05d1ba05e86b956d0aec039d48de84b9fb3878173be9ff",
+      "offsets": [
+        66,
+        178,
+        259
+      ]
+    },
+    {
+      "lookup_sha256": "5b579d5ea0f198f9c681dceb4025c5fb496bf0ed62518d567ec98839ffbefead",
+      "rank": 29,
+      "identity_sha256": "133264d833addf29369622fd8c2b73a1e818c017cd298b34932a28aedea59a13",
+      "offsets": [
+        69
+      ]
+    },
+    {
+      "lookup_sha256": "f4388a5335c3a70fd479549296294a03aa5f0934d6b87ed1ec27c6e0f3f3420a",
+      "rank": 30,
+      "identity_sha256": "b642537fa84451d69f4d4de55e5c1efc66e2ab51e349dff91f017405ca8f2c28",
+      "offsets": [
+        216,
+        349
+      ]
+    },
+    {
+      "lookup_sha256": "29ecea15f6644a1fa1165e9b58412deebd51721e1e9709843bb534edeee7ecca",
+      "rank": 31,
+      "identity_sha256": "c5b7071ca3dda1af62ab636100d23fe6f83c7577eaffea51b9c81942a04911ac",
+      "offsets": [
+        144
+      ]
+    },
+    {
+      "lookup_sha256": "4fba1e417eae3f1c29b28f717810faccb22b57fdbeefc5fbfa59cfe822477177",
+      "rank": 32,
+      "identity_sha256": "ea170756322f882aa1b3b3da1db505d5cd07f519d4e3661ea40b1cbe3cb160e4",
+      "offsets": [
+        197,
+        321
+      ]
+    },
+    {
+      "lookup_sha256": "c5dcb002dbe2b6a68ad999d6f26b7ce98ce1eb052122bf331bba23a64070ffe7",
+      "rank": 33,
+      "identity_sha256": "3f9ddddeafdc21e9241cd921e9d86f9ecd0fd3f25206d0822a6c9a5db8ff43a2",
+      "offsets": [
+        147,
+        309,
+        429
+      ]
+    }
+  ]
+}

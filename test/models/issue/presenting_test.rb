@@ -54,6 +54,14 @@ class Issue::PresentingTest < ActiveSupport::TestCase
     assert_nil props[:status]
   end
 
+  test "今日未到配置时间且没有记录时说明计划生成时间" do
+    Setting.set("daily_time", "07:30")
+    assert_equal "今日将于 07:30 生成", Issue.daily_props_for("2026-09-09", issue: nil, now: BEFORE_DAILY_TIME)[:status]
+    assert_equal "本期未生成", Issue.daily_props_for("2026-09-08", issue: nil, now: BEFORE_DAILY_TIME)[:status]
+    assert_equal "本期未生成", Issue.daily_props_for("2026-09-09", issue: nil, now: Time.utc(2026, 9, 8, 23, 30))[:status]
+    assert_equal "本期未生成", Issue.daily_props_for("2026-09-10", issue: nil, now: BEFORE_DAILY_TIME)[:status]
+  end
+
   test "今天已经出了期，昨日那一期就不再标 is_yesterday" do
     publish!("2026-09-09")
 
@@ -87,6 +95,21 @@ end
 # 归档与周刊页的 props。上海 2026-09-10 12:00：fixture 的日刊 2026-09-08 与周刊 2026-W36 都在过去，本周是 2026-W37。
 class Issue::ArchivePresentingTest < ActiveSupport::TestCase
   NOW = Time.utc(2026, 9, 10, 4)
+
+  test "归档仅将尚未到生成时间的今日无记录显示为待生成" do
+    Setting.set("daily_time", "07:30")
+    before = Time.utc(2026, 9, 9, 23, 29)
+    rows = Issue.daily_archive_props(now: before)[:days].index_by { |day| day[:period_key] }
+    assert_equal [ "scheduled", "待 07:30 生成", nil ], rows["2026-09-10"].values_at(:state, :published_label, :source_marks)
+    assert_equal "missing", rows["2026-09-09"][:state]
+    assert_equal "missing", Issue.daily_archive_props(now: before + 1.minute)[:days].first[:state]
+  end
+
+  test "提前生成的今日期在计划时间之前保留真实状态" do
+    Issue.create!(kind: "daily", period_key: "2026-09-10", state: "generating", generation_started_at: Time.utc(2026, 9, 9, 20))
+    row = Issue.daily_archive_props(now: Time.utc(2026, 9, 9, 21))[:days].first
+    assert_equal [ "generating", "生成中" ], row.values_at(:state, :published_label)
+  end
 
   def entry(title, section: nil, rank: 1, issue_no: nil, issue_title: nil, url: nil, summary: nil, content: nil)
     attributes = { title: title, url: url || "https://r.example/#{rank}#{issue_no}", summary: summary, section: section, rank: rank,

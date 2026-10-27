@@ -25,7 +25,7 @@ module Issue::Presenting
         weekday: WEEKDAYS[date.wday],
         state: issue&.state,
         time_label: head_time_label(issue),
-        status: head_status(issue, is_yesterday, daily_time),
+        status: head_status(issue, is_yesterday, daily_time, scheduled_daily?(period_key, issue, now, daily_time)),
         daily_time: daily_time,
         published_at: hhmm(issue&.published_at),
         revised_at: hhmm(issue&.revised_at),
@@ -94,7 +94,7 @@ module Issue::Presenting
         month_label: "#{month.year} 年 #{month.month} 月",
         prev_month: month_nav(month.prev_month, month, earliest, today),
         next_month: month_nav(month.next_month, month, earliest, today),
-        days: archive_days([ month, earliest ].max, [ month.end_of_month, today ].min)
+        days: archive_days([ month, earliest ].max, [ month.end_of_month, today ].min, now, Setting.get("daily_time"))
       }
     end
 
@@ -126,7 +126,7 @@ module Issue::Presenting
         "#{range.first.month}月#{range.first.day}日 至 #{range.last.month}月#{range.last.day}日"
       end
 
-      def archive_days(first, last)
+      def archive_days(first, last, now, daily_time)
         return [] if first > last
 
         issues = daily.where(period_key: first.iso8601..last.iso8601).includes(:fetch_runs).index_by(&:period_key)
@@ -134,16 +134,17 @@ module Issue::Presenting
         sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
 
-        (first..last).to_a.reverse.map { |date| archive_day(date, issues[date.iso8601], sources, counts) }
+        (first..last).to_a.reverse.map { |date| archive_day(date, issues[date.iso8601], sources, counts, now, daily_time) }
       end
 
-      def archive_day(date, issue, sources, counts)
+      def archive_day(date, issue, sources, counts, now, daily_time)
+        scheduled = scheduled_daily?(date.iso8601, issue, now, daily_time)
         {
           period_key: date.iso8601,
           date_label: "#{date.month}月#{date.day}日",
           weekday: WEEKDAYS[date.wday],
-          state: issue&.state || "missing",
-          published_label: archive_label(issue),
+          state: issue&.state || (scheduled ? "scheduled" : "missing"),
+          published_label: scheduled ? "待 #{daily_time} 生成" : archive_label(issue),
           source_marks: issue && daily_columns(issue, sources).map { |source| "#{source.name} #{mark(issue, source, counts)}" }.join(" · ")
         }
       end
@@ -228,9 +229,9 @@ module Issue::Presenting
       end
 
       # 一个期头只挂一个标签：期级状态先于期的来历，来历里修订又先于延迟（附录 B 的六句）
-      def head_status(issue, is_yesterday, daily_time)
+      def head_status(issue, is_yesterday, daily_time, scheduled)
         if issue.nil?
-          "本期未生成"
+          scheduled ? "今日将于 #{daily_time} 生成" : "本期未生成"
         elsif issue.generating?
           "生成中，约 1 分钟后刷新"
         elsif issue.empty?
@@ -258,6 +259,10 @@ module Issue::Presenting
         period_key == PeriodKey.daily(now - 1.day) &&
           now.in_time_zone(PeriodKey::ZONE).strftime("%H:%M") < daily_time &&
           !daily.exists?(period_key: PeriodKey.daily(now))
+      end
+
+      def scheduled_daily?(period_key, issue, now, daily_time)
+        issue.nil? && period_key == PeriodKey.daily(now) && now.in_time_zone(PeriodKey::ZONE).strftime("%H:%M") < daily_time
       end
 
       def day_stamp(time)

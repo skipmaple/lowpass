@@ -323,7 +323,7 @@ class DesignRulesTest < ApplicationSystemTestCase
       [ "item-media--single", "item-media--multiple" ].each do |layout|
         render_fragment(<<~HTML, width: width)
           <div class="item-media #{layout}">
-            <figure class="item-media-frame item-media-frame--sized" style="--image-width:1200px;--image-ratio:1.5">
+            <figure class="item-media-frame item-media-frame--sized item-media-frame--loading" style="--image-width:1200px;--image-ratio:1.5">
               <img class="item-media-image" width="1200" height="800" alt="横图">
             </figure>
             #{if layout == "item-media--multiple"
@@ -332,6 +332,7 @@ class DesignRulesTest < ApplicationSystemTestCase
           </div>
           <p id="after-media">下一段正文</p>
         HTML
+        assert_equal "solid", style(".item-media-frame--loading", "outline-style")
         before = evaluate_script("document.querySelector('#after-media').getBoundingClientRect().top")
         execute_script(<<~JS)
           for (const image of document.images) {
@@ -340,6 +341,7 @@ class DesignRulesTest < ApplicationSystemTestCase
           }
         JS
         wait_until { evaluate_script("[...document.images].every(image => image.complete && image.naturalWidth > 0)") }
+        execute_script("document.querySelector('.item-media-frame--loading').classList.remove('item-media-frame--loading')")
         after = evaluate_script("document.querySelector('#after-media').getBoundingClientRect().top")
         assert_in_delta before, after, 0.5, "#{width}px #{layout}：解码不推移后文"
         assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width

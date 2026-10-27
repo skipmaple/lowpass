@@ -454,6 +454,30 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(container.querySelector('.item-content--weekly')).toHaveTextContent('介绍。说明。')
   })
 
+  it('已知尺寸的配图加载时标示预留区域，完成后移除边界且不影响其他图片', () => {
+    const urls = ['https://cdn.example.com/1.webp', 'https://cdn.example.com/2.webp']
+    render(<ItemRow item={item({ title: '图文', meta: { image_urls: urls }, image_dimensions: { [urls[0]]: { width: 1200, height: 800 }, [urls[1]]: { width: 600, height: 400 } } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    const [first, second] = screen.getAllByRole('img', { name: /图文配图/ })
+    expect(first.parentElement).toHaveClass('item-media-frame--loading')
+    expect(second.parentElement).toHaveClass('item-media-frame--loading')
+    fireEvent.load(first)
+    expect(first.parentElement).not.toHaveClass('item-media-frame--loading')
+    expect(second.parentElement).toHaveClass('item-media-frame--loading')
+    fireEvent.error(second)
+    expect(screen.getAllByRole('img', { name: /图文配图/ })).toEqual([first])
+  })
+
+  it('同一位置重新出现先前的图片时，按新图片的加载状态显示边界', () => {
+    const urls = ['https://cdn.example.com/a.webp', 'https://cdn.example.com/b.webp']
+    const dimensions = Object.fromEntries(urls.map((url) => [url, { width: 1200, height: 800 }]))
+    const row = (url: string) => <ItemRow item={item({ title: '图文', meta: { image_urls: [url] }, image_dimensions: dimensions })} adapter="ruanyf_weekly" rank={1} variant="weekly" />
+    const { rerender } = render(row(urls[0]))
+    fireEvent.load(screen.getByRole('img', { name: '图文配图' }))
+    rerender(row(urls[1]))
+    rerender(row(urls[0]))
+    expect(screen.getByRole('img', { name: '图文配图' }).parentElement).toHaveClass('item-media-frame--loading')
+  })
+
   it('按原顺序展示条目对应的图片，并为外链图片保护来源页面', () => {
     const { container } = render(
       <ItemRow

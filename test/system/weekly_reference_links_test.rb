@@ -2,6 +2,11 @@ require "application_system_test_case"
 require "digest"
 
 class WeeklyReferenceLinksTest < ApplicationSystemTestCase
+  # 无头 Linux 默认没有指针设备；显式模拟鼠标，再用 CDP 单独测试触屏。
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ], options: { name: :weekly_pointer_chrome } do |options|
+    options.add_argument("--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4")
+  end
+
   test "连续段落中的正文链接的触控区域不会互相覆盖" do
     sign_in_with_browser(users(:drew))
     issue = issues(:weekly_w36)

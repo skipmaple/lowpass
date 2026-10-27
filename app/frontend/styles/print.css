@@ -32,6 +32,8 @@
   .item-title a.t[data-host]::after { content: "  " attr(data-host); font-family: var(--font-data); font-size: var(--fs-12); font-weight: 400; color: var(--ink2); }
   .item-reason { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .item-media-image { mix-blend-mode: normal; }
+  .item-media { row-gap: 16px; padding-bottom: 4px; }
+  .item-media-original { display: none; }
   .item-media-frame--loading { outline: none; }
 
   /* 周刊横带：白底墨字，上 2px、下 1px 两条线 */

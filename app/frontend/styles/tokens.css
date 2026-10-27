@@ -287,10 +287,11 @@ a.source-tab { cursor: pointer; }
 .item-content--weekly > p + p, .item-content--weekly > .item-media + p { margin-top: 12px; }
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
-.item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 780px; padding: 8px 0 4px; }
+.item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 60px 16px; width: 100%; max-width: 780px; padding: 8px 0 48px; }
 .item-media--single { justify-items: center; }
 .item-media--multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.item-media-frame { display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; width: fit-content; max-width: 100%; margin: 0; }
+.item-media-frame { position: relative; display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; width: fit-content; max-width: 100%; margin: 0; }
+.item-media-original { position: absolute; top: 100%; right: 0; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); white-space: nowrap; }
 .item-media-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 640px; }
 .item-media--multiple .item-media-frame { width: 100%; }
 .item-media--multiple .item-media-image { width: 100%; max-height: none; }

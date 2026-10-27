@@ -392,6 +392,24 @@ describe('搜索框', () => {
 })
 
 describe('结果行', () => {
+  it('已有日刊译文紧跟相应原文，没有理由也能显示', () => {
+    const result = searchResult({ title_zh: '用 Rust 编写的控制器', summary_zh: '使用 Rust 构建的控制器' })
+    const { container } = show({ state: 'results', q: 'rust', results: [result], total: 1, pages: 1 })
+    const row = container.querySelector('.search-row') as HTMLElement
+    const children = Array.from(row.children)
+    const translations = row.querySelectorAll('.item-translation')
+    expect(Array.from(translations).map((element) => element.textContent)).toEqual(['用 Rust 编写的控制器', '使用 Rust 构建的控制器'])
+    expect(children.indexOf(translations[0])).toBe(children.indexOf(row.querySelector('.search-title') as Element) + 1)
+    expect(children.indexOf(translations[1])).toBe(children.indexOf(row.querySelector('.search-snippet') as Element) + 1)
+    expect(translations[0].closest('a')).toBeNull()
+  })
+
+  it('周刊或缺少原文片段时不显示不匹配的译文', () => {
+    const weekly = searchResult({ publication: 'weekly', title_zh: '不应出现', summary_zh: '不应出现' })
+    const withoutSnippet = searchResult({ item_id: 'no-summary', snippet_runs: null, summary_zh: '没有原文的译文' })
+    const { container } = show({ state: 'results', q: 'rust', results: [weekly, withoutSnippet], total: 2, pages: 1 })
+    expect(container.querySelectorAll('.item-translation')).toHaveLength(0)
+  })
   it('眉行、命中下划线、所在期与原文', () => {
     const { container } = results()
     const row = container.querySelector('.search-row') as HTMLElement

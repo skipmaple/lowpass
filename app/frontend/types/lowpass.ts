@@ -4,7 +4,7 @@ export type SourceSummary = { id: string; name: string; adapter: Adapter; state:
 // RSS 的首图与「时间是抓取时间不是发布时间」标记（Adapters::Rss、Adapters::RuanyfWeekly）。
 export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; image_positions?: number[]; time_from_fetch?: boolean };
 // title_zh 是 HN 与 Hackaday 标题的中文译文，summary_zh 是 GitHub Trending 简介的中文译文（D25）；
-// 都跟推荐理由同一次生成，没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
+// 可随合规理由生成，也可按 D39 独立补齐；没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
 export type ImageDimensions = { width: number; height: number };
 export type Item = { id: string; url_hash: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; image_dimensions?: Record<string, ImageDimensions>; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";
@@ -39,7 +39,7 @@ export type DatePreset = { from: string; to: string };
 export type DatePresets = Record<"7d" | "30d", DatePreset>;
 // 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
 export type HitRun = { text: string; hit: boolean };
-export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null };
+export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; title_zh: string | null; snippet_runs: HitRun[] | null; summary_zh: string | null };
 
 // 收藏（PRD 5.10）：日刊、周刊、搜索、收藏四个页面的 props 都带 favorites——这一页里已收藏链接的 url_hash 列表。
 // 收藏页的一行（FavoritesController#entry_props）：字段照搜索结果行，标题不带命中 run；snippet 是不超过 160 字的摘要片段

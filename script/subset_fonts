@@ -12,6 +12,8 @@
   - 文楷 ui-admin：后台页面、后台报错与表单校验多出来的界面字；只有后台页用到。
   - Maple Mono NL：只留 ASCII、拉丁补充、常用标点、箭头与几何记号（元数据行、时间、序号用得到的）。
   - Bodoni Moda：只用于报头 LOWPASS 与 LP 邮戳，只留这几个字母，固定成 900 字重的静态字形。
+  - 文楷 period：期头日期的数字、空格与年月日第周，从 ui 再切一份并内联进 CSS。
+    沿用 ui 的字形和度量，普通字库迟到时日期不先用宋体排出另一种宽度。
 
 界面文案改了（新加了字）就重跑一次：没收进来的字不会缺，只是回落到包的分片、多下载一片。
 
@@ -71,6 +73,7 @@ CJK_PUNCT = "·—‘’“”…"
 ASCII = {chr(c) for c in range(0x20, 0x7F)}
 MAPLE_RANGES = [(0x20, 0x7E), (0xA0, 0x17F), (0x2010, 0x205E), (0x20AC, 0x20AC), (0x2190, 0x21FF), (0x2212, 0x2212), (0x25A0, 0x25FF), (0x2605, 0x2606)]
 BRAND = "LOWPASlowpas "
+PERIOD = "0123456789 年月日第周"
 
 
 def main():
@@ -88,6 +91,7 @@ def main():
             wenkai(slices, admin, "lxgw-wenkai-screen-ui-admin.woff2"),
             maple(),
             bodoni(),
+            period(),
         ]
         write_css(faces)
 
@@ -153,6 +157,14 @@ def bodoni():
     return save(font, "bodoni-moda-brand.woff2", "Bodoni Moda Variable", wanted, "font-weight: 900;")
 
 
+def period():
+    # 不重新计算整字库的边界或时间戳：切片的基线必须与普通 ui 字库一致。
+    font = TTFont(os.path.join(FONTS, "lxgw-wenkai-screen-ui.woff2"), recalcBBoxes=False, recalcTimestamp=False)
+    wanted = {ord(c) for c in PERIOD}
+    subset_font(font, wanted, drop=[])
+    return save(font, "lxgw-wenkai-screen-period.woff2", "LXGW WenKai Screen", wanted, "font-weight: 400;")
+
+
 def subset_font(font, codepoints, drop):
     options = subset.Options()
     options.drop_tables += drop
@@ -175,10 +187,11 @@ def save(font, filename, family, codepoints, weight):
 def write_css(faces):
     rules = []
     for family, filename, weight, codepoints in faces:
+        inline = "?inline" if filename == "lxgw-wenkai-screen-period.woff2" else ""
         rules.append(
             "@font-face {\n"
             f'  font-family: "{family}";\n'
-            f'  src: url("../fonts/{filename}") format("woff2");\n'
+            f'  src: url("../fonts/{filename}{inline}") format("woff2");\n'
             f"  {weight}\n"
             "  font-display: swap;\n"
             f"  unicode-range: {format_range(codepoints)};\n"

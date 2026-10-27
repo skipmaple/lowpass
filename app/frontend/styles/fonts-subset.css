@@ -39,3 +39,11 @@
   font-display: swap;
   unicode-range: U+20, U+41, U+4c, U+4f-50, U+53, U+57, U+61, U+6c, U+6f-70, U+73, U+77;
 }
+
+@font-face {
+  font-family: "LXGW WenKai Screen";
+  src: url("../fonts/lxgw-wenkai-screen-period.woff2?inline") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+20, U+30-39, U+5468, U+5e74, U+65e5, U+6708, U+7b2c;
+}

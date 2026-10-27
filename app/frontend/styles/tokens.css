@@ -302,7 +302,8 @@ a.source-tab { cursor: pointer; }
 .item-media--single { justify-items: start; }
 .item-media--multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .item-media-frame { position: relative; display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; width: fit-content; max-width: 100%; margin: 0; }
-.item-media-original { position: absolute; top: 100%; right: 0; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); white-space: nowrap; }
+/* 未知尺寸的懒加载图片暂时宽为 0：入口靠左保留在正文内，图片足够宽时仍与右边缘对齐。 */
+.item-media-original { position: absolute; top: 100%; left: max(0px, calc(100% - 44px)); min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); white-space: nowrap; }
 .item-media-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 640px; }
 .item-media--multiple .item-media-frame { width: 100%; }
 .item-media--multiple .item-media-image { width: 100%; max-height: none; }

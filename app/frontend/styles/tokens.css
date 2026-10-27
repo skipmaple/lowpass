@@ -296,6 +296,13 @@ a.source-tab { cursor: pointer; }
 .item-content--weekly > blockquote > p + p { margin-top: 12px; }
 .item-content--weekly .weekly-reference { display: inline-block; max-width: 100%; min-height: 44px; line-height: 44px; vertical-align: baseline; }
 .item-content--weekly .weekly-reference-group { white-space: nowrap; }
+/* 纯鼠标设备按正文行距排版；任何触屏设备继续保留 44px 高的独立目标。 */
+@media screen and (hover: hover) and (pointer: fine) {
+  .item-content--weekly .weekly-reference { display: inline; min-height: 0; line-height: inherit; }
+}
+@media screen and (any-pointer: coarse) {
+  .item-content--weekly .weekly-reference { display: inline-block; min-height: 44px; line-height: 44px; }
+}
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
 .item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 60px 16px; width: 100%; max-width: 780px; padding: 8px 0 48px; }

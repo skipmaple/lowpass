@@ -122,6 +122,32 @@ class Search::HighlighterTest < ActiveSupport::TestCase
     assert_match(/ z…\z|z…\z/, body)
   end
 
+  test "末尾恰好落在词后标点之前时保留完整词" do
+    prefix = "rust " + ("a " * 71) + "b "
+    assert_equal 149, prefix.length
+    [ ", next", ". Next", "! next", ".\" Next", "。下一句", "，继续" ].each do |suffix|
+      text = prefix + "important" + suffix + (" remaining" * 10)
+      expected = prefix + "important…"
+      assert_equal expected, Search::Highlighter.excerpt(text)
+      assert_equal expected, joined(highlighter("rust").snippet(text))
+      assert_includes pairs(highlighter("rust").snippet(text)), [ "rust", true ]
+    end
+  end
+
+  test "标点位于网址或连字符内部时仍避免切断短词" do
+    prefix = "a " * 74
+    [ "addressxx.example", "addressxx-name", "addressxx/path" ].each do |word|
+      text = prefix + word + " rest"
+      assert_equal prefix.rstrip + "…", Search::Highlighter.excerpt(text)
+    end
+    [ "https://example", "(https://example", "（https://example", "访问https://example", "www.example" ].each do |token|
+      remaining = 158 - token.length
+      prefix = remaining.even? ? "a " * (remaining / 2) : ("a " * ((remaining - 3) / 2)) + "xx "
+      text = prefix + token + "。公司/path rest"
+      assert_equal prefix.rstrip + "…", Search::Highlighter.excerpt(text)
+    end
+  end
+
   # F7：片段起点落在连字符上（「Production-grade」的 -）时，挪到下一个词的开头，不从「-grade」开始
   test "连字符连起来的词也不从中间切开" do
     body = joined(highlighter("agent").snippet("Production-grade engineering skills for AI coding agents."))

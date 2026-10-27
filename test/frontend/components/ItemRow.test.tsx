@@ -437,6 +437,29 @@ describe('ItemRow 周刊那一版（D19）', () => {
     expect(image.compareDocumentPosition(paragraphs[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  it('仅强调经验证的正文段落，并保持图片与文字的先后顺序', () => {
+    const { container } = render(
+      <ItemRow item={item({ content: '介绍。\n（1）标题。\n说明。', meta: { image_urls: ['https://cdn.example.com/1.webp'], image_positions: [1], emphasis_positions: [1] } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />,
+    )
+    const content = container.querySelector('.item-content--weekly')!
+    expect([...content.children].map((node) => node.matches('.item-media') ? '图片' : node.textContent)).toEqual(['介绍。', '图片', '（1）标题。', '说明。'])
+    expect(content.querySelectorAll('strong')).toHaveLength(1)
+    expect(content.querySelector('strong')).toHaveTextContent('（1）标题。')
+  })
+
+  it.each([[0, 7], [-1], [1, 1], [1, 0], [0, undefined], Array(1), ['1'], [NaN], '1', null])('不可信的强调位置 %j 不会改变正文的展示', (positions) => {
+    const meta = { emphasis_positions: positions } as ItemMeta
+    const { container } = render(<ItemRow item={item({ content: '正文。\n说明。', meta })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('strong')).toBeNull()
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('正文。说明。')
+  })
+
+  it('只有摘要的记录不使用正文强调位置', () => {
+    const { container } = render(<ItemRow item={item({ content: null, summary: '摘要。', meta: { emphasis_positions: [0] } })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(container.querySelector('strong')).toBeNull()
+    expect(container.querySelector('.item-content--weekly')).toHaveTextContent('摘要。')
+  })
+
   it('同段落边界的配图同行，末尾图和全条目编号都保持原顺序', () => {
     const { container } = render(
       <ItemRow

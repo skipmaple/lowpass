@@ -2,7 +2,7 @@ export type Adapter = "hacker_news" | "github_trending" | "rss" | "ruanyf_weekly
 export type SourceSummary = { id: string; name: string; adapter: Adapter; state: "ok" | "empty" | "failed" | "pending" | "no_backfill"; home_url: string | null; last_ok_label: string | null };
 // 适配器往 meta 里放的全部键：HN 的分数与评论、GitHub 的语言与 star、阮一峰的期号与板块锚点、
 // RSS 的首图与「时间是抓取时间不是发布时间」标记（Adapters::Rss、Adapters::RuanyfWeekly）。
-export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; image_positions?: number[]; time_from_fetch?: boolean };
+export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; image_positions?: number[]; emphasis_positions?: number[]; time_from_fetch?: boolean };
 // title_zh 是 HN 与 Hackaday 标题的中文译文，summary_zh 是 GitHub Trending 简介的中文译文（D25）；
 // 可随合规理由生成，也可按 D39 独立补齐；没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
 export type ImageDimensions = { width: number; height: number };

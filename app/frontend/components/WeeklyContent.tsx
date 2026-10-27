@@ -75,8 +75,9 @@ function WeeklyMedia({ item, indices }: { item: Item; indices?: number[] }) {
   )
 }
 
-function Paragraph({ text }: { text: string }) {
-  return <p><Mixed text={text} font="latin" size="var(--fs-15)" color="var(--ink2)" lineHeight={1.8} /></p>
+function Paragraph({ text, emphasized }: { text: string; emphasized: boolean }) {
+  const copy = <Mixed text={text} font="latin" size="var(--fs-15)" color={emphasized ? 'var(--ink)' : 'var(--ink2)'} weight={emphasized ? 600 : 500} lineHeight={1.8} />
+  return <p>{emphasized ? <strong>{copy}</strong> : copy}</p>
 }
 
 // 新抓取记录可保留图片的原文段落位置；旧记录或任何不可靠元数据完整沿用全文后配图。
@@ -84,6 +85,9 @@ export default function WeeklyContent({ item }: { item: Item }) {
   const copy = item.content ?? item.summary
   const paragraphs = copy ? copy.split('\n') : []
   const positions = imagePositions(item, paragraphs)
+  const emphasis = item.content && Array.isArray(item.meta.emphasis_positions) && item.meta.emphasis_positions.length <= 256
+    && Array.from(item.meta.emphasis_positions).every((position, index, values) => Number.isInteger(position) && position >= 0 && position < paragraphs.length && (index === 0 || position > values[index - 1]))
+    ? new Set(item.meta.emphasis_positions) : new Set<number>()
   if (positions) {
     const groups = new Map<number, number[]>()
     positions.forEach((position, index) => {
@@ -97,7 +101,7 @@ export default function WeeklyContent({ item }: { item: Item }) {
         {Array.from({ length: paragraphs.length + 1 }, (_, boundary) => (
           <Fragment key={boundary}>
             {groups.has(boundary) ? <WeeklyMedia item={item} indices={groups.get(boundary)} /> : null}
-            {boundary < paragraphs.length ? <Paragraph text={paragraphs[boundary]} /> : null}
+            {boundary < paragraphs.length ? <Paragraph text={paragraphs[boundary]} emphasized={emphasis.has(boundary)} /> : null}
           </Fragment>
         ))}
       </div>
@@ -106,7 +110,7 @@ export default function WeeklyContent({ item }: { item: Item }) {
 
   return (
     <>
-      {copy ? <div className="item-content item-content--weekly">{paragraphs.map((text, index) => <Paragraph key={index} text={text} />)}</div> : null}
+      {copy ? <div className="item-content item-content--weekly">{paragraphs.map((text, index) => <Paragraph key={index} text={text} emphasized={emphasis.has(index)} />)}</div> : null}
       <WeeklyMedia item={item} />
     </>
   )

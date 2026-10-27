@@ -351,7 +351,7 @@ a.source-tab { cursor: pointer; }
 .search-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 .search-clear { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
                 border: 0; background: transparent; cursor: pointer; }
-.search-clear:disabled { visibility: hidden; }
+.search-clear:disabled { display: none; }
 .search-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
 .search-note { flex-basis: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 /* 反白按钮（画布 btn(primary=True)）：40px 墨块，纸色文楷 15 */

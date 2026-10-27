@@ -119,6 +119,49 @@ describe('ItemRow 标题与摘要', () => {
 })
 
 describe('ItemRow 元数据（按适配器）', () => {
+  it('页面停留时刷新相对时间，并在重新显示页面时立即校准', () => {
+    render(<ItemRow item={item({ published_at: '2026-09-08T22:11:00Z' })} adapter="hacker_news" rank={1} />)
+    const age = screen.getByTitle('09-09 06:11')
+    expect(age).toHaveTextContent('1m')
+
+    act(() => vi.advanceTimersByTime(60_000))
+    expect(age).toHaveTextContent('2m')
+
+    act(() => {
+      vi.setSystemTime(new Date('2026-09-09T00:12:00Z'))
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(age).toHaveTextContent('2h')
+    expect(age).toHaveAttribute('datetime', '2026-09-08T22:11:00Z')
+  })
+
+  it('多条时间共用时钟，隐藏后恢复立即更新，离开页面时释放时钟', () => {
+    const interval = vi.spyOn(globalThis, 'setInterval')
+    const clear = vi.spyOn(globalThis, 'clearInterval')
+    const visibility = vi.spyOn(document, 'visibilityState', 'get')
+    visibility.mockReturnValue('visible')
+    const { unmount } = render(<>
+      <ItemRow item={item({ id: 'first', published_at: '2026-09-08T22:11:00Z' })} adapter="hacker_news" rank={1} />
+      <ItemRow item={item({ id: 'second', published_at: '2026-09-08T22:10:00Z' })} adapter="hacker_news" rank={2} />
+    </>)
+    const ages = screen.getAllByTitle(/09-09 06:1/)
+    expect(interval).toHaveBeenCalledTimes(1)
+
+    visibility.mockReturnValue('hidden')
+    act(() => vi.advanceTimersByTime(120_000))
+    expect(ages[0]).toHaveTextContent('1m')
+    visibility.mockReturnValue('visible')
+    act(() => document.dispatchEvent(new Event('visibilitychange')))
+    expect(ages[0]).toHaveTextContent('3m')
+    expect(ages[1]).toHaveTextContent('4m')
+
+    unmount()
+    expect(clear).toHaveBeenCalledTimes(1)
+    visibility.mockRestore()
+    interval.mockRestore()
+    clear.mockRestore()
+  })
+
   it('HN：分数、评论数链到讨论页、相对时间带绝对时间的悬停', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
 

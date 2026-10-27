@@ -1,5 +1,5 @@
 import type * as React from 'react'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -17,6 +17,35 @@ import type { Adapter, Item } from '@/types/lowpass'
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
 
+const clockListeners = new Set<(now: number) => void>()
+let clockTimer: ReturnType<typeof setInterval> | undefined
+
+function refreshClock() {
+  if (document.visibilityState === 'visible') {
+    const now = Date.now()
+    clockListeners.forEach((listener) => listener(now))
+  }
+}
+
+function subscribeClock(listener: (now: number) => void) {
+  clockListeners.add(listener)
+  if (clockListeners.size === 1) {
+    clockTimer = setInterval(refreshClock, 60_000)
+    document.addEventListener('visibilitychange', refreshClock)
+    window.addEventListener('pageshow', refreshClock)
+  }
+  listener(Date.now())
+  return () => {
+    clockListeners.delete(listener)
+    if (clockListeners.size === 0) {
+      clearInterval(clockTimer)
+      clockTimer = undefined
+      document.removeEventListener('visibilitychange', refreshClock)
+      window.removeEventListener('pageshow', refreshClock)
+    }
+  }
+}
+
 function Metric({ icon, label, children }: { icon: IconName; label: string; children: React.ReactNode }) {
   return (
     <span className="item-metric">
@@ -27,7 +56,9 @@ function Metric({ icon, label, children }: { icon: IconName; label: string; chil
 }
 
 function Age({ published }: { published: string }) {
-  const age = relativeAge(published)
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => subscribeClock(setNow), [])
+  const age = relativeAge(published, now)
   if (age === '') return null
   return (
     <time className="item-metric" dateTime={published} title={absoluteStamp(published)}>

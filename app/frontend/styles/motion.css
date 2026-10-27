@@ -147,6 +147,8 @@ details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
 
 /* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码不会卡住 */
 @media (prefers-reduced-motion: reduce) {
+  /* 日出是纯 SVG，没有依赖 animationend 的收尾：第一帧直接呈现终态，避免 1ms 动画仍先画起始姿态。 */
+  .sunrise--animated .sunrise-sun, .sunrise--animated .sunrise-ray, .sunrise--animated .sunrise-wave { animation: none !important; }
   .daily-source { overflow: visible !important; }
   .daily-source > .daily-source-sheet { transform: none !important; }
   .daily-source .item-row { color: var(--ink) !important; }

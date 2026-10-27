@@ -3,6 +3,44 @@ require "digest"
 require "tempfile"
 
 class HistoricalWeeklyOrderTest < ApplicationSystemTestCase
+  test "未知尺寸的懒加载图片尚未开始加载时原图入口留在正文内" do
+    sign_in_with_browser(users(:drew))
+    issue = issues(:weekly_w36)
+    source = sources(:ruanyf)
+    filler_url = "https://example.com/long-story"
+    issue.items.create!(source: source, title: "长篇正文", rank: 1, section: "图片", url: filler_url,
+      url_hash: Digest::SHA256.hexdigest(filler_url), fetched_at: Time.current,
+      content: Array.new(180, "这是用于推迟图片加载的段落。").join("\n"), meta: { issue_no: 416 })
+    image_url = "http://127.0.0.1:#{Capybara.current_session.server.port}/icon.png?deferred-image"
+    url = "https://example.com/deferred-image"
+    item = issue.items.create!(source: source, title: "延后加载的图片", rank: 2, section: "图片", url: url,
+      url_hash: Digest::SHA256.hexdigest(url), fetched_at: Time.current,
+      content: "图片介绍。\n图片说明。", meta: { issue_no: 416, image_urls: [ image_url ], image_positions: [ 1 ] })
+    ImageDimension.stubs(:enqueue_for)
+
+    [ 320, 375, 1440 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 700, deviceScaleFactor: 1, mobile: false)
+      visit weekly_issue_path(issue.period_key)
+      geometry = page.evaluate_script(<<~JS)
+        (() => {
+          const row = document.getElementById('item-#{item.id}'), image = row.querySelector('img')
+          const content = row.querySelector('.item-content--weekly').getBoundingClientRect()
+          const frame = row.querySelector('.item-media-frame').getBoundingClientRect()
+          const link = row.querySelector('.item-media-original').getBoundingClientRect()
+          return { complete: image.complete, top: frame.top, contentLeft: content.left, contentRight: content.right,
+            frameWidth: frame.width, linkLeft: link.left, linkRight: link.right, linkWidth: link.width }
+        })()
+      JS
+      assert_not geometry.fetch("complete"), "图片应仍在视口外等待加载：#{geometry}"
+      assert_operator geometry.fetch("top"), :>, 700
+      assert_operator geometry.fetch("linkWidth"), :>=, 44
+      assert_operator geometry.fetch("linkLeft"), :>=, geometry.fetch("contentLeft") - 0.5, "#{width}px: #{geometry}"
+      assert_operator geometry.fetch("linkRight"), :<=, geometry.fetch("contentRight") + 0.5, "#{width}px: #{geometry}"
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
   test "匹配的历史索引把图片放回段落之间而不修改刊期" do
     sign_in_with_browser(users(:drew))
     issue = issues(:weekly_w36)
@@ -31,6 +69,7 @@ class HistoricalWeeklyOrderTest < ApplicationSystemTestCase
         visit weekly_issue_path(issue.period_key)
         row = find("#item-#{item.id}")
         assert_selector "#item-#{item.id} .item-media img", count: 1, visible: :all
+        assert_selector("#item-#{item.id} .item-media img", visible: :all) { |image| image.evaluate_script("this.complete && this.naturalWidth > 0") }
         assert_equal %w[p img p], row.all(".item-content--weekly p, .item-media img", visible: :all).map(&:tag_name)
         original = row.find("a.item-media-original")
         assert_equal "查看历史图片顺序配图的原图（新标签页）", original["aria-label"]
@@ -39,13 +78,18 @@ class HistoricalWeeklyOrderTest < ApplicationSystemTestCase
           (() => {
             const link = this.getBoundingClientRect(), image = this.closest('figure').querySelector('img').getBoundingClientRect()
             const next = this.closest('.item-media').nextElementSibling.getBoundingClientRect()
-            return { width: link.width, height: link.height, imageBottom: image.bottom, linkTop: link.top, linkBottom: link.bottom, nextTop: next.top }
+            const content = this.closest('.item-content--weekly').getBoundingClientRect()
+            return { width: link.width, height: link.height, imageBottom: image.bottom, linkTop: link.top, linkBottom: link.bottom, nextTop: next.top,
+              linkLeft: link.left, linkRight: link.right, imageRight: image.right, contentLeft: content.left, contentRight: content.right, imageWidth: image.width }
           })()
         JS
         assert_operator geometry.fetch("width"), :>=, 44
         assert_operator geometry.fetch("height"), :>=, 44
         assert_operator geometry.fetch("linkTop"), :>=, geometry.fetch("imageBottom") - 0.5
         assert_operator geometry.fetch("nextTop"), :>=, geometry.fetch("linkBottom")
+        assert_operator geometry.fetch("linkLeft"), :>=, geometry.fetch("contentLeft") - 0.5
+        assert_operator geometry.fetch("linkRight"), :<=, geometry.fetch("contentRight") + 0.5
+        assert_in_delta geometry.fetch("imageRight"), geometry.fetch("linkRight"), 0.5 if geometry.fetch("imageWidth") >= 44
         assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0, "#{width}px 横向溢出"
       end
       HistoricalImagePositions.stubs(:current).returns(HistoricalImagePositions.new(paths: []))

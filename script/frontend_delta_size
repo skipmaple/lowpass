@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+# 获奖品质 D4 的累计预算，不能把每个 PR 当成新基线。
+# aee2d5f 的原始产物冻结在 vendor/frontend-budget，保留其逐文件指纹。
+# 当前与原始产物用同一个运行时 Zlib 重压缩，避免 macOS/Linux 的压缩库差异。
+# 沿用逐物理文件 BEST_COMPRESSION；异步与后台资源也计入。
+require "zlib"
+require "json"
+require "digest"
+
+build = File.expand_path(ARGV.fetch(0, "../public/vite"), __dir__)
+reference_path = File.expand_path("../vendor/frontend-budget/aee2d5f.json.gz", __dir__)
+unless Digest::SHA256.file(reference_path).hexdigest == "4382add9f5da24339750d24128142d01c645a9b18ac984dc8440d94a37620177"
+  abort "原始预算基线指纹不符"
+end
+reference = Zlib::GzipReader.open(reference_path) { |file| JSON.parse(file.read) }
+reference.fetch("files").each do |entry|
+  unless Digest::SHA256.hexdigest(entry.fetch("content")) == entry.fetch("sha256")
+    abort "原始资源指纹不符：#{entry.fetch('path')}"
+  end
+end
+gzip_size = ->(bytes) { Zlib.gzip(bytes, level: Zlib::BEST_COMPRESSION).bytesize }
+limits = { "js" => 3 * 1024, "css" => 4 * 1024 }
+manifest_path = File.join(build, ".vite/manifest.json")
+if File.file?(manifest_path)
+  # 本地多次构建可留下旧指纹文件；只数当前 manifest 的全页资源，不把过期缓存混进来。
+  resources = JSON.parse(File.read(manifest_path)).values.flat_map { |entry| [ entry.fetch("file"), *entry.fetch("css", []) ] }.uniq
+else
+  # 已冻结的逐资源验收包可以没有 Vite manifest。
+  resources = Dir.glob(File.join(build, "**", "*.{js,css}")).map { |path| path.delete_prefix("#{build}/") }
+end
+
+puts "基线 aee2d5f；Ruby #{RUBY_VERSION} / Zlib #{Zlib.zlib_version}；逐资源 gzip"
+passed = limits.map do |extension, limit|
+  original = reference.fetch("files").select { |entry| entry.fetch("path").end_with?(".#{extension}") }.sum { |entry| gzip_size.call(entry.fetch("content")) }
+  files = resources.select { |path| path.end_with?(".#{extension}") }.map { |path| File.join(build, path) }
+  total = files.sum { |path| gzip_size.call(File.binread(path)) }
+  delta = total - original
+  valid = files.any? && delta <= limit
+  puts "#{extension.upcase}: #{total} B，基线 #{original} B，增量 #{format('%+d', delta)} B，上限 +#{limit} B#{valid ? '' : '（超出或产物缺失）'}"
+  valid
+end.all?
+
+exit(passed ? 0 : 1)

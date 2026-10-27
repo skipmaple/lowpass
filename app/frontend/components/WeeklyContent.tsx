@@ -80,6 +80,22 @@ function Paragraph({ text, emphasized }: { text: string; emphasized: boolean }) 
   return <p>{emphasized ? <strong>{copy}</strong> : copy}</p>
 }
 
+function quoteRanges(item: Item, paragraphs: string[], positions: number[] | undefined, emphasis: Set<number>): [number, number][] {
+  const ranges = item.meta.quote_ranges
+  if (!item.content || !Array.isArray(ranges) || ranges.length > 128) return []
+  const valid = Array.from(ranges).every((range, index, values) => {
+    if (!Array.isArray(range) || range.length !== 2) return false
+    const [start, end] = range
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start >= end || end > paragraphs.length) return false
+    if (index > 0 && (!Array.isArray(values[index - 1]) || start < values[index - 1][1])) return false
+    const lines = paragraphs.slice(start, end)
+    return lines.every((line) => /^>(?: |$)/.test(line) && !/^>\s*>/.test(line)) && lines.some((line) => line.replace(/^> ?/, '').trim().length > 0)
+      && !positions?.some((position) => position > start && position < end)
+      && !Array.from(emphasis).some((position) => position >= start && position < end)
+  })
+  return valid ? ranges : []
+}
+
 // 新抓取记录可保留图片的原文段落位置；旧记录或任何不可靠元数据完整沿用全文后配图。
 export default function WeeklyContent({ item }: { item: Item }) {
   const copy = item.content ?? item.summary
@@ -88,6 +104,20 @@ export default function WeeklyContent({ item }: { item: Item }) {
   const emphasis = item.content && Array.isArray(item.meta.emphasis_positions) && item.meta.emphasis_positions.length <= 256
     && Array.from(item.meta.emphasis_positions).every((position, index, values) => Number.isInteger(position) && position >= 0 && position < paragraphs.length && (index === 0 || position > values[index - 1]))
     ? new Set(item.meta.emphasis_positions) : new Set<number>()
+  const quotes = quoteRanges(item, paragraphs, positions, emphasis)
+  const starts = new Map(quotes)
+  const covered = new Set(quotes.flatMap(([start, end]) => Array.from({ length: end - start - 1 }, (_, i) => start + i + 1)))
+  const paragraphAt = (index: number) => {
+    const end = starts.get(index)
+    if (end !== undefined) {
+      return <blockquote key={index}>{paragraphs.slice(index, end).map((text, offset) => {
+        const quote = text.replace(/^> ?/, '')
+        return quote ? <Paragraph key={index + offset} text={quote} emphasized={false} /> : null
+      })}</blockquote>
+    }
+    if (covered.has(index)) return null
+    return <Paragraph key={index} text={paragraphs[index]} emphasized={emphasis.has(index)} />
+  }
   if (positions) {
     const groups = new Map<number, number[]>()
     positions.forEach((position, index) => {
@@ -101,7 +131,7 @@ export default function WeeklyContent({ item }: { item: Item }) {
         {Array.from({ length: paragraphs.length + 1 }, (_, boundary) => (
           <Fragment key={boundary}>
             {groups.has(boundary) ? <WeeklyMedia item={item} indices={groups.get(boundary)} /> : null}
-            {boundary < paragraphs.length ? <Paragraph text={paragraphs[boundary]} emphasized={emphasis.has(boundary)} /> : null}
+            {boundary < paragraphs.length ? paragraphAt(boundary) : null}
           </Fragment>
         ))}
       </div>
@@ -110,7 +140,7 @@ export default function WeeklyContent({ item }: { item: Item }) {
 
   return (
     <>
-      {copy ? <div className="item-content item-content--weekly">{paragraphs.map((text, index) => <Paragraph key={index} text={text} emphasized={emphasis.has(index)} />)}</div> : null}
+      {copy ? <div className="item-content item-content--weekly">{paragraphs.map((_, index) => paragraphAt(index))}</div> : null}
       <WeeklyMedia item={item} />
     </>
   )

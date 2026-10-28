@@ -15,11 +15,12 @@ class PublicationWrappingTest < ApplicationSystemTestCase
   test "320px 周刊来源副标题保留全文且末行不剩非字" do
     weekly("2026-W43", 416, "编程已经面目全非", count: 32)
     sign_in_with_browser(users(:drew))
-    render_page weekly_issue_path("2026-W43"), width: 320, target: ".source-band-issue"
+    render_page weekly_issue_path("2026-W43"), width: 320, target: ".source-band-title"
 
-    layout = text_layout(".source-band-issue")
-    assert_equal "第 416 期 · 编程已经面目全非", layout.fetch("text")
-    assert_equal [ "15px" ], layout.fetch("fontSizes")
+    layout = text_layout(".source-band-title")
+    assert_equal "编程已经面目全非", layout.fetch("text")
+    assert_selector ".source-band-issue", text: "第 416 期"
+    assert_equal [ "22px" ], layout.fetch("fontSizes")
     assert_no_orphan layout
     assert layout.fetch("lines").any? { |line| line.include?("编程已经面目全非") },
       "主题能放进一行时，不应把编程拆到期号两边：#{layout.fetch('lines').inspect}"
@@ -30,17 +31,19 @@ class PublicationWrappingTest < ApplicationSystemTestCase
     title = "完整技术主题" * 8 + " " + "W" * 80
     issue = weekly("2026-W43", 416, title, count: 1)
     sign_in_with_browser(users(:drew))
-    render_page weekly_issue_path("2026-W43"), width: 320, target: ".source-band-issue"
-    layout = text_layout(".source-band-issue")
-    assert_equal "第 416 期 · #{title}", layout.fetch("text")
+    render_page weekly_issue_path("2026-W43"), width: 320, target: ".source-band-title"
+    layout = text_layout(".source-band-title")
+    assert_equal title, layout.fetch("text")
+    assert_selector ".source-band-issue", text: "第 416 期"
     assert_no_overflow layout
     assert_operator layout.fetch("lines").length, :>, 2
 
     [ nil, "用 Rust · 组织工具" ].each do |theme|
       issue.items.first!.update!(meta: { issue_no: 416, issue_title: theme })
-      render_page weekly_issue_path("2026-W43"), width: 320, target: ".source-band-issue"
-      layout = text_layout(".source-band-issue")
-      assert_equal [ "第 416 期", theme ].compact.join(" · "), layout.fetch("text")
+      render_page weekly_issue_path("2026-W43"), width: 320, target: ".source-band-title"
+      layout = text_layout(".source-band-title")
+      assert_equal theme || sources(:ruanyf).name, layout.fetch("text")
+      assert_selector ".source-band-issue", text: "第 416 期"
       assert_no_overflow layout
     end
   end
@@ -76,8 +79,9 @@ class PublicationWrappingTest < ApplicationSystemTestCase
       sign_in_with_browser(users(:drew))
       render_page weekly_issues_path(year: "2026"), width: width, target: ".archive-label"
 
-      layout = text_layout(".archive-row[href='#{weekly_issue_path(key)}'] .archive-label")
-      assert_equal "阮一峰科技爱好者周刊 第 #{number} 期 · #{title}", layout.fetch("text")
+      layout = text_layout(".archive-row[href='#{weekly_issue_path(key)}'] .archive-label-title")
+      assert_equal title, layout.fetch("text")
+      assert_selector ".archive-row[href='#{weekly_issue_path(key)}'] .archive-label-source", text: "阮一峰科技爱好者周刊 · 第 #{number} 期"
       assert_equal [ "20px" ], layout.fetch("fontSizes")
       assert_no_orphan layout
     end
@@ -101,9 +105,10 @@ class PublicationWrappingTest < ApplicationSystemTestCase
       render_page weekly_issues_path(year: "2026"), width: width, target: ".archive-label-part"
       row = find(".archive-row[href='#{weekly_issue_path('2026-W38')}']")
       labels = row.all(".archive-label-part")
-      assert_equal [ "阮一峰科技爱好者周刊 第 412 期 · 禁止 issue / PR", "阮一峰科技爱好者周刊 第 413 期 · 再见了，React Native" ], labels.map(&:text)
+      assert_equal [ "禁止 issue / PR", "再见了，React Native" ], labels.map { |label| label.find(".archive-label-title").text }
+      assert_equal [ "阮一峰科技爱好者周刊 · 第 412 期", "阮一峰科技爱好者周刊 · 第 413 期" ], labels.map { |label| label.find(".archive-label-source").text }
       source_layout = text_layout(".archive-row[href='#{weekly_issue_path('2026-W38')}'] .archive-label-part:nth-child(2) .archive-label-source")
-      assert_equal [ "阮一峰科技爱好者周刊" ], source_layout.fetch("lines"), "#{width}px 来源名应保持为一个阅读单位"
+      assert source_layout.fetch("lines").any? { |line| line.include?("阮一峰科技爱好者周刊") }, "#{width}px 来源名应保持为一个阅读单位"
       assert_operator labels[0].rect.y + labels[0].rect.height, :<, labels[1].rect.y, "#{width}px 标题之间需要留白"
       assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0, "#{width}px 横向溢出"
       assert_equal weekly_issue_path("2026-W38"), URI(row[:href]).path
@@ -112,7 +117,7 @@ class PublicationWrappingTest < ApplicationSystemTestCase
     sources(:ruanyf).update!(name: "超长来源" * 20)
     render_page weekly_issues_path(year: "2026"), width: 320, target: ".archive-label-source"
     layout = text_layout(".archive-row[href='#{weekly_issue_path('2026-W38')}'] .archive-label-source")
-    assert_equal "超长来源" * 20, layout.fetch("text")
+    assert_includes layout.fetch("text"), "超长来源" * 20
     assert_no_overflow layout
 
     sources(:ruanyf).update!(name: "阮一峰科技爱好者周刊")
@@ -151,8 +156,8 @@ class PublicationWrappingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
 
     [ 320, 375, 390, 481, 600, 767, 768, 1023, 1024, 1440, 1920, 2560 ].each do |width|
-      render_page weekly_issue_path("2026-W43"), width: width, target: ".source-band-issue"
-      issue_label = text_layout(".source-band-issue")
+      render_page weekly_issue_path("2026-W43"), width: width, target: ".source-band-title"
+      issue_label = text_layout(".source-band-title")
       assert_no_orphan issue_label
       assert issue_label.fetch("lines").any? { |line| line.include?("编程已经面目全非") },
         "#{width}px：可放下的主题保留为阅读单位；#{issue_label.fetch('lines').inspect}"
@@ -167,7 +172,7 @@ class PublicationWrappingTest < ApplicationSystemTestCase
 
       render_page weekly_issues_path(year: "2026"), width: width, target: ".archive-label"
       %w[ 2026-W43 2026-W41 2026-W38 ].each do |key|
-        assert_no_orphan text_layout(".archive-row[href='#{weekly_issue_path(key)}'] .archive-label")
+        assert_no_orphan text_layout(".archive-row[href='#{weekly_issue_path(key)}'] .archive-label-title")
       end
       assert_date_units "2026-W41", "10月5日 至 10月11日"
       assert_date_units "2026-W40", "9月28日 至 10月4日"

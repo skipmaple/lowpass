@@ -50,19 +50,24 @@ describe('周刊归档', () => {
 
     const row = rows(container)[0]
     expect(row.querySelectorAll('.archive-label-part')).toHaveLength(2)
-    expect(row.querySelectorAll('.archive-label-part')[0]).toHaveTextContent(first)
-    expect(row.querySelectorAll('.archive-label-part')[1]).toHaveTextContent(second)
+    expect(row.querySelectorAll('.archive-label-title')[0]).toHaveTextContent('禁止 issue / PR')
+    expect(row.querySelectorAll('.archive-label-title')[1]).toHaveTextContent('再见 React Native')
+    expect(row.querySelectorAll('.archive-label-source')[0]).toHaveTextContent('阮一峰科技爱好者周刊 · 第 412 期')
+    expect(row.querySelectorAll('.archive-label-source')[1]).toHaveTextContent('阮一峰科技爱好者周刊 · 第 413 期')
     expect(row).toHaveAttribute('href', '/weekly/2026-W36')
   })
 
   it('已发布：实心记号、周次、日期范围、各源期号与条数', () => {
-    const { container } = index()
+    const { container } = index({ weeks: [archiveWeek({ summary_parts: [
+      { source: '阮一峰科技爱好者周刊', label: '第 366 期 · 人生的容错率' },
+    ] })] })
 
     const row = rows(container)[0]
     expect(within(row).getByRole('img', { name: '已发布' })).toBeInTheDocument()
     expect(row).toHaveTextContent('第 36 周')
     expect(row).toHaveTextContent('8月31日 至 9月6日')
-    expect(row.querySelector('.archive-label')).toHaveTextContent('阮一峰科技爱好者周刊 第 366 期 · 人生的容错率')
+    expect(row.querySelector('.archive-label-title')).toHaveTextContent('人生的容错率')
+    expect(row.querySelector('.archive-label-source')).toHaveTextContent('阮一峰科技爱好者周刊 · 第 366 期')
     expect(row.querySelector('.archive-meta')).toHaveTextContent('42 条')
   })
 
@@ -85,10 +90,22 @@ describe('周刊归档', () => {
     })
 
     const colorOf = (row: HTMLElement) =>
-      (row.querySelector('.archive-label-source span') as HTMLElement | null)?.style.color
+      (row.querySelector('.archive-label-title span') as HTMLElement | null)?.style.color
 
     expect(colorOf(rows(container)[0])).toBe('var(--ink)')
     expect(colorOf(rows(container)[1])).toBe('var(--ink2)')
+  })
+
+  it('没有独立主题时保留来源名作为主要信息，不凭空添加主题', () => {
+    const { container } = index({ weeks: [archiveWeek({ summary_parts: [
+      { source: '阮一峰科技爱好者周刊', label: '第 366 期' },
+      { source: 'Engineering Weekly', label: null },
+    ] })] })
+    const parts = rows(container)[0].querySelectorAll('.archive-label-part')
+    expect(parts[0].querySelector('.archive-label-title')).toHaveTextContent('阮一峰科技爱好者周刊')
+    expect(parts[0].querySelector('.archive-label-source')).toHaveTextContent('第 366 期')
+    expect(parts[1].querySelector('.archive-label-title')).toHaveTextContent('Engineering Weekly')
+    expect(parts[1].querySelector('.archive-label-source')).toBeNull()
   })
 })
 

@@ -12,7 +12,7 @@ import type { Adapter, Item } from '@/types/lowpass'
 // 说明译文（GitHub Trending，D25）、元数据、兴趣标签、推荐理由。日刊时间明确区分提交、发布与收录。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
 // 兴趣标签紧跟标题最后一个词（所有宽度，2026-10-14 O1）：标题元素行内排，标签是它后面的行内小签，放不下就整个换到下一行行首。
-// 日刊书签在元数据中跟随评论，Tab 依次到标题、评论与收藏；周刊书签仍在条目行末独立一格。
+// 日刊操作跟在完整内容后；周刊书签紧跟标题，长文开始前即可收藏。
 // 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
@@ -169,10 +169,10 @@ export function Translation({ text }: { text: string }) {
 
 // D19：周刊条目不生成推荐理由，也就没有兴趣标签；元数据只剩发布时间。
 // heading 是标题的层级（PRD 6.4「标题层级语义正确」）：日刊页 h1 是日期，条目就是 h2；
-// 周刊页 h1 是周次、h2 是源名、h3 是板块，所以条目按所在位置降一到两级。
+// 周刊页 h1 是周次、h2 是本期主题、h3 是板块；承担本期主题的首条直接用 h2，其余条目按所在位置降一到两级。
 // id 是搜索结果所在期链接的落点（设计 6.3）。
 export type ItemVariant = 'daily' | 'weekly'
-export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4' }
+export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4'; intro?: React.ReactNode }
 
 // 标签也参与父盒的 balance；保留英文末两词的断行关系，避免标签把标题末词独留一行。
 // slice 原文而不重新拼词，空白与可读名称不变；超长片段仍可在自己的宽度上限内折行。
@@ -183,13 +183,13 @@ function TitleText({ text, tagged }: { text: string; tagged: boolean }) {
   return <>{text.slice(0, tail.index)}<span className="item-title-tail">{tail[0]}</span></>
 }
 
-export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2' }: ItemRowProps) {
+export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2', intro }: ItemRowProps) {
   const weekly = variant === 'weekly'
   const tagged = !weekly && Boolean(item.interest_tag)
   const copy = item.summary
 
   return (
-    <article className={`item-row${weekly ? ' item-row--weekly' : ''}`} id={`item-${item.id}`} tabIndex={weekly ? -1 : undefined}>
+    <article className={`item-row${weekly ? ' item-row--weekly' : ''}${intro ? ' item-row--lead' : ''}`} id={`item-${item.id}`} tabIndex={weekly ? -1 : undefined}>
       <span className="item-rank">{rank}</span>
 
       <div className="item-body">
@@ -203,20 +203,21 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
           {tagged ? (
             <span className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></span>
           ) : null}
+          {weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} /> : null}
         </div>
+        {intro}
         {!weekly && item.title_zh ? <Translation text={item.title_zh} /> : null}
         {/* 周刊正文完整展开、按原文分段（SummaryCleaner.content 一行一段），并按中西文分配字体；日刊摘要完整显示。 */}
         {weekly ? <WeeklyContent item={item} /> : copy ? <span className="item-summary" lang={latinLang(copy)}>{copy}</span> : null}
         {!weekly && item.summary_zh ? <Translation text={item.summary_zh} /> : null}
-        <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
         {!weekly && item.reason ? (
           <div className="item-reason">
             <Mixed text={item.reason} font="latin" size="inherit" color="inherit" weight={400} lineHeight="inherit" />
           </div>
         ) : null}
+        <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
       </div>
 
-      {weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} /> : null}
     </article>
   )
 }

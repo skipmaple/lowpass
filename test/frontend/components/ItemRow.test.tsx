@@ -795,7 +795,7 @@ describe('ItemRow 书签（PRD 5.10）', () => {
     expect(savedMark.textContent).toBe('')
   })
 
-  it('周刊纯图标书签仍独立位于正文之后', () => {
+  it('周刊纯图标书签紧随标题，长文阅读前即可操作', () => {
     const { container } = render(
       <FavoritesProvider favorites={[]}>
         <ItemRow item={item({ title: '人生的容错率' })} adapter="ruanyf_weekly" rank={1} variant="weekly" heading="h4" />
@@ -805,7 +805,8 @@ describe('ItemRow 书签（PRD 5.10）', () => {
     const mark = screen.getByRole('button', { name: '收藏：人生的容错率' })
     expect(mark).toHaveClass('item-mark')
     expect(mark.textContent).toBe('')
-    expect(container.querySelector('.item-body')?.nextElementSibling).toBe(mark)
+    expect(container.querySelector('.item-title')?.nextElementSibling).toBe(mark)
+    expect(container.querySelector('.item-heading')?.contains(mark)).toBe(true)
   })
 
   it('日刊键盘依次到标题、评论和收藏；空格收藏保持焦点与同一按钮', async () => {

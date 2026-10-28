@@ -1,0 +1,17 @@
+/* 搜索与收藏是一列连续阅读：正文、出处、操作与分隔线共用版心。 */
+.search-reading, .results-reading, .search-results { width: 100%; max-width: 780px; margin-inline: auto; }
+.search-row { padding: 24px 0; }
+.search-title { margin-top: 0; }
+.result-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 8px; }
+.result-context {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; max-width: 100%;
+  font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); overflow-wrap: anywhere;
+}
+.result-context > span { max-width: 100%; }
+.result-meta .search-links { min-width: 0; max-width: 100%; gap: 4px 8px; margin-top: 0; }
+.result-meta .search-mark { margin-left: 0; }
+.result-meta .favorite-button { margin-right: 0; }
+
+@media (min-width: 1920px) {
+  .search-reading, .results-reading, .search-results { max-width: 920px; }
+}

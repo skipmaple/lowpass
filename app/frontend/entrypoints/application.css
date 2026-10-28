@@ -4,6 +4,8 @@
 @import "../styles/tokens.css";
 @import "../styles/motion.css";
 @import "../styles/daily.css";
+@import "../styles/weekly.css";
+@import "../styles/results.css";
 @import "../styles/print.css";
 
 /* shadcn 的组件只作可及性与键盘行为的底座，外观全部由令牌覆盖：

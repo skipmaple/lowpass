@@ -19,7 +19,7 @@
 /* ─── M4 墨线 ─────────────────────────────────────────────────────────── */
 
 /* 链接下划线由 30% 墨加深到实墨；原先悬停才画下划线的几处改成常驻透明下划线，悬停只换颜色，才过渡得起来 */
-a.t, .link-button, .archive-key, .search-original { transition: text-decoration-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out); }
+a.t, .link-button, .archive-key { transition: text-decoration-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out); }
 .menu-item, .directory-return, .source-band-link {
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
   transition: text-decoration-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
@@ -39,12 +39,12 @@ a.t, .link-button, .archive-key, .search-original { transition: text-decoration-
 }
 
 /* 可选中的控件（来源索引条、分段控件）反白专指选中：未选中项悬停只给名字加 1px 下划线 */
-.source-tab .source-tab-name, .seg-item {
+.seg-item {
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent;
   transition: text-decoration-color var(--dur-1) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .source-tab[data-state="inactive"]:hover .source-tab-name, .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }
+  .seg-item:not([aria-current="true"]):hover { text-decoration-color: currentColor; }
 }
 
 /* ─── 日刊跨来源：沿纸面接入下一栏（D35）─────────────────────────── */

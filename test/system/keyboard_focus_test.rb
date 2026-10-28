@@ -76,7 +76,7 @@ class KeyboardFocusTest < ApplicationSystemTestCase
         JS
 
         tab_to(".weekly-directory > summary")
-        press(:return) if width < 768
+        press(:return)
         assert_selector ".weekly-directory[open]"
         press(:tab)
         assert_selector ".anchor-chip:first-child:focus"

@@ -1,21 +1,17 @@
 import { Link } from '@inertiajs/react'
 
-import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
 import HitText from '@/components/HitText'
-import Icon from '@/components/Icon'
 import { Translation } from '@/components/ItemRow'
 import { reportClick } from '@/lib/search'
 import { markSearchResult, searchResultId } from '@/lib/searchFocus'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { HitRun, SearchResult } from '@/types/lowpass'
 
-// 结果行（R-4.6）：眉行放刊物、来源与独立发布时间，所在期只在底行链接中出现；标题与摘要片段带命中下划线，
-// 已有日刊译文紧跟对应原文；底行「所在期 · …」与「原文 ↗」，右端是书签（PRD 5.10）。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
-// 所在期是站内直链，不计。
+// 结果行（R-4.6）：先读标题、译文与命中片段，再看来源和所属刊期。
+// 标题是唯一原文入口，点击上报一次 search_click（9.1）；所在期直链与书签组成同一操作组。
 
 const LABELS: Record<SearchResult['publication'], string> = { daily: '日刊', weekly: '周刊' }
-const DOT = <span className="search-dot">·</span>
 const runText = (runs: HitRun[]) => runs.map((run) => run.text).join('')
 
 export default function SearchResultRow({ result, q }: { result: SearchResult; q: string }) {
@@ -23,18 +19,6 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
 
   return (
     <article className="search-row">
-      <div className="search-eyebrow">
-        <Chip text={LABELS[result.publication]} />
-        <Mixed text={result.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
-        {/* 发布时间与所在期相同就不重复；周刊的发布日期不同于周次与板块，仍须保留。 */}
-        {result.published_label !== result.where.label ? (
-          <>
-            {DOT}
-            <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" />
-          </>
-        ) : null}
-      </div>
-
       <h2 className="search-title">
         <a className="t" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report} lang={latinLang(runText(result.title_runs))}>
           <HitText runs={result.title_runs} size="var(--fs-20)" color="var(--ink)" />
@@ -49,15 +33,20 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
       ) : null}
       {result.publication === 'daily' && result.snippet_runs && result.summary_zh ? <Translation text={result.summary_zh} /> : null}
 
-      <div className="search-links">
-        <Link id={searchResultId(result.item_id)} className="t" href={result.where.href} onBefore={() => markSearchResult(result.item_id)}>
-          <Mixed text={`所在期 · ${result.where.label}`} size="var(--fs-13)" color="var(--ink)" />
-        </Link>
-        <a className="search-original" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report}>
-          <span>原文</span>
-          <Icon name="arrow-up-right" size={12} />
-        </a>
-        <FavoriteButton className="search-mark" itemId={result.item_id} urlHash={result.url_hash} title={runText(result.title_runs)} />
+      <div className="result-meta">
+        <div className="result-context">
+          <span>{LABELS[result.publication]}</span>
+          <Mixed text={result.source_name} font="latin" size="var(--fs-13)" color="var(--ink2)" />
+          {result.published_label !== result.where.label ? (
+            <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" />
+          ) : null}
+        </div>
+        <div className="search-links">
+          <Link id={searchResultId(result.item_id)} className="t" href={result.where.href} onBefore={() => markSearchResult(result.item_id)}>
+            <Mixed text={`所在期 · ${result.where.label}`} size="var(--fs-13)" color="var(--ink)" />
+          </Link>
+          <FavoriteButton className="search-mark" itemId={result.item_id} urlHash={result.url_hash} title={runText(result.title_runs)} />
+        </div>
       </div>
     </article>
   )

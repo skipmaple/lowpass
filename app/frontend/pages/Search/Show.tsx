@@ -237,10 +237,12 @@ export default function Show(props: SearchShowProps) {
       <Head title={props.q ? `搜索 · ${props.q}` : '搜索'} />
       {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
       <h1 ref={headingRef} className="sr-only" tabIndex={-1}>搜索</h1>
-      <SearchHead draft={draft} setDraft={setDraft} filters={filterDraft.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} autoFocus={!returnTarget} />
-      <SearchFilters q={navigationQuery} draft={filterDraft} sourceOptions={props.source_options} datePresets={props.date_presets} />
-      <div id="search-status" className={loading && props.state !== 'results' ? 'search-loading' : !loading && notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
-      <Body {...props} navigationQuery={navigationQuery} filterDraft={filterDraft} onModifyQuery={modifyQuery} loading={loading} />
+      <div className="search-reading">
+        <SearchHead draft={draft} setDraft={setDraft} filters={filterDraft.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} autoFocus={!returnTarget} />
+        <SearchFilters q={navigationQuery} draft={filterDraft} sourceOptions={props.source_options} datePresets={props.date_presets} />
+        <div id="search-status" className={loading && props.state !== 'results' ? 'search-loading' : !loading && notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
+        <Body {...props} navigationQuery={navigationQuery} filterDraft={filterDraft} onModifyQuery={modifyQuery} loading={loading} />
+      </div>
     </FavoritesProvider>
   )
 }

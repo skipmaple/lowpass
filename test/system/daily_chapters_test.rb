@@ -23,6 +23,39 @@ class DailyChaptersTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
   end
 
+  test "窄屏短标题可触控且元信息在空间足够时保持同一行" do
+    items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
+    [ 305, 320, 375 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{items(:hn_one).id}")
+      assert row.has_selector?(".item-comments"), "评论应为可操作的链接"
+      title = row.find(".item-title a")
+      execute_script("arguments[0].scrollIntoView({ block: 'center' })", title)
+      geometry = evaluate_script(<<~JS, row)
+        (() => {
+          const row = arguments[0], link = row.querySelector('.item-title a'), r = link.getBoundingClientRect();
+          const x = r.left + r.width / 2, y = r.top + r.height / 2;
+          const age = row.querySelector('.item-age').getBoundingClientRect();
+          const bookmark = row.querySelector('.item-save').getBoundingClientRect();
+          const meta = row.querySelector('.item-meta'), gap = parseFloat(getComputedStyle(meta).columnGap);
+          const children = [...meta.children], required = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + gap * (children.length - 1);
+          return { height: r.height, hits: [-21.5, 0, 21.5].map(dy => document.elementFromPoint(x, y + dy)?.closest('a') === link),
+            ageY: age.top + age.height / 2, bookmarkY: bookmark.top + bookmark.height / 2,
+            gap, required, available: meta.getBoundingClientRect().width,
+            overflow: document.documentElement.scrollWidth > innerWidth };
+        })()
+      JS
+      assert_operator geometry.fetch("height"), :>=, 44, "#{width}px 短标题触控高度"
+      assert geometry.fetch("hits").all?, "#{width}px 标题的 44px 区域应命中链接"
+      assert_equal 4, geometry.fetch("gap"), "#{width}px 极窄屏收紧元信息间距" if width < 359
+      if geometry.fetch("required") <= geometry.fetch("available") + 0.01
+        assert_in_delta geometry.fetch("bookmarkY"), geometry.fetch("ageY"), 1, "#{width}px 空间足够时元信息应在同一行"
+      end
+      assert_not geometry.fetch("overflow"), "#{width}px 无横向溢出"
+    end
+  end
+
   test "桌面与窄屏的全部章节保持原有暖纸与纸纹，普通和减少动态模式下正文都可读" do
     WIDTHS.each do |width|
       viewport(width)
@@ -134,7 +167,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "来源标题与首条正文共享居中的阅读列，栏目开头没有额外空块" do
+  test "来源标题与正文共享左对齐的阅读列，栏目开头没有额外空块" do
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
     WIDTHS.each do |width|
       viewport(width)
@@ -144,7 +177,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
       geometry = evaluate_script(<<~JS)
         (() => {
           const rect = element => element.getBoundingClientRect().toJSON();
-          return { sheet: rect(document.querySelector('.sheet-body')),
+          return { sheet: rect(document.querySelector('.sheet-body')), pageHead: rect(document.querySelector('.page-head')),
             sources: [...document.querySelectorAll('.daily-source')].map(section => {
               const header = section.querySelector('.daily-source-head'), heading = section.querySelector('.print-source-name');
               const row = section.querySelector('.item-row'), body = row.querySelector('.item-body'), title = row.querySelector('.item-heading');
@@ -155,8 +188,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
       JS
       geometry.fetch("sources").each do |source|
         column, header, heading, row, body, title = source.values_at("section", "header", "heading", "row", "body", "title")
-        sheet = geometry.fetch("sheet")
-        assert_in_delta sheet.fetch("left") + sheet.fetch("width") / 2, column.fetch("left") + column.fetch("width") / 2, 1, "#{width}px：阅读列居中"
+        assert_in_delta geometry.fetch("pageHead").fetch("left"), column.fetch("left"), 1, "#{width}px：阅读列与期头左对齐"
         assert_in_delta heading.fetch("left"), body.fetch("left"), 1, "#{width}px：来源名与正文左缘一致"
         assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{width}px：条目与栏目同列"
         assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{width}px：条目与栏目同列"

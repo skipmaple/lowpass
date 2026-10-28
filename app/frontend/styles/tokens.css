@@ -18,7 +18,7 @@
   --font-data: "Maple Mono NL", ui-monospace, monospace;
 
   /* 基础字号序列；16 / 64 只用于 1920px 以上的大屏阅读模式。 */
-  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-16: 16px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-40: 40px; --fs-56: 56px; --fs-64: 64px;
+  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-16: 16px; --fs-18: 18px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-40: 40px; --fs-56: 56px; --fs-64: 64px;
 
   /* 没有圆角：shadcn 组件里的 calc(var(--radius) …) 也要能算，所以带单位 */
   --radius: 0px;

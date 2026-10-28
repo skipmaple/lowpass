@@ -1,7 +1,7 @@
 /* 周刊的主题、目录与正文共享阅读列；来源事实跟在主题之后。 */
 .item-row--lead .source-band-link { color: var(--ink); }
 @media screen {
-  .weekly-reading { --weekly-gutter: 44px; max-width: 824px; margin-top: 24px; margin-inline: auto; }
+  .weekly-reading { --weekly-gutter: 44px; max-width: 824px; margin-top: 24px; }
   .weekly-reading + .weekly-reading { margin-top: 40px; }
   .weekly-reading .source-band {
     display: block; min-height: 0; margin: 0 0 8px var(--weekly-gutter); padding: 0;
@@ -45,6 +45,7 @@
   }
   .weekly-reading .weekly-directory + section > .weekly-section-head { padding-top: 16px; }
   .weekly-reading .item-row--weekly { padding-top: 16px; padding-bottom: 20px; }
+  .weekly-reading .item-content--weekly { font-size: var(--fs-18); }
   .weekly-reading .item-row--lead { padding-top: 0; }
   .weekly-reading .item-row--lead .item-title { font-size: var(--fs-26); line-height: 1.3; }
   .weekly-reading .item-row--lead .weekly-directory { margin-left: 0; }
@@ -57,6 +58,7 @@
   @media (max-width: 767px) {
     .weekly-reading { --weekly-gutter: 32px; margin-top: 20px; }
     .weekly-reading .source-band-title { font-size: var(--fs-22); }
+    .weekly-reading .item-content--weekly { font-size: var(--fs-16); }
     .weekly-reading .item-row--lead .item-title { font-size: var(--fs-22); }
   }
   @media (min-width: 1920px) {

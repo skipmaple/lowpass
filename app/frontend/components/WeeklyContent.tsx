@@ -80,7 +80,7 @@ type ReferenceLink = [number, number, number, string]
 function Paragraph({ text, emphasized, links = [], skip = 0 }: { text: string; emphasized: boolean; links?: ReferenceLink[]; skip?: number }) {
   const characters = Array.from(text)
   let cursor = 0
-  const mixed = (value: string) => <Mixed text={value} font="latin" size="var(--fs-15)" color={emphasized ? 'var(--ink)' : 'var(--ink2)'} weight={emphasized ? 600 : 500} lineHeight={1.8} />
+  const mixed = (value: string) => <Mixed text={value} font="latin" size="inherit" color={emphasized ? 'var(--ink)' : 'var(--ink2)'} weight={emphasized ? 600 : 500} lineHeight={1.8} />
   const copy = links.length ? <>{links.map(([, rawStart, rawEnd, href], index) => {
     const start = rawStart - skip, end = rawEnd - skip
     let preceding = characters.slice(cursor, start).join('')

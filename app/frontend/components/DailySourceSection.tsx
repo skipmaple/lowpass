@@ -5,7 +5,7 @@ import { SourceMark } from '@/components/Illustration'
 import { Mixed } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
-export default function DailySourceSection({ source, children, animate, aliasId }: PropsWithChildren<{ source: SourceSummary; animate: boolean; aliasId?: string }>) {
+export default function DailySourceSection({ source, children, animate, aliasId, ordinal = 1 }: PropsWithChildren<{ source: SourceSummary; animate: boolean; aliasId?: string; ordinal?: number }>) {
   const sectionRef = useRef<HTMLElement>(null)
   const headingId = `source-heading-${source.id}`
 
@@ -70,16 +70,17 @@ export default function DailySourceSection({ source, children, animate, aliasId 
   }, [animate, source.id, source.state])
 
   return (
-    <section ref={sectionRef} id={`source-${source.id}`} className="daily-source print-source" aria-labelledby={headingId} tabIndex={-1}>
+    <section ref={sectionRef} id={`source-${source.id}`} className="daily-source print-source" data-adapter={source.adapter} aria-labelledby={headingId} tabIndex={-1}>
       <div className="daily-source-sheet">
         <header className="daily-source-head">
           {aliasId ? <span id={aliasId} className="daily-source-anchor" aria-hidden="true" /> : null}
           <div className="daily-source-heading">
-            <SourceMark adapter={source.adapter} hole="var(--paper)" className="daily-source-icon" />
+            <span className="daily-source-number" aria-hidden="true">{String(ordinal).padStart(2, '0')}</span>
             <h2 id={headingId} className="print-source-name">
               <Mixed text={source.name} font="latin" size="inherit" color="inherit" weight={600} lineHeight={1.2} />
             </h2>
           </div>
+          <SourceMark adapter={source.adapter} hole="var(--paper)" className="daily-source-icon" />
           <span className="daily-source-rule" aria-hidden="true" />
         </header>
         <div className="daily-source-content">{children}</div>

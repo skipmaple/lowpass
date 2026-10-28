@@ -4,7 +4,7 @@ require "base64"
 # 设计说明 2026-10-14 里能用计算样式与几何量出来的规则。直接把生产 CSS 和最小的 HTML 片段装进一页
 # （同 paper_test），不经 Vite、不登录：量的是样式表本身。动效与打印的样式表还没建时就跳过它们。
 class DesignRulesTest < ApplicationSystemTestCase
-  STYLES = %w[ tokens.css motion.css print.css ].freeze
+  STYLES = %w[ tokens.css motion.css daily.css print.css ].freeze
   PAPER = "rgb(232, 227, 218)".freeze
   INK = "rgb(29, 29, 27)".freeze
 
@@ -51,34 +51,52 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "90deg", style("summary", "rotate", "::before")
   end
 
-  test "Q3 索引条相邻的边与下面的列表线都合成一条 1px" do
-    [ 1440, 375 ].each do |width|
+  test "来源目录的三个独立入口保留足够命中面积，窄屏不重叠或溢出" do
+    [ 1440, 375, 320 ].each do |width|
       render_fragment(<<~HTML, width: width)
-        <div class="source-tabs"><button class="source-tab">A</button><button class="source-tab">B</button><button class="source-tab">C</button></div>
+        <nav class="source-tabs">
+          <a class="source-tab" href="#hn" data-adapter="hacker_news"><span class="source-tab-number">01</span><span class="source-tab-name">Hacker News</span></a>
+          <a class="source-tab" href="#gh" data-adapter="github_trending"><span class="source-tab-number">02</span><span class="source-tab-name">GitHub Trending</span></a>
+          <a class="source-tab" href="#rss" data-adapter="rss"><span class="source-tab-number">03</span><span class="source-tab-name">Hackaday</span></a>
+        </nav>
         <div class="issue-body"><p>x</p></div>
       HTML
       tabs = evaluate_script("[...document.querySelectorAll('.source-tab')].map((tab) => tab.getBoundingClientRect().toJSON())")
-      body = evaluate_script("document.querySelector('.issue-body').getBoundingClientRect().toJSON()")
-
-      assert_in_delta 0, tabs[0]["left"], 0.5, "#{width}px：最左一条贴齐版心"
-      assert_in_delta tabs[0]["right"] - 1, tabs[1]["left"], 0.5, "#{width}px：第一、二条共用一条边"
-      assert_in_delta tabs[1]["right"] - 1, tabs[2]["left"], 0.5, "#{width}px：第二、三条共用一条边"
-      assert_in_delta tabs[0]["bottom"] - 1, body["top"], 0.5, "#{width}px：索引条底边与列表顶线合成一条"
+      tabs.each do |tab|
+        assert_operator tab.fetch("width"), :>=, 44, "#{width}px"
+        assert_operator tab.fetch("height"), :>=, 44, "#{width}px"
+        assert_operator tab.fetch("left"), :>=, 0, "#{width}px"
+        assert_operator tab.fetch("right"), :<=, width, "#{width}px"
+      end
+      tabs.each_cons(2) { |left, right| assert_operator left.fetch("right"), :<, right.fetch("left"), "#{width}px：入口之间保留间隔" }
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
     end
   end
 
-  test "Q5 手机上评论链接的触控区 44px，元数据行仍是 24px 高" do
-    render_fragment(%(<div style="padding: 60px"><div class="item-meta"><a class="item-metric item-comments" href="#c"><span>6</span></a></div></div>), width: 375, height: 812)
-
-    assert_operator evaluate_script("document.querySelector('.item-meta').getBoundingClientRect().height"), :<=, 24.5
-    hits = evaluate_script(<<~JS)
-      (() => {
-        const r = document.querySelector('.item-comments').getBoundingClientRect()
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2
-        return [[cx, cy - 21], [cx, cy + 21], [cx - 21, cy], [cx + 21, cy]].map(([x, y]) => document.elementFromPoint(x, y)?.closest('.item-comments') !== null)
-      })()
-    JS
-    assert_equal [ true, true, true, true ], hits
+  test "窄屏元数据的评论与收藏分别保留 44px 命中区，时间可自然换行" do
+    [ 320, 375 ].each do |width|
+      render_fragment(<<~HTML, width: width, height: 812)
+        <div style="padding: 24px"><div class="item-meta">
+          <a class="item-metric item-comments" href="#c"><span>6</span></a>
+          <button type="button" class="favorite-button item-save" aria-label="收藏"><span class="favorite-line" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" /></svg></span></button>
+          <time class="item-metric item-age">11 小时前提交</time>
+        </div></div>
+      HTML
+      targets = evaluate_script(<<~JS)
+        [...document.querySelectorAll('.item-comments, .item-save')].map(element => {
+          const r = element.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          return { width: r.width, height: r.height,
+            hits: [[cx - 21, cy - 21], [cx + 21, cy - 21], [cx - 21, cy + 21], [cx + 21, cy + 21]].map(([x, y]) => document.elementFromPoint(x, y)?.closest('a, button') === element) };
+        })
+      JS
+      targets.each do |target|
+        assert_operator target.fetch("width"), :>=, 44, "#{width}px"
+        assert_operator target.fetch("height"), :>=, 44, "#{width}px"
+        assert target.fetch("hits").all?, "#{width}px：各控件完整命中自己的 44px 区域"
+      end
+      assert_selector "time", text: "11 小时前提交"
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
+    end
   end
 
   test "标题的 44px 高触控区不占用译文、标签、摘要、周刊正文或独立操作" do
@@ -589,16 +607,17 @@ class DesignRulesTest < ApplicationSystemTestCase
       when :weekly
         %(<div class="item-content item-content--weekly"><p><span style="font-family:var(--font-cjk);font-size:var(--fs-15);line-height:1.8">这是周刊的完整正文，按原文分段展示。</span></p><p><span style="font-family:var(--font-latin);font-size:var(--fs-15);line-height:1.8">The second paragraph remains part of the weekly reading column.</span></p></div>)
       end
+      bookmark = %(<button type="button" class="favorite-button #{variant == :weekly ? 'item-mark' : 'item-save'}" aria-label="收藏" data-touch="bookmark"><span class="favorite-line" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" /></svg></span></button>)
       meta = if variant == :weekly
         %(<span class="data" data-protected>10-22 06:00</span>)
       else
-        %(<div class="item-meta"><span class="item-metric" data-protected>382</span><a class="item-metric item-comments" href="#comments" data-touch="comments">147</a><time class="item-metric" data-protected>42d</time></div><div class="item-reason">与关注的领域相关，说明具体使用场景。</div>)
+        %(<div class="item-meta"><span class="item-metric" data-protected>382</span><a class="item-metric item-comments" href="#comments" data-touch="comments">147</a>#{bookmark}<time class="item-metric item-age" data-protected>42 天前提交</time></div><div class="item-reason">与关注的领域相关，说明具体使用场景。</div>)
       end
       <<~HTML
-        <div class="sheet-body" style="padding-top:40px"><article class="item-row"><span class="item-rank">1</span><div class="item-body">
+        <div class="sheet-body" style="padding-top:40px"><article class="item-row#{' item-row--weekly' if variant == :weekly}"><span class="item-rank">1</span><div class="item-body">
           <div class="item-heading"><#{heading} class="item-title"><a class="t" href="#title" data-touch="title">#{ERB::Util.html_escape(title)}</a></#{heading}>#{tag}</div>
           #{copy}#{meta}
-        </div><button type="button" class="favorite-button item-mark" aria-label="收藏" data-touch="bookmark">书签</button></article></div>
+        </div>#{bookmark if variant == :weekly}</article></div>
       HTML
     end
 

@@ -63,7 +63,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
     const overview = within(screen.getByRole('list', { name: '来源' }))
-    expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
+    expect(overview.getAllByRole('listitem').map((entry) => entry.querySelector('.source-tab-body')?.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
     expect(overview.queryAllByRole('link')).toHaveLength(0)
     expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
     expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
@@ -94,7 +94,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 
     expect(noticeText(container)).toBe('本期为空刊，管理员已收到通知')
     const overview = within(screen.getByRole('list', { name: '来源' }))
-    expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News抓取失败', 'GitHub Trending抓取失败', 'Hackaday抓取失败'])
+    expect(overview.getAllByRole('listitem').map((entry) => entry.querySelector('.source-tab-body')?.textContent)).toEqual(['Hacker News抓取失败', 'GitHub Trending抓取失败', 'Hackaday抓取失败'])
     expect(overview.queryAllByRole('link')).toHaveLength(0)
     expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
     expect(container.querySelectorAll('.daily-source')).toHaveLength(0)

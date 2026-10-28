@@ -30,7 +30,7 @@ class MotionTest < ApplicationSystemTestCase
       assert_selector ".daily-source", count: 3
       scroll_source_to(source, 0.82)
       before = source_motion_state(source)
-      assert_operator before["opening_gap"], :<=, 24, "标题后不能再产生一段随滚动收缩的空白"
+      assert_in_delta before["normal_gap"], before["opening_gap"], 0.1, "标题后只有版式留白，不额外制造随滚动收缩的空白"
       page.driver.browser.action.scroll_by(0, 90).perform
       settle_scroll
       assert_in_delta before["opening_gap"], source_motion_state(source)["opening_gap"], 0.1, "正文不能相对标题追赶"
@@ -257,7 +257,7 @@ class MotionTest < ApplicationSystemTestCase
         assert_operator middle["progress"], :>, 0
         assert_operator middle["progress"], :<, 1
         assert_in_delta middle["heading_offset"], middle["content_offset"], 0.1, "标题与正文作为同一阅读单元移动"
-        assert_operator middle["opening_gap"], :<=, 24, "标题后保持原有间距，不制造第二次停顿"
+        assert_in_delta middle["normal_gap"], middle["opening_gap"], 0.1, "标题后保持静态版式间距，不制造第二次停顿"
         assert_operator middle["content_offset"], :>, 8
         assert_equal "1", middle["opacity"]
         assert_equal "1", middle["heading_opacity"]
@@ -323,6 +323,7 @@ class MotionTest < ApplicationSystemTestCase
             scroll_y: scrollY,
             heading_offset: offset(heading) + offset(sheet), content_offset: offset(content) + offset(sheet),
             opening_gap: content.getBoundingClientRect().top - heading.getBoundingClientRect().bottom,
+            normal_gap: parseFloat(getComputedStyle(section.querySelector('.daily-source-head')).paddingBottom),
             colors: rows.map(row => getComputedStyle(row).color),
             link_color: getComputedStyle(rows[0].querySelector('a.t')).color,
             opacity: getComputedStyle(rows[0]).opacity, heading_opacity: getComputedStyle(heading).opacity,

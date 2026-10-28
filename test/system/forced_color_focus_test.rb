@@ -106,10 +106,10 @@ class ForcedColorFocusTest < ApplicationSystemTestCase
   test "高对比模式下来源图形的挖空与强调使用系统颜色" do
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "forced-colors", value: "active" } ])
     visit daily_issue_path("2026-09-08")
-    assert_selector ".source-tab-icon"
+    assert_selector ".daily-source-icon", count: 3
     details = evaluate_script(<<~JS)
       (() => {
-        const svgs = Array.from(document.querySelectorAll('.source-tab-icon, .daily-source-icon'));
+        const svgs = Array.from(document.querySelectorAll('.daily-source-icon'));
         const ink = svgs.flatMap(svg => Array.from(svg.querySelectorAll('[fill="var(--ink)"], [fill="var(--green)"]')).map(el => ({ value: getComputedStyle(el).fill, expected: getComputedStyle(svg).color })));
         const holes = svgs.flatMap(svg => Array.from(svg.querySelectorAll('[fill="var(--paper)"]')).map(el => getComputedStyle(el).fill));
         return { ink, holes, canvas: getComputedStyle(document.documentElement).backgroundColor };

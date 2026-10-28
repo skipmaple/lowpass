@@ -8,9 +8,9 @@ import type { ItemMeta } from '@/types/lowpass'
 import { setPageProps } from '../support/inertia'
 import { item } from '../support/props'
 
-// 条目行（PRD 5.1「条目结构」）：十条格式一致，元数据行按适配器换内容但只有数字与记号。
-// 相对时间要一个确定的「现在」：published_at 2026-09-08T17:12:00Z 在下面这个时钟里是 5h，
-// 悬停的绝对时间按 Asia/Shanghai 是 09-09 01:12。
+// 条目行（PRD 5.1「条目结构」）：十条格式一致，元数据按适配器区分信息、收藏与时间来源。
+// 相对时间要一个确定的「现在」：published_at 2026-09-08T17:12:00Z 在下面这个时钟里是 5 小时前，
+// 绝对时间按 Asia/Shanghai 是 2026-09-09 01:12。
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
@@ -121,17 +121,16 @@ describe('ItemRow 标题与摘要', () => {
 describe('ItemRow 元数据（按适配器）', () => {
   it('页面停留时刷新相对时间，并在重新显示页面时立即校准', () => {
     render(<ItemRow item={item({ published_at: '2026-09-08T22:11:00Z' })} adapter="hacker_news" rank={1} />)
-    const age = screen.getByTitle('09-09 06:11')
-    expect(age).toHaveTextContent('1m')
+    const age = screen.getByText('1 分钟前提交').closest('time')!
 
     act(() => vi.advanceTimersByTime(60_000))
-    expect(age).toHaveTextContent('2m')
+    expect(age).toHaveTextContent('2 分钟前提交')
 
     act(() => {
       vi.setSystemTime(new Date('2026-09-09T00:12:00Z'))
       document.dispatchEvent(new Event('visibilitychange'))
     })
-    expect(age).toHaveTextContent('2h')
+    expect(age).toHaveTextContent('2 小时前提交')
     expect(age).toHaveAttribute('datetime', '2026-09-08T22:11:00Z')
   })
 
@@ -149,11 +148,11 @@ describe('ItemRow 元数据（按适配器）', () => {
 
     visibility.mockReturnValue('hidden')
     act(() => vi.advanceTimersByTime(120_000))
-    expect(ages[0]).toHaveTextContent('1m')
+    expect(ages[0]).toHaveTextContent('1 分钟前提交')
     visibility.mockReturnValue('visible')
     act(() => document.dispatchEvent(new Event('visibilitychange')))
-    expect(ages[0]).toHaveTextContent('3m')
-    expect(ages[1]).toHaveTextContent('4m')
+    expect(ages[0]).toHaveTextContent('3 分钟前提交')
+    expect(ages[1]).toHaveTextContent('4 分钟前提交')
 
     unmount()
     expect(clear).toHaveBeenCalledTimes(1)
@@ -173,10 +172,11 @@ describe('ItemRow 元数据（按适配器）', () => {
     expect(comments).toHaveAttribute('target', '_blank')
     expect(comments.getAttribute('rel')).toContain('noopener')
 
-    const age = screen.getByTitle('09-09 01:12')
-    expect(age).toHaveTextContent('5h')
+    const age = screen.getByText('5 小时前提交').closest('time')!
+    expect(age).toHaveAttribute('title', '提交到 Hacker News：2026-09-09 01:12（Asia/Shanghai）')
+    expect(age).toHaveAttribute('aria-label', '5 小时前提交，提交到 Hacker News：2026-09-09 01:12（Asia/Shanghai）')
     expect(age).toHaveAttribute('datetime', '2026-09-08T17:12:00Z')
-    expect(screen.getByRole('img', { name: '发布时间' })).toBeInTheDocument()
+    expect(age.querySelector('svg')).toBeNull()
   })
 
   it('评论图标响应悬停与键盘聚焦，离开后恢复，不改变讨论链接', async () => {
@@ -219,7 +219,7 @@ describe('ItemRow 元数据（按适配器）', () => {
   it('GitHub：语言、收成 k 的 star 数、今日新增', () => {
     render(<ItemRow item={gh()} adapter="github_trending" rank={1} />)
 
-    expect(screen.getByText('Rust')).toBeInTheDocument()
+    expect(screen.getByText('Rust')).toHaveClass('item-meta-text')
     expect(screen.getByText('12.3k')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Star' })).toBeInTheDocument()
     expect(screen.getByText('+312')).toBeInTheDocument()
@@ -235,19 +235,38 @@ describe('ItemRow 元数据（按适配器）', () => {
     expect(screen.getByText('+312').getAttribute('style')).not.toContain('var(--green)')
   })
 
-  it('RSS：作者与时间同属元数据，整行一个 Maple 角色', () => {
+  it('RSS：作者与发布时间同属元数据', () => {
     render(<ItemRow item={rss()} adapter="rss" rank={1} />)
 
     expect(screen.getByText('Al Williams').style.fontFamily).toBe('var(--font-data)')
-    expect(screen.getByTitle('09-09 01:12')).toHaveTextContent('5h')
+    expect(screen.getByText('Al Williams')).toHaveClass('item-meta-text')
+    const age = screen.getByText('5 小时前发布').closest('time')!
+    expect(age).toHaveAttribute('title', '发布：2026-09-09 01:12（Asia/Shanghai）')
     expect(screen.queryByText('Rust')).toBeNull()
+  })
+
+  it('RSS 缺少源发布时间时明确标为收录时间', () => {
+    render(<ItemRow item={item({ meta: { time_from_fetch: true } })} adapter="rss" rank={1} />)
+
+    const age = screen.getByText('5 小时前收录').closest('time')!
+    expect(age).toHaveAttribute('aria-label', '5 小时前收录，收录：2026-09-09 01:12（Asia/Shanghai）')
+    expect(age).toHaveAttribute('datetime', '2026-09-08T17:12:00Z')
+    expect(screen.queryByText(/前发布/)).toBeNull()
+  })
+
+  it('整天年龄继续按当前时钟计算，绝对时间的年份也按上海时区', () => {
+    vi.setSystemTime(new Date('2027-01-03T16:30:00Z'))
+    render(<ItemRow item={item({ published_at: '2026-12-31T16:30:00Z' })} adapter="hacker_news" rank={1} />)
+
+    const age = screen.getByText('3 天前提交').closest('time')!
+    expect(age).toHaveAttribute('title', '提交到 Hacker News：2027-01-01 00:30（Asia/Shanghai）')
   })
 
   it('没有发布时间就不渲染时间那一段', () => {
     render(<ItemRow item={item({ published_at: null, meta: { score: 312 } })} adapter="hacker_news" rank={1} />)
 
     expect(screen.getByText('312')).toBeInTheDocument()
-    expect(screen.queryByTitle('09-09 01:12')).toBeNull()
+    expect(screen.queryByText(/前提交/)).toBeNull()
   })
 
   it('无法解析的发布时间不留下图标或占位', () => {
@@ -748,16 +767,22 @@ describe('ItemRow 阅读页不提供重生成入口', () => {
 describe('ItemRow 书签（PRD 5.10）', () => {
   const TITLE = 'Show HN: A terminal log viewer written in Rust'
 
-  it('页面套了 FavoritesProvider：条目行末有书签，排在正文后面，状态照 favorites', () => {
+  it('日刊纯图标收藏跟随评论、位于时间前，可读操作名同步收藏状态', () => {
     const { container, unmount } = render(
       <FavoritesProvider favorites={[]}>
         <ItemRow item={hn()} adapter="hacker_news" rank={1} />
       </FavoritesProvider>,
     )
     const mark = screen.getByRole('button', { name: `收藏：${TITLE}` })
-    expect(mark).toHaveClass('favorite-button', 'item-mark')
-    // Tab 先到标题再到书签：书签在 DOM 里排在正文后面
-    expect(container.querySelector('.item-body')?.nextElementSibling).toBe(mark)
+    expect(mark).toHaveClass('favorite-button', 'item-save')
+    expect(mark.textContent).toBe('')
+    expect(mark).not.toHaveAttribute('data-on')
+    expect(mark.querySelector('.favorite-line')).toHaveAttribute('aria-hidden', 'true')
+    expect(mark.querySelector('.favorite-ink')).toHaveAttribute('aria-hidden', 'true')
+    expect(mark.closest('.item-meta')).not.toBeNull()
+    expect(mark.previousElementSibling).toBe(screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' }))
+    expect(mark.nextElementSibling).toHaveTextContent('5 小时前提交')
+    expect(container.querySelectorAll('.favorite-button')).toHaveLength(1)
     unmount()
 
     render(
@@ -765,17 +790,47 @@ describe('ItemRow 书签（PRD 5.10）', () => {
         <ItemRow item={hn()} adapter="hacker_news" rank={1} />
       </FavoritesProvider>,
     )
-    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveAttribute('data-on')
+    const savedMark = screen.getByRole('button', { name: `取消收藏：${TITLE}` })
+    expect(savedMark).toHaveAttribute('data-on')
+    expect(savedMark.textContent).toBe('')
   })
 
-  it('周刊那一版同样有书签', () => {
-    render(
+  it('周刊纯图标书签仍独立位于正文之后', () => {
+    const { container } = render(
       <FavoritesProvider favorites={[]}>
         <ItemRow item={item({ title: '人生的容错率' })} adapter="ruanyf_weekly" rank={1} variant="weekly" heading="h4" />
       </FavoritesProvider>,
     )
 
-    expect(screen.getByRole('button', { name: '收藏：人生的容错率' })).toBeInTheDocument()
+    const mark = screen.getByRole('button', { name: '收藏：人生的容错率' })
+    expect(mark).toHaveClass('item-mark')
+    expect(mark.textContent).toBe('')
+    expect(container.querySelector('.item-body')?.nextElementSibling).toBe(mark)
+  })
+
+  it('日刊键盘依次到标题、评论和收藏；空格收藏保持焦点与同一按钮', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 201, json: async () => ({ url_hash: 'hash-termlog' }) } as Response)
+    try {
+      render(<FavoritesProvider favorites={[]}><ItemRow item={hn()} adapter="hacker_news" rank={1} /></FavoritesProvider>)
+
+      await user.tab()
+      expect(screen.getByRole('link', { name: TITLE })).toHaveFocus()
+      await user.tab()
+      expect(screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' })).toHaveFocus()
+      await user.tab()
+      const mark = screen.getByRole('button', { name: `收藏：${TITLE}` })
+      expect(mark).toHaveFocus()
+      await user.keyboard(' ')
+
+      expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toBe(mark)
+      expect(mark).toHaveFocus()
+      expect(mark).toHaveAttribute('data-on')
+      expect(mark.textContent).toBe('')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    } finally {
+      fetchMock.mockRestore()
+    }
   })
 
   it('没有 FavoritesProvider 时条目行里没有书签', () => {

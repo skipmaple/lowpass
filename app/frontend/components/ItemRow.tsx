@@ -9,10 +9,10 @@ import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/li
 import type { Adapter, Item } from '@/types/lowpass'
 
 // 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、标题译文（HN、Hackaday，D25）、说明、
-// 说明译文（GitHub Trending，D25）、元数据、兴趣标签、推荐理由。元数据行只有数字与记号，不出现中文单位（设计 skill）。
+// 说明译文（GitHub Trending，D25）、元数据、兴趣标签、推荐理由。日刊时间明确区分提交、发布与收录。
 // 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
 // 兴趣标签紧跟标题最后一个词（所有宽度，2026-10-14 O1）：标题元素行内排，标签是它后面的行内小签，放不下就整个换到下一行行首。
-// 书签（PRD 5.10）在条目行末另占一格，手机上与序号同一行、靠右；DOM 里排在正文后面，Tab 先到标题再到书签。
+// 日刊书签在元数据中跟随评论，Tab 依次到标题、评论与收藏；周刊书签仍在条目行末独立一格。
 // 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
@@ -55,15 +55,21 @@ function Metric({ icon, label, children }: { icon: IconName; label: string; chil
   )
 }
 
-function Age({ published }: { published: string }) {
+const SHANGHAI_YEAR = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', year: 'numeric' })
+const AGE_UNITS: Record<string, string> = { m: '分钟', h: '小时', d: '天' }
+type TimeKind = '提交' | '发布' | '收录'
+
+function Age({ published, kind }: { published: string; kind: TimeKind }) {
   const [now, setNow] = useState(Date.now)
   useEffect(() => subscribeClock(setNow), [])
-  const age = relativeAge(published, now)
-  if (age === '') return null
+  const age = relativeAge(published, now).match(/^(\d+)([mhd])$/)
+  if (!age) return null
+  const text = `${age[1]} ${AGE_UNITS[age[2]]}前${kind}`
+  const source = kind === '提交' ? '提交到 Hacker News' : kind
+  const absolute = `${source}：${SHANGHAI_YEAR.format(new Date(published))}-${absoluteStamp(published)}（Asia/Shanghai）`
   return (
-    <time className="item-metric" dateTime={published} title={absoluteStamp(published)}>
-      <Icon name="clock" title="发布时间" color="currentColor" />
-      <span>{age}</span>
+    <time className="item-metric item-age" dateTime={published} title={absolute} aria-label={`${text}，${absolute}`}>
+      <span>{text}</span>
     </time>
   )
 }
@@ -93,7 +99,7 @@ function Comments({ count, url }: { count: number; url?: string }) {
   )
 }
 
-// 今日新增：前三名反白成鼠尾草绿小徽章（唯一的彩色角色之一），其余同色等宽
+// 今日新增：前三名用原有鼠尾草绿徽章，其余同色等宽。
 function StarsToday({ value, highlight }: { value: number; highlight: boolean }) {
   const text = `+${value}`
   if (highlight) {
@@ -122,19 +128,21 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
       parts.push(<Comments count={item.meta.comments} url={item.meta.comments_url} />)
     }
   } else if (adapter === 'github_trending') {
-    if (item.meta.language) parts.push(<span style={data}>{item.meta.language}</span>)
+    if (item.meta.language) parts.push(<span className="item-meta-text" style={data}>{item.meta.language}</span>)
     if (item.meta.stars !== undefined) parts.push(<Metric icon="star" label="Star">{compactCount(item.meta.stars)}</Metric>)
     if (item.meta.stars_today !== undefined) parts.push(<StarsToday value={item.meta.stars_today} highlight={rank <= 3} />)
   } else if (item.author) {
     // RSS 源：作者与 GitHub 的语言名一样属于元数据，整行只有一个字体角色（Maple）
-    parts.push(<span style={data}>{item.author}</span>)
+    parts.push(<span className="item-meta-text" style={data}>{item.author}</span>)
   }
 
-  if (item.published_at && relativeAge(item.published_at) !== '') parts.push(<Age published={item.published_at} />)
+  const timeKind = adapter === 'hacker_news' ? '提交' : item.meta.time_from_fetch ? '收录' : '发布'
 
   return (
     <span className="item-meta">
       {parts.map((part, index) => <Fragment key={index}>{part}</Fragment>)}
+      <FavoriteButton className="item-save" itemId={item.id} urlHash={item.url_hash} title={item.title} />
+      {item.published_at ? <Age published={item.published_at} kind={timeKind} /> : null}
     </span>
   )
 }
@@ -208,7 +216,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         ) : null}
       </div>
 
-      <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} />
+      {weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} /> : null}
     </article>
   )
 }

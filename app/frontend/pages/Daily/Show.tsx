@@ -77,7 +77,7 @@ function Sources({ sources, itemsBySource, notice, fallbackAnchor }: { sources: 
     <>
       {sources.length > 0 ? <SourceDirectory sources={sources} navigable={!notice} /> : null}
       {notice ? <IssueNotice text={notice} /> : sources.map((source, index) => (
-        <DailySourceSection key={source.id} source={source} animate={index > 0} aliasId={fallbackAnchor?.sourceId === source.id ? fallbackAnchor.id : undefined}>
+        <DailySourceSection key={source.id} source={source} ordinal={index + 1} animate={index > 0} aliasId={fallbackAnchor?.sourceId === source.id ? fallbackAnchor.id : undefined}>
           <SourceBody source={source} items={itemsBySource[source.id] ?? []} />
         </DailySourceSection>
       ))}

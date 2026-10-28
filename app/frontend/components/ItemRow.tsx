@@ -196,7 +196,7 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。标签在标题元素外面：不进标题的可读名称 */}
         <div className="item-heading">
           <Heading className="item-title">
-            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" lang={latinLang(item.title)} data-host={hostOf(item.url)}>
+            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" lang={latinLang(item.title)} data-host={hostOf(item.url)}>
               <TitleText text={item.title} tagged={tagged} />
             </a>
           </Heading>

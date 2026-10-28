@@ -48,7 +48,7 @@ function Row({ entry }: { entry: FavoriteEntry }) {
   return (
     <article ref={rowRef} className="search-row">
       <h2 className="search-title">
-        <a className="t" href={entry.url} target="_blank" rel="noopener noreferrer" lang={latinLang(entry.title)}>
+        <a className="t" href={entry.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" lang={latinLang(entry.title)}>
           <Mixed text={entry.title} font="latin" size="var(--fs-20)" color={kept ? 'var(--ink)' : 'var(--ink2)'} />
         </a>
       </h2>

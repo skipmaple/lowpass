@@ -155,7 +155,8 @@ class DailyChaptersTest < ApplicationSystemTestCase
       JS
       geometry.fetch("sources").each do |source|
         column, header, heading, row, body, title = source.values_at("section", "header", "heading", "row", "body", "title")
-        assert_in_delta width / 2.0, column.fetch("left") + column.fetch("width") / 2, 1, "#{width}px：阅读列居中"
+        sheet = geometry.fetch("sheet")
+        assert_in_delta sheet.fetch("left") + sheet.fetch("width") / 2, column.fetch("left") + column.fetch("width") / 2, 1, "#{width}px：阅读列居中"
         assert_in_delta heading.fetch("left"), body.fetch("left"), 1, "#{width}px：来源名与正文左缘一致"
         assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{width}px：条目与栏目同列"
         assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{width}px：条目与栏目同列"

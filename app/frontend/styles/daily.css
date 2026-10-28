@@ -1,6 +1,6 @@
 /* 阅读列与操作同界：来源只在栏首出现一次，目录按需展开。 */
 @media screen {
-  .daily-reading { max-width: 824px; margin-inline: auto; }
+  .daily-reading { max-width: 824px; }
   .source-directory { margin: 8px 0 12px 44px; }
   .source-directory > summary { width: fit-content; min-height: 44px; align-content: center; cursor: pointer; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
   .source-directory > summary:focus-visible, .source-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -55,6 +55,6 @@
     .item-row { grid-template-columns: 20px minmax(0, 1fr); gap: 0 12px; }
   }
   @media (max-width: 359px) {
-    .item-meta { column-gap: 8px; }
+    .item-meta { column-gap: 4px; }
   }
 }

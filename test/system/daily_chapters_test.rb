@@ -25,7 +25,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
 
   test "窄屏短标题可触控且普通元信息保持在同一行" do
     items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
-    [ 320, 375 ].each do |width|
+    [ 305, 320, 375 ].each do |width|
       viewport(width)
       visit daily_issue_path("2026-09-08")
       row = find("#item-#{items(:hn_one).id}")
@@ -161,7 +161,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "来源标题与首条正文共享居中的阅读列，栏目开头没有额外空块" do
+  test "来源标题与正文共享左对齐的阅读列，栏目开头没有额外空块" do
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
     WIDTHS.each do |width|
       viewport(width)
@@ -171,7 +171,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
       geometry = evaluate_script(<<~JS)
         (() => {
           const rect = element => element.getBoundingClientRect().toJSON();
-          return { sheet: rect(document.querySelector('.sheet-body')),
+          return { sheet: rect(document.querySelector('.sheet-body')), pageHead: rect(document.querySelector('.page-head')),
             sources: [...document.querySelectorAll('.daily-source')].map(section => {
               const header = section.querySelector('.daily-source-head'), heading = section.querySelector('.print-source-name');
               const row = section.querySelector('.item-row'), body = row.querySelector('.item-body'), title = row.querySelector('.item-heading');
@@ -182,8 +182,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
       JS
       geometry.fetch("sources").each do |source|
         column, header, heading, row, body, title = source.values_at("section", "header", "heading", "row", "body", "title")
-        sheet = geometry.fetch("sheet")
-        assert_in_delta sheet.fetch("left") + sheet.fetch("width") / 2, column.fetch("left") + column.fetch("width") / 2, 1, "#{width}px：阅读列居中"
+        assert_in_delta geometry.fetch("pageHead").fetch("left"), column.fetch("left"), 1, "#{width}px：阅读列与期头左对齐"
         assert_in_delta heading.fetch("left"), body.fetch("left"), 1, "#{width}px：来源名与正文左缘一致"
         assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{width}px：条目与栏目同列"
         assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{width}px：条目与栏目同列"

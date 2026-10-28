@@ -20,12 +20,15 @@ class WeeklyTypographyTest < ApplicationSystemTestCase
         (() => {
           const node = this.querySelector('span'), style = getComputedStyle(node), r = this.getBoundingClientRect()
           return { size: parseFloat(style.fontSize), line: parseFloat(style.lineHeight), width: r.width,
+            columnLeft: document.querySelector('.weekly-reading').getBoundingClientRect().left,
+            pageHeadLeft: document.querySelector('.page-head').getBoundingClientRect().left,
             overflow: document.documentElement.scrollWidth > innerWidth }
         })()
       JS
       assert_equal size, geometry.fetch("size"), "#{width}px 正文字号"
       assert_operator geometry.fetch("line"), :>=, size * 1.7, "#{width}px 行距"
       assert_operator geometry.fetch("width"), :<=, width
+      assert_in_delta geometry.fetch("pageHeadLeft"), geometry.fetch("columnLeft"), 1, "#{width}px 阅读列与期头左对齐"
       assert_not geometry.fetch("overflow"), "#{width}px 无横向溢出"
     end
   ensure

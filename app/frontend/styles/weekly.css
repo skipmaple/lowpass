@@ -1,7 +1,7 @@
 /* 周刊的主题、目录与正文共享阅读列；来源事实跟在主题之后。 */
 .item-row--lead .source-band-link { color: var(--ink); }
 @media screen {
-  .weekly-reading { --weekly-gutter: 44px; max-width: 824px; margin-top: 24px; margin-inline: auto; }
+  .weekly-reading { --weekly-gutter: 44px; max-width: 824px; margin-top: 24px; }
   .weekly-reading + .weekly-reading { margin-top: 40px; }
   .weekly-reading .source-band {
     display: block; min-height: 0; margin: 0 0 8px var(--weekly-gutter); padding: 0;

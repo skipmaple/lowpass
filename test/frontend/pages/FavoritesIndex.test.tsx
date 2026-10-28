@@ -39,17 +39,17 @@ afterEach(() => {
 })
 
 describe('收藏页的行', () => {
-  it('页名是 h1「收藏」；一行有刊物签、来源、所在期、标题外链、所在期链接、原文与书签', () => {
+  it('页名是 h1「收藏」；正文先读，来源与所在期在后，标题是唯一原文入口', () => {
     const { container } = show()
 
     expect(screen.getByRole('heading', { level: 1, name: '收藏' })).toBeInTheDocument()
     expect(document.title).toBe('收藏 · Lowpass')
 
     const row = container.querySelector('.search-row') as HTMLElement
-    const eyebrow = row.querySelector('.search-eyebrow') as HTMLElement
-    expect(eyebrow).toHaveTextContent('日刊')
-    expect(eyebrow).toHaveTextContent('Hacker News')
-    expect(eyebrow).not.toHaveTextContent('2026年9月8日')
+    const context = row.querySelector('.result-context') as HTMLElement
+    expect(context).toHaveTextContent('日刊')
+    expect(context).toHaveTextContent('Hacker News')
+    expect(context).not.toHaveTextContent('2026年9月8日')
 
     const title = within(row).getByRole('link', { name: TITLE })
     expect(within(row).getByRole('heading', { level: 2 })).toContainElement(title)
@@ -59,7 +59,10 @@ describe('收藏页的行', () => {
     expect(title).toHaveAttribute('lang', 'en')
 
     expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
-    expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/termlog')
+    expect(row.firstElementChild).toBe(row.querySelector('.search-title'))
+    expect(row.lastElementChild).toBe(row.querySelector('.result-meta'))
+    expect(row.querySelectorAll('a[href="https://example.com/termlog"]')).toHaveLength(1)
+    expect(within(row).queryByRole('link', { name: '原文' })).not.toBeInTheDocument()
     expect(within(row).getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveAttribute('data-on')
   })
 
@@ -85,13 +88,13 @@ describe('收藏页的行', () => {
     expect(rows[1].querySelector('.search-snippet')?.nextElementSibling).toHaveTextContent('一个极快的 Python 代码检查工具。')
   })
 
-  it('周刊收藏的刊物签是「周刊」，所在期带周次与板块', () => {
+  it('周刊收藏保留刊物、来源及所在期周次与板块', () => {
     const { container } = show({
       entries: [favoriteEntry({ publication: 'weekly', source_name: '阮一峰科技爱好者周刊', where: { label: '2026年 · 第 36 周 · 工具', href: '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7' } })],
     })
 
-    expect(container.querySelector('.search-eyebrow')).toHaveTextContent('周刊')
-    expect(container.querySelector('.search-eyebrow')).not.toHaveTextContent('第 36 周')
+    expect(container.querySelector('.result-context')).toHaveTextContent('周刊')
+    expect(container.querySelector('.result-context')).not.toHaveTextContent('第 36 周')
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toHaveAttribute('href', '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7')
   })
 

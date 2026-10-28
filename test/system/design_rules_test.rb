@@ -4,19 +4,34 @@ require "base64"
 # 设计说明 2026-10-14 里能用计算样式与几何量出来的规则。直接把生产 CSS 和最小的 HTML 片段装进一页
 # （同 paper_test），不经 Vite、不登录：量的是样式表本身。动效与打印的样式表还没建时就跳过它们。
 class DesignRulesTest < ApplicationSystemTestCase
-  STYLES = %w[ tokens.css motion.css daily.css print.css ].freeze
+  STYLES = %w[ tokens.css motion.css daily.css weekly.css results.css print.css ].freeze
   PAPER = "rgb(232, 227, 218)".freeze
   INK = "rgb(29, 29, 27)".freeze
+  WEEKLY_HEADER = <<~HTML.freeze
+    <div class="sheet-body"><section class="weekly-reading"><header class="source-band">
+      <h2 class="source-band-title"><span>慢下来的理由</span></h2>
+      <div class="source-band-meta"><span>阮一峰科技爱好者周刊</span><span class="source-band-issue">第 366 期</span>
+        <a class="source-band-link" href="https://example.com/weekly" target="_blank"><span>原文</span><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor"><path d="M7 17 17 7M7 7h10v10" /></svg></a>
+      </div>
+    </header></section></div>
+  HTML
 
   teardown do
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "", features: [])
   end
 
-  test "Q1 周刊来源横带里的图标与文字是纸色" do
-    render_fragment(%(<div class="source-band"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor"><path d="M0 0L10 10"/></svg></div>))
+  test "Q1 周刊主题与原文入口使用墨色，次级来源事实保留暖纸背景" do
+    [ 375, 1440 ].each do |width|
+      render_fragment(WEEKLY_HEADER, width: width)
 
-    assert_equal PAPER, style(".source-band svg", "color")
+      assert_equal PAPER, style("body", "background-color")
+      assert_equal "rgba(0, 0, 0, 0)", style(".source-band", "background-color")
+      [ ".source-band-title", ".source-band-link", ".source-band-link svg" ].each do |selector|
+        assert_equal INK, style(selector, "color"), "#{width}px #{selector}"
+      end
+      assert_operator style(".source-band-title", "font-size").to_f, :>, style(".source-band-meta", "font-size").to_f
+    end
   end
 
   test "原生 Tab 跳过不可用翻期控件，可用链接使用墨色可见焦点" do
@@ -51,24 +66,34 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "90deg", style("summary", "rotate", "::before")
   end
 
-  test "来源目录的三个独立入口保留足够命中面积，窄屏不重叠或溢出" do
+  test "来源目录展开后的独立链接保留足够命中面积，窄屏不重叠或溢出" do
     [ 1440, 375, 320 ].each do |width|
       render_fragment(<<~HTML, width: width)
-        <nav class="source-tabs">
-          <a class="source-tab" href="#hn" data-adapter="hacker_news"><span class="source-tab-number">01</span><span class="source-tab-name">Hacker News</span></a>
-          <a class="source-tab" href="#gh" data-adapter="github_trending"><span class="source-tab-number">02</span><span class="source-tab-name">GitHub Trending</span></a>
-          <a class="source-tab" href="#rss" data-adapter="rss"><span class="source-tab-number">03</span><span class="source-tab-name">Hackaday</span></a>
-        </nav>
+        <details class="source-directory source-tabs-frame">
+          <summary>来源目录</summary>
+          <nav id="source-directory" class="source-links" aria-label="来源" tabindex="-1">
+            <a class="source-link" href="#hn">Hacker News</a>
+            <a class="source-link" href="#gh">GitHub Trending</a>
+            <a class="source-link" href="#rss">Hackaday</a>
+          </nav>
+        </details>
         <div class="issue-body"><p>x</p></div>
       HTML
-      tabs = evaluate_script("[...document.querySelectorAll('.source-tab')].map((tab) => tab.getBoundingClientRect().toJSON())")
-      tabs.each do |tab|
-        assert_operator tab.fetch("width"), :>=, 44, "#{width}px"
-        assert_operator tab.fetch("height"), :>=, 44, "#{width}px"
-        assert_operator tab.fetch("left"), :>=, 0, "#{width}px"
-        assert_operator tab.fetch("right"), :<=, width, "#{width}px"
+      assert_no_selector "#source-directory", visible: true
+      find(".source-directory > summary").send_keys(:enter)
+      assert_selector ".source-directory[open] .source-link", count: 3
+      links = evaluate_script("[...document.querySelectorAll('.source-link')].map(link => link.getBoundingClientRect().toJSON())")
+      links.each do |link|
+        assert_operator link.fetch("width"), :>=, 44, "#{width}px"
+        assert_operator link.fetch("height"), :>=, 44, "#{width}px"
+        assert_operator link.fetch("left"), :>=, 0, "#{width}px"
+        assert_operator link.fetch("right"), :<=, width, "#{width}px"
       end
-      tabs.each_cons(2) { |left, right| assert_operator left.fetch("right"), :<, right.fetch("left"), "#{width}px：入口之间保留间隔" }
+      links.combination(2).each do |a, b|
+        overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
+          [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
+        assert_equal 0, overlap, "#{width}px：来源链接不能重叠"
+      end
       assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
     end
   end
@@ -117,10 +142,6 @@ class DesignRulesTest < ApplicationSystemTestCase
             assert_equal expected, hit, label
           end
           assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
-          if width <= 767
-            assert_equal "24px", style(".item-row", "padding-top")
-            assert_equal "24px", style(".item-row", "padding-bottom")
-          end
         end
       end
     end
@@ -176,7 +197,7 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "0px", style(".search-title", "padding-bottom")
     assert_equal "static", style(".search-title a", "position")
     assert_equal "none", style(".search-title a", "content", "::before")
-    assert_equal "static", style(".search-eyebrow", "position")
+    assert_equal "static", style(".result-context", "position")
     assert_equal "0px", style(".search-title a", "padding-top")
     assert_equal "0px", style(".search-title a", "padding-bottom")
   end
@@ -271,15 +292,19 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   test "T4 序号与标题首行同一条基线；期头小字末行与大字日期同一条基线" do
-    render_fragment(<<~HTML)
-      #{format(ITEM, title: "Gemini 4 Argon", tag: "AI / LLM")}
-      <header class="page-head"><div class="issue-head-main"><div class="issue-head-title"><h1 class="issue-head-date">10月14日</h1><div class="issue-head-stack"><span class="issue-head-calendar">2026 年 · 星期三</span><span class="issue-head-time">06:00 发布</span></div></div></div></header>
-    HTML
     baseline = <<~JS
-      ((selector) => { const el = document.querySelector(selector); const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.appendChild(probe); const y = probe.getBoundingClientRect().top; probe.remove(); return y })
+      ((selector) => { const el = document.querySelector(selector); const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.prepend(probe); const y = probe.getBoundingClientRect().top; probe.remove(); return y })
     JS
 
-    assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1
+    [ 320, 375, 1440, 1920 ].each do |width|
+      [ :translated, :weekly ].each do |variant|
+        render_fragment(touch_item("A practical guide to asynchronous systems and readable tools", variant), width: width)
+        assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1,
+          "#{width}px #{variant}：序号必须对齐完整标题的首行"
+      end
+    end
+
+    render_fragment(%(<header class="page-head"><div class="issue-head-main"><div class="issue-head-title"><h1 class="issue-head-date">10月14日</h1><div class="issue-head-stack"><span class="issue-head-calendar">2026 年 · 星期三</span><span class="issue-head-time">06:00 发布</span></div></div></div></header>))
     assert_in_delta evaluate_script("#{baseline}('.issue-head-date')"), evaluate_script("#{baseline}('.issue-head-time')"), 1
   end
 
@@ -304,15 +329,15 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "none", style(".ctrl-off", "content", "::before")
   end
 
-  test "M4 未选中的索引条与分段控件悬停只加下划线，不反白" do
-    render_fragment(%(<div class="source-tabs"><button class="source-tab" data-state="active"><span class="source-tab-name">A</span></button><button class="source-tab" data-state="inactive"><span class="source-tab-name">B</span></button></div>), hover: true)
+  test "M4 来源目录链接悬停加深下划线，不反白纸面" do
+    render_fragment(%(<details class="source-directory source-tabs-frame" open><summary>来源目录</summary><nav id="source-directory" class="source-links" aria-label="来源" tabindex="-1"><a class="source-link" href="#hn">Hacker News</a></nav></details>), hover: true)
 
-    name = ".source-tab[data-state='inactive'] .source-tab-name"
-    assert_equal "underline", style(name, "text-decoration-line")
-    assert_equal "rgba(0, 0, 0, 0)", style(name, "text-decoration-color")
-    find(".source-tab[data-state='inactive']").hover
-    wait_until { style(name, "text-decoration-color") == INK }
-    assert_not_equal INK, style(".source-tab[data-state='inactive']", "background-color")
+    assert_equal "underline", style(".source-link", "text-decoration-line")
+    refute_equal "rgba(0, 0, 0, 0)", style(".source-link", "text-decoration-color")
+    refute_equal INK, style(".source-link", "text-decoration-color")
+    find(".source-link").hover
+    wait_until { style(".source-link", "text-decoration-color") == INK }
+    assert_not_equal INK, style(".source-link", "background-color")
   end
 
   test "M7 菜单、对话框、提示条带出现动画；减少动态效果时几乎为零" do
@@ -326,14 +351,14 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "0.001s", style(".ctrl", "transition-duration", "::before")
   end
 
-  test "C3 周刊配图正片叠底；横带图形 52×34，手机 37×24" do
-    render_fragment(%(<div class="source-band"><svg class="source-band-mark" viewBox="0 0 120 78"></svg></div><img class="item-media-image" alt="">))
-
-    assert_equal "multiply", style(".item-media-image", "mix-blend-mode")
-    assert_equal [ 52, 34 ], evaluate_script("(() => { const r = document.querySelector('.source-band-mark').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })()")
-
-    render_fragment(%(<div class="source-band"><svg class="source-band-mark" viewBox="0 0 120 78"></svg></div>), width: 375, height: 812)
-    assert_equal [ 37, 24 ], evaluate_script("(() => { const r = document.querySelector('.source-band-mark').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)] })()")
+  test "C3 周刊配图在纸面正片叠底，打印时恢复原图" do
+    image = %(<figure class="item-media-frame"><img class="item-media-image" alt="周刊配图"></figure>)
+    [ 375, 1440 ].each do |width|
+      render_fragment(image, width: width)
+      assert_equal "multiply", style(".item-media-image", "mix-blend-mode")
+    end
+    render_fragment(image, media: "print")
+    assert_equal "normal", style(".item-media-image", "mix-blend-mode")
   end
 
   test "已知天然尺寸的周刊配图解码前后不推移后文，手机与多图同样成立" do
@@ -456,24 +481,27 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_in_delta 0, offsets["left"], 1
   end
 
-  # 终审：打印时横带底色去掉了，「翻开的书」挖空处却还填着墨，印出来是一块黑剪影
-  test "D2 周刊横带的图形：屏幕上挖空填墨，打印时挖空透明" do
-    band = %(<div class="source-band"><svg class="source-band-mark" viewBox="0 0 10 10"><path class="hole" fill="var(--band-hole)" d="M0 0h10v10H0z"/></svg></div>)
-    render_fragment(band)
-    assert_equal INK, style(".source-band .hole", "fill")
-
-    render_fragment(band, media: "print")
-    assert_equal "rgba(0, 0, 0, 0)", style(".source-band .hole", "fill")
+  test "D2 周刊栏首打印为墨色并保留主题、来源与原文入口" do
+    render_fragment(WEEKLY_HEADER, media: "print")
+    assert_equal "rgba(0, 0, 0, 0)", style(".source-band", "background-color")
+    [ ".source-band-title", ".source-band-meta > span", ".source-band-link" ].each do |selector|
+      assert_equal INK, style(selector, "color"), selector
+    end
+    assert_selector ".source-band-title", text: "慢下来的理由"
+    assert_selector ".source-band-meta", text: "阮一峰科技爱好者周刊"
+    assert_selector ".source-band-link[href='https://example.com/weekly']", text: "原文"
   end
 
   # 终审：选区统一成墨底纸字后，墨底上的字（报头、横带、反白按钮）选中时成了墨上墨，看不见。墨底上反过来用纸底墨字
-  test "T3 墨底上的字选中时是纸底墨字" do
-    render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header><div class="source-band"><h2 class="source-band-title"><span>阮一峰科技爱好者周刊</span></h2></div><button class="btn-primary">搜索</button>))
+  test "T3 墨底选区用纸底墨字，纸面周刊主题选区用墨底纸字" do
+    render_fragment(%(<header class="masthead"><a class="masthead-brand">lowpass</a></header>#{WEEKLY_HEADER}<button class="btn-primary">搜索</button>))
 
-    [ ".masthead-brand", ".source-band-title span", ".btn-primary" ].each do |selector|
+    [ ".masthead-brand", ".btn-primary" ].each do |selector|
       assert_equal PAPER, style(selector, "background-color", "::selection"), selector
       assert_equal INK, style(selector, "color", "::selection"), selector
     end
+    assert_equal INK, style(".source-band-title span", "background-color", "::selection")
+    assert_equal PAPER, style(".source-band-title span", "color", "::selection")
   end
 
   # 终审：summary 设成 flex 后，后台抓取记录里「错误详情 · 原因」这种行内片段各成一个弹性项、互相隔开 8px。
@@ -540,12 +568,14 @@ class DesignRulesTest < ApplicationSystemTestCase
       title_markup = favorite ? mixed : %(<span class="hit">#{mixed}</span>)
       translation = %(<p class="item-translation">原文标题的完整中文译文。</p>) if favorite
       <<~HTML
-        <div class="sheet-body" style="padding-top:40px"><article class="search-row">
-          <div class="search-eyebrow"><span class="chip">日刊</span><span>Hacker News</span><span class="search-dot">·</span><span>2026年10月13日</span></div>
+        <div class="sheet-body" style="padding-top:40px"><div class="search-results"><article class="search-row">
           <h2 class="search-title"><a class="t" href="#title" data-touch="title">#{title_markup}</a></h2>
           #{translation}<p class="search-snippet">A complete ordinary reading excerpt remains nonlinked.</p>
-          <div class="search-links"><a class="t" href="#issue" data-touch="where">所在期 · 2026年10月13日</a><a class="search-original" href="#original" data-touch="original">原文 ↗</a><button type="button" class="favorite-button search-mark" data-touch="bookmark" aria-label="收藏">书签</button></div>
-        </article></div>
+          <div class="result-meta">
+            <div class="result-context"><span>日刊</span><span>Hacker News</span></div>
+            <div class="search-links"><a class="t" href="#issue" data-touch="where">所在期 · 2026年10月13日</a><button type="button" class="favorite-button search-mark" data-touch="bookmark" aria-label="收藏"><span class="favorite-line" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" /></svg></span></button></div>
+          </div>
+        </article></div></div>
       HTML
     end
 
@@ -580,7 +610,7 @@ class DesignRulesTest < ApplicationSystemTestCase
           while (bottom < innerHeight - 1 && bottom - cy < 100 && hit(bottom + 1)) bottom++
           add(cx, top, 'title', '连续命中区上沿'); add(cx, bottom, 'title', '连续命中区下沿')
           for (const line of lines) for (const x of [line.left + 1, line.left + line.width / 2, line.right - 1]) for (const y of [line.top + 1, line.top + line.height / 2, line.bottom - 1]) add(x, y, 'title', '每段字形边界')
-          for (const element of document.querySelectorAll('.search-eyebrow,.item-translation,.search-snippet')) {
+          for (const element of document.querySelectorAll('.result-context,.item-translation,.search-snippet')) {
             const r = element.getBoundingClientRect()
             for (const x of [r.left + 1, r.left + r.width / 2, r.right - 1]) for (const y of [r.top + 1, r.top + r.height / 2, r.bottom - 1]) add(x, y, 'nonlink', element.className)
           }
@@ -611,13 +641,13 @@ class DesignRulesTest < ApplicationSystemTestCase
       meta = if variant == :weekly
         %(<span class="data" data-protected>10-22 06:00</span>)
       else
-        %(<div class="item-meta"><span class="item-metric" data-protected>382</span><a class="item-metric item-comments" href="#comments" data-touch="comments">147</a>#{bookmark}<time class="item-metric item-age" data-protected>42 天前提交</time></div><div class="item-reason">与关注的领域相关，说明具体使用场景。</div>)
+        %(<div class="item-reason">与关注的领域相关，说明具体使用场景。</div><div class="item-meta"><span class="item-metric" data-protected>382</span><a class="item-metric item-comments" href="#comments" data-touch="comments">147</a>#{bookmark}<time class="item-metric item-age" data-protected>42 天前提交</time></div>)
       end
       <<~HTML
-        <div class="sheet-body" style="padding-top:40px"><article class="item-row#{' item-row--weekly' if variant == :weekly}"><span class="item-rank">1</span><div class="item-body">
-          <div class="item-heading"><#{heading} class="item-title"><a class="t" href="#title" data-touch="title">#{ERB::Util.html_escape(title)}</a></#{heading}>#{tag}</div>
+        <div class="sheet-body" style="padding-top:40px"><section class="#{variant == :weekly ? 'weekly-reading' : 'daily-reading daily-source'}"><article class="item-row#{' item-row--weekly' if variant == :weekly}"><span class="item-rank">1</span><div class="item-body">
+          <div class="item-heading"><#{heading} class="item-title"><a class="t" href="#title" data-touch="title">#{ERB::Util.html_escape(title)}</a></#{heading}>#{tag}#{bookmark if variant == :weekly}</div>
           #{copy}#{meta}
-        </div>#{bookmark if variant == :weekly}</article></div>
+        </div></article></section></div>
       HTML
     end
 

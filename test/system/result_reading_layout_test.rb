@@ -5,13 +5,13 @@ class ResultReadingLayoutTest < ApplicationSystemTestCase
     @item = items(:hn_one)
     @item.update!(title: "Reading measure: a long technical headline that stays with its translated title and explanatory paragraph",
       title_zh: "阅读版心：长标题与译文及摘要保持在同一阅读列中",
-      summary: "Reading measure keeps the title and paragraph together while the bookmark stays at the edge of the page.")
+      summary: "Reading measure keeps the title, paragraph and associated actions together.")
     Search::Record.rebuild!
     Favorite.keep(users(:drew), @item)
     sign_in_with_browser(users(:drew))
   end
 
-  test "搜索与收藏的正文共享阅读列，分隔线和书签保留整页宽度" do
+  test "搜索与收藏的文字分隔线与操作共享居中阅读列，书签紧随所在期" do
     [ 1440, 1920 ].each do |width|
       viewport(width)
       [ search_path(q: "Reading measure"), favorites_path ].each do |path|
@@ -21,15 +21,31 @@ class ResultReadingLayoutTest < ApplicationSystemTestCase
           (() => {
             const row = document.querySelector('.search-row');
             const rect = (selector) => row.querySelector(selector).getBoundingClientRect();
-            return { row: row.getBoundingClientRect().width, title: rect('.search-title').width,
+            const bounds = row.getBoundingClientRect(), sheet = document.querySelector('.sheet-body').getBoundingClientRect();
+            const reading = document.querySelector('.search-reading, .results-reading').getBoundingClientRect();
+            const where = rect('.search-links > a'), bookmark = rect('.favorite-button');
+            return { row: bounds.width, center: bounds.left + bounds.width / 2, sheetCenter: sheet.left + sheet.width / 2,
+              reading: reading.width, readingLeft: reading.left, rowLeft: bounds.left,
+              title: rect('.search-title').width,
               translation: rect('.item-translation').width, snippet: rect('.search-snippet').width,
-              bookmarkRight: rect('.favorite-button').right, rowRight: row.getBoundingClientRect().right };
+              metaTop: rect('.result-meta').top, snippetBottom: rect('.search-snippet').bottom,
+              bookmarkGap: bookmark.left - where.right, bookmarkWidth: bookmark.width, bookmarkHeight: bookmark.height,
+              whereCenter: where.top + where.height / 2, bookmarkCenter: bookmark.top + bookmark.height / 2 };
           })()
         JS
         assert_in_delta geometry.fetch("translation"), geometry.fetch("title"), 1, "#{path} at #{width}px: #{geometry}"
         assert_in_delta geometry.fetch("translation"), geometry.fetch("snippet"), 1
-        assert_operator geometry.fetch("row"), :>, geometry.fetch("title")
-        assert_in_delta geometry.fetch("rowRight") + 13, geometry.fetch("bookmarkRight"), 1
+        assert_in_delta width >= 1920 ? 920 : 780, geometry.fetch("row"), 1
+        assert_in_delta geometry.fetch("row"), geometry.fetch("title"), 1
+        assert_in_delta geometry.fetch("row"), geometry.fetch("reading"), 1
+        assert_in_delta geometry.fetch("rowLeft"), geometry.fetch("readingLeft"), 1
+        assert_in_delta geometry.fetch("sheetCenter"), geometry.fetch("center"), 1
+        assert_operator geometry.fetch("metaTop"), :>=, geometry.fetch("snippetBottom")
+        assert_operator geometry.fetch("bookmarkGap"), :>=, 0
+        assert_operator geometry.fetch("bookmarkGap"), :<=, 16, "#{path} at #{width}px: 收藏应与所在期组成紧凑操作组"
+        assert_in_delta geometry.fetch("whereCenter"), geometry.fetch("bookmarkCenter"), 1
+        assert_operator geometry.fetch("bookmarkWidth"), :>=, 44
+        assert_operator geometry.fetch("bookmarkHeight"), :>=, 44
       end
     end
   end

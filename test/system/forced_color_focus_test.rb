@@ -103,36 +103,21 @@ class ForcedColorFocusTest < ApplicationSystemTestCase
     assert_equal sun.fetch("canvas"), sun.fetch("paper")
   end
 
-  test "高对比模式下来源图形的挖空与强调使用系统颜色" do
+  test "高对比模式下来源标题与分隔线仍可辨认" do
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "forced-colors", value: "active" } ])
     visit daily_issue_path("2026-09-08")
-    assert_selector ".daily-source-icon", count: 3
-    details = evaluate_script(<<~JS)
-      (() => {
-        const svgs = Array.from(document.querySelectorAll('.daily-source-icon'));
-        const ink = svgs.flatMap(svg => Array.from(svg.querySelectorAll('[fill="var(--ink)"], [fill="var(--green)"]')).map(el => ({ value: getComputedStyle(el).fill, expected: getComputedStyle(svg).color })));
-        const holes = svgs.flatMap(svg => Array.from(svg.querySelectorAll('[fill="var(--paper)"]')).map(el => getComputedStyle(el).fill));
-        return { ink, holes, canvas: getComputedStyle(document.documentElement).backgroundColor };
-      })()
-    JS
-    assert_not_empty details.fetch("ink")
-    assert_not_empty details.fetch("holes")
-    assert details.fetch("ink").all? { |entry| entry.fetch("value") == entry.fetch("expected") }, details.inspect
-    assert details.fetch("holes").all? { |color| color == details.fetch("canvas") }, details.inspect
-
-    entry = Adapters::Entry.new(title: "本期话题", url: "https://example.com/story", section: "本周话题", rank: 1,
-      meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "本周话题" })
-    issues(:weekly_w36).replace_section!(sources(:ruanyf), [ entry ], issue_no: 366)
-    visit weekly_issue_path("2026-W36")
-    assert_selector ".source-band-mark"
+    assert_selector ".daily-source h2", count: 3
     values = evaluate_script(<<~JS)
-      (() => {
-        const svg = document.querySelector('.source-band-mark');
-        return { paper: getComputedStyle(svg.querySelector('[fill="var(--band-hole)"]')).fill,
-                 canvas: getComputedStyle(document.documentElement).backgroundColor };
-      })()
+      [...document.querySelectorAll('.daily-source')].map(section => ({
+        title: getComputedStyle(section.querySelector('h2')).color,
+        rule: getComputedStyle(section.querySelector('.daily-source-rule')).borderTopColor,
+        canvas: getComputedStyle(document.documentElement).backgroundColor
+      }))
     JS
-    assert_equal values.fetch("canvas"), values.fetch("paper")
+    values.each do |value|
+      assert_not_equal value.fetch("canvas"), value.fetch("title")
+      assert_not_equal value.fetch("canvas"), value.fetch("rule")
+    end
   end
 
   test "高对比模式下缺页插图使用系统前景与背景色" do

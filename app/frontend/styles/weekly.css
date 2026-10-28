@@ -1,0 +1,65 @@
+/* 周刊的主题、目录与正文共享阅读列；来源事实跟在主题之后。 */
+.item-row--lead .source-band-link { color: var(--ink); }
+@media screen {
+  .weekly-reading { --weekly-gutter: 44px; max-width: 824px; margin-top: 24px; margin-inline: auto; }
+  .weekly-reading + .weekly-reading { margin-top: 40px; }
+  .weekly-reading .source-band {
+    display: block; min-height: 0; margin: 0 0 8px var(--weekly-gutter); padding: 0;
+    background: transparent; color: var(--ink);
+  }
+  .weekly-reading .source-band-title {
+    margin: 0; font-size: var(--fs-26); line-height: 1.3; overflow: visible; text-overflow: clip;
+    overflow-wrap: anywhere; text-wrap: balance;
+  }
+  .weekly-reading .source-band-meta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; width: auto;
+    font-family: var(--font-cjk); font-size: var(--fs-13); line-height: 1.6; color: var(--ink2);
+  }
+  .weekly-reading .source-band-issue { opacity: 1; }
+  .weekly-reading .source-band-source { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .weekly-reading .source-band-link {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: inherit; color: var(--ink);
+  }
+  .weekly-reading .source-band-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .weekly-reading .source-band::selection, .weekly-reading .source-band ::selection { background: var(--ink); color: var(--paper); }
+  .weekly-reading .weekly-directory { margin-left: var(--weekly-gutter); border-bottom: 1px solid var(--rule); }
+  .weekly-reading .weekly-directory > summary {
+    width: max-content; max-width: 100%; min-height: 44px; align-content: center; cursor: pointer;
+    font-family: var(--font-cjk); font-size: var(--fs-15);
+  }
+  .weekly-reading .anchors {
+    display: flex; flex-wrap: wrap; gap: 0 20px; padding: 0 0 8px; border-bottom: 0;
+    overflow: visible; scroll-margin-top: 24px;
+  }
+  .weekly-reading .anchor-chip {
+    display: inline-flex; align-items: center; flex: none; min-width: 44px; max-width: 100%; min-height: 44px; height: auto;
+    padding: 0; border: 0; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink);
+    white-space: normal; overflow-wrap: anywhere; text-decoration: underline;
+    text-decoration-color: var(--underline); text-underline-offset: 3px;
+  }
+  .weekly-reading .anchor-chip:hover, .weekly-reading .anchor-chip:focus-visible { text-decoration-color: var(--ink); }
+  .weekly-reading :is(.source-band-link, .weekly-directory > summary, .anchors, .anchor-chip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .weekly-reading .weekly-section-head {
+    margin-left: var(--weekly-gutter); padding: 24px 0 4px; border-bottom: 0;
+    font-size: var(--fs-20); color: var(--ink2);
+  }
+  .weekly-reading .weekly-directory + section > .weekly-section-head { padding-top: 16px; }
+  .weekly-reading .item-row--weekly { padding-top: 16px; padding-bottom: 20px; }
+  .weekly-reading .item-row--lead { padding-top: 0; }
+  .weekly-reading .item-row--lead .item-title { font-size: var(--fs-26); line-height: 1.3; }
+  .weekly-reading .item-row--lead .weekly-directory { margin-left: 0; }
+  .weekly-reading .directory-return { margin: 4px 0 4px var(--weekly-gutter); }
+  .weekly-reading > .issue-body { margin-top: 0; border-top: 0; }
+  .weekly-reading > .source-state { margin-left: var(--weekly-gutter); }
+  .archive-weekly .archive-label-title, .archive-weekly .archive-label-source { display: block; }
+  .archive-weekly .archive-label-source { margin-top: 4px; }
+  .archive-weekly .archive-label-part + .archive-label-part { margin-top: 12px; }
+  @media (max-width: 767px) {
+    .weekly-reading { --weekly-gutter: 32px; margin-top: 20px; }
+    .weekly-reading .source-band-title { font-size: var(--fs-22); }
+    .weekly-reading .item-row--lead .item-title { font-size: var(--fs-22); }
+  }
+  @media (min-width: 1920px) {
+    .weekly-reading { --weekly-gutter: 52px; max-width: 972px; }
+  }
+}

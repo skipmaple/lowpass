@@ -9,7 +9,7 @@ import { emitRouterEvent, router, visitRouterEvent } from '../support/inertia'
 import { searchFilters, searchResult } from '../support/props'
 
 // 搜索页（PRD 5.4、6.2，设计 6.2）：搜索状态由服务端 state 决定，文案是附录 B 原句；
-// 筛选、排序、翻页全是地址；点标题或原文先上报 search_click。
+// 筛选、排序、翻页全是地址；点标题上报 search_click。
 
 function showProps(overrides: Partial<SearchShowProps> = {}): SearchShowProps {
   return {
@@ -70,7 +70,7 @@ describe('原生片段返回搜索结果', () => {
     window.history.replaceState({}, '', `${url}#search-result-${originalId}`)
   }
 
-  it('共用板块 href 时仍恢复原条目，下一 Tab 到该行原文', async () => {
+  it('共用板块 href 时仍恢复原条目，下一 Tab 到该行收藏', async () => {
     returnToResult()
     const focus = vi.spyOn(HTMLElement.prototype, 'focus')
     render(<main id="main-content"><Show {...props} /></main>)
@@ -79,7 +79,7 @@ describe('原生片段返回搜索结果', () => {
     expect(links[1]).toHaveFocus()
     expect(focus).toHaveBeenCalledWith({ preventScroll: true })
     await userEvent.setup().tab()
-    expect(within(links[1].closest('article')!).getByRole('link', { name: '原文' })).toHaveFocus()
+    expect(within(links[1].closest('article')!).getByRole('button', { name: '收藏：Kubernetes operator in Rust' })).toHaveFocus()
   })
 
   it('原条目消失则聚焦 h1，不猜另一个共 href 的结果', () => {
@@ -430,12 +430,12 @@ describe('结果行', () => {
     const { container } = show({ state: 'results', q: 'rust', results: [weekly, withoutSnippet], total: 2, pages: 1 })
     expect(container.querySelectorAll('.item-translation')).toHaveLength(0)
   })
-  it('眉行、命中下划线、所在期与原文', () => {
+  it('正文在前，来源与所在期在后，标题是唯一原文入口', () => {
     const { container } = results()
     const row = container.querySelector('.search-row') as HTMLElement
 
-    expect(row.querySelector('.search-eyebrow')?.textContent).toContain('日刊')
-    expect(row.querySelector('.search-eyebrow')?.textContent).toContain('Hacker News')
+    expect(row.querySelector('.result-context')?.textContent).toContain('日刊')
+    expect(row.querySelector('.result-context')?.textContent).toContain('Hacker News')
     expect(Array.from(row.querySelectorAll('.search-title .hit')).map((hit) => hit.textContent)).toEqual(['Kuber', 'Rust'])
     expect(Array.from(row.querySelectorAll('.search-snippet .hit')).map((hit) => hit.textContent)).toEqual(['Kubernetes'])
 
@@ -447,13 +447,16 @@ describe('结果行', () => {
     expect(title).toHaveAttribute('target', '_blank')
     expect(title).toHaveAttribute('rel', 'noopener noreferrer')
     expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
-    expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
+    expect(row.firstElementChild).toBe(row.querySelector('.search-title'))
+    expect(row.lastElementChild).toBe(row.querySelector('.result-meta'))
+    expect(row.querySelectorAll('a[href="https://example.com/k8s-rust"]')).toHaveLength(1)
+    expect(within(row).queryByRole('link', { name: '原文' })).not.toBeInTheDocument()
   })
 
   // 所在期集中在可操作的链接里；不同的发布时间仍保留在来源旁。
   it('所在期只显示在链接中，独立发布时间仍保留', () => {
     const daily = results()
-    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News')
+    expect(daily.container.querySelector('.result-context')?.textContent).toBe('日刊Hacker News')
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toBeInTheDocument()
     daily.unmount()
 
@@ -467,7 +470,7 @@ describe('结果行', () => {
         }),
       ],
     })
-    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·2026年9月4日')
+    expect(weekly.container.querySelector('.result-context')?.textContent).toBe('周刊阮一峰科技爱好者周刊2026年9月4日')
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toBeInTheDocument()
   })
 
@@ -485,7 +488,7 @@ describe('结果行', () => {
     const user = userEvent.setup()
     const { container } = results()
 
-    // 正则容忍 HitText run 边界的空格差异（同上「眉行、命中下划线…」一条的注释）
+    // 正则容忍 HitText run 边界的空格差异（同上结果行测试的注释）
     const title = within(container.querySelector('.search-row') as HTMLElement).getByRole('link', { name: /^Kubernetes\s*operator\s*in\s*Rust$/ })
     title.addEventListener('click', (event) => event.preventDefault())
     await user.click(title)
@@ -505,7 +508,7 @@ describe('结果行', () => {
     const user = userEvent.setup()
     results()
 
-    // 正则容忍 Mixed run 边界的空格差异（同上「眉行、命中下划线…」一条的注释）
+    // 正则容忍 Mixed run 边界的空格差异（同上结果行测试的注释）
     const where = screen.getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })
     where.addEventListener('click', (event) => event.preventDefault())
     await user.click(where)
@@ -536,7 +539,7 @@ describe('排序与分页', () => {
     expect(screen.getByRole('link', { name: '时间' })).toHaveAttribute('href', '/search?q=kuber&source=src-hn&sort=date')
     expect(screen.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/search?q=kuber&source=src-hn')
     expect(screen.getByRole('status')).toHaveTextContent('41 条结果')
-    expect(screen.getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
+    expect(screen.getByRole('link', { name: /^Kubernetes\s*operator\s*in\s*Rust$/ })).toHaveAttribute('href', 'https://example.com/k8s-rust')
   })
 
   it('日期还在待确认时，排序、分页与查询提交使用同一对日期', () => {

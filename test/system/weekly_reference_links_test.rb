@@ -121,6 +121,8 @@ class WeeklyReferenceLinksTest < ApplicationSystemTestCase
     row = find("#item-#{item.id}")
     execute_script("arguments[0].focus()", row.find(".item-title a"))
     page.driver.browser.switch_to.active_element.send_keys(:tab)
+    assert_selector "#item-#{item.id} .item-mark:focus"
+    page.driver.browser.switch_to.active_element.send_keys(:tab)
     assert_selector "#item-#{item.id} .weekly-reference:focus", text: "交互版"
     assert_equal "solid", page.evaluate_script("getComputedStyle(document.activeElement).outlineStyle")
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "forced-colors", value: "active" } ])

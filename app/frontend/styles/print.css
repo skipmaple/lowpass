@@ -16,6 +16,7 @@
   .source-foot, footer a, footer .ctrl, .search-head, .filters-shell, .search-pager { display: none !important; }
 
   .daily-source { margin-top: 18pt !important; overflow: visible !important; }
+  .daily-source:focus { outline: none; }
   .daily-source-head { padding: 0; break-after: avoid; }
   .daily-source-icon, .daily-source-rule { display: none; }
   .daily-source *, .daily-source *::before, .daily-source *::after { animation: none !important; }

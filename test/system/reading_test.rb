@@ -14,6 +14,7 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     within("#source-directory") { click_on sources(:github).name }
     wait_for_reading_anchor("source-#{sources(:github).id}")
     history_length = evaluate_script("history.length")
@@ -32,6 +33,7 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     assert_selector ".daily-source", count: 3
     history_length = evaluate_script("history.length")
     within("#source-directory") { click_on sources(:github).name }
@@ -75,6 +77,7 @@ class ReadingTest < ApplicationSystemTestCase
     Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     find("#source-directory a", match: :first).send_keys(:left, :right)
     assert_current_path daily_issue_path("2026-09-08")
   end
@@ -85,6 +88,7 @@ class ReadingTest < ApplicationSystemTestCase
     source = sources(:github)
     item = Item.where(issue: issues(:daily_0908), source: source).order(:rank).first!
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     within("#source-directory") { click_on source.name }
     within("#source-#{source.id}") { find("button[aria-label='收藏：#{item.title}']").click }
     wait_until { users(:drew).favorites.exists?(url_hash: item.url_hash) }
@@ -101,6 +105,7 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     find("#source-directory a[href='#source-#{sources(:github).id}']").send_keys(:enter)
     wait_until { evaluate_script("document.activeElement.id") == "source-#{sources(:github).id}" }
     page.driver.browser.switch_to.active_element.send_keys(:tab)
@@ -117,6 +122,7 @@ class ReadingTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "forced-colors", value: forced_colors ? "active" : "none" } ])
       visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
       find("#source-directory a[href='#source-#{source.id}']").send_keys(:enter)
       wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
       state = evaluate_script(<<~JS)
@@ -152,6 +158,7 @@ class ReadingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
     source = sources(:github)
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     find("#source-directory a[href='#source-#{source.id}']").send_keys(:enter)
     wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
     assert_equal "solid", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
@@ -170,6 +177,7 @@ class ReadingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
     source = sources(:github)
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     within("#source-directory") { click_on source.name }
     wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
     assert_not evaluate_script("document.activeElement.matches(':focus-visible')")
@@ -179,6 +187,7 @@ class ReadingTest < ApplicationSystemTestCase
   test "三个来源连续可读，目录跳转保留之前的内容" do
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     assert_text HN_TITLE
     assert_selector ".daily-source", count: 3
     within("#source-directory") { click_on sources(:github).name }
@@ -206,6 +215,7 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
+    find(".source-directory > summary").click
     within("#source-directory") { click_on sources(:hackaday).name }
     assert_current_path(daily_issue_path("2026-09-08")) { |url| url.fragment == "source-#{sources(:hackaday).id}" }
     wait_for_reading_anchor("source-#{sources(:hackaday).id}")

@@ -122,16 +122,23 @@ describe('键盘翻页', () => {
     return event
   }
 
-  it('来源目录链接获得焦点时，左右键不翻到其他刊期', () => {
+  it('来源目录开关与链接获得焦点时，左右键不翻到其他刊期', () => {
     renderHook(() => useArrowTurns('/daily/2026-09-07', '/daily/2026-09-09'))
-    const directory = document.createElement('nav')
-    directory.id = 'source-directory'
+    const directory = document.createElement('details')
+    directory.className = 'source-directory'
+    const summary = document.createElement('summary')
+    summary.textContent = '来源目录'
+    const nav = document.createElement('nav')
+    nav.id = 'source-directory'
     const link = document.createElement('a')
     link.href = '#source-github'
-    directory.appendChild(link)
+    nav.appendChild(link)
+    directory.append(summary, nav)
     document.body.appendChild(directory)
-    link.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }))
-    link.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
+    for (const target of [summary, link]) {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }))
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
+    }
     expect(router.visit).not.toHaveBeenCalled()
     directory.remove()
   })

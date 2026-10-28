@@ -2,9 +2,7 @@ import { Link, usePage } from '@inertiajs/react'
 import { useEffect, useId, useRef } from 'react'
 import type * as React from 'react'
 
-import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
-import Icon from '@/components/Icon'
 import IssueNotice from '@/components/IssueNotice'
 import { Translation } from '@/components/ItemRow'
 import Layout from '@/components/Layout'
@@ -15,8 +13,8 @@ import { DAILY_LATEST, dailyHref, favoritesHref, latestWeeklyHref } from '@/lib/
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { FavoriteEntry, FooterData, Publication } from '@/types/lowpass'
 
-// 收藏页（PRD 5.10、R-10.6）：按收藏时间倒序，每页 20 条。行沿用搜索结果行的装置（眉行、标题、片段、底行两个链接），
-// 眉行只放刊物与来源，所在期集中在底行链接；标题不带命中下划线，译文照日刊页的位置（D25），底行右端是书签。不显示总数、不分组、不筛选（D28）。
+// 收藏页（PRD 5.10、R-10.6）：按收藏时间倒序，每页 20 条。先读标题、译文与片段，来源及所在期跟在正文后面。
+// 标题是唯一原文入口，所在期与书签组成紧凑操作组；译文照日刊页的位置（D25）。不显示总数、不分组、不筛选（D28）。
 // 取消后那一行原地留下「已取消收藏」与「恢复」，离开或刷新页面才消失（R-10.7）。文案是附录 B 原句。
 
 export type FavoritesIndexProps = FooterData & {
@@ -49,11 +47,6 @@ function Row({ entry }: { entry: FavoriteEntry }) {
 
   return (
     <article ref={rowRef} className="search-row">
-      <div className="search-eyebrow">
-        <Chip text={LABELS[entry.publication]} />
-        <Mixed text={entry.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
-      </div>
-
       <h2 className="search-title">
         <a className="t" href={entry.url} target="_blank" rel="noopener noreferrer" lang={latinLang(entry.title)}>
           <Mixed text={entry.title} font="latin" size="var(--fs-20)" color={kept ? 'var(--ink)' : 'var(--ink2)'} />
@@ -68,18 +61,20 @@ function Row({ entry }: { entry: FavoriteEntry }) {
       ) : null}
       {entry.summary_zh ? <Translation text={entry.summary_zh} /> : null}
 
-      <div className="search-links">
-        <Link className="t" href={entry.where.href}>
-          <Mixed text={`所在期 · ${entry.where.label}`} size="var(--fs-13)" color="var(--ink)" />
-        </Link>
-        <a className="search-original" href={entry.url} target="_blank" rel="noopener noreferrer">
-          <span>原文</span>
-          <Icon name="arrow-up-right" size={12} />
-        </a>
-        <span className={`favorite-controls search-mark${kept ? '' : ' favorite-removed'}`}>
-          {!kept ? <span id={statusId}>已取消收藏</span> : null}
-          <FavoriteButton ref={kept ? markRef : restoreRef} urlHash={entry.url_hash} title={entry.title} undo={{ describedBy: statusId }} />
-        </span>
+      <div className="result-meta">
+        <div className="result-context">
+          <span>{LABELS[entry.publication]}</span>
+          <Mixed text={entry.source_name} font="latin" size="var(--fs-13)" color="var(--ink2)" />
+        </div>
+        <div className="search-links">
+          <Link className="t" href={entry.where.href}>
+            <Mixed text={`所在期 · ${entry.where.label}`} size="var(--fs-13)" color="var(--ink)" />
+          </Link>
+          <span className={`favorite-controls search-mark${kept ? '' : ' favorite-removed'}`}>
+            {!kept ? <span id={statusId}>已取消收藏</span> : null}
+            <FavoriteButton ref={kept ? markRef : restoreRef} urlHash={entry.url_hash} title={entry.title} undo={{ describedBy: statusId }} />
+          </span>
+        </div>
       </div>
     </article>
   )
@@ -104,7 +99,7 @@ function List({ entries, page, pages, latest_daily_key }: Pick<FavoritesIndexPro
   }
 
   return (
-    <>
+    <div className="results-reading">
       <div className="search-results">
         {shown.map((entry) => (
           <Row key={entry.url_hash} entry={entry} />
@@ -113,7 +108,7 @@ function List({ entries, page, pages, latest_daily_key }: Pick<FavoritesIndexPro
       {pages > 1 ? (
         <Pager prevHref={page > 1 ? favoritesHref(page - 1) : null} nextHref={page < pages ? favoritesHref(page + 1) : null} page={page} pages={pages} />
       ) : null}
-    </>
+    </div>
   )
 }
 

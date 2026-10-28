@@ -32,6 +32,11 @@ export function usePage<T = PageProps>() {
   return currentPage as unknown as Page & { props: T }
 }
 
+// 单元测试只需本地开合状态；按历史条目的记忆与滚动恢复由真实浏览器系统测试覆盖。
+export function useRemember<T>(initial: T, _key?: string) {
+  return useState(initial)
+}
+
 // 页面本身不发访问（切来源是本地状态），留个 spy 好断言「没有回服务端」；后台表单提交也走 spy（post/patch）
 type RouterEvent = 'start' | 'finish' | 'before' | 'navigate' | 'beforeUpdate' | 'clientVisit'
 type RouterListener = (event: Event) => void

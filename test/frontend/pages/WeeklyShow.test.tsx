@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Show, { type WeeklyShowProps } from '@/pages/Weekly/Show'
 import { item, weeklyGroup, weeklyIssue, weeklySection } from '../support/props'
 
-// 周刊详情（PRD 5.2、R-2.5 到 R-2.7）：每个源一节——反白横带、板块锚点目录、按板块分节的条目。
+// 周刊详情（PRD 5.2、R-2.5 到 R-2.7）：每个源一节——主题、来源事实、可展开目录与完整条目。
 // 阮一峰按原文板块分节，RSS 周刊源没有板块。
 
 function show(overrides: Partial<WeeklyShowProps> = {}) {
@@ -60,15 +60,68 @@ describe('周刊期头', () => {
   })
 })
 
-describe('源节头（反白横带）', () => {
-  it('源名是 h2，期号与主题归入源名信息组，右端只保留原文操作', () => {
+describe('源节头', () => {
+  it('首组单条标题与本期主题完全一致时只保留实际条目的标题与操作', () => {
+    const theme = '慢下来的理由'
+    const lead = item({ id: '000000000000000000000000a', title: theme, url: 'https://example.com/editorial', content: '完整的开篇正文。', published_at: null })
+    const group = weeklyGroup({ name: theme, anchor: 'issue-366-editorial', items: [lead] })
+    const section = weeklySection({ issue_title: theme, groups: [group, weeklyGroup({ name: '工具', anchor: 'issue-366-tools', items: [item({ id: 'tool', title: '终端工具' })] })] })
+    const { container } = show({ sections: [section] })
+
+    expect(screen.getAllByRole('heading', { name: theme })).toHaveLength(1)
+    const heading = screen.getByRole('heading', { name: theme, level: 2 })
+    const article = document.getElementById(`item-${lead.id}`)!
+    expect(article).toHaveClass('item-row--lead')
+    expect(article).toHaveAttribute('tabindex', '-1')
+    expect(article).toContainElement(heading)
+    expect(document.getElementById(group.anchor)).toContainElement(article)
+    expect(within(heading).getByRole('link')).toHaveAttribute('href', lead.url)
+    expect(within(article).getByRole('button', { name: `收藏：${theme}` })).toBeInTheDocument()
+    expect(within(article).getByRole('link', { name: '原文' })).toHaveAttribute('href', section.original_url)
+    expect(article).toHaveTextContent(section.source.name)
+    expect(article).toHaveTextContent('第 366 期')
+    expect(article).toHaveTextContent('完整的开篇正文。')
+    expect(container.querySelector('.source-band')).toBeNull()
+    expect(container.querySelectorAll('.weekly-directory')).toHaveLength(1)
+    expect(article).toContainElement(container.querySelector('.weekly-directory'))
+    expect(screen.getByRole('heading', { name: '工具', level: 3 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '终端工具', level: 4 })).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('link', { name: '返回板块目录' })[0])
+    expect(container.querySelector('.weekly-directory')).toHaveAttribute('open')
+    expect(container.querySelector('.anchors')).toHaveFocus()
+    const ids = [...container.querySelectorAll('[id]')].map((node) => node.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it.each(['不同板块名', '不同条目名', '多条板块', '封面先于主题', '降级'])('不合并%s的来源节头', (kind) => {
+    const theme = '慢下来的理由'
+    const group = weeklyGroup({ name: theme, anchor: 'issue-366-editorial', items: [item({ title: theme })] })
+    if (kind === '不同板块名') group.name = '文章'
+    if (kind === '不同条目名') group.items[0].title = `${theme}续篇`
+    if (kind === '多条板块') group.items.push(item({ id: 'second', title: '另一条内容' }))
+    const groups = kind === '封面先于主题' ? [weeklyGroup({ name: '封面', anchor: 'issue-366-cover', items: [item({ id: 'cover', title: '封面' })] }), group] : [group]
+    const { container } = show({ sections: [weeklySection({ issue_title: theme, groups, degraded: kind === '降级' })] })
+
+    expect(container.querySelector('.source-band')).toContainElement(screen.getByRole('heading', { name: theme, level: 2 }))
+    expect(container.querySelector('.item-row--lead')).toBeNull()
+  })
+
+  it('本期主题是 h2，来源和期号跟随主题，原文入口仍在同组', () => {
     const { container } = show()
 
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('阮一峰科技爱好者周刊')
-    expect(container.querySelector('.source-band-issue')).toHaveTextContent('第 366 期 · 人生的容错率')
-    expect(container.querySelector('.source-band-copy')).toHaveTextContent('阮一峰科技爱好者周刊第 366 期 · 人生的容错率')
-    expect(container.querySelector('.source-band-meta')).not.toHaveTextContent('第 366 期 · 人生的容错率')
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('人生的容错率')
+    expect(container.querySelector('.source-band-issue')).toHaveTextContent('第 366 期')
+    expect(container.querySelector('.source-band-meta')).toHaveTextContent('阮一峰科技爱好者周刊')
+    expect(container.querySelector('.source-band-meta')).not.toHaveTextContent('人生的容错率')
     expect(container.querySelector('.source-band-meta')).toHaveTextContent('原文')
+  })
+
+  it('没有本期主题时使用来源名，不重复显示同一个来源', () => {
+    const { container } = show({ sections: [weeklySection({ issue_title: null, issue_label: '第 366 期' })] })
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('阮一峰科技爱好者周刊')
+    expect(container.querySelector('.source-band-meta')).not.toHaveTextContent('阮一峰科技爱好者周刊')
+    expect(container.querySelector('.source-band-issue')).toHaveTextContent('第 366 期')
   })
 
   it('有期号写「原文」，链到那一期的 Markdown，新标签页打开', () => {
@@ -118,6 +171,7 @@ describe('板块与锚点', () => {
 
   it('每个板块一个锚点小块，指向自己的落点', () => {
     const { container } = show({ sections })
+    fireEvent.click(screen.getByText('板块目录'))
 
     const anchors = within(container.querySelector('.anchors') as HTMLElement).getAllByRole('link')
     expect(anchors.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
@@ -200,6 +254,7 @@ describe('板块与锚点', () => {
 
   it('每个板块一个锚点小块，指向自己的落点', () => {
     const { container } = show({ sections })
+    fireEvent.click(screen.getByText('板块目录'))
 
     const anchors = within(container.querySelector('.anchors') as HTMLElement).getAllByRole('link')
     expect(anchors.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
@@ -244,6 +299,7 @@ describe('板块与锚点', () => {
     })
 
     const encoded = encodeURIComponent('issue-366-文章')
+    fireEvent.click(screen.getByText('板块目录'))
     expect(within(container.querySelector('.anchors') as HTMLElement).getByRole('link', { name: '文章' })).toHaveAttribute('href', `#${encoded}`)
     expect(document.getElementById(encoded)).toContainElement(screen.getByRole('heading', { level: 3, name: '文章' }))
   })
@@ -386,8 +442,8 @@ it('单条板块与标题重复时只保留一个标题，保留两种深链与�
 })
 
 
-it('手机目录默认收起，返回目录会展开并聚焦导航', () => {
-  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+it.each([false, true])('目录始终默认收起，返回目录会展开并聚焦导航（手机=%s）', (mobile) => {
+  vi.stubGlobal('matchMedia', () => ({ matches: mobile, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
   try {
     const { container } = show()
     const directory = container.querySelector('details.weekly-directory') as HTMLDetailsElement
@@ -411,10 +467,11 @@ it('周刊条目有书签，降级的节没有', () => {
   expect(container.querySelector('.favorite-button')).toBeNull()
 })
 
-it('来源横带用「翻开的书」木刻图形，对读屏隐藏', () => {
+it('来源节与完整正文共用一个阅读容器，不插入重复的装饰图形', () => {
   const { container } = show()
-
-  const mark = container.querySelector('.source-band svg.source-band-mark')
-  expect(mark).not.toBeNull()
-  expect(mark).toHaveAttribute('aria-hidden', 'true')
+  const reading = container.querySelector('.weekly-reading')
+  expect(reading).toContainElement(container.querySelector('.source-band'))
+  expect(reading).toContainElement(container.querySelector('.weekly-directory'))
+  expect(reading).toContainElement(container.querySelector('.item-row--weekly'))
+  expect(container.querySelector('.source-band-mark')).toBeNull()
 })

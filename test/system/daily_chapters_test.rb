@@ -96,63 +96,72 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "桌面来源目录按实际一二三四个来源填满同一行" do
+  test "目录默认收起，展开后完整提供实际一二四个来源与状态" do
     issue = issues(:daily_0908)
     extra = Source.create!(name: "Technical Notes", adapter: "rss", publication: "daily", sort_order: 4,
       config: { feed_url: "https://notes.example/feed" })
     available = [ sources(:hn), sources(:github), sources(:hackaday), extra ]
-    viewport(1440)
-
-    [ 1, 2, 3, 4 ].each do |count|
-      selected = available.first(count)
-      issue.update!(source_states: selected.to_h { |source| [ source.id, source == extra ? "empty" : "ok" ] })
-      visit daily_issue_path("2026-09-08")
-      assert_selector "#source-directory .source-tab", count: count
-      assert_selector ".daily-source", count: count
-      evaluate_async_script("document.fonts.ready.then(arguments[0])")
-      geometry = evaluate_script(<<~JS)
-        (() => {
-          const directory = document.querySelector('#source-directory');
-          return { directory: directory.getBoundingClientRect().toJSON(),
-            tabs: [...directory.querySelectorAll('a.source-tab')].map(tab => ({
-              href: tab.getAttribute('href'), rect: tab.getBoundingClientRect().toJSON()
-            })) };
-        })()
-      JS
-      tabs = geometry.fetch("tabs")
-      assert_equal selected.map { |source| "#source-#{source.id}" }, tabs.map { |tab| tab.fetch("href") }
-      first = tabs.first.fetch("rect")
-      last = tabs.last.fetch("rect")
-      # 既有目录左侧有 1px 的保护内边距；右端必须由实际入口填满，不能留下空网格列。
-      assert_in_delta geometry.fetch("directory").fetch("left"), first.fetch("left"), 2, "#{count} 个来源：首入口贴齐目录左缘"
-      assert_in_delta geometry.fetch("directory").fetch("right"), last.fetch("right"), 1, "#{count} 个来源：末入口填满目录右缘"
-      tabs.each do |tab|
-        rect = tab.fetch("rect")
-        assert_in_delta first.fetch("top"), rect.fetch("top"), 0.5, "#{count} 个来源：桌面入口应在同一行"
-        assert_in_delta first.fetch("width"), rect.fetch("width"), 1, "#{count} 个来源：入口均分可用宽度"
-        assert_operator rect.fetch("height"), :>=, 44
+    [ 320, 1440 ].each do |width|
+      viewport(width)
+      [ 1, 2, 4 ].each do |count|
+        selected = available.first(count)
+        issue.update!(source_states: selected.to_h { |source| [ source.id, source == extra ? "empty" : "ok" ] })
+        visit daily_issue_path("2026-09-08")
+        assert_selector "details.source-directory:not([open])"
+        assert_no_selector "#source-directory", visible: true
+        assert_selector ".daily-source", count: count
+        assert_selector "#item-#{items(:hn_one).id} .item-title"
+        summary = find("details.source-directory > summary", text: "来源目录")
+        assert_operator summary.native.rect.height, :>=, 44
+        summary.send_keys(:enter)
+        assert_selector "details.source-directory[open]"
+        links = all("#source-directory a.source-link", count: count)
+        assert_equal selected.map { |source| "#source-#{source.id}" }, links.map { |link| "##{link[:href].split('#', 2).last}" }
+        links.zip(selected).each do |link, source|
+          assert_includes link.text, source.name
+          assert_operator link.native.rect.height, :>=, 44
+          assert_operator link.native.rect.width, :>=, 44
+        end
+        assert_selector "#source-directory", text: "本期无新内容" if count == 4
+        rectangles = evaluate_script("[...document.querySelectorAll('#source-directory a.source-link')].map(link => link.getBoundingClientRect().toJSON())")
+        rectangles.combination(2).each do |a, b|
+          overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
+            [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
+          assert_equal 0, overlap, "#{width}px：来源入口不能重叠"
+        end
+        assert_no_horizontal_overflow
       end
-      tabs.each_cons(2) do |left, right|
-        assert_operator left.fetch("rect").fetch("right"), :<, right.fetch("rect").fetch("left"), "#{count} 个来源：入口应有独立间隔"
-      end
-      assert_no_horizontal_overflow
     end
   end
 
-  test "来源目录的单行与换行标题从同一高度开始" do
-    [ 375, 481, 768 ].each do |width|
+  test "来源标题与首条正文共享居中的阅读列，栏目开头没有额外空块" do
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+    WIDTHS.each do |width|
       viewport(width)
       visit daily_issue_path("2026-09-08")
-      assert_selector "#source-directory .source-tab", count: 3
+      assert_selector ".daily-source", count: 3
       evaluate_async_script("document.fonts.ready.then(arguments[0])")
-      headings = evaluate_script(<<~JS)
-        [...document.querySelectorAll('#source-directory .source-tab-name')].map(name => ({
-          text: name.textContent, rect: name.getBoundingClientRect().toJSON()
-        }))
+      geometry = evaluate_script(<<~JS)
+        (() => {
+          const rect = element => element.getBoundingClientRect().toJSON();
+          return { sheet: rect(document.querySelector('.sheet-body')),
+            sources: [...document.querySelectorAll('.daily-source')].map(section => {
+              const header = section.querySelector('.daily-source-head'), heading = section.querySelector('.print-source-name');
+              const row = section.querySelector('.item-row'), body = row.querySelector('.item-body'), title = row.querySelector('.item-heading');
+              return { section: rect(section), header: rect(header), heading: rect(heading), row: rect(row), body: rect(body), title: rect(title),
+                titleLine: parseFloat(getComputedStyle(row.querySelector('.item-title')).lineHeight) };
+            }) };
+        })()
       JS
-      headings.each do |heading|
-        assert_in_delta headings.first.fetch("rect").fetch("top"), heading.fetch("rect").fetch("top"), 0.5,
-          "#{width}px：#{heading.fetch('text')} 不应因行数少而垂直居中下沉"
+      geometry.fetch("sources").each do |source|
+        column, header, heading, row, body, title = source.values_at("section", "header", "heading", "row", "body", "title")
+        assert_in_delta width / 2.0, column.fetch("left") + column.fetch("width") / 2, 1, "#{width}px：阅读列居中"
+        assert_in_delta heading.fetch("left"), body.fetch("left"), 1, "#{width}px：来源名与正文左缘一致"
+        assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{width}px：条目与栏目同列"
+        assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{width}px：条目与栏目同列"
+        assert_in_delta header.fetch("bottom"), row.fetch("top"), 1, "#{width}px：栏首之后不插入空白块"
+        assert_operator title.fetch("top") - heading.fetch("bottom"), :<=, source.fetch("titleLine"), "#{width}px：来源名与首条标题的留白不超过一行正文标题"
+        assert_operator column.fetch("width"), :<, geometry.fetch("sheet").fetch("width") if width >= 1440
       end
       assert_no_horizontal_overflow
     end
@@ -210,13 +219,25 @@ class DailyChaptersTest < ApplicationSystemTestCase
       viewport(width)
       visit daily_issue_path("2026-09-08")
       target = "source-#{sources(:github).id}"
+      summary = find("details.source-directory > summary", text: "来源目录")
+      summary.send_keys(:enter)
+      assert_selector "details.source-directory[open]"
       find("#source-directory a[href='##{target}']").send_keys(:enter)
       wait_until { evaluate_script("location.hash") == "##{target}" && evaluate_script("document.activeElement.id") == target }
+      assert_selector "details.source-directory[open]"
       heading = find("##{target} .daily-source-heading")
       visible = evaluate_script("(() => { const r = arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })()", heading)
       assert visible, "#{width}px：目录落点的栏目标题应完整在视口内"
       page.driver.browser.switch_to.active_element.send_keys(:tab)
       assert evaluate_script("document.activeElement.matches('##{target} .item-title a')"), "#{width}px：Tab 应从栏目进入正文"
+
+      summary.send_keys(:enter)
+      assert_selector "details.source-directory:not([open])"
+      find("##{target} .directory-return").send_keys(:enter)
+      wait_until { evaluate_script("location.hash") == "#source-directory" && evaluate_script("document.activeElement.id") == "source-directory" }
+      assert_selector "details.source-directory[open]"
+      page.driver.browser.switch_to.active_element.send_keys(:tab)
+      assert_selector "#source-directory a.source-link:first-child:focus"
       assert_no_horizontal_overflow
     end
   end
@@ -251,7 +272,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
             return `rgb(${composite.join(', ')})`;
           }
           const text = [];
-          for (const block of section.querySelectorAll('.daily-source-number, .print-source-name, .item-rank, .item-title, .item-summary, .item-translation, .item-reason, .item-meta')) {
+          for (const block of section.querySelectorAll('.print-source-name, .item-rank, .item-title, .item-summary, .item-translation, .item-reason, .item-meta')) {
             const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
             while (walker.nextNode()) {
               const node = walker.currentNode, element = node.parentElement;
@@ -260,8 +281,8 @@ class DailyChaptersTest < ApplicationSystemTestCase
               }
             }
           }
-          const tab = document.querySelector(`#source-directory a[href="#${section.id}"]`);
-          const planes = [section, section.querySelector('.daily-source-sheet'), section.querySelector('.daily-source-head'), tab].map(element => {
+          const directory = document.querySelector('details.source-directory');
+          const planes = [section, section.querySelector('.daily-source-sheet'), section.querySelector('.daily-source-head'), directory].map(element => {
             const style = getComputedStyle(element);
             return { color: style.backgroundColor, image: style.backgroundImage };
           });

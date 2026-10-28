@@ -20,6 +20,20 @@ export type WeeklyIndexProps = FooterData & {
   weeks: ArchiveWeek[]
 }
 
+function Summary({ source, label, published }: { source: string; label: string | null; published: boolean }) {
+  const boundary = label?.indexOf(' · ') ?? -1
+  const theme = boundary >= 0 ? label!.slice(boundary + 3) : null
+  const title = theme || source
+  const context = theme ? `${source} · ${label!.slice(0, boundary)}` : label
+
+  return (
+    <span className="archive-label-part">
+      <Mixed className="archive-label-title" text={title} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
+      {context ? <Mixed className="archive-label-source" text={context} font="latin" size="var(--fs-13)" color="var(--ink2)" /> : null}
+    </span>
+  )
+}
+
 function Row({ week }: { week: ArchiveWeek }) {
   const published = week.state === 'published'
   const labels = week.summary_parts?.length ? week.summary_parts : [{ source: week.summary, label: null }]
@@ -38,10 +52,7 @@ function Row({ week }: { week: ArchiveWeek }) {
       </span>
       <span className="archive-label">
         {labels.map(({ source, label }, index) => source ? (
-          <span className="archive-label-part" key={index}>
-            <Mixed className="archive-label-source" text={source} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
-            {label ? <> <Mixed text={label} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} /></> : null}
-          </span>
+          <Summary key={index} source={source} label={label} published={published} />
         ) : null)}
       </span>
       <span className="archive-meta">{week.count ? <Mixed text={`${week.count} 条`} /> : null}</span>

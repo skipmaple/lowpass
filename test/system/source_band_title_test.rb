@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-# 真实周刊来源横带：已载入文楷后量文字行，避免只检查 CSS 属性却漏掉末行孤字。
+# 真实周刊阅读标题：已载入文楷后量文字行，避免只检查 CSS 属性却漏掉末行孤字。
 class SourceBandTitleTest < ApplicationSystemTestCase
   teardown do
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
@@ -44,37 +44,34 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Network.setBlockedURLs", urls: [])
   end
 
-  test "周刊来源标题在 320px 不剩末行孤字，375px 仍完整单行" do
+  test "周刊主题高于来源事实，窄屏完整换行且不留末行孤字" do
     original_url = "https://github.com/ruanyf/weekly/blob/master/docs/issue-366.md"
+    theme = "在复杂的工程系统里慢下来的理由"
     issues(:weekly_w36).items.create!(
-      source: sources(:ruanyf), title: "科技爱好者周刊（第 366 期）：慢下来的理由", rank: 1,
+      source: sources(:ruanyf), title: "科技爱好者周刊（第 366 期）：#{theme}", rank: 1,
       url: original_url, url_hash: Digest::SHA256.hexdigest(original_url), fetched_at: Time.current,
-      meta: { issue_no: 366, issue_title: "慢下来的理由", degraded: true }
+      meta: { issue_no: 366, issue_title: theme, degraded: true }
     )
     sign_in_with_browser(users(:drew))
 
-    [ 375, 320 ].each do |width|
+    [ 320, 375, 1440 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       visit weekly_issue_path("2026-W36")
-      assert_selector ".source-band-title", text: sources(:ruanyf).name
+      assert_selector "h2.source-band-title", text: theme
       evaluate_async_script("document.fonts.ready.then(arguments[0])")
       layout = source_title_layout
 
-      assert_equal sources(:ruanyf).name, layout.fetch("text"), "#{width}px：来源名完整"
-      assert_equal "20px", layout.fetch("fontSize"), "#{width}px：保留既有字号"
+      assert_equal theme, layout.fetch("text"), "#{width}px：主题完整"
+      assert_operator layout.fetch("fontSize").to_f, :>, layout.fetch("metaFontSize").to_f, "#{width}px：主题高于来源事实"
       assert_operator layout.fetch("overflow"), :<=, 0, "#{width}px：页面不横向溢出"
-      if width == 375
-        assert_equal [ sources(:ruanyf).name ], layout.fetch("lines"), "375px：原标题仍为一行"
-      else
-        assert_operator layout.fetch("lines").length, :>, 1, "320px：在原有可用宽度内自然换行"
-        assert_operator layout.fetch("lines").last.length, :>=, 2, "320px：来源标题末行不能只剩一个汉字（#{layout.fetch('lines').inspect}）"
-      end
-      assert_selector ".source-band-issue", text: "第 366 期 · 慢下来的理由"
+      assert_operator layout.fetch("lines").last.length, :>=, 2, "#{width}px：主题末行不能只剩一个汉字（#{layout.fetch('lines').inspect}）"
+      assert_selector ".source-band-meta", text: sources(:ruanyf).name
+      assert_selector ".source-band-issue", text: "第 366 期"
       assert_selector ".source-band-link[href='#{original_url}'][target='_blank']", text: "原文"
     end
   end
 
-  test "周刊原文链接打印为墨色，切回屏幕仍为纸色" do
+  test "周刊原文链接在屏幕与打印均跟随墨色，屏幕保留透明纸面" do
     original_url = "https://github.com/ruanyf/weekly/blob/master/docs/issue-366.md"
     issues(:weekly_w36).items.create!(
       source: sources(:ruanyf), title: "科技爱好者周刊（第 366 期）：慢下来的理由", rank: 1,
@@ -84,7 +81,7 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
     page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
     visit weekly_issue_path("2026-W36")
-    assert_selector ".source-band-title", text: sources(:ruanyf).name
+    assert_selector ".source-band-title", text: "慢下来的理由"
     assert_selector ".source-band-link[href='#{original_url}'][target='_blank']", text: "原文"
     evaluate_async_script("document.fonts.ready.then(arguments[0])")
 
@@ -99,7 +96,8 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     assert_equal [ true, false ], states.fetch("print").values_at("print", "screen"), diagnostic
     assert_equal [ false, true ], states.fetch("screen").values_at("print", "screen"), diagnostic
     assert_equal "rgb(29, 29, 27)", states.fetch("print").fetch("band"), diagnostic
-    assert_equal "rgb(232, 227, 218)", states.fetch("screen").fetch("band"), diagnostic
+    assert_equal "rgb(29, 29, 27)", states.fetch("screen").fetch("band"), diagnostic
+    assert_equal "rgba(0, 0, 0, 0)", states.fetch("screen").fetch("background"), diagnostic
 
     states.each do |media, state|
       expected = state.fetch("band")
@@ -112,6 +110,48 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     end
   ensure
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+  end
+
+  test "有主题时100字符英文来源名完整换行并保留语言标识" do
+    source_name = "unbrokenweeklysource" * 5
+    sources(:ruanyf).update!(name: source_name)
+    original_url = "https://github.com/ruanyf/weekly/blob/master/docs/issue-366.md"
+    issues(:weekly_w36).items.create!(
+      source: sources(:ruanyf), title: "慢下来的理由", rank: 1,
+      url: original_url, url_hash: Digest::SHA256.hexdigest(original_url), fetched_at: Time.current,
+      meta: { issue_no: 366, issue_title: "慢下来的理由" }
+    )
+    sign_in_with_browser(users(:drew))
+
+    [ 320, 375 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      visit weekly_issue_path("2026-W36")
+      assert_selector "h2.source-band-title", text: "慢下来的理由"
+      assert_selector ".source-band-source[lang='en']", text: source_name
+      evaluate_async_script(<<~JS)
+        const done = arguments[0], source = document.querySelector('.source-band-source')
+        Promise.all([...source.querySelectorAll('span')].map(run => document.fonts.load(getComputedStyle(run).font, run.textContent)))
+          .then(() => document.fonts.ready).then(() => requestAnimationFrame(() => requestAnimationFrame(done)))
+      JS
+      layout = evaluate_script(<<~JS)
+        (() => {
+          const source = document.querySelector('.source-band-source'), box = source.getBoundingClientRect()
+          const walker = document.createTreeWalker(source, NodeFilter.SHOW_TEXT), lines = []
+          for (let node; (node = walker.nextNode());) {
+            const range = document.createRange(); range.selectNodeContents(node)
+            lines.push(...Array.from(range.getClientRects()).filter(rect => rect.width > 0))
+          }
+          return { text: source.textContent, overflow: document.documentElement.scrollWidth - innerWidth,
+            lineCount: lines.length,
+            contained: lines.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1) }
+        })()
+      JS
+
+      assert_equal source_name, layout.fetch("text"), "#{width}px：来源名不能截断或省略"
+      assert_operator layout.fetch("lineCount"), :>, 1, "#{width}px：长来源名应实际换行"
+      assert layout.fetch("contained"), "#{width}px：每行字形应完整留在来源区域内"
+      assert_operator layout.fetch("overflow"), :<=, 0, "#{width}px：长来源名不能撑出页面"
+    end
   end
 
   private
@@ -160,6 +200,7 @@ class SourceBandTitleTest < ApplicationSystemTestCase
             print: matchMedia('print').matches,
             screen: matchMedia('screen').matches,
             band: getComputedStyle(band).color,
+            background: getComputedStyle(band).backgroundColor,
             link: getComputedStyle(link).color,
             text: getComputedStyle(link.querySelector('span')).color,
             pathStrokes: [...link.querySelectorAll('svg path')].map(path => getComputedStyle(path).stroke),
@@ -194,6 +235,7 @@ class SourceBandTitleTest < ApplicationSystemTestCase
             text: title.textContent.trim(),
             lines: lines.sort((a, b) => a.top - b.top).map(line => line.text),
             fontSize: getComputedStyle(title).fontSize,
+            metaFontSize: getComputedStyle(document.querySelector('.source-band-meta')).fontSize,
             overflow: document.documentElement.scrollWidth - innerWidth,
           }
         })()

@@ -8,7 +8,7 @@ import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
 import SourceState from '@/components/SourceState'
-import SourceDirectory from '@/components/SourceDirectory'
+import SourceDirectory, { openSourceDirectory } from '@/components/SourceDirectory'
 import DailySourceSection from '@/components/DailySourceSection'
 import { useScrollToHash } from '@/lib/anchors'
 import { FavoritesProvider } from '@/lib/favorites'
@@ -63,7 +63,7 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
             <Icon name="arrow-up-right" size={13} />
           </a>
         ) : null}
-        <a className="directory-return" href="#source-directory">
+        <a className="directory-return" href="#source-directory" onClick={openSourceDirectory}>
           <span aria-hidden="true">↑</span>
           <span>返回来源目录</span>
         </a>
@@ -74,14 +74,14 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
 
 function Sources({ sources, itemsBySource, notice, fallbackAnchor }: { sources: SourceSummary[]; itemsBySource: Record<string, Item[]>; notice: string | null; fallbackAnchor?: { sourceId: string; id: string } }) {
   return (
-    <>
+    <div className="daily-reading">
       {sources.length > 0 ? <SourceDirectory sources={sources} navigable={!notice} /> : null}
       {notice ? <IssueNotice text={notice} /> : sources.map((source, index) => (
-        <DailySourceSection key={source.id} source={source} ordinal={index + 1} animate={index > 0} aliasId={fallbackAnchor?.sourceId === source.id ? fallbackAnchor.id : undefined}>
+        <DailySourceSection key={source.id} source={source} animate={index > 0} aliasId={fallbackAnchor?.sourceId === source.id ? fallbackAnchor.id : undefined}>
           <SourceBody source={source} items={itemsBySource[source.id] ?? []} />
         </DailySourceSection>
       ))}
-    </>
+    </div>
   )
 }
 

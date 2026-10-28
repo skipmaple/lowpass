@@ -1,52 +1,36 @@
-/* 同一张暖纸上的栏目换版：只用小面积识别色，纸色、纸纹与正文墨色保持一致。 */
+/* 阅读列与操作同界：来源只在栏首出现一次，目录按需展开。 */
 @media screen {
-  .source-tab, .daily-source {
-    --source-accent: #626422;
-  }
-  [data-adapter="hacker_news"] {
-    --source-accent: #995139;
-  }
-  [data-adapter="github_trending"] {
-    --source-accent: #3f665c;
-  }
-  .source-tabs { gap: 12px; padding: 24px 0 0; }
-  .source-tabs > .source-tab {
-    min-height: 80px; margin: 0; padding: 16px 20px; border: 0;
-    border-top: 3px solid var(--source-accent); border-bottom: 1px solid var(--rule);
-    background: transparent; color: var(--ink); flex-direction: row; align-items: flex-start; gap: 16px;
-  }
-  .source-tab-number, .daily-source-number { font-family: var(--font-data); font-size: var(--fs-12); flex: none; }
-  .source-tab-number { align-self: flex-start; padding-top: 3px; color: var(--source-accent); }
-  .source-tab-body { align-items: flex-start; text-align: left; }
-  .source-tab-name { font-size: var(--fs-26); text-align: left; }
-  .source-tab[href] .source-tab-name { text-decoration-color: var(--underline); }
-  .source-tab-state { color: inherit; }
-  .source-tab:focus-visible { outline-color: var(--ink); outline-offset: 4px; }
-  .daily-source {
-    margin: 40px -40px 0; color: var(--ink);
-  }
-  .daily-source-sheet { padding: 0 40px 24px; }
+  .daily-reading { max-width: 824px; margin-inline: auto; }
+  .source-directory { margin: 8px 0 12px 44px; }
+  .source-directory > summary { width: fit-content; min-height: 44px; align-content: center; cursor: pointer; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+  .source-directory > summary:focus-visible, .source-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .source-links, .source-facts { display: flex; flex-wrap: wrap; gap: 0 24px; padding-bottom: 12px; }
+  .source-facts { margin-top: 16px; }
+  .source-link { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 8px; min-width: 44px; min-height: 44px; max-width: 100%; overflow-wrap: anywhere; font-size: var(--fs-15); }
+  a.source-link { text-decoration: underline; text-decoration-color: var(--underline); text-underline-offset: 4px; }
+  a.source-link:hover { text-decoration-color: var(--ink); }
+  .source-link-state { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
+  .daily-source { --source-accent: #626422; margin-top: 12px; scroll-margin-top: 24px; }
+  .daily-source[data-adapter="hacker_news"] { --source-accent: #995139; }
+  .daily-source[data-adapter="github_trending"] { --source-accent: #3f665c; }
   .daily-source + .daily-source { margin-top: 40px; }
-  .daily-source-head {
-    display: flex; align-items: center; justify-content: space-between; gap: 24px;
-    margin: 0 -40px; padding: 36px 40px; border-top: 1px solid var(--rule); color: var(--ink);
-  }
-  .daily-source-heading { min-width: 0; align-items: baseline; gap: 24px; }
-  .daily-source-number { font-size: var(--fs-40); line-height: 1; letter-spacing: -.06em; color: var(--source-accent); }
-  .daily-source h2 { font-size: var(--fs-56); line-height: 1.05; letter-spacing: -.025em; }
-  .daily-source-icon { width: 64px; height: 48px; }
-  .daily-source-rule { top: -1px; left: 40px; right: auto; width: 72px; height: 4px; background: var(--source-accent); }
-  .daily-source .item-row { padding: 28px 0; }
-  .daily-source .item-rank { align-self: start; }
+  .daily-source-head { position: relative; padding: 20px 0 4px 44px; }
+  .daily-source-anchor { position: absolute; top: 0; width: 0; height: 0; scroll-margin-top: 24px; }
+  .daily-source-rule { position: absolute; top: 0; inset-inline: 0; height: 0; border-top: 1px solid var(--source-accent); }
+  .daily-source h2 { margin: 0; font-family: var(--font-latin); font-size: var(--fs-22); line-height: 1.2; color: var(--source-accent); overflow-wrap: anywhere; }
+  .daily-source:focus { outline: none; }
+  .daily-source:focus-visible .daily-source-heading { outline: 2px solid var(--ink); outline-offset: 4px; }
+  .daily-source-content > .issue-body { border-top: 0; margin-top: 0; }
+  .daily-source .item-row { padding: 20px 0; }
   .daily-source .item-title { font-size: var(--fs-26); line-height: 1.25; }
-  .daily-source :is(.item-heading, .item-summary, .item-translation, .item-reason) { max-width: 780px; }
   .daily-source .item-heading { padding-bottom: 8px; }
   .daily-source .item-title > a.t { padding-block: 10px; }
   .daily-source :is(.item-summary, .item-translation) { font-size: var(--fs-16); line-height: 1.7; }
-  .daily-source .item-reason { font-size: var(--fs-15); }
-  .daily-source .source-actions { padding-top: 12px; }
+  .daily-source .item-reason { font-size: var(--fs-15); border-left-width: 1px; }
+  .daily-source .source-actions { padding: 8px 0 0 44px; }
   .daily-source .source-foot { padding-top: 0; }
-  .item-row:not(.item-row--weekly) { grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; }
+  .item-row { grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; gap: 16px; align-items: start; }
+  .item-rank, .item-body { align-self: baseline; }
   .item-meta { gap: 4px 12px; align-items: center; }
   .item-meta-text { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
   .item-meta .item-comments { min-width: 44px; min-height: 44px; }
@@ -55,35 +39,19 @@
   .item-comments:hover > span, .item-comments:focus-visible > span { text-decoration-color: currentColor; }
   .item-meta .item-save { margin: 0; }
   .item-age { font-family: var(--font-cjk); font-size: var(--fs-12); }
+  .item-heading > .item-mark { display: inline-flex; vertical-align: middle; margin: -8px 0 -8px 2px; }
   @media (min-width: 1920px) {
-    .daily-source h2 { font-size: var(--fs-64); }
-    .daily-source :is(.item-heading, .item-summary, .item-translation, .item-reason) { max-width: 920px; }
+    .daily-reading { max-width: 972px; }
+    .item-row { grid-template-columns: 32px minmax(0, 1fr); gap: 20px; }
+    .source-directory { margin-left: 52px; }
+    .daily-source-head, .daily-source .source-actions { padding-left: 52px; }
   }
   @media (max-width: 767px) {
-    .daily-source { margin-inline: -24px; }
-    .daily-source-sheet { padding: 0 24px 20px; }
-    .daily-source-head { margin-inline: -24px; padding: 28px 24px; gap: 16px; }
-    .daily-source-heading { gap: 12px; }
-    .daily-source-number { font-size: var(--fs-22); }
-    .daily-source h2 { font-size: var(--fs-32); }
-    .daily-source-icon { width: 40px; height: 36px; }
-    .daily-source-rule { left: 24px; }
+    .source-directory { margin-left: 32px; }
+    .daily-source-head, .daily-source .source-actions { padding-left: 32px; }
+    .daily-source + .daily-source { margin-top: 32px; }
     .daily-source .item-title { font-size: var(--fs-22); }
-    .daily-source .item-row { padding: 24px 0; }
-    .item-row:not(.item-row--weekly) { grid-template-columns: 20px minmax(0, 1fr); gap: 0 12px; }
-    .source-tabs { gap: 8px; }
-    .source-tabs > .source-tab { padding: 12px 10px; gap: 8px; }
-    .source-tab-name { font-size: var(--fs-20); }
-  }
-  @media (max-width: 480px) {
-    .source-tabs { padding-top: 16px; }
-    .source-tabs > .source-tab { flex-direction: column; align-items: flex-start; min-height: 88px; gap: 6px; }
-    .source-tab-name { font-size: var(--fs-15); line-height: 1.2; }
-    .source-tabs-frame + .daily-source { margin-top: 24px; }
-    .daily-source-icon { display: none; }
     .daily-source :is(.item-summary, .item-translation) { font-size: var(--fs-15); }
+    .item-row { grid-template-columns: 20px minmax(0, 1fr); gap: 0 12px; }
   }
-}
-@media print {
-  .daily-source-number, .source-tab-number { display: none; }
 }

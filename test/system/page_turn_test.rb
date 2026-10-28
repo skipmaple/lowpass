@@ -2,6 +2,7 @@ require "application_system_test_case"
 
 # 自然原生时钟：不暂停、不改速率、不延长 240/360ms。
 class PageTurnTest < ApplicationSystemTestCase
+  include ContinuousReadingHelpers
   setup do
     sign_in_with_browser(users(:drew))
   end
@@ -202,6 +203,7 @@ class PageTurnTest < ApplicationSystemTestCase
   end
 
   test "原生 wheel 与键盘输入同步收尾，滚动和文字输入仍执行" do
+    prepare_continuous_issue
     point = begin_input_turn(".sheet-body", daily: true)
     page.driver.browser.execute_cdp("Input.dispatchMouseEvent", type: "mouseWheel", x: 300, y: 300, deltaX: 0, deltaY: 150)
     wait_until { evaluate_script("window.__input.some(e=>e.type==='wheel')") }
@@ -300,6 +302,7 @@ class PageTurnTest < ApplicationSystemTestCase
   end
 
   test "受控 swap 前原生 Back 仍恢复历史，连续往返保持 URL 和正文一致" do
+    prepare_continuous_issue
     visit search_path
     find(".masthead-brand").click
     assert_current_path daily_issue_path("2026-09-08")

@@ -98,7 +98,7 @@ class SearchingTest < ApplicationSystemTestCase
     wait_until { (evaluate_script("scrollY") - reading_position).abs < 2 }
     assert evaluate_script("(() => { const rect = document.activeElement.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight })()")
     page.driver.browser.switch_to.active_element.send_keys(:tab)
-    assert_selector ".search-row:nth-child(13) .search-original:focus"
+    assert_selector ".search-row:nth-child(13) .favorite-button:focus"
     assert_in_delta reading_position, evaluate_script("scrollY"), 2
 
     page.go_forward
@@ -188,11 +188,11 @@ class SearchingTest < ApplicationSystemTestCase
 
   # test 环境默认关掉 CSRF 校验（config/environments/test.rb 的 allow_forgery_protection = false）：
   # 这一条把它打开，fetch 带的 X-CSRF-Token 才真的被校验，令牌读错了这里就会是 422 而不是 204
-  test "点原文记一次 search_click，带 CSRF 令牌" do
+  test "点标题打开原文并记一次 search_click，带 CSRF 令牌" do
     with_forgery_protection do
       visit search_path(q: "terminal")
 
-      click_on "原文"
+      find(".search-title a", match: :first).click
 
       wait_until { Search::Click.count == 1 }
       click = Search::Click.sole

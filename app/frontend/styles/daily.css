@@ -22,7 +22,7 @@
   .daily-source:focus { outline: none; }
   .daily-source:focus-visible .daily-source-heading { outline: 2px solid var(--ink); outline-offset: 4px; }
   .daily-source-content > .issue-body { border-top: 0; margin-top: 0; }
-  .daily-source .item-row { padding: 20px 0; }
+  .daily-source .item-row { padding: 12px 0; }
   .daily-source .item-title { font-size: var(--fs-26); line-height: 1.25; }
   .daily-source .item-heading { padding-bottom: 8px; }
   .daily-source :is(.item-summary, .item-translation) { font-size: var(--fs-16); line-height: 1.7; }

@@ -23,6 +23,42 @@ class DailyChaptersTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
   end
 
+  test "相邻日刊条目的标题和操作保持独立的触控范围" do
+    first = items(:hn_one)
+    first.update!(title: "Genie 4", title_zh: nil, meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
+    url = "https://example.com/daily-rhythm-second"
+    second = issues(:daily_0908).items.create!(source: sources(:hn), title: "Ghostty 1.4", rank: 2,
+      url: url, url_hash: Digest::SHA256.hexdigest(url), fetched_at: Time.current,
+      meta: { score: 546, comments: 161, comments_url: "https://news.ycombinator.com/item?id=2" })
+
+    [ 320, 375, 1440 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{first.id}")
+      execute_script("arguments[0].scrollIntoView({ block: 'center' })", row)
+      geometry = evaluate_script(<<~JS, row, second.id)
+        (() => {
+          const first = arguments[0], second = document.getElementById(`item-${arguments[1]}`);
+          const title = second.querySelector('.item-title a'), rect = title.getBoundingClientRect(), bounds = second.getBoundingClientRect();
+          const controls = [...first.querySelectorAll('.item-comments, .item-save')].map(control => {
+            const r = control.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            return { width: r.width, height: r.height, bottom: r.bottom,
+              hits: [[-21, -21], [21, -21], [-21, 21], [21, 21]].map(([dx, dy]) => document.elementFromPoint(x + dx, y + dy)?.closest('a, button') === control) };
+          });
+          return { titleTop: rect.top, rowTop: bounds.top, controls };
+        })()
+      JS
+      assert_operator geometry.fetch("titleTop"), :>=, geometry.fetch("rowTop") - 1, "#{width}px：下一条标题不能侵入上一条"
+      geometry.fetch("controls").each do |control|
+        assert_operator control.fetch("width"), :>=, 44
+        assert_operator control.fetch("height"), :>=, 44
+        assert_operator geometry.fetch("titleTop"), :>=, control.fetch("bottom"), "#{width}px：相邻控件不能重叠"
+        assert control.fetch("hits").all?, "#{width}px：控件的四角应命中自身"
+      end
+      assert_no_horizontal_overflow
+    end
+  end
+
   test "窄屏短标题可触控且元信息在空间足够时保持同一行" do
     items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
     [ 305, 320, 375 ].each do |width|

@@ -42,6 +42,9 @@ class TitleKeyboardFocusTest < ApplicationSystemTestCase
       ax = page.driver.browser.execute_cdp("Accessibility.getPartialAXTree", nodeId: node, fetchRelatives: false).fetch("nodes").first
       assert_equal title, ax.dig("name", "value"), "#{name}：读屏名称保持原始标题"
       assert_equal "在新标签页打开", ax.dig("description", "value"), "#{name}：读屏器应获得新标签页提示"
+      tree = page.driver.browser.execute_cdp("Accessibility.getFullAXTree").fetch("nodes")
+      standalone = tree.select { |entry| !entry["ignored"] && entry.dig("role", "value") == "StaticText" && entry.dig("name", "value") == "在新标签页打开" }
+      assert_empty standalone, "#{name}：提示不应作为独立内容被重复朗读"
     end
 
     diagnostic = "TITLE_KEYBOARD_FOCUS #{states.to_json}"

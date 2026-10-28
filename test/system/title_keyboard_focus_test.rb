@@ -37,6 +37,11 @@ class TitleKeyboardFocusTest < ApplicationSystemTestCase
       tab_to_title(selector)
       evaluate_async_script("requestAnimationFrame(() => requestAnimationFrame(arguments[0]))")
       states[name] = title_focus_state(name, path)
+      root = page.driver.browser.execute_cdp("DOM.getDocument").fetch("root").fetch("nodeId")
+      node = page.driver.browser.execute_cdp("DOM.querySelector", nodeId: root, selector: selector).fetch("nodeId")
+      ax = page.driver.browser.execute_cdp("Accessibility.getPartialAXTree", nodeId: node, fetchRelatives: false).fetch("nodes").first
+      assert_equal title, ax.dig("name", "value"), "#{name}：读屏名称保持原始标题"
+      assert_equal "在新标签页打开", ax.dig("description", "value"), "#{name}：读屏器应获得新标签页提示"
     end
 
     diagnostic = "TITLE_KEYBOARD_FOCUS #{states.to_json}"
@@ -48,6 +53,8 @@ class TitleKeyboardFocusTest < ApplicationSystemTestCase
       assert_operator state.fetch("trustedTabs").length, :>, 0, "#{name}：应经过原生 Tab；#{diagnostic}"
       assert state.fetch("trustedTabs").all?, "#{name}：Tab 必须为浏览器可信事件；#{diagnostic}"
       assert state.fetch("inViewport"), "#{name}：获焦标题应在视口内；#{diagnostic}"
+      assert_equal "在新标签页打开", state.fetch("description"), "#{name}：标题外链应提供读屏提示"
+      assert_equal "_blank", state.fetch("target"), "#{name}：原文仍在新标签页打开"
       assert_equal [ "solid", "2px", "rgb(29, 29, 27)", "2px" ],
         state.fetch("outline").values_at("style", "width", "color", "offset"), "#{name}：沿用墨色 2px 轮廓与 2px 间距；#{diagnostic}"
     end
@@ -70,7 +77,8 @@ class TitleKeyboardFocusTest < ApplicationSystemTestCase
           const box = title.getBoundingClientRect()
           return {
             label: #{label.to_json}, expectedPath: #{expected_path.to_json}, path: location.pathname + location.search,
-            text: title.textContent.trim(), href: title.getAttribute('href'),
+            text: title.textContent.trim(), href: title.getAttribute('href'), target: title.getAttribute('target'),
+            description: document.getElementById(title.getAttribute('aria-describedby'))?.textContent.trim() || '',
             focusVisible: title.matches(':focus-visible'), trustedTabs: window.titleFocusTabs,
             outline: { style: style.outlineStyle, width: style.outlineWidth, color: style.outlineColor, offset: style.outlineOffset },
             box: box.toJSON(),

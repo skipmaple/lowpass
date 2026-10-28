@@ -20,7 +20,7 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
   return (
     <article className="search-row">
       <h2 className="search-title">
-        <a className="t" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report} lang={latinLang(runText(result.title_runs))}>
+        <a className="t" href={result.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" onClick={report} lang={latinLang(runText(result.title_runs))}>
           <HitText runs={result.title_runs} size="var(--fs-20)" color="var(--ink)" />
         </a>
       </h2>

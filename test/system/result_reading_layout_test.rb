@@ -11,7 +11,7 @@ class ResultReadingLayoutTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
   end
 
-  test "搜索与收藏的文字分隔线与操作共享居中阅读列，书签紧随所在期" do
+  test "搜索与收藏的阅读列与版心左对齐，书签紧随所在期" do
     [ 1440, 1920 ].each do |width|
       viewport(width)
       [ search_path(q: "Reading measure"), favorites_path ].each do |path|
@@ -21,10 +21,11 @@ class ResultReadingLayoutTest < ApplicationSystemTestCase
           (() => {
             const row = document.querySelector('.search-row');
             const rect = (selector) => row.querySelector(selector).getBoundingClientRect();
-            const bounds = row.getBoundingClientRect(), sheet = document.querySelector('.sheet-body').getBoundingClientRect();
+            const bounds = row.getBoundingClientRect(), sheet = document.querySelector('.sheet-body');
+            const innerLeft = sheet.getBoundingClientRect().left + parseFloat(getComputedStyle(sheet).paddingLeft);
             const reading = document.querySelector('.search-reading, .results-reading').getBoundingClientRect();
             const where = rect('.search-links > a'), bookmark = rect('.favorite-button');
-            return { row: bounds.width, center: bounds.left + bounds.width / 2, sheetCenter: sheet.left + sheet.width / 2,
+            return { row: bounds.width, innerLeft,
               reading: reading.width, readingLeft: reading.left, rowLeft: bounds.left,
               title: rect('.search-title').width,
               translation: rect('.item-translation').width, snippet: rect('.search-snippet').width,
@@ -39,7 +40,7 @@ class ResultReadingLayoutTest < ApplicationSystemTestCase
         assert_in_delta geometry.fetch("row"), geometry.fetch("title"), 1
         assert_in_delta geometry.fetch("row"), geometry.fetch("reading"), 1
         assert_in_delta geometry.fetch("rowLeft"), geometry.fetch("readingLeft"), 1
-        assert_in_delta geometry.fetch("sheetCenter"), geometry.fetch("center"), 1
+        assert_in_delta geometry.fetch("innerLeft"), geometry.fetch("readingLeft"), 1, "#{path} at #{width}px: 阅读列应对齐版心左缘"
         assert_operator geometry.fetch("metaTop"), :>=, geometry.fetch("snippetBottom")
         assert_operator geometry.fetch("bookmarkGap"), :>=, 0
         assert_operator geometry.fetch("bookmarkGap"), :<=, 16, "#{path} at #{width}px: 收藏应与所在期组成紧凑操作组"

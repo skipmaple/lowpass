@@ -26,6 +26,7 @@ export default function Layout({ children, masthead, footer }: LayoutProps) {
     <ToastRegion.Provider value={toastRegion}>
       <div className="paper sheet">
         <a className="skip-link" href="#main-content">跳到正文</a>
+        <span id="new-tab-description" className="sr-only">在新标签页打开</span>
         <Masthead {...masthead} />
         <div className="sheet-body" ref={surface}>
           <div className="toasts" role="status" ref={setToastRegion} />

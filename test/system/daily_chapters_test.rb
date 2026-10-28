@@ -23,6 +23,33 @@ class DailyChaptersTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
   end
 
+  test "窄屏短标题可触控且普通元信息保持在同一行" do
+    items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
+    [ 320, 375 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{items(:hn_one).id}")
+      assert row.has_selector?(".item-comments"), "评论应为可操作的链接"
+      title = row.find(".item-title a")
+      execute_script("arguments[0].scrollIntoView({ block: 'center' })", title)
+      geometry = evaluate_script(<<~JS, row)
+        (() => {
+          const row = arguments[0], link = row.querySelector('.item-title a'), r = link.getBoundingClientRect();
+          const x = r.left + r.width / 2, y = r.top + r.height / 2;
+          const age = row.querySelector('.item-age').getBoundingClientRect();
+          const bookmark = row.querySelector('.item-save').getBoundingClientRect();
+          return { height: r.height, hits: [-21.5, 0, 21.5].map(dy => document.elementFromPoint(x, y + dy)?.closest('a') === link),
+            ageY: age.top + age.height / 2, bookmarkY: bookmark.top + bookmark.height / 2,
+            overflow: document.documentElement.scrollWidth > innerWidth };
+        })()
+      JS
+      assert_operator geometry.fetch("height"), :>=, 44, "#{width}px 短标题触控高度"
+      assert geometry.fetch("hits").all?, "#{width}px 标题的 44px 区域应命中链接"
+      assert_in_delta geometry.fetch("bookmarkY"), geometry.fetch("ageY"), 1, "#{width}px 元信息应在同一行"
+      assert_not geometry.fetch("overflow"), "#{width}px 无横向溢出"
+    end
+  end
+
   test "桌面与窄屏的全部章节保持原有暖纸与纸纹，普通和减少动态模式下正文都可读" do
     WIDTHS.each do |width|
       viewport(width)

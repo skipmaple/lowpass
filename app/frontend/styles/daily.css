@@ -25,7 +25,6 @@
   .daily-source .item-row { padding: 20px 0; }
   .daily-source .item-title { font-size: var(--fs-26); line-height: 1.25; }
   .daily-source .item-heading { padding-bottom: 8px; }
-  .daily-source .item-title > a.t { padding-block: 10px; }
   .daily-source :is(.item-summary, .item-translation) { font-size: var(--fs-16); line-height: 1.7; }
   .daily-source .item-reason { font-size: var(--fs-15); border-left-width: 1px; }
   .daily-source .source-actions { padding: 8px 0 0 44px; }
@@ -54,5 +53,8 @@
     .daily-source .item-title { font-size: var(--fs-22); }
     .daily-source :is(.item-summary, .item-translation) { font-size: var(--fs-15); }
     .item-row { grid-template-columns: 20px minmax(0, 1fr); gap: 0 12px; }
+  }
+  @media (max-width: 359px) {
+    .item-meta { column-gap: 8px; }
   }
 }

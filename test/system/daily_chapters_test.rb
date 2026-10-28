@@ -23,7 +23,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
   end
 
-  test "窄屏短标题可触控且普通元信息保持在同一行" do
+  test "窄屏短标题可触控且元信息在空间足够时保持同一行" do
     items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
     [ 305, 320, 375 ].each do |width|
       viewport(width)
@@ -38,14 +38,20 @@ class DailyChaptersTest < ApplicationSystemTestCase
           const x = r.left + r.width / 2, y = r.top + r.height / 2;
           const age = row.querySelector('.item-age').getBoundingClientRect();
           const bookmark = row.querySelector('.item-save').getBoundingClientRect();
+          const meta = row.querySelector('.item-meta'), gap = parseFloat(getComputedStyle(meta).columnGap);
+          const children = [...meta.children], required = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + gap * (children.length - 1);
           return { height: r.height, hits: [-21.5, 0, 21.5].map(dy => document.elementFromPoint(x, y + dy)?.closest('a') === link),
             ageY: age.top + age.height / 2, bookmarkY: bookmark.top + bookmark.height / 2,
+            gap, required, available: meta.getBoundingClientRect().width,
             overflow: document.documentElement.scrollWidth > innerWidth };
         })()
       JS
       assert_operator geometry.fetch("height"), :>=, 44, "#{width}px 短标题触控高度"
       assert geometry.fetch("hits").all?, "#{width}px 标题的 44px 区域应命中链接"
-      assert_in_delta geometry.fetch("bookmarkY"), geometry.fetch("ageY"), 1, "#{width}px 元信息应在同一行"
+      assert_equal 4, geometry.fetch("gap"), "#{width}px 极窄屏收紧元信息间距" if width < 359
+      if geometry.fetch("required") <= geometry.fetch("available") + 0.01
+        assert_in_delta geometry.fetch("bookmarkY"), geometry.fetch("ageY"), 1, "#{width}px 空间足够时元信息应在同一行"
+      end
       assert_not geometry.fetch("overflow"), "#{width}px 无横向溢出"
     end
   end

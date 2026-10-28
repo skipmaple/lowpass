@@ -430,7 +430,11 @@ button.chip-outline { min-height: 44px; }
 .search-snippet { margin: 6px 0 0 0; line-height: 1.7; }
 /* 搜索与收藏沿用日周刊的阅读列，整行分隔线与书签仍贴版心右缘。 */
 .search-title, .search-snippet { max-width: 780px; overflow-wrap: anywhere; }
-.search-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin-top: 10px; }
+.search-links { display: flex; align-items: center; gap: 4px 20px; margin-top: 10px; }
+.search-links > .search-original, .search-links > .search-mark { flex-shrink: 0; }
+.search-links > .t { word-break: keep-all; text-wrap: balance; }
+/* 取消后的事实与恢复按钮需要独立空间，不挤压所在期链接。 */
+.search-links:has(.favorite-removed) { flex-wrap: wrap; }
 .search-links > a, a.field-note { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
 .search-original { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); }
 /* 命中词：2px 墨色下划线（D22），不用颜色块 */

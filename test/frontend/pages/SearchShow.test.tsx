@@ -450,10 +450,11 @@ describe('结果行', () => {
     expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
   })
 
-  // 日刊的所在期就是那一天，日期与它相同：眉行只写一次；周刊的所在期是「2026年 · 第 36 周 · 工具」，日期另有信息，两个都写
-  it('所在期与日期相同时眉行只写一次', () => {
+  // 所在期集中在可操作的链接里；不同的发布时间仍保留在来源旁。
+  it('所在期只显示在链接中，独立发布时间仍保留', () => {
     const daily = results()
-    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News·2026年9月8日')
+    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News')
+    expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toBeInTheDocument()
     daily.unmount()
 
     const weekly = results({
@@ -466,7 +467,8 @@ describe('结果行', () => {
         }),
       ],
     })
-    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·2026年 · 第 36 周 · 工具·2026年9月4日')
+    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·2026年9月4日')
+    expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toBeInTheDocument()
   })
 
   it('没有摘要就没有片段行', () => {

@@ -16,7 +16,7 @@ import { Mixed, latinLang } from '@/lib/typeset'
 import type { FavoriteEntry, FooterData, Publication } from '@/types/lowpass'
 
 // 收藏页（PRD 5.10、R-10.6）：按收藏时间倒序，每页 20 条。行沿用搜索结果行的装置（眉行、标题、片段、底行两个链接），
-// 标题不带命中下划线，译文照日刊页的位置（D25），底行右端是书签。不显示总数、不分组、不筛选（D28）。
+// 眉行只放刊物与来源，所在期集中在底行链接；标题不带命中下划线，译文照日刊页的位置（D25），底行右端是书签。不显示总数、不分组、不筛选（D28）。
 // 取消后那一行原地留下「已取消收藏」与「恢复」，离开或刷新页面才消失（R-10.7）。文案是附录 B 原句。
 
 export type FavoritesIndexProps = FooterData & {
@@ -27,7 +27,6 @@ export type FavoritesIndexProps = FooterData & {
 }
 
 const LABELS: Record<Publication, string> = { daily: '日刊', weekly: '周刊' }
-const DOT = <span className="search-dot">·</span>
 
 // 只画在收藏里的、这一次停留里取消过的（List 已经筛过）：不在收藏里的就是取消过、等着「恢复」的那一行
 function Row({ entry }: { entry: FavoriteEntry }) {
@@ -53,8 +52,6 @@ function Row({ entry }: { entry: FavoriteEntry }) {
       <div className="search-eyebrow">
         <Chip text={LABELS[entry.publication]} />
         <Mixed text={entry.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
-        {DOT}
-        <Mixed text={entry.where.label} size="var(--fs-13)" color="var(--ink2)" />
       </div>
 
       <h2 className="search-title">

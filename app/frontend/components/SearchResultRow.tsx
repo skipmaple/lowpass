@@ -10,7 +10,7 @@ import { markSearchResult, searchResultId } from '@/lib/searchFocus'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { HitRun, SearchResult } from '@/types/lowpass'
 
-// 结果行（R-4.6、画布 search_row()）：眉行「刊物反白签 · 来源名 · 所在期 · 日期」，标题与摘要片段带命中下划线，
+// 结果行（R-4.6）：眉行放刊物、来源与独立发布时间，所在期只在底行链接中出现；标题与摘要片段带命中下划线，
 // 已有日刊译文紧跟对应原文；底行「所在期 · …」与「原文 ↗」，右端是书签（PRD 5.10）。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
 // 所在期是站内直链，不计。
 
@@ -26,9 +26,7 @@ export default function SearchResultRow({ result, q }: { result: SearchResult; q
       <div className="search-eyebrow">
         <Chip text={LABELS[result.publication]} />
         <Mixed text={result.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
-        {DOT}
-        <Mixed text={result.where.label} size="var(--fs-13)" color="var(--ink2)" />
-        {/* 日刊的所在期就是那一天，日期与它相同就不写第二遍；周刊的所在期含年份、周次与板块，日期另有信息 */}
+        {/* 发布时间与所在期相同就不重复；周刊的发布日期不同于周次与板块，仍须保留。 */}
         {result.published_label !== result.where.label ? (
           <>
             {DOT}

@@ -49,7 +49,7 @@ describe('收藏页的行', () => {
     const eyebrow = row.querySelector('.search-eyebrow') as HTMLElement
     expect(eyebrow).toHaveTextContent('日刊')
     expect(eyebrow).toHaveTextContent('Hacker News')
-    expect(eyebrow).toHaveTextContent('2026年9月8日')
+    expect(eyebrow).not.toHaveTextContent('2026年9月8日')
 
     const title = within(row).getByRole('link', { name: TITLE })
     expect(within(row).getByRole('heading', { level: 2 })).toContainElement(title)
@@ -91,6 +91,7 @@ describe('收藏页的行', () => {
     })
 
     expect(container.querySelector('.search-eyebrow')).toHaveTextContent('周刊')
+    expect(container.querySelector('.search-eyebrow')).not.toHaveTextContent('第 36 周')
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toHaveAttribute('href', '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7')
   })
 

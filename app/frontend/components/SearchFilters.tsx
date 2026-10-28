@@ -159,7 +159,7 @@ function SourceChips({ draft, sourceOptions }: { draft: FilterDraft; sourceOptio
             aria-pressed={on}
             onClick={() => toggle(source.id)}
           >
-            <Mixed text={source.name} font="latin" size="var(--fs-12)" color={on ? 'var(--paper)' : 'var(--ink2)'} nowrap />
+            <Mixed text={source.name} font="latin" size="var(--fs-12)" color={on ? 'var(--paper)' : 'var(--ink2)'} />
           </button>
         )
       })}

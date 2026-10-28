@@ -1,7 +1,8 @@
 require "application_system_test_case"
 
 class DailyChaptersTest < ApplicationSystemTestCase
-  WIDTHS = [ 1440, 375, 320 ].freeze
+  WIDTHS = [ 320, 375, 481, 768, 1440, 1920, 2560 ].freeze
+  INTERACTION_WIDTHS = [ 320, 375, 1440 ].freeze
 
   setup do
     issue = issues(:daily_0908)
@@ -52,7 +53,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
 
   test "无边框图标收藏与评论同组，切换保留可访问名称与稳定命中区" do
     with_forgery_protection do
-      WIDTHS.each do |width|
+      INTERACTION_WIDTHS.each do |width|
         viewport(width)
         visit daily_issue_path("2026-09-08")
         row = find("#item-#{items(:hn_one).id}")
@@ -92,6 +93,68 @@ class DailyChaptersTest < ApplicationSystemTestCase
         assert_bookmark_layers(bookmark_geometry(bookmark), width)
         assert_no_horizontal_overflow
       end
+    end
+  end
+
+  test "桌面来源目录按实际一二三四个来源填满同一行" do
+    issue = issues(:daily_0908)
+    extra = Source.create!(name: "Technical Notes", adapter: "rss", publication: "daily", sort_order: 4,
+      config: { feed_url: "https://notes.example/feed" })
+    available = [ sources(:hn), sources(:github), sources(:hackaday), extra ]
+    viewport(1440)
+
+    [ 1, 2, 3, 4 ].each do |count|
+      selected = available.first(count)
+      issue.update!(source_states: selected.to_h { |source| [ source.id, source == extra ? "empty" : "ok" ] })
+      visit daily_issue_path("2026-09-08")
+      assert_selector "#source-directory .source-tab", count: count
+      assert_selector ".daily-source", count: count
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      geometry = evaluate_script(<<~JS)
+        (() => {
+          const directory = document.querySelector('#source-directory');
+          return { directory: directory.getBoundingClientRect().toJSON(),
+            tabs: [...directory.querySelectorAll('a.source-tab')].map(tab => ({
+              href: tab.getAttribute('href'), rect: tab.getBoundingClientRect().toJSON()
+            })) };
+        })()
+      JS
+      tabs = geometry.fetch("tabs")
+      assert_equal selected.map { |source| "#source-#{source.id}" }, tabs.map { |tab| tab.fetch("href") }
+      first = tabs.first.fetch("rect")
+      last = tabs.last.fetch("rect")
+      # 既有目录左侧有 1px 的保护内边距；右端必须由实际入口填满，不能留下空网格列。
+      assert_in_delta geometry.fetch("directory").fetch("left"), first.fetch("left"), 2, "#{count} 个来源：首入口贴齐目录左缘"
+      assert_in_delta geometry.fetch("directory").fetch("right"), last.fetch("right"), 1, "#{count} 个来源：末入口填满目录右缘"
+      tabs.each do |tab|
+        rect = tab.fetch("rect")
+        assert_in_delta first.fetch("top"), rect.fetch("top"), 0.5, "#{count} 个来源：桌面入口应在同一行"
+        assert_in_delta first.fetch("width"), rect.fetch("width"), 1, "#{count} 个来源：入口均分可用宽度"
+        assert_operator rect.fetch("height"), :>=, 44
+      end
+      tabs.each_cons(2) do |left, right|
+        assert_operator left.fetch("rect").fetch("right"), :<, right.fetch("rect").fetch("left"), "#{count} 个来源：入口应有独立间隔"
+      end
+      assert_no_horizontal_overflow
+    end
+  end
+
+  test "来源目录的单行与换行标题从同一高度开始" do
+    [ 375, 481, 768 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      assert_selector "#source-directory .source-tab", count: 3
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      headings = evaluate_script(<<~JS)
+        [...document.querySelectorAll('#source-directory .source-tab-name')].map(name => ({
+          text: name.textContent, rect: name.getBoundingClientRect().toJSON()
+        }))
+      JS
+      headings.each do |heading|
+        assert_in_delta headings.first.fetch("rect").fetch("top"), heading.fetch("rect").fetch("top"), 0.5,
+          "#{width}px：#{heading.fetch('text')} 不应因行数少而垂直居中下沉"
+      end
+      assert_no_horizontal_overflow
     end
   end
 

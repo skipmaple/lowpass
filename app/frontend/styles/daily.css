@@ -9,11 +9,11 @@
   [data-adapter="github_trending"] {
     --source-accent: #3f665c;
   }
-  .source-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 24px 0 0; }
+  .source-tabs { gap: 12px; padding: 24px 0 0; }
   .source-tabs > .source-tab {
     min-height: 80px; margin: 0; padding: 16px 20px; border: 0;
     border-top: 3px solid var(--source-accent); border-bottom: 1px solid var(--rule);
-    background: transparent; color: var(--ink); flex-direction: row; align-items: center; gap: 16px;
+    background: transparent; color: var(--ink); flex-direction: row; align-items: flex-start; gap: 16px;
   }
   .source-tab-number, .daily-source-number { font-family: var(--font-data); font-size: var(--fs-12); flex: none; }
   .source-tab-number { align-self: flex-start; padding-top: 3px; color: var(--source-accent); }

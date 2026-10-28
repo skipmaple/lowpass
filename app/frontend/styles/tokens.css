@@ -391,7 +391,7 @@ a.source-tab { cursor: pointer; }
 /* 展开按钮由 React 的 mobile 条件挂载，避免 CSS 先隐藏造成断点交接前失焦。 */
 .filter-toggle-icon { transition: transform var(--dur-1) var(--ease-move); }
 .filter-toggle-icon[data-open] { transform: rotate(90deg); }
-.filter-group { display: flex; flex-direction: column; gap: 8px; }
+.filter-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 100%; }
 .filter-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
 .filter-row { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 
@@ -407,6 +407,11 @@ a.source-tab { cursor: pointer; }
 .chip-outline { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid var(--rule); background: transparent;
                 letter-spacing: 0.04em; white-space: nowrap; cursor: pointer; }
 button.chip-outline { min-height: 44px; }
+/* 来源名允许到 100 字：完整换行，短名称仍保留原来的 44px 目标。 */
+.filters .chips > button { height: auto; max-width: 100%; padding-block: 8px; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.filters .chips > button > span { min-width: 0; }
+.filter-toggle > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.filter-toggle-icon { flex: none; }
 .chip-outline:hover { border-color: var(--ink); }
 .chip-outline:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .chip-on { border-color: var(--ink); background: var(--ink); }
@@ -422,7 +427,9 @@ button.chip-outline { min-height: 44px; }
 .search-eyebrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .search-dot { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
 .search-title { margin: 10px 0 0 0; font-weight: 500; line-height: 1.35; }
-.search-snippet { margin: 6px 0 0 0; max-width: 820px; line-height: 1.7; }
+.search-snippet { margin: 6px 0 0 0; line-height: 1.7; }
+/* 搜索与收藏沿用日周刊的阅读列，整行分隔线与书签仍贴版心右缘。 */
+.search-title, .search-snippet { max-width: 780px; overflow-wrap: anywhere; }
 .search-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin-top: 10px; }
 .search-links > a, a.field-note { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
 .search-original { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); }
@@ -839,6 +846,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .item-summary { max-width: 920px; font-size: var(--fs-16); line-height: 1.6; }
   .item-reason { max-width: 920px; font-size: var(--fs-16); line-height: 1.75; }
   .item-content--weekly, .item-media { max-width: 920px; }
+  .search-title, .search-snippet { max-width: 920px; }
 }
 .management-row-primary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .management-primary-field { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

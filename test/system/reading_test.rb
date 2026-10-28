@@ -130,11 +130,15 @@ class ReadingTest < ApplicationSystemTestCase
           const section = document.activeElement
           const heading = section.querySelector('.daily-source-heading')
           const rect = heading.getBoundingClientRect()
+          const text = document.createRange()
+          text.selectNodeContents(heading.querySelector('h2'))
+          const textRect = text.getBoundingClientRect()
           const sectionStyle = getComputedStyle(section)
           const headingStyle = getComputedStyle(heading)
           return { focusVisible: section.matches(':focus-visible'), sectionOutline: sectionStyle.outlineStyle,
             headingOutline: headingStyle.outlineStyle, headingWidth: headingStyle.outlineWidth,
             headingColor: headingStyle.outlineColor, textColor: headingStyle.color,
+            boxWidth: rect.width, textWidth: textRect.width,
             visible: rect.top >= 6 && rect.bottom <= innerHeight - 6 && rect.left >= 6 && rect.right <= innerWidth - 6 }
         })()
       JS
@@ -144,6 +148,7 @@ class ReadingTest < ApplicationSystemTestCase
       assert_equal "solid", state.fetch("headingOutline"), state.inspect
       assert_equal "2px", state.fetch("headingWidth"), state.inspect
       assert_equal state.fetch("textColor"), state.fetch("headingColor"), state.inspect
+      assert_operator state.fetch("boxWidth"), :<=, state.fetch("textWidth") + 2, "焦点框应贴合标题，不横跨空白阅读列：#{state.inspect}"
       assert state.fetch("visible"), state.inspect
       page.driver.browser.switch_to.active_element.send_keys(:tab)
       assert evaluate_script("document.activeElement.matches('#source-#{source.id} .item-title a')")

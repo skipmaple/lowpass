@@ -3,18 +3,18 @@ import { useEffect, useState } from 'react'
 import type * as React from 'react'
 
 import Icon from '@/components/Icon'
-import { Sunrise } from '@/components/Illustration'
+import ThemePicker from '@/components/ThemePicker'
 import { authCallbackHref, authHref } from '@/lib/paths'
 import type { AuthProvider, SharedProps } from '@/types/lowpass'
 
-// 登录页（PRD 5.5、6.2，画布 pages_site.py 的 login_card()）：深色底上一张 400px 纸卡——80px 墨带与品牌字、
-// 1px 框里的低通日出、口号（附录 B）、每个 provider 一个 44px 描边按钮。按钮各是一个普通表单：
+// 登录页沿用当前阅读主题的字形与平面；登录方式始终使用普通表单。
 // Google / GitHub POST 到 /auth/<策略>（omniauth-rails_csrf_protection 要求 POST 带 CSRF 令牌），整页跳去 provider；
 // 开发登录（仅 development）直接 GET 回调，字段就是 OmniAuth developer 策略要的 name / email。
 // next（校验过的站内路径）放进隐藏字段 origin，OmniAuth 会存进会话、回调时交回。
 // 不套持久布局：登录前没有报头导航与页脚可去的地方。
 
-export type LoginShowProps = { providers: AuthProvider[]; next: string | null }
+export type DevelopmentAccount = { role: 'admin' | 'reader'; name: string; email: string }
+export type LoginShowProps = { providers: AuthProvider[]; next: string | null; developer_accounts?: DevelopmentAccount[] }
 
 const LABELS: Record<AuthProvider, string> = { google_oauth2: '使用 Google 登录', github: '使用 GitHub 登录', developer: '开发登录' }
 
@@ -22,8 +22,9 @@ function csrfToken() {
   return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
 }
 
-function ProviderForm({ provider, next }: { provider: AuthProvider; next: string | null }) {
+function ProviderForm({ provider, next, account }: { provider: AuthProvider; next: string | null; account?: DevelopmentAccount }) {
   const developer = provider === 'developer'
+  const label = account ? (account.role === 'admin' ? '以管理员身份进入' : '以读者身份进入') : LABELS[provider]
   const [pending, setPending] = useState(false)
   useEffect(() => {
     const restore = () => setPending(false)
@@ -35,7 +36,12 @@ function ProviderForm({ provider, next }: { provider: AuthProvider; next: string
     <form method={developer ? 'get' : 'post'} action={developer ? authCallbackHref(provider) : authHref(provider)} className="login-form" onSubmit={() => setPending(true)} aria-busy={pending}>
       {developer ? null : <input type="hidden" name="authenticity_token" value={csrfToken()} />}
       {next ? <input type="hidden" name="origin" value={next} /> : null}
-      {developer ? (
+      {developer && account ? (
+        <>
+          <input type="hidden" name="name" value={account.name} />
+          <input type="hidden" name="email" value={account.email} />
+        </>
+      ) : developer ? (
         <>
           <label className="field">
             <span className="field-label">显示名</span>
@@ -47,14 +53,14 @@ function ProviderForm({ provider, next }: { provider: AuthProvider; next: string
           </label>
         </>
       ) : null}
-      <button type="submit" className="login-button" disabled={pending}>
-        {pending ? (developer ? '正在登录…' : `正在前往 ${provider === 'github' ? 'GitHub' : 'Google'}…`) : LABELS[provider]}
+      <button type="submit" className={account?.role === 'reader' ? 'ctrl login-secondary' : 'login-button'} disabled={pending} aria-busy={pending}>
+        {pending ? (developer ? '正在登录…' : `正在前往 ${provider === 'github' ? 'GitHub' : 'Google'}…`) : label}
       </button>
     </form>
   )
 }
 
-export default function Show({ providers, next }: LoginShowProps) {
+export default function Show({ providers, next, developer_accounts = [] }: LoginShowProps) {
   const { flash } = usePage<SharedProps>().props
 
   return (
@@ -63,32 +69,41 @@ export default function Show({ providers, next }: LoginShowProps) {
       <div className="login-card">
         <div className="login-band">
           <span className="masthead-brand">lowpass</span>
+          <div className="login-composition" aria-hidden="true" />
         </div>
         <div className="login-body">
-          <h1 className="sr-only">登录</h1>
-          <div className="login-art">
-            <Sunrise animated />
-          </div>
+          <h1>登录</h1>
           <p className="login-tagline">每天一期技术日刊，登录后阅读</p>
           <div className="login-forms">
-            {providers.map((provider) => (
-              <ProviderForm key={provider} provider={provider} next={next} />
-            ))}
+            {providers.map((provider) => provider === 'developer' ? (
+              <div className="login-development" key={provider}>
+                {developer_accounts.map((account) => (
+                  <ProviderForm key={account.role} provider={provider} next={next} account={account} />
+                ))}
+                <details className="login-other-account">
+                  <summary>使用其他账号<Icon name="chevron-down" size={14} /></summary>
+                  <ProviderForm provider={provider} next={next} />
+                </details>
+              </div>
+            ) : <ProviderForm key={provider} provider={provider} next={next} />)}
           </div>
           {flash?.alert ? (
-            <div className="notice-line" style={{ marginTop: 20 }} role="alert">
-              <Icon name="triangle-alert" size={14} color="var(--ink2)" />
+            <div className="notice-line login-feedback" data-kind="fail" role="alert">
+              <Icon name="triangle-alert" size={14} color="currentColor" />
               <span>{flash.alert}</span>
             </div>
           ) : null}
           {/* 不是出错的提示（注销之后的「已注销账号。」，R-5.11）：对勾，status 不打断读屏 */}
           {flash?.notice ? (
-            <div className="notice-line" style={{ marginTop: 20 }} role="status">
-              <Icon name="check" size={14} color="var(--ink2)" />
+            <div className="notice-line login-feedback" data-kind="ok" role="status">
+              <Icon name="check" size={14} color="currentColor" />
               <span>{flash.notice}</span>
             </div>
           ) : null}
         </div>
+      </div>
+      <div className="login-appearance">
+        <ThemePicker compact />
       </div>
     </main>
   )

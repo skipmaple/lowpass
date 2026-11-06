@@ -52,7 +52,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     const { container } = show({ missing: true, issue: dailyIssue({ state: null, status: '本期未生成' }) })
 
     expect(noticeText(container)).toBe('本期未生成')
-    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
@@ -62,7 +62,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     })
 
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
-    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')).toHaveLength(3)
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
@@ -92,7 +92,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
   it('已发布没有事实句，直接是条目', () => {
     const { container } = show({ issue: dailyIssue({ status: '已于 06:42 修订' }) })
 
-    expect(noticeText(container)).toBeNull()
+    expect(container.querySelector('.source-section--first .state-line')).toBeNull()
     expect(container.querySelectorAll('.item-row')).toHaveLength(1)
   })
 })
@@ -103,10 +103,10 @@ describe('切来源（本地状态 + ?source= 深链）', () => {
     const replaceState = vi.spyOn(window.history, 'replaceState')
     show()
 
-    await user.click(screen.getAllByRole('tab')[1])
+    await user.click(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')[1])
 
     expect(router.replace).toHaveBeenCalledWith({
-      url: '/daily/2026-09-08?source=src-gh',
+      url: '/daily/2026-09-08?source=src-gh#source-src-gh',
       props: expect.any(Function),
       preserveState: true,
       preserveScroll: true,
@@ -120,7 +120,7 @@ describe('切来源（本地状态 + ?source= 深链）', () => {
     expect(router.visit).not.toHaveBeenCalled()
   })
 
-  it('切换换掉的是条目，不是整页', async () => {
+  it('跳转来源保留整期条目，不卸载前一来源', async () => {
     const user = userEvent.setup()
     show({
       items_by_source: {
@@ -131,17 +131,17 @@ describe('切来源（本地状态 + ?source= 深链）', () => {
 
     expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeInTheDocument()
 
-    await user.click(screen.getAllByRole('tab')[1])
+    await user.click(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')[1])
 
     expect(screen.getByRole('link', { name: 'openclaw/openclaw' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeInTheDocument()
   })
 
   // 服务端已经按 ?source= 挑好了当前来源（DailyIssuesController#show），页面拿它当种子
   it('当前来源的种子来自 props', () => {
     show({ active_source_id: 'src-had', items_by_source: { 'src-had': [item({ title: 'A 3D-printed rotary phone' })] } })
 
-    expect(screen.getAllByRole('tab')[2]).toHaveAttribute('aria-selected', 'true')
+    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')[2]).toHaveAttribute('aria-current', 'location')
     expect(screen.getByRole('link', { name: 'A 3D-printed rotary phone' })).toBeInTheDocument()
   })
 
@@ -154,13 +154,13 @@ describe('切来源（本地状态 + ?source= 深链）', () => {
     })
 
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
-    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
   })
 })
 
 describe('栏级状态与栏尾外链（SourceBody）', () => {
   function panel() {
-    return within(screen.getByRole('tabpanel'))
+    return within(screen.getByRole('region', { name: 'Hacker News' }))
   }
 
   it('抓取失败留一句加上次成功时间', () => {
@@ -189,10 +189,10 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
     expect(container.querySelector('.source-state-failed')).toBeNull()
   })
 
-  it('本期无新内容只有一句，没有插图', () => {
+  it('本期未收录只有一句，没有插图', () => {
     const { container } = show({ sources: [source({ state: 'empty' })], active_source_id: 'src-hn', items_by_source: {} })
 
-    expect(panel().getByText('本期无新内容')).toBeInTheDocument()
+    expect(panel().getByText('本期未收录')).toBeInTheDocument()
     expect(container.querySelector('.source-state-failed')).toBeNull()
   })
 
@@ -223,7 +223,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
 
     const ranks = Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)
     const titles = Array.from(container.querySelectorAll('.item-title')).map((el) => el.textContent)
-    expect(ranks).toEqual(['1', '2'])
+    expect(ranks).toEqual(['01', '02'])
     expect(titles).toEqual(['第一条', '第二条'])
   })
 
@@ -232,7 +232,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
       items_by_source: { 'src-hn': [item({ id: 'a', rank: null }), item({ id: 'b', rank: null })] },
     })
 
-    expect(Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)).toEqual(['1', '2'])
+    expect(Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)).toEqual(['01', '02'])
   })
 })
 
@@ -319,16 +319,16 @@ describe('打印（D34）', () => {
       ],
       items_by_source: { 'src-hn': [item()], 'src-gh': [item({ id: 'itm-gh-1', url_hash: 'hash-gh', title: 'openclaw/openclaw' })] },
     })
-    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')).toHaveLength(3)
 
     act(() => { window.dispatchEvent(new Event('beforeprint')) })
-    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
     expect(screen.getByText('openclaw/openclaw')).toBeInTheDocument()
     expect(screen.getByText('本期抓取失败，已通知管理员')).toBeInTheDocument()
 
     act(() => { window.dispatchEvent(new Event('afterprint')) })
-    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')).toHaveLength(3)
   })
 
   it('期级事实句（生成中）打印时只印一次', () => {
@@ -344,7 +344,7 @@ describe('打印（D34）', () => {
 
     show({ items_by_source: { 'src-hn': [item()], 'src-gh': [], 'src-had': [] } })
 
-    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
     vi.unstubAllGlobals()
   })

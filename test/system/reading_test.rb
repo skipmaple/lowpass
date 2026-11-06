@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
-# P0 出口：真的在浏览器里读一期日刊。切来源是页面本地状态（条目全在 props 里，不回服务端），
-# 集成测试只看得到第一屏的 payload，验不出切换这件事。
+# P0 出口：日刊按来源连续阅读，来源目录只定位，不隐藏其他来源。
+# 集成测试只看得到 payload，实际滚动、历史与页内锚点仍在浏览器里验。
 class ReadingTest < ApplicationSystemTestCase
   HN_TITLE = "Show HN: A terminal log viewer written in Rust".freeze
 
@@ -9,14 +9,15 @@ class ReadingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
   end
 
-  test "读一期日刊并切到另一个来源" do
+  test "读一期日刊并定位另一个来源，其他来源仍可阅读" do
     visit daily_issue_path("2026-09-08")
 
     assert_text HN_TITLE
 
     click_on sources(:github).name
 
-    assert_no_text HN_TITLE
+    assert_selector "article#item-#{items(:hn_one).id}", text: HN_TITLE
+    assert_selector ".source-tab[aria-current='location']", text: sources(:github).name
     # fixture 里 GitHub Trending 那一栏是 failed：附录 B 的「本期抓取失败，已通知管理员」
     assert_text "本期抓取失败，已通知管理员"
   end
@@ -25,17 +26,18 @@ class ReadingTest < ApplicationSystemTestCase
     source = sources(:hackaday)
     visit daily_issue_path("2026-09-08")
 
-    find(".source-tabs:not(.source-tabs-ink)").click_on source.name
+    find(".source-tabs").click_on source.name
     assert_current_path daily_issue_path("2026-09-08", source: source.id)
     assert_equal "source=#{source.id}", URI.parse(page.current_url).query
 
-    click_on "返回来源目录"
+    find(".source-tail a[href='#source-directory']", match: :first).click
     current = URI.parse(page.current_url)
     assert_equal "source=#{source.id}", current.query
     assert_equal "source-directory", current.fragment
 
     refresh
-    assert_selector "[role='tab'][aria-selected='true']", text: source.name
+    assert_selector ".source-tabs a", text: source.name
+    assert_selector "article#item-#{items(:hn_one).id}", text: HN_TITLE
     assert_equal "source=#{source.id}", URI.parse(page.current_url).query
   end
 
@@ -43,23 +45,23 @@ class ReadingTest < ApplicationSystemTestCase
     source = sources(:hackaday)
     visit daily_issue_path("2026-09-08")
 
-    find(".source-tabs:not(.source-tabs-ink)").click_on source.name
+    find(".source-tabs").click_on source.name
     assert_current_path daily_issue_path("2026-09-08", source: source.id)
-    assert_selector "[role='tab'][aria-selected='true']", text: source.name
+    assert_selector ".source-tab[aria-current='location']", text: source.name
 
-    find("a[aria-label='搜索']").click
+    within(".masthead-nav") { click_on "搜索" }
     assert_current_path search_path
 
     page.go_back
     assert_current_path daily_issue_path("2026-09-08", source: source.id)
-    assert_selector "[role='tab'][aria-selected='true']", text: source.name
+    assert_selector ".source-tab[aria-current='location']", text: source.name
 
     page.go_forward
     assert_current_path search_path
 
     page.go_back
     assert_current_path daily_issue_path("2026-09-08", source: source.id)
-    assert_selector "[role='tab'][aria-selected='true']", text: source.name
+    assert_selector ".source-tab[aria-current='location']", text: source.name
   end
 
   # D20：`/` 就是最新一期日刊，没有单独的首页
@@ -67,7 +69,7 @@ class ReadingTest < ApplicationSystemTestCase
     visit root_path
 
     assert_current_path daily_issue_path("2026-09-08")
-    assert_text "9月8日"
+    assert_selector ".calendar-date", text: /09\s*\/\s*08/
   end
 
   # 附录 B：「这一页不存在。回到首页」。文案写在页面组件里（没有开 SSR），只有真的渲染出来才看得见

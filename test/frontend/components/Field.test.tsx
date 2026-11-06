@@ -22,5 +22,20 @@ describe('Field', () => {
 
     expect(screen.getByLabelText('feed 地址')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText('必填')).toBeInTheDocument()
+    expect(screen.getByLabelText('feed 地址')).toHaveAccessibleDescription('必填')
+  })
+
+  it('只读字段可聚焦和选择，不被当成禁用或发送编辑', async () => {
+    const onChange = vi.fn()
+    render(<Field label="模型地址" name="endpoint" value="https://example.com" onChange={onChange} readOnly note="由环境配置" />)
+
+    const input = screen.getByRole('textbox', { name: '模型地址' })
+    expect(input).not.toBeDisabled()
+    expect(input).toHaveAccessibleDescription('由环境配置')
+    await userEvent.click(input)
+    expect(input).toHaveFocus()
+    await userEvent.type(input, '/v1')
+    expect(input).toHaveValue('https://example.com')
+    expect(onChange).not.toHaveBeenCalled()
   })
 })

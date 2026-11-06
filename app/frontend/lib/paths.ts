@@ -45,7 +45,13 @@ export function searchHref(params: SearchParams = {}): string {
 
 // P4 收藏（config/routes.rb 的 resources :favorites）：资源的键是链接的 url_hash，不是行 id；第 1 页不写 page
 export const FAVORITES = '/favorites'
-export const favoritesHref = (page = 1) => (page > 1 ? `${FAVORITES}?page=${page}` : FAVORITES)
+export function favoritesHref(page = 1, filters: { q?: string; source?: string } = {}): string {
+  const query = new URLSearchParams()
+  if (filters.q) query.set('q', filters.q)
+  if (filters.source) query.set('source', filters.source)
+  if (page > 1) query.set('page', String(page))
+  return query.size ? `${FAVORITES}?${query}` : FAVORITES
+}
 export const favoriteHref = (urlHash: string) => `${FAVORITES}/${urlHash}`
 
 // P2-① 登录（config/routes.rb 的 login / session / settings，OmniAuth 的 /auth/:provider 与回调）

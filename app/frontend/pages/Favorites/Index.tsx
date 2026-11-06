@@ -1,36 +1,35 @@
-import { Link, usePage } from '@inertiajs/react'
-import { useEffect, useId, useRef } from 'react'
+import { Link, router, usePage } from '@inertiajs/react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 
-import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
 import Icon from '@/components/Icon'
 import IssueNotice from '@/components/IssueNotice'
-import { Translation } from '@/components/ItemRow'
 import Layout from '@/components/Layout'
+import LibraryRecord from '@/components/LibraryRecord'
 import PageHead from '@/components/PageHead'
 import Pager from '@/components/Pager'
+import PendingLabel from '@/components/PendingLabel'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { FavoritesProvider, useFavorites } from '@/lib/favorites'
 import { DAILY_LATEST, dailyHref, favoritesHref, latestWeeklyHref } from '@/lib/paths'
-import { Mixed, latinLang } from '@/lib/typeset'
+import { latinLang } from '@/lib/typeset'
 import type { FavoriteEntry, FooterData, Publication } from '@/types/lowpass'
-
-// 收藏页（PRD 5.10、R-10.6）：按收藏时间倒序，每页 20 条。行沿用搜索结果行的装置（眉行、标题、片段、底行两个链接），
-// 标题不带命中下划线，译文照日刊页的位置（D25），底行右端是书签。不显示总数、不分组、不筛选（D28）。
-// 取消后那一行原地留下「已取消收藏」与「恢复」，离开或刷新页面才消失（R-10.7）。文案是附录 B 原句。
 
 export type FavoritesIndexProps = FooterData & {
   entries: FavoriteEntry[]
   favorites: string[]
   page: number
   pages: number
+  q?: string
+  source?: string
+  total?: number
+  source_options?: { id: string; name: string }[]
 }
 
 const LABELS: Record<Publication, string> = { daily: '日刊', weekly: '周刊' }
-const DOT = <span className="search-dot">·</span>
 
-// 只画在收藏里的、这一次停留里取消过的（List 已经筛过）：不在收藏里的就是取消过、等着「恢复」的那一行
-function Row({ entry }: { entry: FavoriteEntry }) {
+function Row({ entry, rank }: { entry: FavoriteEntry; rank: number }) {
   const favorites = useFavorites()
   const kept = favorites?.has(entry.url_hash) ?? false
   const rowRef = useRef<HTMLElement>(null)
@@ -38,9 +37,12 @@ function Row({ entry }: { entry: FavoriteEntry }) {
   const restoreRef = useRef<HTMLButtonElement>(null)
   const was = useRef(kept)
   const statusId = useId()
+  const title = entry.title_zh || entry.title
+  const summary = entry.summary_zh || entry.snippet
+  const detail = entry.reason || entry.title_zh || (entry.summary_zh && entry.snippet)
 
-  // 取消与恢复会把读者刚按的那个控件换掉：焦点跟到换上来的那个，不掉回 body（PRD 6.4）。
-  // 只在读者还在这一行时跟（焦点在行里，或者随换掉的控件掉回了 body）：请求失败回滚时读者可能已经去了别处，不拽回来
+  // Keep keyboard focus on the replacement action after removing/restoring.
+  // A failed request must not steal focus if the reader already moved elsewhere.
   useEffect(() => {
     const active = document.activeElement
     const stayed = !active || active === document.body || rowRef.current?.contains(active)
@@ -49,97 +51,113 @@ function Row({ entry }: { entry: FavoriteEntry }) {
   }, [kept])
 
   return (
-    <article ref={rowRef} className="search-row">
-      <div className="search-eyebrow">
-        <Chip text={LABELS[entry.publication]} />
-        <Mixed text={entry.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
-        {DOT}
-        <Mixed text={entry.where.label} size="var(--fs-13)" color="var(--ink2)" />
-      </div>
-
-      <h2 className="search-title">
-        <a className="t" href={entry.url} target="_blank" rel="noopener noreferrer" lang={latinLang(entry.title)}>
-          <Mixed text={entry.title} font="latin" size="var(--fs-20)" color={kept ? 'var(--ink)' : 'var(--ink2)'} />
-        </a>
-      </h2>
-      {entry.title_zh ? <Translation text={entry.title_zh} /> : null}
-
-      {entry.snippet ? (
-        <p className="search-snippet" lang={latinLang(entry.snippet)}>
-          <Mixed text={entry.snippet} font="latin" size="var(--fs-15)" color="var(--ink2)" />
-        </p>
-      ) : null}
-      {entry.summary_zh ? <Translation text={entry.summary_zh} /> : null}
-
-      <div className="search-links">
-        <Link className="t" href={entry.where.href}>
-          <Mixed text={`所在期 · ${entry.where.label}`} size="var(--fs-13)" color="var(--ink)" />
-        </Link>
-        <a className="search-original" href={entry.url} target="_blank" rel="noopener noreferrer">
-          <span>原文</span>
-          <Icon name="arrow-up-right" size={12} />
-        </a>
+    <LibraryRecord
+      ref={rowRef}
+      id={`favorite-${entry.url_hash}`}
+      rank={rank}
+      title={title}
+      href={entry.url}
+      lang={latinLang(title)}
+      meta={<>
+        <span>{entry.source_name}</span><span>{LABELS[entry.publication]}</span>
+        <span>{normalizeDateLabel(entry.where.label)}</span>
+        {entry.saved_label ? <time>收藏于 {normalizeDateLabel(entry.saved_label)}</time> : null}
+      </>}
+      summary={summary ? <p className="search-snippet" lang={latinLang(summary)}>{summary}</p> : null}
+      detailTitle={entry.reason ? '值得关注' : '原文线索'}
+      detail={detail ? <>
+        {entry.reason ? <p>{entry.reason}</p> : null}
+        {entry.title_zh ? <p className="record-original-title" lang={latinLang(entry.title)}>{entry.title}</p> : null}
+        {entry.summary_zh && entry.snippet ? <p className="record-original-summary" lang={latinLang(entry.snippet)}>{entry.snippet}</p> : null}
+      </> : null}
+      actions={<>
+        <a className="search-original" href={entry.url} target="_blank" rel="noopener noreferrer">原文<Icon name="arrow-up-right" size={16} /></a>
+        <Link className="record-issue-link" href={entry.where.href}>所在期 · {normalizeDateLabel(entry.where.label)}</Link>
         {kept ? (
-          <FavoriteButton ref={markRef} className="search-mark" urlHash={entry.url_hash} title={entry.title} />
+          <FavoriteButton ref={markRef} className="search-mark" urlHash={entry.url_hash} title={title} />
         ) : (
           <span className="favorite-removed search-mark">
             <span id={statusId}>已取消收藏</span>
-            <button ref={restoreRef} type="button" className="link-button" aria-describedby={statusId} onClick={() => favorites?.restore(entry.url_hash)}>
-              恢复
-            </button>
+            <button ref={restoreRef} type="button" className="link-button" aria-describedby={statusId} onClick={() => favorites?.restore(entry.url_hash)}>恢复</button>
           </span>
         )}
-      </div>
-    </article>
+      </>}
+    />
   )
 }
 
-// 列表放在 FavoritesProvider 里面：哪几行画出来要看收藏状态
-function List({ entries, page, pages, latest_daily_key }: Pick<FavoritesIndexProps, 'entries' | 'page' | 'pages' | 'latest_daily_key'>) {
+function List({ entries, page, pages, latest_daily_key, q = '', source = '' }: FavoritesIndexProps) {
   const favorites = useFavorites()
-  // 既不在收藏里、这一次停留里也没取消过的行不画：历史恢复出来的旧列表里已经不在的那几条（R-10.7 离开后不再出现），
-  // 或者取消时服务端说本来就没有（204）
   const shown = entries.filter((entry) => favorites?.has(entry.url_hash) || favorites?.removed(entry.url_hash))
 
-  // 一行都不剩就是空态（AC-10.10），不是一页空白；别的页上还有收藏时不这么说，只留分页
   if (shown.length === 0 && pages <= 1) {
+    if (q || source) {
+      return <IssueNotice text={q ? `收藏中没有找到「${q}」。` : '这个来源还没有收藏。'} />
+    }
     return (
       <IssueNotice text="还没有收藏。">
-        <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_LATEST}>
-          阅读最新日刊
-        </Link>
+        <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_LATEST}>阅读最新日刊</Link>
       </IssueNotice>
     )
   }
 
   return (
     <>
-      <div className="search-results">
-        {shown.map((entry) => (
-          <Row key={entry.url_hash} entry={entry} />
-        ))}
-      </div>
-      {pages > 1 ? (
-        <Pager prevHref={page > 1 ? favoritesHref(page - 1) : null} nextHref={page < pages ? favoritesHref(page + 1) : null} page={page} pages={pages} />
-      ) : null}
+      <div className="search-results">{shown.map((entry, index) => <Row key={entry.url_hash} entry={entry} rank={(page - 1) * 20 + index + 1} />)}</div>
+      {pages > 1 ? <Pager prevHref={page > 1 ? favoritesHref(page - 1, { q, source }) : null} nextHref={page < pages ? favoritesHref(page + 1, { q, source }) : null} page={page} pages={pages} /> : null}
     </>
   )
 }
 
-export default function Index({ entries, favorites, page, pages, latest_daily_key }: FavoritesIndexProps) {
+function CollectionCount({ entries, total, filtered, loading }: { entries: FavoriteEntry[]; total: number; filtered: boolean; loading: boolean }) {
+  const favorites = useFavorites()
+  const removed = entries.filter((entry) => !favorites?.has(entry.url_hash)).length
+  const count = Math.max(0, total - removed)
+  return <p className="collection-count" role="status">{loading ? '正在搜索收藏…' : `${count} 条${filtered ? '符合条件的' : ''}收藏`}</p>
+}
+
+export default function Index(props: FavoritesIndexProps) {
+  const { q = '', source = '', source_options = [] } = props
+  const { url } = usePage()
+  const [draft, setDraft] = useState(q)
+  const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => setDraft(q), [q, url])
+
+  function search(selectedSource = source) {
+    router.get(favoritesHref(1, { q: draft.trim(), source: selectedSource }), {}, {
+      preserveState: true,
+      onStart: () => setLoading(true),
+      onFinish: () => setLoading(false),
+    })
+  }
+
   return (
-    <FavoritesProvider favorites={favorites}>
-      <PageHead big="收藏" />
-      <List entries={entries} page={page} pages={pages} latest_daily_key={latest_daily_key} />
+    <FavoritesProvider favorites={props.favorites}>
+      <section className="library-page collection-page">
+        <PageHead big="收藏" />
+        <div className="library-workspace">
+          <form role="search" aria-label="搜索收藏" className="collection-search" onSubmit={(event) => { event.preventDefault(); if (!loading) search() }}>
+            <label htmlFor="collection-query">搜索收藏</label>
+            <div className="collection-search-field">
+              <input ref={inputRef} id="collection-query" type="search" value={draft} maxLength={100} onChange={(event) => setDraft(event.target.value)} placeholder="标题、用途或项目名" autoComplete="off" />
+              <button type="submit" className="btn-primary" disabled={loading} aria-busy={loading}><PendingLabel idle="搜索" pending="搜索中…" busy={loading} /><Icon name="search" size={18} /></button>
+            </div>
+            {source_options.length > 1 ? (
+              <label className="collection-source-filter">来源<select aria-label="收藏来源" value={source} onChange={(event) => search(event.target.value)}><option value="">全部来源</option>{source_options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+            ) : null}
+            {q || source ? <Link className="collection-reset" href={favoritesHref()}>清除筛选</Link> : null}
+          </form>
+          {props.total !== undefined ? <CollectionCount entries={props.entries} total={props.total} filtered={Boolean(q || source)} loading={loading} /> : null}
+          <List {...props} />
+        </div>
+      </section>
     </FavoritesProvider>
   )
 }
 
-// 持久布局（application.tsx）：页脚要的字段从 props 来，跟 Search/Show 同一种写法
 function FavoritesLayout({ children }: React.PropsWithChildren) {
   const { daily_time, latest_weekly_key } = usePage<FavoritesIndexProps>().props
-
   return <Layout footer={{ nextAt: daily_time, latestWeeklyHref: latestWeeklyHref(latest_weekly_key) }}>{children}</Layout>
 }
-
 Index.layout = (page: React.ReactNode) => <FavoritesLayout>{page}</FavoritesLayout>

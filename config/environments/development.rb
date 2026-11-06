@@ -3,8 +3,9 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
-  # Make code changes take effect immediately without server restart.
-  config.enable_reloading = true
+  # Web 继续热重载；worker 固定启动时的代码版本。长模型任务运行时，另一个任务
+  # 等待卸载锁会连带阻塞心跳，使仍在工作的进程被误判失联。修改任务代码后重启 jobs。
+  config.enable_reloading = ENV["LOWPASS_JOB_PROCESS"] != "1"
 
   # Do not eager load code on boot.
   config.eager_load = false

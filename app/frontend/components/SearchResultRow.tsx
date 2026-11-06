@@ -1,62 +1,56 @@
 import { Link } from '@inertiajs/react'
 
-import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
 import HitText from '@/components/HitText'
 import Icon from '@/components/Icon'
+import LibraryRecord from '@/components/LibraryRecord'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { reportClick } from '@/lib/search'
-import { Mixed, latinLang } from '@/lib/typeset'
+import { latinLang } from '@/lib/typeset'
 import type { HitRun, SearchResult } from '@/types/lowpass'
 
-// 结果行（R-4.6、画布 search_row()）：眉行「刊物反白签 · 来源名 · 所在期 · 日期」，标题与摘要片段带命中下划线，
-// 底行「所在期 · …」与「原文 ↗」，右端是书签（PRD 5.10）。点标题或原文先上报一次 search_click（9.1）再由浏览器打开（R-8.4 新标签页）；
-// 所在期是站内直链，不计。
-
 const LABELS: Record<SearchResult['publication'], string> = { daily: '日刊', weekly: '周刊' }
-const DOT = <span className="search-dot">·</span>
 const runText = (runs: HitRun[]) => runs.map((run) => run.text).join('')
 
 export default function SearchResultRow({ result, q }: { result: SearchResult; q: string }) {
   const report = () => reportClick({ item_id: result.item_id, rank: result.rank, q })
+  const titleRuns = result.title_zh_runs?.length ? result.title_zh_runs : result.title_runs
+  const summaryRuns = result.summary_zh_runs?.length ? result.summary_zh_runs : result.snippet_runs
+  const translated = titleRuns !== result.title_runs
+  const originalSummary = result.summary_zh_runs?.length && result.snippet_runs
+  const titleMatchInOriginal = translated && result.title_runs.some((run) => run.hit) && !titleRuns.some((run) => run.hit)
+  const summaryMatchInOriginal = originalSummary && originalSummary.some((run) => run.hit) && !summaryRuns?.some((run) => run.hit)
+  const detail = result.reason || (translated && !titleMatchInOriginal) || (originalSummary && !summaryMatchInOriginal)
 
   return (
-    <article className="search-row">
-      <div className="search-eyebrow">
-        <Chip text={LABELS[result.publication]} />
-        <Mixed text={result.source_name} font="latin" weight={500} size="var(--fs-13)" color="var(--ink2)" />
-        {DOT}
-        <Mixed text={result.where.label} size="var(--fs-13)" color="var(--ink2)" />
-        {/* 日刊的所在期就是那一天，日期与它相同就不写第二遍；周刊的所在期含年份、周次与板块，日期另有信息 */}
-        {result.published_label !== result.where.label ? (
-          <>
-            {DOT}
-            <Mixed text={result.published_label} size="var(--fs-13)" color="var(--ink2)" />
-          </>
-        ) : null}
-      </div>
-
-      <h2 className="search-title">
-        <a className="t" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report} lang={latinLang(runText(result.title_runs))}>
-          <HitText runs={result.title_runs} size="var(--fs-20)" color="var(--ink)" />
-        </a>
-      </h2>
-
-      {result.snippet_runs ? (
-        <p className="search-snippet" lang={latinLang(runText(result.snippet_runs))}>
-          <HitText runs={result.snippet_runs} size="var(--fs-15)" color="var(--ink2)" />
-        </p>
-      ) : null}
-
-      <div className="search-links">
-        <Link className="t" href={result.where.href}>
-          <Mixed text={`所在期 · ${result.where.label}`} size="var(--fs-13)" color="var(--ink)" />
-        </Link>
-        <a className="search-original" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report}>
-          <span>原文</span>
-          <Icon name="arrow-up-right" size={12} />
-        </a>
-        <FavoriteButton className="search-mark" itemId={result.item_id} urlHash={result.url_hash} title={runText(result.title_runs)} />
-      </div>
-    </article>
+    <LibraryRecord
+      id={`result-${result.item_id}`}
+      rank={result.rank}
+      title={<HitText runs={titleRuns} size="inherit" color="inherit" />}
+      href={result.url}
+      lang={latinLang(runText(titleRuns))}
+      onOpen={report}
+      meta={<>
+        <span>{result.source_name}</span><span>{LABELS[result.publication]}</span>
+        <span>{normalizeDateLabel(result.where.label)}</span>
+        {result.published_label !== result.where.label ? <span>{normalizeDateLabel(result.published_label)}</span> : null}
+      </>}
+      summary={summaryRuns || titleMatchInOriginal || summaryMatchInOriginal ? <>
+        {summaryRuns ? <p className="search-snippet" lang={latinLang(runText(summaryRuns))}><HitText runs={summaryRuns} size="inherit" color="inherit" /></p> : null}
+        {titleMatchInOriginal ? <p className="record-original-title search-match-context" lang={latinLang(runText(result.title_runs))}><HitText runs={result.title_runs} size="inherit" color="inherit" /></p> : null}
+        {summaryMatchInOriginal && originalSummary ? <p className="record-original-summary search-match-context" lang={latinLang(runText(originalSummary))}><HitText runs={originalSummary} size="inherit" color="inherit" /></p> : null}
+      </> : null}
+      detailTitle={result.reason ? '值得关注' : '原文线索'}
+      detail={detail ? <>
+        {result.reason ? <p>{result.reason}</p> : null}
+        {translated && !titleMatchInOriginal ? <p className="record-original-title" lang={latinLang(runText(result.title_runs))}><HitText runs={result.title_runs} size="inherit" color="inherit" /></p> : null}
+        {originalSummary && !summaryMatchInOriginal ? <p className="record-original-summary" lang={latinLang(runText(originalSummary))}><HitText runs={originalSummary} size="inherit" color="inherit" /></p> : null}
+      </> : null}
+      actions={<>
+        <a className="search-original" href={result.url} target="_blank" rel="noopener noreferrer" onClick={report}>原文<Icon name="arrow-up-right" size={16} /></a>
+        <Link className="record-issue-link" href={result.where.href}>所在期 · {normalizeDateLabel(result.where.label)}</Link>
+        <FavoriteButton className="search-mark" itemId={result.item_id} urlHash={result.url_hash} title={runText(titleRuns)} />
+      </>}
+    />
   )
 }

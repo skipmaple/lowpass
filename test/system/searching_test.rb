@@ -30,7 +30,7 @@ class SearchingTest < ApplicationSystemTestCase
   test "日刊的所在期落到条目并切到对应来源" do
     visit search_path(q: "terminal")
 
-    click_on "所在期 · 2026年9月8日"
+    click_on "所在期 · 2026/09/08"
 
     assert_current_path daily_issue_path("2026-09-08", source: sources(:hn).id)
     assert_selector "article#item-#{items(:hn_one).id}", text: "Show HN"

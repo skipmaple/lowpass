@@ -26,7 +26,7 @@ function showProps(overrides: Partial<SearchShowProps> = {}): SearchShowProps {
     page: 1,
     pages: 0,
     latest_daily_key: '2026-09-08',
-    latest_daily_label: '2026年9月8日',
+    latest_daily_label: '2026\/09\/08',
     daily_time: '06:00',
     latest_weekly_key: '2026-W36',
     ...overrides,
@@ -54,9 +54,9 @@ describe('搜索状态', () => {
     // PRD 6.4 标题层级：页面的 h1 是「搜索」（视觉上隐藏，读屏器能读到），结果标题才是 h2
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('搜索')
     expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveAttribute('placeholder', '搜标题、摘要或来源。拼写不准也可以。')
-    // 「最新日刊 · 2026年9月8日」经 Mixed 拆成多个相邻 <span>，jsdom 的可访问名计算会把落在段边界上的
-    // 空格吃掉（最新日刊·2026年9月8日），可见渲染与 textContent 都不受影响；用正则容忍空格差异。
-    expect(screen.getByRole('link', { name: /^最新日刊\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08')
+    // 「最新日刊 · 2026\/09\/08」经 Mixed 拆成多个相邻 <span>，jsdom 的可访问名计算会把落在段边界上的
+    // 空格吃掉（最新日刊·2026\/09\/08），可见渲染与 textContent 都不受影响；用正则容忍空格差异。
+    expect(screen.getByRole('link', { name: /^最新日刊\s*·\s*2026\/09\/08$/ })).toHaveAttribute('href', '/daily/2026-09-08')
     expect(screen.getByRole('navigation', { name: '刊物' })).toBeInTheDocument()
     expect(container.querySelectorAll('.search-row')).toHaveLength(0)
     expect(container.querySelector('.search-count')).toBeNull()
@@ -73,7 +73,7 @@ describe('搜索状态', () => {
 
     expect(container.querySelector('.search-count')?.textContent).toContain('1 条结果')
     expect(container.querySelectorAll('.search-row')).toHaveLength(1)
-    expect(screen.getByRole('status')).toHaveTextContent('1 条结果')
+    expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent('1 条结果')
     expect(screen.queryByRole('navigation', { name: '分页' })).toBeNull()
   })
 
@@ -111,11 +111,11 @@ describe('搜索状态', () => {
 
   it('限流与不可用各一句', () => {
     const { unmount } = show({ q: 'kuber', state: 'limited' })
-    expect(screen.getByRole('status')).toHaveTextContent('操作过于频繁')
+    expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent('操作过于频繁')
     unmount()
 
     show({ q: 'kuber', state: 'unavailable' })
-    expect(screen.getByRole('status')).toHaveTextContent('搜索暂不可用')
+    expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent('搜索暂不可用')
   })
 
   it.each([
@@ -126,12 +126,12 @@ describe('搜索状态', () => {
   ] as const)('搜索完成为 %s 时给出对应 live 通知', (state, message) => {
     const { rerender } = show({ q: 'a' })
     act(() => emitRouterEvent('start'))
-    expect(screen.getByRole('status')).toHaveTextContent('正在搜索')
+    expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent('正在搜索')
 
     rerender(<Show {...showProps({ q: 'a', state })} />)
     act(() => emitRouterEvent('finish'))
 
-    expect(screen.getByRole('status')).toHaveTextContent(message)
+    expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent(message)
     expect(screen.getByRole('searchbox', { name: '搜索' })).toHaveFocus()
   })
 
@@ -153,7 +153,7 @@ describe('搜索状态', () => {
   it.each(['limited', 'unavailable'] as const)('%s 可以保留筛选与当前页重试', async (state) => {
     const user = userEvent.setup()
     show({ q: 'rust', state, filters: searchFilters({ type: 'weekly' }), page: 2 })
-    if (state === 'limited') expect(screen.getByRole('status')).toHaveTextContent('1 分钟')
+    if (state === 'limited') expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent('1 分钟')
 
     await user.click(screen.getByRole('button', { name: '重试' }))
     expect(router.get).toHaveBeenLastCalledWith('/search?q=rust&type=weekly&page=2')
@@ -161,7 +161,7 @@ describe('搜索状态', () => {
     act(() => emitRouterEvent('start'))
     expect(screen.getByRole('button', { name: '重试' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '搜索' })).toBeDisabled()
-    expect(screen.getByRole('status')).not.toHaveClass('sr-only')
+    expect(screen.getByRole('status', { name: '搜索状态' })).not.toHaveClass('sr-only')
   })
 
   it('超长查询提示已截断', () => {
@@ -255,9 +255,9 @@ describe('搜索框', () => {
     show()
 
     act(() => emitRouterEvent('start'))
-    expect(screen.getByRole('status')).toHaveTextContent('正在搜索…')
+    expect(screen.getByRole('status', { name: '搜索状态' })).toHaveTextContent('正在搜索…')
     act(() => emitRouterEvent('finish'))
-    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    expect(screen.getByRole('status', { name: '搜索状态' })).toBeEmptyDOMElement()
   })
 })
 
@@ -278,14 +278,14 @@ describe('结果行', () => {
     expect(title).toHaveAttribute('href', 'https://example.com/k8s-rust')
     expect(title).toHaveAttribute('target', '_blank')
     expect(title).toHaveAttribute('rel', 'noopener noreferrer')
-    expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
+    expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026\/09\/08$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
     expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/k8s-rust')
   })
 
   // 日刊的所在期就是那一天，日期与它相同：眉行只写一次；周刊的所在期是「2026年 · 第 36 周 · 工具」，日期另有信息，两个都写
   it('所在期与日期相同时眉行只写一次', () => {
     const daily = results()
-    expect(daily.container.querySelector('.search-eyebrow')?.textContent).toBe('日刊Hacker News·2026年9月8日')
+    expect(daily.container.querySelector('.search-eyebrow')?.textContent?.match(/2026\/09\/08/g)).toHaveLength(1)
     daily.unmount()
 
     const weekly = results({
@@ -298,7 +298,20 @@ describe('结果行', () => {
         }),
       ],
     })
-    expect(weekly.container.querySelector('.search-eyebrow')?.textContent).toBe('周刊阮一峰科技爱好者周刊·2026年 · 第 36 周 · 工具·2026年9月4日')
+    expect(weekly.container.querySelector('.search-eyebrow')).toHaveTextContent('2026年 · 第 36 周 · 工具')
+    expect(weekly.container.querySelector('.search-eyebrow')).toHaveTextContent('2026/09/04')
+  })
+
+  it('译文优先，并在关键词只命中原文时保留可见的命中上下文', () => {
+    const { container } = results({ results: [searchResult({
+      title_zh_runs: [{ text: '云原生自动化工具', hit: false }],
+      summary_zh_runs: [{ text: '用于管理集群应用。', hit: false }],
+      reason: '提供了自动恢复能力。',
+    })] })
+    expect(container.querySelector('.record-title')).toHaveTextContent('云原生自动化工具')
+    expect(container.querySelector('.search-snippet')).toHaveTextContent('用于管理集群应用。')
+    expect(container.querySelector('.record-purpose .search-match-context .hit')).toHaveTextContent('Kuber')
+    expect(container.querySelector('.record-detail-content')).toHaveTextContent('提供了自动恢复能力。')
   })
 
   it('没有摘要就没有片段行', () => {
@@ -336,7 +349,7 @@ describe('结果行', () => {
     results()
 
     // 正则容忍 Mixed run 边界的空格差异（同上「眉行、命中下划线…」一条的注释）
-    const where = screen.getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })
+    const where = screen.getByRole('link', { name: /^所在期\s*·\s*2026\/09\/08$/ })
     where.addEventListener('click', (event) => event.preventDefault())
     await user.click(where)
 

@@ -32,10 +32,10 @@ describe('周刊期头', () => {
   it('前后期按周期键拼地址，归档指向 /weekly', () => {
     show({ issue: weeklyIssue({ next_key: '2026-W37' }) })
 
-    for (const link of screen.getAllByRole('link', { name: '前一期' })) {
+    for (const link of screen.getAllByRole('link', { name: '上一期' })) {
       expect(link).toHaveAttribute('href', '/weekly/2026-W35')
     }
-    for (const link of screen.getAllByRole('link', { name: '后一期' })) {
+    for (const link of screen.getAllByRole('link', { name: '下一期' })) {
       expect(link).toHaveAttribute('href', '/weekly/2026-W37')
     }
     for (const link of screen.getAllByRole('link', { name: '归档' })) {
@@ -349,10 +349,10 @@ it('周刊条目有书签，降级的节没有', () => {
   expect(container.querySelector('.favorite-button')).toBeNull()
 })
 
-it('来源横带用「翻开的书」木刻图形，对读屏隐藏', () => {
+it('来源横带保留真实来源标题，不增加装饰图形', () => {
   const { container } = show()
 
   const mark = container.querySelector('.source-band svg.source-band-mark')
-  expect(mark).not.toBeNull()
-  expect(mark).toHaveAttribute('aria-hidden', 'true')
+  expect(mark).toBeNull()
+  expect(container.querySelector('.source-band-title')).toHaveTextContent(weeklySection().source.name)
 })

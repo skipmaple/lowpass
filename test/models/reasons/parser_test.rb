@@ -26,6 +26,29 @@ class Reasons::ParserTest < ActiveSupport::TestCase
     assert_equal 60, result.reason.length
   end
 
+  test "合法领域名与明确空理由表示资料不足，不当作可重试的损坏输出" do
+    error = assert_raises(Reasons::Parser::InsufficientContext) do
+      Reasons::Parser.parse({ reason: "", interest_tag: "前端开发" }.to_json, NAMES)
+    end
+    assert_equal "条目资料不足，未生成理由", error.message
+  end
+
+  test "缺字段、错误类型、非法标签与空白短句仍是普通解析失败" do
+    [
+      { interest_tag: "前端开发" },
+      { reason: nil, interest_tag: "前端开发" },
+      { reason: 123, interest_tag: "前端开发" },
+      { reason: [ "一" * 30 ], interest_tag: "前端开发" },
+      { reason: "", interest_tag: "不存在" },
+      { reason: "" },
+      { reason: " \n ", interest_tag: "前端开发" },
+      { reason: "太短", interest_tag: "前端开发" }
+    ].each do |output|
+      error = assert_raises(Reasons::Parser::Invalid) { Reasons::Parser.parse(output.to_json, NAMES) }
+      assert_instance_of Reasons::Parser::Invalid, error, output.inspect
+    end
+  end
+
   REASON = "这个用 Rust 写的终端日志工具对开发者效率很有帮助，值得一看。".freeze
 
   test "标题译文去首尾空白、空白收成一个空格" do

@@ -1,14 +1,12 @@
 import { createInertiaApp } from '@inertiajs/react'
 
-import Layout from '@/components/Layout'
 import { loadContentFonts } from '@/lib/contentFonts'
-import { markFirstLoad } from '@/lib/motion'
+import Layout from '@/components/Layout'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
 import { crossfadeFor } from '@/lib/pageTurn'
 
-loadContentFonts()
+void loadContentFonts()
 focusMainOnNavigate()
-markFirstLoad()
 
 void createInertiaApp({
   pages: "../pages",

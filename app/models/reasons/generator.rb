@@ -50,18 +50,45 @@ module Reasons::Generator
       return false unless Reasons.ready?
       return false if Reasons::Budget.exhausted?
 
-      messages = Reasons::Prompt.messages(item, profile)
-      (RETRIES + 1).times do
+      # 标题与简短说明不足以说明具体用途；先补读正文，不等模型基于元数据猜出理由。
+      # 较长摘要先直接使用，模型明确弃答时再补读原文。每条最多抓一次。
+      evidence = Reasons::Evidence.fetch(item) if item.summary.to_s.length < Reasons::Evidence::MIN_BODY_CHARACTERS
+      messages = Reasons::Prompt.messages(item, profile, evidence: evidence)
+      (RETRIES + 1).times do |attempt|
+        return false if Reasons::Budget.exhausted?
+
         started = now_ms
         response = nil
         begin
           response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item))
+          # 不能把模型的格式合格当作事实依据。标题不足且正文没取到，即使模型猜出理由也拒绝写回。
+          # 已发生的模型请求仍如实记账，下面的资料不足分支不会再次调用。
+          if item.summary.blank? && evidence&.text.blank?
+            raise Reasons::Parser::InsufficientContext, "条目资料不足，未生成理由"
+          end
           result = Reasons::Parser.parse(response.text, names)
           record(item, "ok", response, started)
           store(item, result)
           return true
+        rescue Reasons::Parser::InsufficientContext => e
+          call = record(item, "invalid", response, started, evidence&.error || e.message)
+          # 这次重试必须有新资料；同一份材料已被拒写，或原文获取失败，就保留旧内容。
+          if evidence.nil? && attempt < RETRIES
+            evidence = Reasons::Evidence.fetch(item)
+            if evidence.text.present?
+              messages = Reasons::Prompt.messages(item, profile, evidence: evidence)
+              next
+            end
+            # 调用账本仍是一条对应一次模型请求，只补充这次失败的可操作原因。
+            call.update!(error_summary: evidence.error) if evidence.error
+          end
+          return false
         rescue Reasons::Parser::Invalid => e
           record(item, "invalid", response, started, e.message)
+        rescue Reasons::Provider::Incomplete => e
+          # 截断已经耗费输出额度，同样的请求不会增加资料或额度；如实计费后停止此条。
+          record(item, "failed", e, started, e.message)
+          return false
         rescue Reasons::Provider::Rejected => e
           record(item, "failed", nil, started, "密钥被拒绝")
           raise

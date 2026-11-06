@@ -5,12 +5,14 @@ import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import { Ctrl } from '@/components/Ctrl'
 import Dialog from '@/components/Dialog'
 import Icon from '@/components/Icon'
+import PendingLabel from '@/components/PendingLabel'
 import Mark from '@/components/Mark'
 import Seg from '@/components/Seg'
 import Table from '@/components/Table'
 import { ADMIN_SOURCES, adminIssueRefetchHref, adminSourceRunsHref } from '@/lib/paths'
 import { useAdminOperations } from '@/lib/operations'
 import { useManualRuns } from '@/lib/runs'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { Mixed } from '@/lib/typeset'
 import type { AdminRunRow, FinishedRun, LatestIssue, ManualRun, Publication } from '@/types/lowpass'
 
@@ -50,7 +52,7 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
     cells: [
       <div className="admin-cell-stack">
         <span className="table-cell-content"><Mark state={run.status === 'succeeded' ? 'published' : run.status === 'queued' || run.status === 'running' ? 'generating' : 'empty'} label={run.status_label} /><span className="cjk">{run.status_label}</span></span>
-        <Mixed text={run.started_label || '—'} color="var(--ink)" />
+        <Mixed text={normalizeDateLabel(run.started_label || '—')} color="var(--ink)" />
       </div>,
       <RunError error={run.error_summary} />,
       <dl className="admin-run-metrics">
@@ -75,9 +77,9 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
         <>
           <Ctrl href={ADMIN_SOURCES} label="返回列表" icon="chevron-left" side="left" />
           {latest_issue ? (
-            <button type="button" className="btn-primary" disabled={busy} onClick={() => setConfirm(true)}>
+            <button type="button" className="btn-primary" disabled={busy} aria-busy={busy} onClick={() => setConfirm(true)}>
               <Icon name={busy ? 'clock' : 'refresh-cw'} color="currentColor" />
-              <span>{busy ? '进行中' : `重抓最新一期 · ${latest_issue.label}`}</span>
+              <PendingLabel idle={`重抓最新一期 · ${normalizeDateLabel(latest_issue.label)}`} pending="进行中" busy={busy} />
             </button>
           ) : null}
         </>
@@ -96,7 +98,7 @@ export default function Runs({ source, status, runs, latest_issue, active_runs, 
       </div>
       {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
       <Table className="runs-table" headers={HEADERS} widths={WIDTHS} rows={rows} mobile={{ primary: [0, 1], detailsLabel: '抓取详情' }} empty="还没有抓取记录" />
-      <Dialog open={confirm} text={`确认重抓最新一期 ${latest_issue?.period_key ?? ''} 的 ${source.name}？`} cancel="取消" confirm="确认重抓" busy={busy} onCancel={() => setConfirm(false)} onConfirm={() => {
+      <Dialog open={confirm} text={`确认重抓最新一期 ${normalizeDateLabel(latest_issue?.period_key ?? '')} 的 ${source.name}？`} cancel="取消" confirm="确认重抓" busy={busy} onCancel={() => setConfirm(false)} onConfirm={() => {
         if (latest_issue) operations.post('refetch', `${latest_issue.period_key} · ${source.name}`, adminIssueRefetchHref(latest_issue.period_key), { source_id: source.id })
         setConfirm(false)
       }} />

@@ -1,0 +1,61 @@
+[
+  {
+    "theme": "daybreak",
+    "outsideOpen": true,
+    "both": {
+      "themeOpen": true,
+      "accountOpen": "true"
+    },
+    "focus": {
+      "focusVisible": true,
+      "outline": "rgb(0, 95, 101) solid 2px"
+    },
+    "modalLayer": {
+      "summaryAtopModal": [
+        "dialog-shade",
+        "",
+        ""
+      ],
+      "shadeZ": "30",
+      "themeZ": "101"
+    }
+  },
+  {
+    "theme": "duet",
+    "outsideOpen": true,
+    "both": {
+      "themeOpen": true,
+      "accountOpen": "true"
+    },
+    "focus": {
+      "focusVisible": true,
+      "outline": "rgb(22, 22, 22) solid 2px"
+    },
+    "modalLayer": {
+      "summaryAtopModal": [],
+      "shadeZ": "30",
+      "themeZ": "101"
+    }
+  },
+  {
+    "theme": "unfold",
+    "outsideOpen": true,
+    "both": {
+      "themeOpen": true,
+      "accountOpen": "true"
+    },
+    "focus": {
+      "focusVisible": true,
+      "outline": "rgb(208, 183, 117) solid 2px"
+    },
+    "modalLayer": {
+      "summaryAtopModal": [
+        "dialog-shade",
+        "",
+        ""
+      ],
+      "shadeZ": "30",
+      "themeZ": "101"
+    }
+  }
+]

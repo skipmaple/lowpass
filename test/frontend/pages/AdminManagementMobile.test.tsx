@@ -19,7 +19,7 @@ it('手机刊物先显示日期、状态和唯一操作，时间与结果放进�
   render(<Issues month="2026-09" month_label="2026 年 9 月" prev_month={null} next_month={null} summary="" kind="all" rows={[adminIssueRow({ time_label: '发布 06:12 · 修订 06:42' })]} today_issue_exists={false} today_period_key="2026-09-09" today_issue_state={null} active_runs={[]} finished_runs={[]} />)
 
   const row = screen.getByRole('listitem')
-  expect(within(row).getByText('2026-09-08')).toBeVisible()
+  expect(within(row).getByText('2026/09/08')).toBeVisible()
   expect(within(row).getByText('已发布')).toBeVisible()
   expect(screen.getAllByRole('link', { name: '查看' })).toHaveLength(1)
   expect(within(row).getByRole('button', { name: '重抓某源' })).toBeVisible()
@@ -30,19 +30,32 @@ it('手机刊物先显示日期、状态和唯一操作，时间与结果放进�
   expect(details).toHaveTextContent('发布 06:12 · 修订 06:42')
 })
 
-it('手机来源保留编辑、记录和健康状态，计划只需展开一次', async () => {
+it('手机理由任务的状态、进度和失败原因无需展开详情即可查看', () => {
+  render(<Issues month="2026-09" month_label="2026 年 9 月" prev_month={null} next_month={null} summary="" kind="all" rows={[adminIssueRow({ reasons: { label: '缺 3 条', missing: 3, ready: true, progress: { status: 'partial', active: false, label: '部分失败', detail: '成功 24 条，失败 3 条', error: '模型连接超时' } } })]} today_issue_exists={false} today_period_key="2026-09-09" today_issue_state={null} active_runs={[]} finished_runs={[]} />)
+
+  const row = screen.getByRole('listitem')
+  expect(within(row).getByText('部分失败')).toBeVisible()
+  expect(within(row).getByText('成功 24 条，失败 3 条')).toBeVisible()
+  expect(within(row).getByText('模型连接超时')).toBeVisible()
+  expect(within(row).getByText('模型连接超时').closest('details')).toBeNull()
+  expect(within(row).getByText('刊物详情').closest('details')).not.toHaveAttribute('open')
+})
+
+it('手机来源直接显示刊物状态和抓取时间，仍只保留一套操作', async () => {
   render(<Sources sources={[adminSourceRow()]} summary="" />)
 
   const row = screen.getByRole('listitem')
   expect(within(row).getByText('正常')).toBeVisible()
   expect(screen.getAllByRole('link', { name: '编辑' })).toHaveLength(1)
   expect(within(row).getByRole('link', { name: '记录' })).toBeVisible()
-  const details = within(row).getByText('抓取计划', { selector: 'summary' }).closest('details')!
-  expect(details).not.toHaveAttribute('open')
-  await userEvent.click(within(row).getByText('抓取计划', { selector: 'summary' }))
-  expect(details).toHaveTextContent('上次抓取')
-  expect(details).toHaveTextContent('下次计划')
-  expect(details.querySelector('details')).toBeNull()
+  expect(within(row).getByText('日刊')).toBeVisible()
+  expect(within(row).getByText('启用')).toBeVisible()
+  expect(within(row).getByText('上次抓取')).toBeVisible()
+  expect(within(row).getByText('下次计划')).toBeVisible()
+  expect(within(row).queryByText('抓取计划', { selector: 'summary' })).toBeNull()
+  await userEvent.click(within(row).getByText('更多操作', { selector: 'summary' }))
+  expect(within(row).getByRole('button', { name: '测试抓取' })).toBeVisible()
+  expect(within(row).getByRole('button', { name: '停用' })).toBeVisible()
 })
 
 it('手机抓取记录直接显示状态和错误，指标可展开', async () => {

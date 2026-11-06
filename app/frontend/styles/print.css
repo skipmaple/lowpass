@@ -30,3 +30,38 @@
   .source-band span { color: var(--ink) !important; }
   footer { break-inside: avoid; }
 }
+
+/* All three reading worlds print as ink on paper. Match the theme selector's
+   specificity so persisted C cannot override print variables. */
+@media print {
+  :root[data-theme] {--paper:#fff;--ink:#000;--ink2:#333;--rule:#888;--surface:#fff;--accent:#000;--accent-surface:#fff;--on-accent:#000;--theme-blue:#fff;--theme-green:#000;--theme-gold:#fff;color-scheme:light;background:#fff!important}
+  html[data-theme] body, html[data-theme] .paper {background:#fff!important;color:#000!important}
+  html[data-theme] .publication-mast, html[data-theme] .publication-brand, html[data-theme] .publication-context,
+  html[data-theme] .source-section-head, html[data-theme] .source-band,
+  html[data-theme] .item-row, html[data-theme] .item-reason-panel,
+  html[data-theme] .item-original {background:transparent!important;color:#000!important;clip-path:none!important}
+  html[data-theme] .publication-brand::after, html[data-theme] .publication-mast::after,
+  html[data-theme] .publication-context::after, html[data-theme] .source-section-head::after {display:none!important}
+  html[data-theme] .source-tabs-frame, html[data-theme] .item-actions, html[data-theme] .favorite-control {display:none!important}
+  html[data-theme] .source-sections, html[data-theme] .daily-reading, html[data-theme] .source-collection {display:block!important}
+  html[data-theme] .item-row--daily {display:block!important;border:0!important;break-inside:auto}
+  html[data-theme] .item-row--daily .item-body {display:block!important;padding:16px 0!important}
+  html[data-theme] .item-rail {display:none!important}
+  html[data-theme] .item-reason-panel {border:1px solid #888!important;padding:12px!important}
+  html[data-theme] .item-body>* {margin-inline:0!important}
+  html[data-theme] .source-section {break-before:auto!important}
+  /* A page's calendar is one line on paper, independent of screen composition. */
+  :root[data-theme] .masthead {width:100%;height:auto;min-height:0;margin:0;padding:8pt 0}
+  :root[data-theme] .publication-mast {min-height:0;padding:12pt 0;grid-template-columns:minmax(0,1fr) auto}
+  :root[data-theme] .publication-brand {height:auto;padding:0;font-size:36px;line-height:1.1}
+  :root[data-theme] .publication-context {padding:0;min-height:0}
+  :root[data-theme] .issue-calendar {display:flex!important;flex-wrap:wrap;align-items:baseline;gap:6px;width:auto;margin:12pt 0}
+  :root[data-theme] .calendar-meta {display:contents}
+  :root[data-theme] .calendar-meta>span:first-child {order:0;font-size:18px;line-height:1.4;font-weight:400;letter-spacing:0}
+  :root[data-theme] .calendar-meta>span:first-child::after {content:' /'}
+  :root[data-theme] .calendar-meta>span:last-child {order:2;font-size:12px;line-height:1.4}
+  :root[data-theme] .calendar-date {order:1;display:inline-flex;flex-direction:row;align-items:baseline;width:auto;margin:0;font-size:24px;font-weight:500;line-height:1.2}
+  :root[data-theme] .calendar-date::before {display:none}
+  :root[data-theme] .calendar-day {align-self:auto}
+  :root[data-theme] .calendar-slash {position:static;width:auto;height:auto;clip-path:none;overflow:visible;align-self:auto;font-size:.8em}
+}

@@ -66,7 +66,7 @@ class FavoritingTest < ApplicationSystemTestCase
     wait_until { users(:drew).favorites.count.zero? }
     wait_for_favorite_requests(1)
 
-    find("a[aria-label='搜索']").click
+    within(".masthead-nav") { click_on "搜索" }
     assert_current_path search_path
 
     page.go_back
@@ -84,7 +84,7 @@ class FavoritingTest < ApplicationSystemTestCase
     wait_until { users(:drew).favorites.count == 1 }
     wait_for_favorite_requests(1)
 
-    find("a[aria-label='搜索']").click
+    within(".masthead-nav") { click_on "搜索" }
     assert_current_path search_path
 
     page.go_back

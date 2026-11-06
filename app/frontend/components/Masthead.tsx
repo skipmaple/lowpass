@@ -1,16 +1,14 @@
 import { Link, router, usePage } from '@inertiajs/react'
-import { useEffect, useId, useRef, useState } from 'react'
-import type * as React from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import Icon from '@/components/Icon'
+import IssueDate from '@/components/IssueDate'
+import ThemePicker from '@/components/ThemePicker'
 import { ADMIN_SOURCES, DAILY_LATEST, FAVORITES, SEARCH, SESSION, SETTINGS, latestWeeklyHref } from '@/lib/paths'
 import { Mixed } from '@/lib/typeset'
-import type { CurrentUser, SharedProps } from '@/types/lowpass'
+import type { CurrentUser, DailyIssue, SharedProps } from '@/types/lowpass'
 
-// 报头黑带：80px 墨底，LOWPASS 用品牌字 40px 纸色，导航文楷 15，右侧搜索图标与账户位。
-// 尺寸（高度、边距、品牌字号、间距）在 tokens.css 的 .masthead* 里，手机版由那里的 @media 收窄。
-// 图标由 Lucide + Morphicons 渲染（在黑带上用纸色描边），开合时在原位变形。
-//
+// 三主题共用品牌、主导航与账户行为；构图和响应式边界由 themes.css 负责。
 // 账户位读 inertia_share 的 current_user（P2-①）：有人就是头像菜单按钮（R-8.2），没有（类型上允许，
 // 实际登录墙后每页都有）就是同样外观的非交互占位。
 export type MastheadProps = {
@@ -25,29 +23,16 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
     <Link
       href={href}
       aria-current={current ? 'page' : undefined}
-      style={{
-        fontFamily: 'var(--font-cjk)',
-        fontSize: 'var(--fs-15)',
-        color: 'var(--paper)',
-        lineHeight: 1,
-        paddingBottom: 2,
-        whiteSpace: 'nowrap',
-        opacity: current ? 1 : 0.72,
-      }}
+      className="primary-nav-link"
     >
       {label}
     </Link>
   )
 }
 
-// 头像菜单（R-8.2，画布 pages_front3.py 的 menu_sheet()）：32px 圆是按钮，点开右对齐 220px 纸卡，
-// 顶部等宽邮箱（没邮箱用显示名），「账户信息」「收藏」（收藏页的唯一入口，D29）「管理」（仅 admin，指向后台的信息源页）「登出」。
-// Escape、点卡外、选中任一项都关闭；打开时焦点进第一项。画布那张卡带阴影，这里不取：
-// 设计规则说纸面里不许有阴影，1px 墨线足够分层（设计 L1）。
-function AccountMenu({ user }: { user: CurrentUser }) {
-  const [open, setOpen] = useState(false)
+// 账户菜单保留真实权限入口。Escape、点卡外、选中项目关闭；打开时焦点进入菜单。
+function AccountMenu({ user, open, onOpenChange }: { user: CurrentUser; open: boolean; onOpenChange: (open: boolean) => void }) {
   const rootRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
   const menuId = useId()
   const focusLast = useRef(false)
 
@@ -57,9 +42,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
     if (items?.length) items[focusLast.current ? items.length - 1 : 0].focus()
     focusLast.current = false
 
-    // WAI-ARIA menu button 模式：Escape 关掉的是键盘用户自己进来的菜单，得把焦点还给触发它的按钮，
-    // 不然聚焦的菜单项一卸载，焦点就掉回 <body>，键盘用户在页面上的位置就丢了。点卡外关闭不这样——
-    // 读者点哪儿是读者的选择，不该抢焦点；选中某一项关闭则是导航/登出接管，也不用管。
+    let tabClose: ReturnType<typeof setTimeout> | undefined
     function onKey(event: KeyboardEvent) {
       const items = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
       const index = items.indexOf(document.activeElement as HTMLElement)
@@ -68,48 +51,40 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
         items[next]?.focus()
       }
-      if (event.key === 'Tab') setOpen(false)
-      if (event.key === 'Escape') {
-        setOpen(false)
-        buttonRef.current?.focus()
-      }
-    }
-    function onPointer(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
+      // 菜单项由方向键遍历；先让原生 Tab 把焦点送到菜单外，再卸载面板。
+      if (event.key === 'Tab') tabClose = setTimeout(() => onOpenChange(false), 0)
     }
     document.addEventListener('keydown', onKey)
-    document.addEventListener('mousedown', onPointer)
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.removeEventListener('mousedown', onPointer)
+      clearTimeout(tabClose)
     }
-  }, [open])
+  }, [open, onOpenChange])
 
   function close() {
-    setOpen(false)
+    onOpenChange(false)
   }
 
   return (
     <div className="account" ref={rootRef}>
       <button
-        ref={buttonRef}
         type="button"
         className="account-button"
         aria-label="账户"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => onOpenChange(!open)}
         onKeyDown={(event) => {
           if (!open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault()
             focusLast.current = event.key === 'ArrowUp'
-            setOpen(true)
+            onOpenChange(true)
           }
         }}
       >
         <Icon name={open ? 'x' : 'user'} size={15} color="currentColor" />
-        {/* 头像覆盖人像占位，展开时淡出以露出关闭图标；SVG 始终挂载，才能连续变形。
+        {/* 头像覆盖人像占位，展开时淡出以露出关闭图标。
             provider 头像用 referrerPolicy 拦住 Referer，避免泄露读者正在看的页面。 */}
         {user.avatar_url ? (
           <img src={user.avatar_url} alt="" className={`account-avatar${open ? ' account-avatar--open' : ''}`} referrerPolicy="no-referrer" />
@@ -121,20 +96,21 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           <div className="menu-head" role="none">
             <Mixed text={user.email ?? user.display_name} size="var(--fs-12)" color="var(--ink2)" />
           </div>
-          <Link role="menuitem" className="menu-item" href={SETTINGS} onClick={close}>
+          <Link role="menuitem" tabIndex={-1} className="menu-item" href={SETTINGS} onClick={close}>
             账户信息
           </Link>
-          <Link role="menuitem" className="menu-item" href={FAVORITES} onClick={close}>
+          <Link role="menuitem" tabIndex={-1} className="menu-item" href={FAVORITES} onClick={close}>
             收藏
           </Link>
           {user.admin ? (
-            <Link role="menuitem" className="menu-item" href={ADMIN_SOURCES} onClick={close}>
+            <Link role="menuitem" tabIndex={-1} className="menu-item" href={ADMIN_SOURCES} onClick={close}>
               管理
             </Link>
           ) : null}
           <button
             type="button"
             role="menuitem"
+            tabIndex={-1}
             className="menu-item"
             onClick={() => {
               close()
@@ -149,47 +125,87 @@ function AccountMenu({ user }: { user: CurrentUser }) {
   )
 }
 
-// 报头上的图标都用 currentColor、颜色给在外层：SVG 的 stroke 写死纸色的话，高对比模式把墨带换成 Canvas 后图标就看不见了
-const SEARCH_STYLE: React.CSSProperties = { display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center', color: 'var(--paper)' }
-const ACCOUNT_STYLE: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  flex: 'none',
-  borderRadius: '50%',
-  border: '1px solid var(--paper)',
-  color: 'var(--paper)',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+function MastheadActions({ user }: { user: CurrentUser | null }) {
+  const [openMenu, setOpenMenu] = useState<'theme' | 'account' | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const themePanelId = useId()
+  const changeAccountOpen = useCallback((open: boolean) => setOpenMenu(open ? 'account' : null), [])
+
+  useEffect(() => {
+    if (!openMenu) return
+    const menuRoot = rootRef.current?.querySelector(openMenu === 'theme' ? '.theme-menu' : '.account')
+    const trigger = menuRoot?.querySelector<HTMLElement>(openMenu === 'theme' ? 'summary' : '.account-button')
+
+    function closeOutside(event: PointerEvent | FocusEvent) {
+      if (event.target instanceof Node && !menuRoot?.contains(event.target)) setOpenMenu(null)
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setOpenMenu(null)
+        trigger?.focus()
+      }
+    }
+    // 一个开合状态同时服务鼠标、触屏和键盘；点外关闭不抢走用户刚选的焦点。
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('focusin', closeOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside)
+      document.removeEventListener('focusin', closeOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [openMenu])
+
+  return (
+    <div className="masthead-actions" ref={rootRef}>
+      <details className="theme-menu" open={openMenu === 'theme'}>
+        <summary
+          aria-label="切换阅读主题"
+          aria-expanded={openMenu === 'theme'}
+          aria-controls={themePanelId}
+          onClick={(event) => {
+            event.preventDefault()
+            setOpenMenu((current) => current === 'theme' ? null : 'theme')
+          }}
+        >
+          <Icon name="sun" size={18} />
+        </summary>
+        <div className="theme-menu-panel" id={themePanelId}><ThemePicker /></div>
+      </details>
+      {user ? <AccountMenu user={user} open={openMenu === 'account'} onOpenChange={changeAccountOpen} /> : <span className="account-placeholder" aria-disabled="true" aria-label="未登录"><Icon name="user" size={18} /></span>}
+    </div>
+  )
 }
 
 export default function Masthead({ active, dailyHref = DAILY_LATEST, weeklyHref, searchHref = SEARCH }: MastheadProps) {
-  const props = usePage<Partial<SharedProps> & { latest_weekly_key?: string | null }>().props
+  const page = usePage<Partial<SharedProps> & { latest_weekly_key?: string | null; issue?: DailyIssue }>()
+  const props = page.props
   const user = props.current_user ?? null
+  const admin = page.component.startsWith('Admin/')
+  const daily = page.component === 'Daily/Show'
+  const moduleName = admin ? '管理' : page.component.startsWith('Favorites/') ? '收藏' : page.component.startsWith('Search/') ? '搜索' : page.component.startsWith('Settings/') ? '账户' : page.component.startsWith('Weekly/') ? '周刊' : '日刊'
+  const selected = active ?? (page.component.startsWith('Daily/') ? 'daily' : page.component.startsWith('Weekly/') ? 'weekly' : undefined)
 
   return (
-    <header className="masthead">
-      <div className="masthead-left">
-        <Link href={dailyHref} className="masthead-brand">
-          lowpass
-        </Link>
-        <nav className="masthead-nav">
-          <Nav href={dailyHref} label="日刊" current={active === 'daily'} />
-          <Nav href={weeklyHref ?? latestWeeklyHref(props.latest_weekly_key ?? null)} label="周刊" current={active === 'weekly'} />
-        </nav>
+    <header className={`site-header${admin ? ' site-header--admin' : ''}`}>
+      <div className="publication-mast">
+        <Link href={dailyHref} className="publication-brand" aria-label="Lowpass 首页">LOWPASS</Link>
+        <div className="publication-context">
+          {daily && props.issue ? <IssueDate issue={props.issue} /> : <span className="publication-module">{moduleName}</span>}
+        </div>
       </div>
-
-      <div className="masthead-actions">
-        <Link href={searchHref} aria-label="搜索" style={SEARCH_STYLE}>
-          <Icon name="search" size={20} color="currentColor" />
-        </Link>
-        {user ? (
-          <AccountMenu user={user} />
-        ) : (
-          <span aria-disabled="true" style={ACCOUNT_STYLE}>
-            <Icon name="user" size={15} color="currentColor" />
-          </span>
+      <div className="masthead">
+        <Link href={dailyHref} className="masthead-monogram" aria-label="Lowpass 首页">LP</Link>
+        {admin ? <Link className="return-reading" href={dailyHref}>返回阅读 <Icon name="arrow-up-right" size={14} /></Link> : (
+          <nav className="masthead-nav" aria-label="主导航">
+            <Nav href={dailyHref} label="日刊" current={selected === 'daily'} />
+            <Nav href={weeklyHref ?? latestWeeklyHref(props.latest_weekly_key ?? null)} label="周刊" current={selected === 'weekly'} />
+            <Nav href={FAVORITES} label="收藏" current={page.component.startsWith('Favorites/')} />
+            <Nav href={searchHref} label="搜索" current={page.component.startsWith('Search/')} />
+          </nav>
         )}
+        <MastheadActions user={user} />
       </div>
     </header>
   )

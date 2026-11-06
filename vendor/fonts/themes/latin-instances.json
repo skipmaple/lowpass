@@ -1,0 +1,73 @@
+[
+  {
+    "family": "bricolage-grotesque",
+    "role": "body",
+    "axes": {
+      "wdth": 100,
+      "opsz": 18,
+      "wght": 400
+    },
+    "bytes": 22484
+  },
+  {
+    "family": "bricolage-grotesque",
+    "role": "display",
+    "axes": {
+      "wdth": 100,
+      "opsz": 72,
+      "wght": [
+        700,
+        800
+      ]
+    },
+    "bytes": 22280
+  },
+  {
+    "family": "newsreader",
+    "role": "body",
+    "axes": {
+      "opsz": 18,
+      "wght": 400
+    },
+    "bytes": 21596
+  },
+  {
+    "family": "newsreader",
+    "role": "display",
+    "axes": {
+      "opsz": 48,
+      "wght": [
+        600,
+        700
+      ]
+    },
+    "bytes": 24248
+  },
+  {
+    "family": "ibm-plex-sans",
+    "role": "body",
+    "axes": {
+      "wdth": 100,
+      "wght": 400
+    },
+    "bytes": 21808
+  },
+  {
+    "family": "ibm-plex-sans",
+    "role": "title",
+    "axes": {
+      "wdth": 100,
+      "wght": 600
+    },
+    "bytes": 23540
+  },
+  {
+    "family": "ibm-plex-sans",
+    "role": "date",
+    "axes": {
+      "wdth": 75,
+      "wght": 300
+    },
+    "bytes": 23540
+  }
+]

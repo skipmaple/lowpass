@@ -15,11 +15,13 @@ export type LayoutProps = React.PropsWithChildren<{
 }>
 
 export default function Layout({ children, masthead, footer }: LayoutProps) {
-  const { flash } = usePage<Partial<SharedProps>>().props
+  const page = usePage<Partial<SharedProps>>()
+  const { flash } = page.props
+  const scene = page.component.startsWith('Admin/') ? 'admin' : page.component.split('/')[0].toLowerCase()
   const [toastRegion, setToastRegion] = useState<HTMLDivElement | null>(null)
   return (
     <ToastRegion.Provider value={toastRegion}>
-      <div className="paper sheet">
+      <div className="paper sheet" data-scene={scene}>
         <a className="skip-link" href="#main-content">跳到正文</a>
         <Masthead {...masthead} />
         <div className="sheet-body">

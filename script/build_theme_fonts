@@ -1,0 +1,303 @@
+#!/usr/bin/env python3
+"""Build checksum-pinned A/B/C fonts; see vendor/fonts/themes/README.md.
+
+The six upstream Chinese OTFs live in --source-dir/fonts. Latin/mono sources,
+licenses and build manifests are vendored. --verify checks existing output
+without rebuilding it. There is deliberately no partial/UI-only build mode.
+"""
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+import argparse
+import gzip
+import hashlib
+import json
+import re
+
+import brotli
+import fontTools
+from fontTools import subset
+from fontTools.ttLib import TTFont
+from fontTools.varLib.instancer import instantiateVariableFont
+
+ROOT = Path(__file__).resolve().parent.parent
+VENDOR = ROOT / 'vendor/fonts/themes'
+OUT = ROOT / 'app/frontend/fonts/themes'
+STYLES = ROOT / 'app/frontend/styles'
+THEMES = dict(zip('abc', ['daybreak', 'duet', 'unfold']))
+WEIGHTS = [('regular', 400), ('bold', 700)]
+UI = '日刊周刊收藏搜索阅读主题层叠清晨双声部展开黑白明亮色面温润圆编辑宋体深平清晰荧界账户信息管理退出登录上一期下一期归档年月星期一二三四五六天值得关注理由尚未补本收录原文来源内容已取消恢复保存请求失败重试没有结果返回最新全选状态正常生成中设置任务用户权限确定关闭查看记录发布时间每天按标题用途项目名筛选全部日期开始结束排序相关性最近清除重置加载正在操作提示密码邮箱方式个人偏好仅自己可见中文说明自定义不限范围数据导出撤销成功需要请重新刷新链接复制字段必填测试连接保存更改每条关键词请输入分钟小时地址名称数量启用禁用删除编辑创建配置兴趣原因系统备份通知立即执行'
+PRIMARY = {ord(c) for c in '日刊周刊收藏搜索阅读主题层叠清晨双声部展开账户管理登录上一期下一归档年月星期一二三四五六天值得关注理由尚未补本收录原文来源内容已取消恢复返回最新发布时间每天技术失败抓取通知员次成功正在生成'}
+IDENTITY_IDS = {1, 2, 3, 4, 6, 16, 17, 18, 21, 22, 25}
+STYLE_NAMES = {300: 'Light', 400: 'Regular', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold'}
+
+
+def read_json(filename):
+    return json.loads((VENDOR / filename).read_text())
+
+
+def check_digest(path, expected):
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != expected:
+        raise ValueError(f'SHA-256 mismatch: {path}\nexpected {expected}\nactual   {actual}')
+
+
+def validate_inputs(source):
+    versions = read_json('build-inputs.json')
+    for name, actual in [('fonttools', fontTools.__version__), ('brotli', brotli.__version__)]:
+        if actual != versions[name]:
+            raise ValueError(f'{name} {versions[name]} required; installed {actual}')
+    for entry in read_json('sources.json'):
+        if entry.get('file', '').startswith('fonts/'):
+            check_digest(source / entry['file'], entry['sha256'])
+        elif entry.get('file', '').startswith('licenses/'):
+            check_digest(VENDOR / Path(entry['file']).name, entry['sha256'])
+    for entry in read_json('latin-sources.json'):
+        check_digest(VENDOR / entry['file'], entry['sha256'])
+        check_digest(VENDOR / entry['license']['file'], entry['license']['sha256'])
+    partition = read_json('build-inputs.json')['partition']
+    check_digest(ROOT / partition['file'], partition['sha256'])
+
+
+def ranges(points):
+    runs = []
+    for cp in sorted(points):
+        if runs and runs[-1][1] + 1 == cp:
+            runs[-1][1] = cp
+        else:
+            runs.append([cp, cp])
+    return ','.join(f'U+{a:X}' if a == b else f'U+{a:X}-{b:X}' for a, b in runs)
+
+
+def unicode_points(text):
+    result = set()
+    for part in text.split(','):
+        bounds = part.strip().upper().removeprefix('U+').split('-')
+        result.update(range(int(bounds[0], 16), int(bounds[-1], 16) + 1))
+    return result
+
+
+def rename_font(font, family, weight):
+    """Rename modified fonts internally too; retain copyright/license/version."""
+    style = STYLE_NAMES[weight]
+    full_name = f'{family} {style}'
+    postscript = f'{family.replace(" ", "")}-{style}'
+    values = {
+        1: family, 2: style, 3: f'{font["head"].fontRevision:.4f};Lowpass;{postscript}',
+        4: full_name, 6: postscript, 16: family, 17: style, 18: full_name,
+        21: family, 22: style, 25: family.replace(' ', ''),
+    }
+    # All existing language/platform identities are updated, including names
+    # produced by variable-font instancing. Add standard Unicode/Windows names.
+    platforms = {(n.platformID, n.platEncID, n.langID) for n in font['name'].names if n.nameID in IDENTITY_IDS}
+    platforms.add((3, 1, 0x409))
+    existing_ids = {n.nameID for n in font['name'].names}
+    for platform, encoding, language in platforms:
+        for name_id in {1, 2, 3, 4, 6, 16, 17} | (existing_ids & IDENTITY_IDS):
+            font['name'].setName(values[name_id], name_id, platform, encoding, language)
+    if 'CFF ' in font:
+        cff = font['CFF '].cff
+        cff.fontNames = [postscript]
+        top = cff.topDictIndex[0]
+        top.FamilyName = family
+        top.FullName = full_name
+        if hasattr(top, 'FontName'):
+            top.FontName = postscript
+        if hasattr(top, 'FDArray'):
+            for index, fd in enumerate(top.FDArray):
+                if hasattr(fd, 'FontName'):
+                    fd.FontName = f'{postscript}-FD{index}'
+            # CID CFF fonts use FDArray[].Private. Glow's unused top Private
+            # duplicates the local subroutines (~80 KB per subset) if retained.
+            if hasattr(top, 'Private'):
+                del top.Private
+            top.rawDict.pop('Private', None)
+    font.recalcTimestamp = False
+
+
+def save_font(font, dest, family, weight):
+    rename_font(font, family, weight)
+    font.flavor = 'woff2'
+    font.save(dest)
+
+
+def face_css(filename, family, weight, points=None):
+    unicode_range = f';unicode-range:{ranges(points)}' if points is not None else ''
+    return f'@font-face{{font-family:"{family}";font-weight:{weight};font-style:normal;font-display:swap;src:url("../fonts/themes/{filename}") format("woff2"){unicode_range}}}'
+
+
+def emit_font(src, filename, points, family, weight):
+    font = TTFont(src, recalcTimestamp=False)
+    options = subset.Options()
+    options.layout_features = ['*']
+    options.name_IDs = [0, 1, 2, 3, 4, 5, 6, 13, 14, 16, 17]
+    options.recalc_timestamp = False
+    sub = subset.Subsetter(options=options)
+    sub.populate(unicodes=points)
+    sub.subset(font)
+    save_font(font, OUT / filename, family, weight)
+    return face_css(filename, family, weight, points)
+
+
+def partitions(src):
+    with TTFont(src) as font:
+        points = set(font.getBestCmap()) - set(range(0x100))
+    ui = {ord(c) for c in UI} & points
+    points -= ui
+    buckets = []
+    partition = ROOT / read_json('build-inputs.json')['partition']['file']
+    for text in re.findall(r'unicode-range:\s*([^;}]+)', partition.read_text()):
+        chars = unicode_points(text) & points
+        if chars:
+            buckets.append(chars)
+            points -= chars
+    ordered = sorted(points)
+    buckets.extend(set(ordered[i:i + 256]) for i in range(0, len(ordered), 256))
+    return [('ui', ui & PRIMARY), ('ui-extra', ui - PRIMARY)] + [(f'{i:03d}', chars) for i, chars in enumerate(buckets)]
+
+
+def build_face(job):
+    key, role, weight, source = job
+    src = Path(source) / 'fonts' / f'{key}-{role}.otf'
+    family = f'Lowpass Chinese {key.upper()}'
+    return [emit_font(src, f'{key}-{role}-{part}.woff2', points, family, weight) for part, points in partitions(src)]
+
+
+def build_latin():
+    sources = {entry['family']: VENDOR / entry['file'] for entry in read_json('latin-sources.json')}
+    theme_keys = {'bricolage-grotesque': 'a', 'newsreader': 'b', 'ibm-plex-sans': 'c'}
+    css = []
+    for entry in read_json('latin-instances.json'):
+        key = theme_keys[entry['family']]
+        axes = {tag: tuple(value) if isinstance(value, list) else value for tag, value in entry['axes'].items()}
+        weight = entry['axes']['wght']
+        declared_weight = ' '.join(map(str, weight)) if isinstance(weight, list) else weight
+        font = TTFont(sources[entry['family']], recalcTimestamp=False)
+        font = instantiateVariableFont(font, axes, inplace=True)
+        filename = f'{key}-latin-{entry["role"]}.woff2'
+        family = f'Lowpass Latin {key.upper()}'
+        save_font(font, OUT / filename, family, font['OS/2'].usWeightClass)
+        css.append(face_css(filename, family, declared_weight))
+    save_font(TTFont(sources['ibm-plex-mono'], recalcTimestamp=False), OUT / 'mono.woff2', 'Lowpass Mono', 400)
+    css.append(face_css('mono.woff2', 'Lowpass Mono', 400))
+    return css
+
+
+def content_order(line):
+    # The matching regular/bold Unicode ranges must be adjacent so gzip can
+    # share their repeated range strings within its 32 KB dictionary window.
+    match = re.search(r'/[abc]-(regular|bold)-([\d]+|ui-extra)\.woff2', line)
+    role, part = match.groups()
+    return (int(part) if part.isdecimal() else 1000000, role == 'bold')
+
+
+def write_styles(sheets, latin):
+    lines = [line for sheet in sheets for line in sheet]
+    ui = [line for line in lines if '-ui.woff2' in line]
+    for key, theme in THEMES.items():
+        content = sorted((line for line in lines if f'/{key}-' in line and '-ui.woff2' not in line), key=content_order)
+        (STYLES / f'fonts-{theme}-content.css').write_text('\n'.join(content) + '\n')
+    (STYLES / 'fonts.css').write_text('\n'.join(latin + ui) + '\n')
+
+
+
+def verify_weight(font, filename, declared, expected_axes=None):
+    variable = {axis.axisTag: axis for axis in font['fvar'].axes} if 'fvar' in font else {}
+    expected_variable = {tag: value for tag, value in (expected_axes or {}).items() if isinstance(value, list)}
+    if variable.keys() != expected_variable.keys():
+        raise ValueError(f'{filename}: variable axes differ from the manifest')
+    for tag, (minimum, maximum) in expected_variable.items():
+        axis = variable[tag]
+        if (axis.minValue, axis.maxValue) != (minimum, maximum) or not minimum <= axis.defaultValue <= maximum:
+            raise ValueError(f'{filename}: {tag} range differs from the manifest')
+    if 'wght' in variable:
+        axis = variable['wght']
+        expected = (axis.minValue, axis.maxValue)
+        default = axis.defaultValue
+    else:
+        default = (expected_axes or {}).get('wght', declared[0])
+        expected = (default,)
+    if declared != expected or font['OS/2'].usWeightClass != default:
+        raise ValueError(f'{filename}: CSS weight/default differs from font or manifest')
+    if variable:
+        print(f'{filename}: weight {expected[0]:g}–{expected[-1]:g}, default {default:g}; axes match manifest')
+
+
+def verify_outputs(source):
+    css_files = [STYLES / 'fonts.css'] + [STYLES / f'fonts-{theme}-content.css' for theme in THEMES.values()]
+    lines = [line for path in css_files for line in path.read_text().splitlines()]
+    theme_keys = {'bricolage-grotesque': 'a', 'newsreader': 'b', 'ibm-plex-sans': 'c'}
+    latin_axes = {f'{theme_keys[entry["family"]]}-latin-{entry["role"]}.woff2': entry['axes'] for entry in read_json('latin-instances.json')}
+    referenced = set()
+    unions = {(key, role): set() for key in THEMES for role, _ in WEIGHTS}
+    for line in lines:
+        filename = re.search(r'fonts/themes/([^"\)]+)', line).group(1)
+        referenced.add(filename)
+        family = re.search(r'font-family:"([^"]+)"', line).group(1)
+        declared = tuple(map(int, re.search(r'font-weight:([\d ]+)', line).group(1).split()))
+        with TTFont(OUT / filename) as font:
+            for record in font['name'].names:
+                if record.nameID in IDENTITY_IDS - {2, 17, 22} and 'Lowpass' not in record.toUnicode():
+                    raise ValueError(f'{filename}: upstream identity remains in name {record.nameID}')
+            if 'CFF ' in font:
+                cff = font['CFF '].cff
+                top = cff.topDictIndex[0]
+                if not all(name.startswith('Lowpass') for name in cff.fontNames) or not top.FamilyName.startswith('Lowpass') or not top.FullName.startswith('Lowpass'):
+                    raise ValueError(f'{filename}: upstream CFF identity remains')
+                if hasattr(top, 'FDArray') and any(hasattr(fd, 'FontName') and not fd.FontName.startswith('Lowpass') for fd in top.FDArray):
+                    raise ValueError(f'{filename}: upstream CFF FontDict identity remains')
+                if hasattr(top, 'FDArray') and 'Private' in top.rawDict:
+                    raise ValueError(f'{filename}: redundant CID top Private')
+            match = re.match(r'([abc])-(regular|bold)-', filename)
+            if match:
+                points = unicode_points(re.search(r'unicode-range:([^}]+)', line).group(1))
+                actual = set(font.getBestCmap())
+                # FontTools may retain aliases for an included glyph in cmap;
+                # CSS advertises only the requested, disjoint range.
+                if not points <= actual:
+                    raise ValueError(f'{filename}: CSS advertises missing Unicode characters')
+                bucket = unions[match.groups()]
+                if bucket & points:
+                    raise ValueError(f'{filename}: overlapping subset Unicode ranges')
+                bucket.update(points)
+            if font['name'].getDebugName(1) != family:
+                raise ValueError(f'{filename}: CSS family differs from font')
+            verify_weight(font, filename, declared, latin_axes.get(filename))
+    for (key, role), actual in unions.items():
+        with TTFont(source / 'fonts' / f'{key}-{role}.otf') as font:
+            expected = set(font.getBestCmap()) - set(range(0x100))
+        if actual != expected:
+            raise ValueError(f'{key}-{role}: incomplete upstream Unicode coverage')
+        print(f'{key}-{role}: {len(actual)} Unicode characters, complete, disjoint')
+    stale = {path.name for path in OUT.glob('*.woff2')} - referenced
+    if stale:
+        raise ValueError(f'Unreferenced generated fonts: {sorted(stale)}')
+    for path in css_files[1:]:
+        size = len(gzip.compress(path.read_bytes(), mtime=0))
+        if size > 56 * 1024:
+            raise ValueError(f'{path.name}: gzip {size} exceeds 56 KiB budget')
+        print(f'{path.name}: gzip {size} bytes')
+    print(f'Verified {len(referenced)} fonts; all names, CFF identities and source coverage checked.')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source-dir', required=True, type=Path)
+    parser.add_argument('--verify', action='store_true', help='validate existing output; do not rebuild')
+    parser.add_argument('--jobs', type=int, default=6)
+    args = parser.parse_args()
+    validate_inputs(args.source_dir)
+    if args.verify:
+        verify_outputs(args.source_dir)
+        return
+    OUT.mkdir(parents=True, exist_ok=True)
+    jobs = [(key, role, weight, args.source_dir) for key in THEMES for role, weight in WEIGHTS]
+    with ProcessPoolExecutor(max_workers=args.jobs) as pool:
+        sheets = list(pool.map(build_face, jobs))
+    write_styles(sheets, build_latin())
+    for key in THEMES:
+        (OUT / f'{key}-latin.woff2').unlink(missing_ok=True)
+    verify_outputs(args.source_dir)
+
+
+if __name__ == '__main__':
+    main()

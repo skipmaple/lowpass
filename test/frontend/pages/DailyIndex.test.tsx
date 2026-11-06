@@ -44,7 +44,7 @@ describe('日刊归档', () => {
 
     const row = rows(container)[0]
     expect(within(row).getByRole('img', { name: '已发布' })).toBeInTheDocument()
-    expect(row).toHaveTextContent('9月8日')
+    expect(row).toHaveTextContent('09/08')
     expect(row).toHaveTextContent('星期二')
     expect(row.querySelector('.archive-label')).toHaveTextContent('06:12 发布')
     expect(row.querySelector('.archive-meta')).toHaveTextContent('HN 10 · GH 10 · HAD 8')

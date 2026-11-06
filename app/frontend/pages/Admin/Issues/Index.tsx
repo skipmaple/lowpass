@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
+import PendingLabel from '@/components/PendingLabel'
 import Chip from '@/components/Chip'
 import { Ctrl } from '@/components/Ctrl'
 import Dialog from '@/components/Dialog'
@@ -14,6 +15,7 @@ import { ADMIN_TODAY_ISSUE, adminIssueBackfillHref, adminIssueReasonsHref, admin
 import { usePolling } from '@/lib/polling'
 import { useAdminOperations } from '@/lib/operations'
 import { useManualRuns } from '@/lib/runs'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { Mixed } from '@/lib/typeset'
 import type { AdminIssueRow, ArchiveNav, FinishedRun, IssueState, ManualRun } from '@/types/lowpass'
 
@@ -48,7 +50,9 @@ function markOf(state: AdminIssueRow['state']) {
 export default function Index({ month, month_label, prev_month, next_month, summary, kind, rows, today_issue_exists, today_period_key, today_issue_state, active_runs, finished_runs }: AdminIssuesIndexProps) {
   const manual = useManualRuns({ active: active_runs, finished: finished_runs, only: REFRESH_PROPS })
   const operations = useAdminOperations(REFRESH_PROPS)
-  usePolling(today_issue_state === 'generating' && active_runs.length === 0, REFRESH_PROPS)
+  const reasonsRunning = rows.some((row) => row.reasons?.progress?.active)
+  // 手动抓取已经刷新同一组 props；只有它没有轮询时，才为理由或出刊任务启动轮询。
+  usePolling((today_issue_state === 'generating' || reasonsRunning) && active_runs.length === 0, REFRESH_PROPS)
   const [pendingOnly, setPendingOnly] = useState(false)
   const [refetching, setRefetching] = useState<AdminIssueRow | null>(null)
   const [sourceId, setSourceId] = useState<string>('')
@@ -59,7 +63,12 @@ export default function Index({ month, month_label, prev_month, next_month, summ
     setSourceId(row.refetchable_sources[0]?.id ?? '')
   }
 
-  const visibleRows = pendingOnly ? rows.filter((row) => row.state === 'missing' || (row.reasons?.missing ?? 0) > 0 || row.source_marks?.split(' · ').some((mark) => mark.endsWith(' 失败'))) : rows
+  const visibleRows = pendingOnly ? rows.filter((row) => {
+    const progress = row.reasons?.progress
+    return row.state === 'missing' || (row.reasons?.missing ?? 0) > 0 || progress?.active ||
+      progress?.status === 'partial' || progress?.status === 'failed' ||
+      row.source_marks?.split(' · ').some((mark) => mark.endsWith(' 失败'))
+  }) : rows
   const todayRunning = manual.running(today_period_key) || today_issue_state === 'generating'
   const selectedSource = refetching?.refetchable_sources.find((source) => source.id === sourceId)
 
@@ -67,16 +76,22 @@ export default function Index({ month, month_label, prev_month, next_month, summ
     key: `${row.kind}-${row.period_key}`,
     cells: [
       <span className="chip-outline">{row.kind === 'daily' ? '日刊' : '周刊'}</span>,
-      <span className="data" style={{ color: 'var(--ink)' }}>{row.period_key}</span>,
+      <span className="data" style={{ color: 'var(--ink)' }}>{normalizeDateLabel(row.period_key)}</span>,
       <>
         <Mark state={markOf(row.state)} label={row.state_label} />
         <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: row.state === 'published' ? 'var(--ink)' : 'var(--ink2)' }}>{row.state_label}</span>
       </>,
-      row.time_label ? <Mixed text={row.time_label} /> : null,
+      row.time_label ? <Mixed text={normalizeDateLabel(row.time_label)} /> : null,
       row.source_marks ? <Mixed text={row.source_marks} /> : null,
-      // 缺 N 条是反白小签（设计 §6.2）；已生成与生成不了的两句都是文楷灰字
+      // 优先显示本次任务的进度和结果，不能把保留的旧理由误当作本次生成成功。
       row.reasons ? (
-        row.reasons.ready && row.reasons.missing > 0 ? (
+        row.reasons.progress ? (
+          <div className="reason-progress" data-state={row.reasons.progress.status}>
+            <strong>{row.reasons.progress.label}</strong>
+            <span>{row.reasons.progress.detail}</span>
+            {row.reasons.progress.error ? <span className="reason-progress-error">{row.reasons.progress.error}</span> : null}
+          </div>
+        ) : row.reasons.ready && row.reasons.missing > 0 ? (
           <Chip text={row.reasons.label} />
         ) : (
           <span className="cjk" style={{ fontSize: 'var(--fs-13)', color: 'var(--ink2)' }}>{row.reasons.label}</span>
@@ -84,9 +99,9 @@ export default function Index({ month, month_label, prev_month, next_month, summ
       ) : null,
       <span className="admin-actions">
         {row.state === 'missing' ? (
-          <button type="button" className="link-button" disabled={operations.busy(`backfill-${row.period_key}`)} onClick={() => operations.post(`backfill-${row.period_key}`, row.period_key, adminIssueBackfillHref(row.period_key))}>
+          <button type="button" className="link-button" disabled={operations.busy(`backfill-${row.period_key}`)} aria-busy={operations.busy(`backfill-${row.period_key}`)} onClick={() => operations.post(`backfill-${row.period_key}`, row.period_key, adminIssueBackfillHref(row.period_key))}>
             <Icon name="refresh-cw" color="currentColor" />
-            <span>{operations.busy(`backfill-${row.period_key}`) ? '正在补生成…' : '补生成'}</span>
+            <PendingLabel idle="补生成" pending="正在补生成…" busy={operations.busy(`backfill-${row.period_key}`)} />
           </button>
         ) : (
           <>
@@ -98,7 +113,9 @@ export default function Index({ month, month_label, prev_month, next_month, summ
               )
             ) : null}
             {row.kind === 'daily' && row.reasons ? (
-              <button type="button" className="link-button" disabled={!row.reasons.ready || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.label : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>{operations.busy(`reasons-${row.period_key}`) ? '正在提交理由任务…' : '重生成理由'}</button>
+              <button type="button" className="link-button" disabled={!row.reasons.ready || row.reasons.progress?.active || operations.busy(`reasons-${row.period_key}`)} aria-busy={row.reasons.progress?.active || operations.busy(`reasons-${row.period_key}`)} title={!row.reasons.ready ? row.reasons.label : undefined} onClick={() => operations.post(`reasons-${row.period_key}`, row.period_key, adminIssueReasonsHref(row.period_key))}>
+                <PendingLabel idle={row.reasons.progress?.active ? (row.reasons.progress.status === 'queued' ? '理由排队中…' : '理由生成中…') : '重生成理由'} pending="正在提交理由任务…" busy={operations.busy(`reasons-${row.period_key}`)} />
+              </button>
             ) : null}
             <Link className="link-button" href={row.kind === 'daily' ? dailyHref(row.period_key) : weeklyHref(row.period_key)}>查看</Link>
           </>
@@ -114,9 +131,9 @@ export default function Index({ month, month_label, prev_month, next_month, summ
       toasts={manual.toasts}
       onDismissToast={manual.dismiss}
       controls={
-        <button type="button" className="btn-primary" disabled={operations.busy('today') || todayRunning} onClick={() => (today_issue_exists ? setConfirmToday(true) : operations.post('today', '今日日刊', ADMIN_TODAY_ISSUE))}>
+        <button type="button" className="btn-primary" disabled={operations.busy('today') || todayRunning} aria-busy={operations.busy('today')} onClick={() => (today_issue_exists ? setConfirmToday(true) : operations.post('today', '今日日刊', ADMIN_TODAY_ISSUE))}>
           <Icon name="refresh-cw" color="currentColor" />
-          <span>{operations.busy('today') ? '正在提交…' : todayRunning ? '今日日刊处理中…' : today_issue_exists ? '重抓今日日刊' : '生成今日日刊'}</span>
+          <PendingLabel idle={todayRunning ? '今日日刊处理中…' : today_issue_exists ? '重抓今日日刊' : '生成今日日刊'} pending="正在提交…" busy={operations.busy('today')} reserve="今日日刊处理中…" />
         </button>
       }
     >
@@ -137,17 +154,17 @@ export default function Index({ month, month_label, prev_month, next_month, summ
       </div>
       <label className="admin-pending-filter"><input type="checkbox" checked={pendingOnly} onChange={(event) => setPendingOnly(event.target.checked)} />待处理</label>
       {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
-      <Table className="issues-table" headers={HEADERS} widths={WIDTHS} rows={tableRows} mobile={{ primary: [1, 0, 2, 6], detailsLabel: '刊物详情' }} empty={pendingOnly ? "没有待处理的刊物" : "这个月还没有期"} />
+      <Table className="issues-table" headers={HEADERS} widths={WIDTHS} rows={tableRows} mobile={{ primary: [1, 0, 2, 5, 6], detailsLabel: '刊物详情' }} empty={pendingOnly ? "没有待处理的刊物" : "这个月还没有期"} />
       <div className="admin-summary">
         <Mixed text={summary} />
       </div>
 
       <Dialog
         open={refetching !== null}
-        text={`重抓 ${refetching?.period_key ?? ''} 的哪个来源？`}
+        text={`重抓 ${normalizeDateLabel(refetching?.period_key ?? '')} 的哪个来源？`}
         cancel="取消"
         confirm={`重抓 ${selectedSource?.name ?? '来源'}`}
-        busy={sourceId === ''}
+        confirmDisabled={sourceId === ''}
         onCancel={() => setRefetching(null)}
         onConfirm={() => {
           if (refetching && selectedSource) operations.post(`refetch-${refetching.period_key}`, `${refetching.period_key} · ${selectedSource.name}`, adminIssueRefetchHref(refetching.period_key), { source_id: sourceId })

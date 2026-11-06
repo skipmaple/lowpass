@@ -9,7 +9,7 @@ class HeadMetaTest < ActionDispatch::IntegrationTest
     get login_path
 
     assert_response :success
-    assert_select "meta[name=theme-color][content='#1D1D1B']"
+    assert_select "meta[name=theme-color][content='#FCFAF2']"
     assert_select "meta[name=description][content=?]", TAGLINE
     assert_select "link[rel=manifest][href='/manifest.webmanifest']"
     assert_select "meta[property='og:site_name'][content=Lowpass]"
@@ -20,8 +20,8 @@ class HeadMetaTest < ActionDispatch::IntegrationTest
 
   test "manifest 用纸色与墨色，分享图 1200×630 且不超过 150 KB" do
     manifest = JSON.parse(Rails.root.join("public/manifest.webmanifest").read)
-    assert_equal "#1D1D1B", manifest["theme_color"]
-    assert_equal "#E8E3DA", manifest["background_color"]
+    assert_equal "#FCFAF2", manifest["theme_color"]
+    assert_equal "#FCFAF2", manifest["background_color"]
     assert_equal "standalone", manifest["display"]
     assert_equal "/", manifest["start_url"]
 
@@ -31,16 +31,16 @@ class HeadMetaTest < ActionDispatch::IntegrationTest
     assert_equal [ 1200, 630 ], png.binread[16, 8].unpack("NN")
   end
 
-  test "正文字体声明 preload 成样式表，不在阻塞渲染的 CSS 里" do
+  test "saved theme is validated before styles and only its fonts are preloaded" do
     get login_path
 
-    assert_select "link[rel=preload][as=style][data-content-fonts][href$='.css']"
-  end
-
-  # 自查第 1 轮：Newsreader 要等文字排出来才开始下，冷缓存时总在首次绘制之后换字、推动版面。跟文楷界面子集一样先 preload
-  test "Newsreader 拉丁字体 preload" do
-    get login_path
-
-    assert_select "link[rel=preload][as=font][type='font/woff2'][crossorigin][href*='newsreader-latin-wght-normal']"
+    assert_select "html[data-theme=daybreak]"
+    script = css_select("script").find { |node| node.text.include?("savedTheme") }.text
+    assert_includes script, "['daybreak', 'duet', 'unfold'].includes(savedTheme)"
+    assert_includes script, "themeFonts[theme].forEach"
+    assert_includes script, "a-regular-ui"
+    assert_includes script, "b-regular-ui"
+    assert_includes script, "c-regular-ui"
+    assert_select "link[data-content-fonts]", count: 0
   end
 end

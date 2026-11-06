@@ -128,7 +128,7 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_in_delta evaluate_script("#{baseline}('.issue-head-date')"), evaluate_script("#{baseline}('.issue-head-time')"), 1
   end
 
-  test "M 动效令牌就这五个" do
+  test "阅读翻期保留原有动效令牌" do
     render_fragment("<p>x</p>")
 
     root = ->(name) { evaluate_script("getComputedStyle(document.documentElement).getPropertyValue(#{name.to_json}).trim()") }
@@ -139,14 +139,21 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "cubic-bezier(0.65, 0, 0.35, 1)", root.("--ease-move")
   end
 
-  test "M4 描边按钮悬停时墨从底部漫满、字转纸色；不可点的没有" do
-    render_fragment(%(<div style="padding: 40px"><a class="ctrl" href="#p">前一期</a> <span class="ctrl ctrl-off">后一期</span></div>), hover: true)
-
-    assert_equal "matrix(1, 0, 0, 0, 0, 0)", style(".ctrl:not(.ctrl-off)", "transform", "::before")
-    find("a.ctrl").hover
-    wait_until { style("a.ctrl", "color") == PAPER }
-    wait_until { style("a.ctrl", "transform", "::before") == "matrix(1, 0, 0, 1, 0, 0)" }
-    assert_equal "none", style(".ctrl-off", "content", "::before")
+  test "操作按钮悬停改变表面且不移动布局；禁用按钮保持原样" do
+    %w[daybreak duet unfold].each do |theme|
+      render_fragment(%(<div style="padding: 40px"><button class="ctrl">次操作</button> <button class="ctrl" disabled>不可用</button></div>), theme: theme, hover: true)
+      enabled = ".ctrl:not(:disabled)"
+      normal = style(enabled, "background-color")
+      disabled = style(".ctrl:disabled", "background-color")
+      bounds = evaluate_script("document.querySelector('#{enabled}').getBoundingClientRect().toJSON()")
+      find(enabled).hover
+      wait_until { style(enabled, "background-color") != normal }
+      assert_equal bounds, evaluate_script("document.querySelector('#{enabled}').getBoundingClientRect().toJSON()"), theme
+      assert_equal "none", style(enabled, "content", "::before"), "#{theme}：不恢复通用填满伪元素"
+      find(".ctrl:disabled").hover
+      sleep 0.25
+      assert_equal disabled, style(".ctrl:disabled", "background-color"), theme
+    end
   end
 
   test "M4 未选中的索引条与分段控件悬停只加下划线，不反白" do
@@ -160,15 +167,73 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_not_equal INK, style(".source-tab[data-state='inactive']", "background-color")
   end
 
-  test "M7 菜单、对话框、提示条带出现动画；减少动态效果时几乎为零" do
-    render_fragment(%(<div class="menu-card">菜单</div><div class="dialog">问句</div><div class="toast">提示</div>))
-    assert_equal "lp-unfold", style(".menu-card", "animation-name")
-    assert_equal "lp-settle", style(".dialog", "animation-name")
-    assert_equal "lp-drop", style(".toast", "animation-name")
+  test "三主题禁用及等待中的文字操作和分段选项不产生悬停反馈" do
+    %w[daybreak duet unfold].each do |theme|
+      render_fragment(<<~HTML, theme: theme, hover: true, reduced_motion: true)
+        <div style="padding: 40px">
+          <button class="link-button" disabled>重生成理由</button>
+          <button class="link-button" disabled aria-busy="true">正在提交</button>
+          <div class="seg"><button class="seg-item seg-button" disabled aria-pressed="false">周刊</button></div>
+        </div>
+      HTML
+      [ ".link-button:not([aria-busy])", ".link-button[aria-busy]", ".seg-button" ].each do |selector|
+        before = %w[color background-color text-decoration-color].map { |property| style(selector, property) }
+        find(selector).hover
+        assert_equal before, %w[color background-color text-decoration-color].map { |property| style(selector, property) }, "#{theme} #{selector} 禁用悬停保持原样"
+      end
+      assert_equal "wait", style(".link-button[aria-busy]", "cursor")
+      assert_equal "not-allowed", style(".link-button:not([aria-busy])", "cursor")
+    end
+  end
 
-    render_fragment(%(<div class="menu-card">菜单</div><a class="ctrl" href="#p">前一期</a>), reduced_motion: true)
-    assert_equal "0.001s", style(".menu-card", "animation-duration")
-    assert_equal "0.001s", style(".ctrl", "transition-duration", "::before")
+  test "后台导航焦点位于滚动区域内且跟随当前项的可读颜色" do
+    [ 1440, 390 ].each do |width|
+      %w[daybreak duet unfold].each do |theme|
+        render_fragment(<<~HTML, width: width, theme: theme)
+          <nav class="admin-nav" style="margin: 0; padding: 0; width: 280px">
+            <a class="admin-nav-item" href="#one" aria-current="page">信息源</a>
+            <a class="admin-nav-item" href="#two">刊物</a>
+          </nav>
+        HTML
+        all(".admin-nav-item").each do |item|
+          page.driver.browser.action.send_keys(:tab).perform
+          assert item.evaluate_script("this === document.activeElement")
+          assert_equal "solid", item.evaluate_script("getComputedStyle(this).outlineStyle")
+          assert_equal "-4px", item.evaluate_script("getComputedStyle(this).outlineOffset")
+          assert_equal item.evaluate_script("getComputedStyle(this).color"), item.evaluate_script("getComputedStyle(this).outlineColor"), "#{theme}/#{width} 焦点线跟随有对比度的前景"
+        end
+      end
+    end
+  end
+
+  test "A 有色页头的等待按钮保留反向文字、边界和图标颜色" do
+    render_fragment(<<~HTML, theme: "daybreak")
+      <header class="admin-page-head"><div class="admin-page-controls">
+        <button class="btn-primary" disabled aria-busy="true"><svg stroke="currentColor"></svg>正在提交</button>
+      </div></header>
+    HTML
+    paper = evaluate_script("getComputedStyle(document.documentElement).getPropertyValue('--paper').trim()")
+    expected = evaluate_script("(() => { const e = document.createElement('span'); e.style.color = #{paper.to_json}; document.body.append(e); return getComputedStyle(e).color })()")
+    %w[color border-top-color].each { |property| assert_equal expected, style(".btn-primary", property) }
+    assert_equal expected, style(".btn-primary svg", "stroke")
+    assert_equal "wait", style(".btn-primary", "cursor")
+  end
+
+  test "浮层按主题短暂出现，减少动态效果保留内容并取消明显运动" do
+    %w[daybreak duet unfold].each do |theme|
+      fragment = %(<div class="menu-card">菜单</div><div class="dialog">问句</div><div class="toast">提示</div>)
+      render_fragment(fragment, theme: theme)
+      %w[.menu-card .dialog .toast].each do |selector|
+        assert_not_equal "none", style(selector, "animation-name"), theme
+        assert_operator style(selector, "animation-duration").to_f, :>, 0
+        assert_operator style(selector, "animation-duration").to_f, :<=, 0.25
+      end
+      render_fragment(fragment, theme: theme, reduced_motion: true)
+      %w[.menu-card .dialog .toast].each do |selector|
+        assert_operator style(selector, "animation-duration").to_f, :<=, 0.001
+        assert_not_equal "hidden", style(selector, "visibility")
+      end
+    end
   end
 
   test "C3 周刊配图正片叠底；横带图形 52×34，手机 37×24" do
@@ -279,13 +344,14 @@ class DesignRulesTest < ApplicationSystemTestCase
   private
     # hover: true 把悬停规则外面那层 (hover: hover) and (pointer: fine) 换成 all：那层只是给触屏设备的保护，
     # GitHub Actions 的无头 Chrome 没有指针设备、不匹配它，悬停的效果却正是这里要量的（CDP 也模拟不了这两个媒体特性）
-    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false)
-      css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
+    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false, theme: nil)
+      styles = theme ? %w[tokens.css motion.css themes.css themes-controls.css themes-admin-workspace.css print.css] : STYLES
+      css = styles.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
       css = css.gsub("@media (hover: hover) and (pointer: fine)", "@media all") if hover
       browser = page.driver.browser
       browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
       browser.execute_cdp("Emulation.setEmulatedMedia", media: media, features: [ { name: "prefers-reduced-motion", value: reduced_motion ? "reduce" : "no-preference" } ])
-      document = "<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><style>#{css}</style></head><body class='paper'>#{html}</body></html>"
+      document = "<!doctype html><html lang='zh-CN'#{theme ? " data-theme='#{theme}'" : ""}><head><meta charset='utf-8'><style>#{css}</style></head><body class='paper'>#{html}</body></html>"
       visit "data:text/html;charset=utf-8;base64,#{Base64.strict_encode64(document)}"
     end
 

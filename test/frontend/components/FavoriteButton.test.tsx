@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,7 +7,7 @@ import { type Favorites, FavoritesProvider, useFavorites } from '@/lib/favorites
 import { emitRouterEvent, router } from '../support/inertia'
 
 // 条目上的书签与它背后的 FavoritesProvider（PRD 5.10、6.3，D30）：点一下立刻换态，请求走 fetch；
-// 成功不出提示，失败回滚并提示附录 B 的句子；请求结束把最新的列表写回 Inertia 当前页。
+// 成功在按钮旁短暂点名确认（本轮已确认设计）；失败回滚并提示附录 B 的句子。
 
 const HASH = 'a'.repeat(64)
 // 同一页上另一条已收藏的链接
@@ -49,6 +49,7 @@ afterEach(() => {
   router.replaceProp.mockClear()
   router.visit.mockClear()
   window.history.replaceState({}, '', '/')
+  vi.useRealTimers()
 })
 
 describe('FavoriteButton', () => {
@@ -61,11 +62,13 @@ describe('FavoriteButton', () => {
   it('未收藏是描线书签，名字带条目标题；已收藏带 data-on（实心）', () => {
     const { unmount } = mount()
     expect(screen.getByRole('button', { name: ADD })).not.toHaveAttribute('data-on')
+    expect(screen.getByRole('button', { name: ADD })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: ADD })).toHaveClass('favorite-button')
     unmount()
 
     mount([HASH])
     expect(screen.getByRole('button', { name: REMOVE })).toHaveAttribute('data-on')
+    expect(screen.getByRole('button', { name: REMOVE })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('className 追加在 favorite-button 后面', () => {
@@ -93,8 +96,39 @@ describe('FavoriteButton', () => {
     expect(init.body).toBe(JSON.stringify({ item_id: 'itm-hn-1' }))
     expect(init.headers['X-CSRF-Token']).toBe('tok-123')
     await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', [HASH]))
-    // R-10.5 成功不出提示
-    expect(screen.queryByRole('status')).toBeNull()
+    // 新版确认在当前按钮旁，带标题并可撤销。
+    expect(screen.getByRole('status')).toHaveTextContent(`已收藏「${TITLE}」`)
+  })
+
+  it('撤销成功后保留按钮焦点，点名播报在两秒后消失', async () => {
+    vi.useFakeTimers()
+    const fetchMock = stubFetch(ok({ url_hash: HASH }))
+    fetchMock.mockResolvedValueOnce(ok({ url_hash: HASH })).mockResolvedValueOnce(ok({ undo: 'token' }, 200))
+    mount()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: ADD })) })
+    expect(screen.getByRole('status')).toHaveTextContent(`已收藏「${TITLE}」`)
+    const undo = screen.getByRole('button', { name: '撤销' })
+    undo.focus()
+    await act(async () => { fireEvent.click(undo) })
+    expect(screen.getByRole('button', { name: ADD })).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent(`已撤销「${TITLE}」的收藏。`)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  it('下一条的操作清掉上一条确认，迟到的响应也不会重新显示旧确认', async () => {
+    let settle: (value: unknown) => void = () => undefined
+    vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(new Promise((resolve) => { settle = resolve })).mockResolvedValue(ok({ url_hash: OTHER })))
+    render(<FavoritesProvider favorites={[]}>
+      <FavoriteButton itemId="one" urlHash={HASH} title={TITLE} />
+      <FavoriteButton itemId="two" urlHash={OTHER} title="uv" />
+    </FavoritesProvider>)
+    await userEvent.click(screen.getByRole('button', { name: ADD }))
+    await userEvent.click(screen.getByRole('button', { name: '收藏：uv' }))
+    await act(async () => { settle(ok({ url_hash: HASH })) })
+    expect(screen.queryByText(`已收藏「${TITLE}」，可在收藏中找回。`)).not.toBeInTheDocument()
+    expect(screen.getByText('已收藏「uv」，可在收藏中找回。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: REMOVE })).toHaveAttribute('data-on')
   })
 
   it('再点一下取消：DELETE /favorites/<url_hash>，列表写回空', async () => {

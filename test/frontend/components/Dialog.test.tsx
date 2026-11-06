@@ -29,6 +29,22 @@ describe('Dialog', () => {
 
     rerender(<Dialog open text="x" cancel="取消" confirm="好" busy onCancel={() => {}} onConfirm={() => {}} />)
     expect(screen.getByRole('button', { name: '好' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '好' })).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('未满足确认条件时仍可取消，不把不可用误报为正在执行', async () => {
+    const onCancel = vi.fn()
+    const onConfirm = vi.fn()
+    render(<Dialog open text="请选择来源" cancel="取消" confirm="重抓来源" confirmDisabled onCancel={onCancel} onConfirm={onConfirm} />)
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('button', { name: '重抓来源' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '重抓来源' })).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('button', { name: '取消' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onConfirm).not.toHaveBeenCalled()
   })
 
   // 焦点不能跑到遮罩后面那一页上：走到两头就绕回来
@@ -71,6 +87,23 @@ describe('Dialog', () => {
     expect(onCancel1).not.toHaveBeenCalled()
     expect(onCancel2).toHaveBeenCalledTimes(1)
   })
+})
+
+it('等待文案只播报当前状态，等待期间保留确认和取消禁用', async () => {
+  const onCancel = vi.fn()
+  const onConfirm = vi.fn()
+  const props = { open: true, text: '确认注销？', cancel: '取消', confirm: '确认注销', busyConfirm: '正在注销…', onCancel, onConfirm }
+  const { rerender } = render(<Dialog {...props} />)
+  expect(screen.getByRole('button', { name: '确认注销' })).toBeEnabled()
+
+  rerender(<Dialog {...props} busy />)
+  const confirm = screen.getByRole('button', { name: '正在注销…' })
+  expect(confirm).toBeDisabled()
+  expect(confirm).toHaveAttribute('aria-busy', 'true')
+  expect(screen.getByRole('button', { name: '取消' })).toBeDisabled()
+  await userEvent.keyboard('{Escape}')
+  expect(onCancel).not.toHaveBeenCalled()
+  expect(onConfirm).not.toHaveBeenCalled()
 })
 
 it('关闭时恢复触发按钮与背景滚动', async () => {

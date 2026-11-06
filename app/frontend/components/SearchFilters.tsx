@@ -53,7 +53,8 @@ function SourceChips({ q, filters, sourceOptions }: Omit<SearchFiltersProps, 'da
             aria-pressed={on}
             onClick={() => router.get(hrefWith(q, filters, { sources }), {}, { preserveState: true })}
           >
-            <Mixed text={source.name} font="latin" size="var(--fs-12)" color={on ? 'var(--paper)' : 'var(--ink2)'} nowrap />
+            <span className="chip-check" aria-hidden="true"><Icon name="check" size={14} color="currentColor" /></span>
+            <Mixed text={source.name} font="latin" size="var(--control-label-size)" color="currentColor" nowrap />
           </button>
         )
       })}

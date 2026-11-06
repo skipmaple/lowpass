@@ -7,8 +7,9 @@ import IssueHead from '@/components/IssueHead'
 import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
+import PendingLabel from '@/components/PendingLabel'
 import SourceState from '@/components/SourceState'
-import SourceTabs from '@/components/SourceTabs'
+import SourceTabs, { sourceSectionId } from '@/components/SourceTabs'
 import { useScrollToHash } from '@/lib/anchors'
 import { FavoritesProvider } from '@/lib/favorites'
 import { DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
@@ -18,8 +19,7 @@ import { usePrinting } from '@/lib/print'
 import { Mixed, latinLang } from '@/lib/typeset'
 import type { DailyIssue, IssueState, Item, SharedProps, SourceSummary } from '@/types/lowpass'
 
-// 日刊详情，也是首页（D20）。期头带状态，来源索引条一次只显示一个来源，
-// 条目单栏十条一致。切来源不回服务端：整期条目已经在 props 里。
+// 日刊详情：按来源连续阅读，目录跳到对应章节。整期内容已在 props 中，无需切换请求。
 
 export type DailyShowProps = {
   issue: DailyIssue
@@ -48,6 +48,7 @@ function bodyNotice(issue: DailyIssue, missing: boolean): string | null {
 function rememberSource(sourceId: string) {
   const url = new URL(window.location.href)
   url.searchParams.set('source', sourceId)
+  url.hash = sourceSectionId(sourceId)
   router.replace({
     url: `${url.pathname}${url.search}${url.hash}`,
     props: (props) => ({ ...props, active_source_id: sourceId }),
@@ -56,20 +57,21 @@ function rememberSource(sourceId: string) {
   })
 }
 
-function SourceBody({ source, items, heading = 'h2' }: { source: SourceSummary; items: Item[]; heading?: 'h2' | 'h3' }) {
+function SourceBody({ source, items, heading = 'h3' }: { source: SourceSummary; items: Item[]; heading?: 'h2' | 'h3' }) {
   return (
     <>
       <div className="issue-body">
-        {source.state === 'ok' ? (
-          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} heading={heading} />)
+        {source.state === 'ok' && items.length > 0 ? (
+          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} heading={heading} sourceName={source.name} />)
         ) : (
-          <SourceState state={source.state} lastOkLabel={source.last_ok_label} />
+          <SourceState state={source.state === 'ok' ? 'empty' : source.state} lastOkLabel={source.last_ok_label} />
         )}
       </div>
 
       {/* 栏尾外链，措辞按第八轮定的「来源名 完整榜单 ↗」；R-8.4 新标签页打开。
           画布 foot_link() 没有下划线——那是栏尾装置，不是正文里的原文链接。
           源的 home_url 算不出来（feed 地址不是 http）时整条不渲染。 */}
+      <div className="source-tail">
       <a className="source-foot" href="#source-directory">返回来源目录</a>
       {source.home_url ? (
         <a className="source-foot" href={source.home_url} target="_blank" rel="noopener noreferrer">
@@ -77,6 +79,7 @@ function SourceBody({ source, items, heading = 'h2' }: { source: SourceSummary; 
           <Icon name="arrow-up-right" size={13} />
         </a>
       ) : null}
+      </div>
     </>
   )
 }
@@ -88,7 +91,7 @@ export type SourcesProps = {
   notice: string | null
 }
 
-// 当前来源是本地状态，种子来自服务端（?source= 深链也走这条）。
+// 当前阅读位置是本地状态，种子来自服务端（?source= 深链也走这条）。
 // 调用方用 key={period_key} 拿住它：换一期就换一个实例，不会有一帧还停在上一期的来源上。
 function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProps) {
   const [activeId, setActiveId] = useState(activeSourceId)
@@ -99,10 +102,10 @@ function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProp
     rememberSource(id)
   }
 
-  const active = sources.find((source) => source.id === activeId)
+  const active = sources.find((source) => source.id === activeId) ?? sources[0]
   if (!active) return notice ? <IssueNotice text={notice} /> : null
 
-  // 打印时印出全部来源，每个来源前印来源名（PRD D34）；期级事实句只印一次。平时一次只显示一个来源（PRD 6.2）
+  // 打印保留全部来源、每节来源名与一次期级事实句，不印交互目录（PRD D34）。
   if (printing) {
     if (notice) return <IssueNotice text={notice} />
     return (
@@ -118,8 +121,8 @@ function Sources({ sources, itemsBySource, activeSourceId, notice }: SourcesProp
   }
 
   return (
-    <SourceTabs sources={sources} activeId={active.id} onSelect={selectSource}>
-      {(source) => (notice ? <IssueNotice text={notice} /> : <SourceBody source={source} items={itemsBySource[source.id] ?? []} />)}
+    <SourceTabs sources={sources.map((source) => source.state === 'ok' && !(itemsBySource[source.id]?.length) ? { ...source, state: 'empty' as const } : source)} activeId={active.id} onSelect={selectSource}>
+      {(source) => (notice ? (source.id === sources[0]?.id ? <IssueNotice text={notice} /> : null) : <SourceBody source={source} items={itemsBySource[source.id] ?? []} />)}
     </SourceTabs>
   )
 }
@@ -154,13 +157,14 @@ export default function Show({ issue, missing, sources, items_by_source, favorit
 
   return (
     <FavoritesProvider favorites={favorites}>
+      <div className="daily-reading">
       <IssueHead issue={issue} archiveHref={DAILY_ARCHIVE} hrefFor={dailyHref} />
 
       {/* R-1.6 缺期没有来源索引条，列表区只有「本期未生成」那一句 */}
       {missing ? (
         <IssueNotice text={notice ?? ''}>
           <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_ARCHIVE}>{latest_daily_key ? '阅读最新日刊' : '查看日刊归档'}</Link>
-          {backfill_available ? <button className="link-button" type="button" disabled={backfilling} onClick={backfill}>{backfilling ? '正在补生成…' : '补生成本期'}</button> : null}
+          {backfill_available ? <button className="link-button" type="button" disabled={backfilling} aria-busy={backfilling} onClick={backfill}><PendingLabel idle="补生成本期" pending="正在补生成…" busy={backfilling} /></button> : null}
           {backfillResult ? <p className="operation-feedback" role="status">{backfillResult}</p> : null}
         </IssueNotice>
       ) : (
@@ -172,6 +176,7 @@ export default function Show({ issue, missing, sources, items_by_source, favorit
           notice={notice}
         />
       )}
+      </div>
     </FavoritesProvider>
   )
 }

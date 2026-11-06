@@ -28,8 +28,38 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[google_oauth2 github], page_props["providers"]
     assert_equal "/weekly", page_props["next"]
     assert_nil page_props["current_user"]
+    assert_not page_props.key?("developer_accounts")
     # 到了登录页就没有人登录着：清掉 Inertia 加密历史的密钥，后退拿不回上一个人的页面（R-10.8）
     assert page["clearHistory"]
+  end
+
+  test "只有开发环境且已挂载 developer 时提供快捷账号" do
+    Rails.env.stubs(:development?).returns(true)
+    Rails.configuration.x.stubs(:auth_providers).returns(%w[google_oauth2 github developer])
+    accounts = [ { role: "reader", name: "普通读者", email: "reader@lowpass.test" } ]
+    Identity::DevelopmentAccounts.expects(:call).returns(accounts)
+
+    get login_path(next: "/admin/sources")
+
+    assert_equal accounts.as_json, page_props["developer_accounts"]
+    assert_equal "/admin/sources", page_props["next"]
+  end
+
+  test "非开发环境即便配置包含 developer 也不暴露快捷账号" do
+    Rails.env.stubs(:development?).returns(false)
+    Rails.configuration.x.stubs(:auth_providers).returns(%w[google_oauth2 github developer])
+
+    get login_path
+
+    assert_not page_props.key?("developer_accounts")
+  end
+
+  test "开发环境未挂载 developer 不提供快捷账号" do
+    Rails.env.stubs(:development?).returns(true)
+
+    get login_path
+
+    assert_not page_props.key?("developer_accounts")
   end
 
   test "登录页的 next 是站外地址时当没有" do
@@ -153,6 +183,15 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, Session.count
     follow_redirect!
     assert_alert_flash "登录失败，请重试。"
+  end
+
+  test "未挂载 developer 的环境不能通过快捷账号参数登录" do
+    assert_no_difference [ -> { User.count }, -> { Session.count } ] do
+      get "/auth/developer/callback", params: { name: "开发管理员", email: "drew@example.com", origin: "/admin/sources" }
+    end
+
+    assert_redirected_to login_path
+    assert_nil cookies[:session_token].presence
   end
 
   test "R-5.9 同一 IP 一分钟内第 11 次回调被挡在 OmniAuth 之前" do

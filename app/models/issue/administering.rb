@@ -33,10 +33,16 @@ module Issue::Administering
         sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
         missing_counts = Item.visible.where(issue_id: issues.values.map(&:id), reason: nil).group(:issue_id).count
+        reason_progress = Reasons::Progress.for_issues(issues.values)
         # 一页最多 31 行，能不能生成是整页一样的：算一次带下去，别每行再查一遍 settings 与 interest_areas
         ready = Reasons.ready?
         unready_label = ready ? nil : Reasons.unready_label
-        (first..last).to_a.reverse.map { |date| admin_daily_row(date.iso8601, issues[date.iso8601], sources, counts, missing_counts, ready: ready, unready_label: unready_label) }
+        (first..last).to_a.reverse.map do |date|
+          issue = issues[date.iso8601]
+          row = admin_daily_row(date.iso8601, issue, sources, counts, missing_counts, ready: ready, unready_label: unready_label)
+          row[:reasons][:progress] = reason_progress[issue.id] if row[:reasons] && reason_progress[issue.id]
+          row
+        end
       end
 
       def admin_daily_row(key, issue, sources, counts, missing_counts, ready:, unready_label:)

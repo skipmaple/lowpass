@@ -5,12 +5,13 @@ import type * as React from 'react'
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import Dialog from '@/components/Dialog'
 import Icon from '@/components/Icon'
-import Mark from '@/components/Mark'
-import Table from '@/components/Table'
+import PendingLabel from '@/components/PendingLabel'
+import Table, { type TableRow } from '@/components/Table'
 import { useToasts } from '@/components/Toast'
 import { TEST_FETCH_FAILED, testFetch } from '@/lib/admin'
 import { useAdminOperations } from '@/lib/operations'
 import { ADMIN_SOURCES_NEW, adminSourceEditHref, adminSourceEnablementHref, adminSourceRunsHref } from '@/lib/paths'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { Mixed } from '@/lib/typeset'
 import type { AdminSourceRow } from '@/types/lowpass'
 
@@ -19,16 +20,14 @@ import type { AdminSourceRow } from '@/types/lowpass'
 export type AdminSourcesIndexProps = { sources: AdminSourceRow[]; summary: string }
 
 const HEADERS = ['名称 / 来源类型', '刊物 / 状态', '健康度', '操作', '抓取计划']
-const WIDTHS = ['minmax(0, 1.4fr)', 'minmax(0, .8fr)', 'minmax(0, 1fr)', 'minmax(0, 1.5fr)', 'minmax(0, 1.4fr)']
+const WIDTHS = ['minmax(0, 1.6fr)', 'minmax(0, .75fr)', 'minmax(0, .9fr)', 'minmax(0, 1.1fr)', 'minmax(0, 1.4fr)']
 
 function Health({ row }: { row: AdminSourceRow }) {
   return (
-    <>
-      <Mark state={row.health === 'ok' ? 'published' : 'empty'} label={row.health_label} />
-      <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: row.health === 'ok' ? 'var(--ink)' : 'var(--ink2)' }}>
-        {row.health_label}
-      </span>
-    </>
+    <span className="admin-health" data-health={row.health}>
+      <Icon name={row.health === 'ok' ? 'check' : row.health === 'disabled' ? 'clock' : 'triangle-alert'} size={17} color="currentColor" />
+      <span>{row.health_label}</span>
+    </span>
   )
 }
 
@@ -38,6 +37,7 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
   // 各行独立跟踪测试请求，后返回的结果仍保留明确的来源名。
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set())
   const { toasts, push, dismiss } = useToasts()
+  const attention = sources.filter((row) => row.health === 'recent_failure' || row.health === 'consecutive_failures')
 
   async function test(row: AdminSourceRow) {
     setTestingIds((current) => new Set(current).add(row.id))
@@ -52,25 +52,26 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
     }
   }
 
-  const rows = sources.map((row) => ({
+  const rows: TableRow[] = sources.map((row) => ({
     key: row.id,
+    tone: row.health === 'recent_failure' || row.health === 'consecutive_failures' ? 'attention' : row.enabled ? undefined : 'muted',
     cells: [
-      <div className="admin-cell-stack"><Mixed text={row.name} font="latin" size="var(--fs-15)" color="var(--ink)" />{row.adapter_label !== row.name ? <Mixed text={row.adapter_label} font="latin" /> : null}</div>,
+      <div className="admin-cell-stack"><span className="admin-source-name"><Mixed text={row.name} font="latin" size="inherit" color="var(--ink)" /></span>{row.adapter_label !== row.name ? <Mixed text={row.adapter_label} font="latin" /> : null}</div>,
       <div className="admin-cell-stack"><span className="chip-outline">{row.publication === 'daily' ? '日刊' : '周刊'}</span><span className="cjk">{row.enabled ? '启用' : '停用'}</span></div>,
       <Health row={row} />,
       <div className="admin-actions">
         <Link className="link-button" href={adminSourceEditHref(row.id)}>编辑</Link>
         <Link className="link-button" href={adminSourceRunsHref(row.id)}>记录</Link>
         <details className="admin-details"><summary>更多操作</summary><div className="admin-actions">
-        <button type="button" className="link-button" disabled={testingIds.has(row.id)} onClick={() => test(row)}>{testingIds.has(row.id) ? '测试中…' : '测试抓取'}</button>
+        <button type="button" className="link-button" disabled={testingIds.has(row.id)} aria-busy={testingIds.has(row.id)} onClick={() => test(row)}><PendingLabel idle="测试抓取" pending="测试中…" busy={testingIds.has(row.id)} /></button>
         {row.enabled ? (
-          <button type="button" className="link-button" disabled={operations.busy(row.id)} onClick={() => setDisabling(row)}>{operations.busy(row.id) ? '正在停用…' : '停用'}</button>
+          <button type="button" className="link-button" disabled={operations.busy(row.id)} aria-busy={operations.busy(row.id)} onClick={() => setDisabling(row)}><PendingLabel idle="停用" pending="正在停用…" busy={operations.busy(row.id)} /></button>
         ) : (
-          <button type="button" className="link-button" disabled={operations.busy(row.id)} onClick={() => operations.post(row.id, row.name, adminSourceEnablementHref(row.id))}>{operations.busy(row.id) ? '正在启用…' : '启用'}</button>
+          <button type="button" className="link-button" disabled={operations.busy(row.id)} aria-busy={operations.busy(row.id)} onClick={() => operations.post(row.id, row.name, adminSourceEnablementHref(row.id))}><PendingLabel idle="启用" pending="正在启用…" busy={operations.busy(row.id)} /></button>
         )}
         </div></details>
       </div>,
-      <dl className="admin-run-metrics"><dt>排序</dt><dd className="data">{row.sort_order}</dd><dt>上次抓取</dt><dd><Mixed text={row.last_fetch_label || '—'} /></dd><dt>下次计划</dt><dd><Mixed text={row.next_run_label || '—'} /></dd></dl>,
+      <dl className="admin-run-metrics"><dt>排序</dt><dd className="data">{row.sort_order}</dd><dt>上次抓取</dt><dd><Mixed text={normalizeDateLabel(row.last_fetch_label || '—')} /></dd><dt>下次计划</dt><dd><Mixed text={normalizeDateLabel(row.next_run_label || '—')} /></dd></dl>,
     ],
   }))
 
@@ -88,11 +89,25 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
       }
     >
       {operations.errors.map((error) => <p key={error.key} role="alert" className="form-feedback">{error.text}</p>)}
-      <Table className="sources-table" headers={HEADERS} widths={WIDTHS} rows={rows} mobile={{ primary: [0, 1, 2, 3], detailsLabel: '抓取计划' }} empty="还没有来源" />
+      {attention.length > 0 ? (
+        <aside className="admin-attention" aria-label="需要关注的信息源">
+          <Icon name="triangle-alert" size={20} color="currentColor" />
+          <ul>
+            {attention.map((row) => (
+              <li key={row.id}>
+                <span>{row.name} · {row.health_label}</span>
+                <Link className="link-button" href={adminSourceRunsHref(row.id)} aria-label={`查看记录 · ${row.name}`}>查看记录</Link>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      ) : null}
+      <Table className="sources-table" headers={HEADERS} widths={WIDTHS} rows={rows} mobile={{ primary: [0, 2, 1, 4, 3], detailsLabel: '抓取计划' }} empty="还没有来源" />
       <div className="admin-summary">
         <Mixed text={summary} />
       </div>
       <Dialog
+        tone="danger"
         open={disabling !== null}
         text={`停用后不再抓取，历史内容保留。确认停用 ${disabling?.name ?? ''}？`}
         cancel="取消"

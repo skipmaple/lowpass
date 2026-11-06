@@ -1,0 +1,10 @@
+{
+  "fonttools": "4.68.0",
+  "brotli": "1.2.1",
+  "partition": {
+    "file": "node_modules/lxgw-wenkai-screen-webfont/lxgwwenkaiscreen.css",
+    "package": "lxgw-wenkai-screen-webfont",
+    "version": "1.7.0",
+    "sha256": "c265ee0f34820ba6f83aa349006ef55679c810a6b12cfc7f96b2c925e2bbfecf"
+  }
+}

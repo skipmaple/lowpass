@@ -64,6 +64,19 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert entry["snippet_runs"].any? { |run| run["hit"] }
   end
 
+  test "搜索结果保留原文高亮，并提供真实译文和日刊理由" do
+    @item.update!(title_zh: "用 Rust 构建集群控制器", summary_zh: "通过 Rust SDK 管理集群。", reason: "提供自动恢复任务的实现示例。")
+
+    get search_path(q: "rust")
+
+    entry = page_props["results"].find { |result| result["item_id"] == @item.id }
+    assert_equal @item.title_zh, entry["title_zh_runs"].pluck("text").join
+    assert_equal @item.summary_zh, entry["summary_zh_runs"].pluck("text").join
+    assert entry["title_zh_runs"].any? { |run| run["hit"] }
+    assert_equal @item.reason, entry["reason"]
+    assert_equal @item.title, entry["title_runs"].pluck("text").join
+  end
+
   test "周刊条目的所在期落到周刊页的板块锚点" do
     weekly = index_item("Rust weekly note", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
                         meta: { "issue_no" => 366, "anchor" => "工具" })

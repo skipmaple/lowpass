@@ -1,200 +1,101 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import SourceTabs, { inkInset } from '@/components/SourceTabs'
-import type { SourceSummary } from '@/types/lowpass'
+import SourceTabs from '@/components/SourceTabs'
 import { source } from '../support/props'
 
-// 来源索引条（PRD 6.2）：一次只显示一个来源，栏级状态标在名字下面。
-// 切换是本地状态，条目已经全在 props 里，不回服务端。
+const sources = [source(), source({ id: 'src-gh', name: 'GitHub Trending', state: 'failed' }), source({ id: 'src-had', name: 'Hackaday', state: 'empty' })]
 
-const sources: SourceSummary[] = [
-  source(),
-  source({ id: 'src-gh', name: 'GitHub Trending', adapter: 'github_trending', state: 'failed' }),
-  source({ id: 'src-had', name: 'Hackaday', adapter: 'rss', state: 'empty' }),
-]
-
-function renderTabs(activeId = 'src-hn', onSelect: (id: string) => void = vi.fn()) {
-  return render(
-    <SourceTabs sources={sources} activeId={activeId} onSelect={onSelect}>
-      {(current) => <div>面板 {current.name}</div>}
-    </SourceTabs>,
-  )
+function Harness({ initial = 'src-hn', onSelect = vi.fn() }: { initial?: string; onSelect?: (id: string) => void }) {
+  const [activeId, setActiveId] = useState(initial)
+  return <SourceTabs sources={sources} activeId={activeId} onSelect={(id) => { setActiveId(id); onSelect(id) }}>{(current) => <p>内容 {current.name}</p>}</SourceTabs>
 }
 
-// 切换要看到面板真的换了：把 activeId 交给一个有状态的外壳，跟 Daily/Show 的 Sources 一样
-function Harness({ onSelect }: { onSelect: (id: string) => void }) {
-  const [activeId, setActiveId] = useState('src-hn')
+function links() { return within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link') }
 
-  return (
-    <SourceTabs
-      sources={sources}
-      activeId={activeId}
-      onSelect={(id) => {
-        onSelect(id)
-        setActiveId(id)
-      }}
-    >
-      {(current) => <div>面板 {current.name}</div>}
-    </SourceTabs>
-  )
-}
+afterEach(() => vi.restoreAllMocks())
 
-describe('SourceTabs', () => {
-  it('一个源一条索引，带源名', () => {
-    renderTabs()
-
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(3)
-    expect(within(tabs[0]).getByText('Hacker News')).toBeInTheDocument()
-    expect(within(tabs[1]).getByText('GitHub Trending')).toBeInTheDocument()
-    expect(within(tabs[2]).getByText('Hackaday')).toBeInTheDocument()
-    expect(screen.getByRole('tablist')).toHaveAccessibleName('来源')
+describe('连续来源导航', () => {
+  it('每个链接有可达的命名章节，所有内容按来源顺序同时存在', () => {
+    render(<Harness />)
+    expect(links()).toHaveLength(3)
+    expect(links().map((link) => link.getAttribute('href'))).toEqual(['#source-src-hn', '#source-src-gh', '#source-src-had'])
+    expect(screen.getAllByRole('region').map((section) => section.id)).toEqual(['source-src-hn', 'source-src-gh', 'source-src-had'])
+    expect(screen.getByText('内容 Hacker News')).toBeInTheDocument()
+    expect(screen.getByText('内容 GitHub Trending')).toBeInTheDocument()
+    expect(screen.getByText('内容 Hackaday')).toBeInTheDocument()
   })
 
-  it('当前源反白，其余不是', () => {
-    renderTabs()
-
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
-    expect(tabs[1]).toHaveAttribute('aria-selected', 'false')
-    expect(tabs[2]).toHaveAttribute('aria-selected', 'false')
+  it('深链传入来源决定初始标记', () => {
+    render(<Harness initial="src-gh" />)
+    expect(links()[1]).toHaveAttribute('aria-current', 'location')
+    expect(links()[0]).not.toHaveAttribute('aria-current')
+    expect(links()[1]).toHaveAttribute('data-state', 'active')
+    expect(links()[0]).toHaveAttribute('data-state', 'inactive')
   })
 
-  // 深链 ?source= 与服务端记住的来源都是这条：种子来自 props，不是永远第一个
-  it('当前源认传进来的那个，不是第一个', () => {
-    renderTabs('src-gh')
-
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'false')
-    expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 GitHub Trending')
+  it('失败和未收录各有明确说明，不把空来源禁用', () => {
+    render(<Harness />)
+    expect(links()[1]).toHaveTextContent('抓取失败')
+    expect(links()[2]).toHaveTextContent('本期未收录')
+    expect(links()[2]).not.toHaveAttribute('aria-disabled')
   })
 
-  it('抓取失败与本期无新内容标在名字下面，正常的源不标', () => {
-    renderTabs()
-
-    const tabs = screen.getAllByRole('tab')
-    expect(within(tabs[1]).getByText('抓取失败')).toBeInTheDocument()
-    expect(within(tabs[2]).getByText('本期无新内容')).toBeInTheDocument()
-    expect(tabs[0]).toHaveTextContent('Hacker News')
-    expect(within(tabs[0]).queryByText('抓取失败')).toBeNull()
-    expect(within(tabs[0]).queryByText('本期无新内容')).toBeNull()
-  })
-
-  // R-1.6 补生成的期：不支持回填的源（7.7）在索引条上标短形，长句「该来源无法回填」留给列表区
-  it('无法回填标在名字下面', () => {
-    render(
-      <SourceTabs sources={[source({ state: 'no_backfill' })]} activeId="src-hn" onSelect={vi.fn()}>
-        {(current) => <div>面板 {current.name}</div>}
-      </SourceTabs>,
-    )
-
-    expect(within(screen.getByRole('tab')).getByText('无法回填')).toBeInTheDocument()
-  })
-
-  it('生成中的源在索引条上不说话（期头的标签已经写着）', () => {
-    render(
-      <SourceTabs sources={[source({ state: 'pending' })]} activeId="src-hn" onSelect={vi.fn()}>
-        {(current) => <div>面板 {current.name}</div>}
-      </SourceTabs>,
-    )
-
-    const tab = screen.getByRole('tab')
-    expect(tab).toHaveTextContent('Hacker News')
-    expect(screen.queryByText('抓取失败')).toBeNull()
-    expect(screen.queryByText('本期无新内容')).toBeNull()
-    expect(tab.querySelector('.source-tab-state')).toBeNull()
-  })
-
-  it('只渲染当前源的面板', () => {
-    renderTabs()
-
-    expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 Hacker News')
-    expect(screen.queryByText('面板 Hackaday')).toBeNull()
-  })
-
-  it('点另一条索引把源的 id 交出去', async () => {
-    const user = userEvent.setup()
+  it('点击更新当前来源并滚动，其他章节仍保留', async () => {
     const onSelect = vi.fn()
-    renderTabs('src-hn', onSelect)
-
-    await user.click(screen.getAllByRole('tab')[2])
-
-    expect(onSelect).toHaveBeenCalledWith('src-had')
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    render(<Harness onSelect={onSelect} />)
+    await userEvent.click(links()[2])
+    expect(onSelect).toHaveBeenLastCalledWith('src-had')
+    expect(links()[2]).toHaveAttribute('aria-current', 'location')
+    expect(scroll).toHaveBeenCalled()
+    expect(screen.getByText('内容 Hacker News')).toBeInTheDocument()
   })
 
-  it('点一下换掉面板', async () => {
-    const user = userEvent.setup()
-    render(<Harness onSelect={vi.fn()} />)
+  it('页尾主动选择不被程序滚动覆盖，继续手动滚动才恢复跟踪', async () => {
+    const frames: FrameRequestCallback[] = []
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => { frames.push(callback); return frames.length })
+    Element.prototype.scrollIntoView = vi.fn()
+    render(<Harness />)
+    const sections = screen.getAllByRole('region')
+    sections.forEach((section, index) => vi.spyOn(section, 'getBoundingClientRect').mockReturnValue({ top: index * 400, bottom: index * 400 + 100 } as DOMRect))
 
-    await user.click(screen.getAllByRole('tab')[1])
+    fireEvent.click(links()[1])
+    fireEvent.scroll(window)
+    act(() => { frames.splice(0).forEach((callback) => callback(0)) })
+    expect(links()[1]).toHaveAttribute('aria-current', 'location')
 
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 GitHub Trending')
-    expect(screen.queryByText('面板 Hacker News')).toBeNull()
+    fireEvent.wheel(window)
+    act(() => { frames.splice(0).forEach((callback) => callback(0)) })
+    expect(links()[0]).toHaveAttribute('aria-current', 'location')
   })
 
-  // PRD 6.4：索引条能用键盘走。Radix 的 roving tabindex 把方向键接在整条索引上
-  it('方向键往下一个源走', async () => {
+  it('所有来源都是原生可聚焦链接，Enter 可操作', async () => {
+    const onSelect = vi.fn()
     const user = userEvent.setup()
+    render(<Harness onSelect={onSelect} />)
+    links()[1].focus()
+    await user.keyboard('{Enter}')
+    expect(onSelect).toHaveBeenCalledWith('src-gh')
+  })
+
+  it('修饰键点击保留原生链接行为', () => {
     const onSelect = vi.fn()
     render(<Harness onSelect={onSelect} />)
-
-    screen.getAllByRole('tab')[0].focus()
-    await user.keyboard('{ArrowRight}')
-
-    expect(onSelect).toHaveBeenLastCalledWith('src-gh')
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 GitHub Trending')
-
-    await user.keyboard('{ArrowRight}')
-
-    expect(onSelect).toHaveBeenLastCalledWith('src-had')
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('面板 Hackaday')
+    fireEvent.click(links()[2], { metaKey: true })
+    expect(onSelect).not.toHaveBeenCalled()
   })
 
-  // 索引条要在 Tab 序列里：从前面的控件按一次 Tab 就落在当前源上，不是跳过整条去到面板
-  it('Tab 从前面的控件进到当前源', async () => {
-    const user = userEvent.setup()
-    render(
-      <>
-        <button type="button">前一期</button>
-        <Harness onSelect={vi.fn()} />
-      </>,
-    )
-
-    screen.getByRole('button', { name: '前一期' }).focus()
-    await user.tab()
-
-    expect(screen.getAllByRole('tab')[0]).toHaveFocus()
-  })
-})
-
-describe('墨块平移（M1）', () => {
-  it('inkInset 把当前项相对容器的位置换成 inset(上 右 下 左)', () => {
-    expect(inkInset({ width: 900, height: 104 }, { left: 299, top: 24, width: 301, height: 80 })).toBe('inset(24px 300px 0px 299px)')
-  })
-
-  it('inkInset 四舍五入到 0.01px', () => {
-    expect(inkInset({ width: 100.004, height: 10 }, { left: 33.333, top: 0, width: 33.333, height: 10 })).toBe('inset(0px 33.34px 0px 33.33px)')
-  })
-
-  // jsdom 没有布局：量不到位置就不叠副本，当前项照旧自己反白（跟以前一样）
-  it('量不到位置时不叠反白副本', () => {
-    const { container } = renderTabs()
-
-    expect(container.querySelector('.source-tabs-ink')).toBeNull()
-    expect(container.querySelector('.source-tabs-frame')).not.toHaveAttribute('data-ink')
-  })
-
-  it('首次渲染的面板不带换入动画，切换之后的才带', async () => {
-    const user = userEvent.setup()
-    render(<Harness onSelect={vi.fn()} />)
-
-    expect(screen.getByRole('tabpanel')).not.toHaveAttribute('data-switched')
-    await user.click(screen.getAllByRole('tab')[1])
-    expect(screen.getByRole('tabpanel')).toHaveAttribute('data-switched')
+  it('hash 改变同步来源标记，不触发服务端或历史页更新', () => {
+    const onSelect = vi.fn()
+    render(<Harness onSelect={onSelect} />)
+    window.history.replaceState(null, '', '#source-src-gh')
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(links()[1]).toHaveAttribute('aria-current', 'location')
+    expect(onSelect).not.toHaveBeenCalled()
+    window.history.replaceState(null, '', '/')
   })
 })

@@ -1,0 +1,83 @@
+[
+  {
+    "theme": "daybreak",
+    "readonly": {
+      "readOnly": true,
+      "disabled": false,
+      "focused": true,
+      "value": "ruanyf/weekly",
+      "color": "rgb(32, 62, 48)",
+      "background": "rgb(242, 240, 230)",
+      "outline": "rgb(0, 95, 101) solid 2px"
+    },
+    "busy": {
+      "ariaBusy": "true",
+      "disabled": true,
+      "beforeWidth": 109,
+      "afterWidth": 109
+    },
+    "error": {
+      "invalid": "true",
+      "description": "_r_4_-note",
+      "focused": true,
+      "border": "rgb(156, 62, 44)"
+    },
+    "intercepted": 1,
+    "backendWrites": 0,
+    "simulated": true
+  },
+  {
+    "theme": "duet",
+    "readonly": {
+      "readOnly": true,
+      "disabled": false,
+      "focused": true,
+      "value": "ruanyf/weekly",
+      "color": "rgb(22, 22, 22)",
+      "background": "rgb(241, 241, 237)",
+      "outline": "rgb(22, 22, 22) solid 2px"
+    },
+    "busy": {
+      "ariaBusy": "true",
+      "disabled": true,
+      "beforeWidth": 109,
+      "afterWidth": 109
+    },
+    "error": {
+      "invalid": "true",
+      "description": "_r_4_-note",
+      "focused": true,
+      "border": "rgb(22, 22, 22)"
+    },
+    "intercepted": 1,
+    "backendWrites": 0,
+    "simulated": true
+  },
+  {
+    "theme": "unfold",
+    "readonly": {
+      "readOnly": true,
+      "disabled": false,
+      "focused": true,
+      "value": "ruanyf/weekly",
+      "color": "rgb(236, 237, 231)",
+      "background": "rgb(35, 41, 42)",
+      "outline": "rgb(208, 183, 117) solid 2px"
+    },
+    "busy": {
+      "ariaBusy": "true",
+      "disabled": true,
+      "beforeWidth": 109,
+      "afterWidth": 109
+    },
+    "error": {
+      "invalid": "true",
+      "description": "_r_4_-note",
+      "focused": true,
+      "border": "rgb(230, 161, 139)"
+    },
+    "intercepted": 1,
+    "backendWrites": 0,
+    "simulated": true
+  }
+]

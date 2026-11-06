@@ -1,0 +1,308 @@
+[
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "left": 20,
+    "right": 300,
+    "viewport": 320,
+    "docWidth": 320,
+    "items": [
+      {
+        "text": "Hacker News",
+        "pressed": "true",
+        "font": "14px",
+        "left": 20,
+        "right": 148.265625,
+        "top": 416.375,
+        "width": 128.265625,
+        "height": 44.390625
+      },
+      {
+        "text": "GitHub Trending",
+        "pressed": "false",
+        "font": "14px",
+        "left": 20,
+        "right": 167.28125,
+        "top": 468.765625,
+        "width": 147.28125,
+        "height": 44.390625
+      },
+      {
+        "text": "Hackaday",
+        "pressed": "false",
+        "font": "14px",
+        "left": 175.28125,
+        "right": 282.15625,
+        "top": 468.765625,
+        "width": 106.875,
+        "height": 44.390625
+      },
+      {
+        "text": "阮一峰科技爱好者周刊",
+        "pressed": "false",
+        "font": "14px",
+        "left": 20,
+        "right": 202,
+        "top": 521.15625,
+        "width": 182,
+        "height": 44
+      }
+    ],
+    "widthStable": true
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "left": 25.640625,
+    "right": 614.0625,
+    "viewport": 768,
+    "docWidth": 768,
+    "items": [
+      {
+        "text": "Hacker News",
+        "pressed": "true",
+        "font": "14px",
+        "left": 25.640625,
+        "right": 153.90625,
+        "top": 394.375,
+        "width": 128.265625,
+        "height": 44.390625
+      },
+      {
+        "text": "GitHub Trending",
+        "pressed": "false",
+        "font": "14px",
+        "left": 161.90625,
+        "right": 309.1875,
+        "top": 394.375,
+        "width": 147.28125,
+        "height": 44.390625
+      },
+      {
+        "text": "Hackaday",
+        "pressed": "false",
+        "font": "14px",
+        "left": 317.1875,
+        "right": 424.0625,
+        "top": 394.375,
+        "width": 106.875,
+        "height": 44.390625
+      },
+      {
+        "text": "阮一峰科技爱好者周刊",
+        "pressed": "false",
+        "font": "14px",
+        "left": 432.0625,
+        "right": 614.0625,
+        "top": 394.5625,
+        "width": 182,
+        "height": 44
+      }
+    ],
+    "widthStable": true
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "left": 20,
+    "right": 300,
+    "viewport": 320,
+    "docWidth": 320,
+    "items": [
+      {
+        "text": "Hacker News",
+        "pressed": "true",
+        "font": "14px",
+        "left": 20,
+        "right": 136.625,
+        "top": 446.375,
+        "width": 116.625,
+        "height": 44
+      },
+      {
+        "text": "GitHub Trending",
+        "pressed": "false",
+        "font": "14px",
+        "left": 144.625,
+        "right": 285.328125,
+        "top": 446.375,
+        "width": 140.703125,
+        "height": 44
+      },
+      {
+        "text": "Hackaday",
+        "pressed": "false",
+        "font": "14px",
+        "left": 20,
+        "right": 117.625,
+        "top": 498.375,
+        "width": 97.625,
+        "height": 44
+      },
+      {
+        "text": "阮一峰科技爱好者周刊",
+        "pressed": "false",
+        "font": "14px",
+        "left": 20,
+        "right": 202,
+        "top": 550.375,
+        "width": 182,
+        "height": 45
+      }
+    ],
+    "widthStable": true
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "left": 159.640625,
+    "right": 720.59375,
+    "viewport": 768,
+    "docWidth": 768,
+    "items": [
+      {
+        "text": "Hacker News",
+        "pressed": "true",
+        "font": "14px",
+        "left": 159.640625,
+        "right": 276.265625,
+        "top": 353.6875,
+        "width": 116.625,
+        "height": 44
+      },
+      {
+        "text": "GitHub Trending",
+        "pressed": "false",
+        "font": "14px",
+        "left": 284.265625,
+        "right": 424.96875,
+        "top": 353.6875,
+        "width": 140.703125,
+        "height": 44
+      },
+      {
+        "text": "Hackaday",
+        "pressed": "false",
+        "font": "14px",
+        "left": 432.96875,
+        "right": 530.59375,
+        "top": 353.6875,
+        "width": 97.625,
+        "height": 44
+      },
+      {
+        "text": "阮一峰科技爱好者周刊",
+        "pressed": "false",
+        "font": "14px",
+        "left": 538.59375,
+        "right": 720.59375,
+        "top": 353.1875,
+        "width": 182,
+        "height": 45
+      }
+    ],
+    "widthStable": true
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "left": 20,
+    "right": 300,
+    "viewport": 320,
+    "docWidth": 320,
+    "items": [
+      {
+        "text": "Hacker News",
+        "pressed": "true",
+        "font": "14px",
+        "left": 20,
+        "right": 144.75,
+        "top": 418.375,
+        "width": 124.75,
+        "height": 44
+      },
+      {
+        "text": "GitHub Trending",
+        "pressed": "false",
+        "font": "14px",
+        "left": 152.75,
+        "right": 297.21875,
+        "top": 418.375,
+        "width": 144.46875,
+        "height": 44
+      },
+      {
+        "text": "Hackaday",
+        "pressed": "false",
+        "font": "14px",
+        "left": 20,
+        "right": 123.71875,
+        "top": 470.375,
+        "width": 103.71875,
+        "height": 44
+      },
+      {
+        "text": "阮一峰科技爱好者周刊",
+        "pressed": "false",
+        "font": "14px",
+        "left": 20,
+        "right": 202,
+        "top": 522.375,
+        "width": 182,
+        "height": 44
+      }
+    ],
+    "widthStable": true
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "left": 25.640625,
+    "right": 604.578125,
+    "viewport": 768,
+    "docWidth": 768,
+    "items": [
+      {
+        "text": "Hacker News",
+        "pressed": "true",
+        "font": "14px",
+        "left": 25.640625,
+        "right": 150.390625,
+        "top": 369.375,
+        "width": 124.75,
+        "height": 44
+      },
+      {
+        "text": "GitHub Trending",
+        "pressed": "false",
+        "font": "14px",
+        "left": 158.390625,
+        "right": 302.859375,
+        "top": 369.375,
+        "width": 144.46875,
+        "height": 44
+      },
+      {
+        "text": "Hackaday",
+        "pressed": "false",
+        "font": "14px",
+        "left": 310.859375,
+        "right": 414.578125,
+        "top": 369.375,
+        "width": 103.71875,
+        "height": 44
+      },
+      {
+        "text": "阮一峰科技爱好者周刊",
+        "pressed": "false",
+        "font": "14px",
+        "left": 422.578125,
+        "right": 604.578125,
+        "top": 369.375,
+        "width": 182,
+        "height": 44
+      }
+    ],
+    "widthStable": true
+  }
+]

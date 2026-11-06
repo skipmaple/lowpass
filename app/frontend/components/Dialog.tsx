@@ -2,15 +2,19 @@ import { createPortal } from 'react-dom'
 import { useEffect, useId, useRef } from 'react'
 import type * as React from 'react'
 
-// 确认对话框（画布 dialog()）：整页 40% 墨色遮罩，480px 纸卡，1px 墨线加 2px 顶线，文楷 20 的问句，
-// 右下「取消」描边 + 确认反白。Escape 取消；打开时焦点进取消按钮，关掉后回到打开前的元素；
-// Tab / Shift+Tab 在纸卡里转圈，不跑到遮罩后面那一页上。
+import PendingLabel from '@/components/PendingLabel'
+
+// 确认对话框共用取消优先、焦点圈和焦点返回；表面与危险操作样式由主题决定。
+// 无法确认与正在执行是两种状态：前者仍允许取消，后者保护执行中的操作。
 export type DialogProps = React.PropsWithChildren<{
   open: boolean
   text: string
   cancel: string
   confirm: string
+  busyConfirm?: string
   busy?: boolean
+  confirmDisabled?: boolean
+  tone?: 'default' | 'danger'
   returnFocus?: () => HTMLElement | null
   onCancel: () => void
   onConfirm: () => void
@@ -19,7 +23,7 @@ export type DialogProps = React.PropsWithChildren<{
 // 纸卡里可以停焦点的元素，顺序就是 Tab 的顺序
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-export default function Dialog({ open, text, cancel, confirm, busy = false, returnFocus, onCancel, onConfirm, children }: DialogProps) {
+export default function Dialog({ open, text, cancel, confirm, busyConfirm, busy = false, confirmDisabled = false, tone = 'default', returnFocus, onCancel, onConfirm, children }: DialogProps) {
   const paperRef = useRef<HTMLDivElement>(null)
   const initialFocusRef = useRef<HTMLButtonElement>(null)
   // 问句既是看得见的标题也是纸卡的名字：aria-labelledby 指过去，读屏读到的和眼睛看到的是同一段
@@ -79,7 +83,7 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, retu
 
   return createPortal(
     <div className="dialog-shade">
-      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby={textId} aria-busy={busy} tabIndex={-1} ref={paperRef}>
+      <div className="dialog" data-tone={tone} role="dialog" aria-modal="true" aria-labelledby={textId} aria-busy={busy} tabIndex={-1} ref={paperRef}>
         <p className="dialog-text" id={textId}>
           {text}
         </p>
@@ -88,8 +92,8 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, retu
           <button type="button" className="ctrl" ref={initialFocusRef} disabled={busy} onClick={onCancel}>
             {cancel}
           </button>
-          <button type="button" className="btn-primary" disabled={busy} onClick={onConfirm}>
-            {confirm}
+          <button type="button" className={`btn-primary${tone === 'danger' ? ' btn-danger' : ''}`} disabled={busy || confirmDisabled} aria-busy={busy} onClick={onConfirm}>
+            {busyConfirm ? <PendingLabel idle={confirm} pending={busyConfirm} busy={busy} /> : confirm}
           </button>
         </div>
       </div>

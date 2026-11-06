@@ -1,7 +1,7 @@
 require "net/http"
 
 # 模型接入层（ADR T8、设计 §4.4、C1）：只认 OpenAI 兼容的 chat completions——地址与模型名在后台，密钥只从环境读。
-# 单条 20 秒（R-9.8）；401 / 403 是密钥被拒绝、429 是被限流（都不追加重试，本期不再继续），其余失败可重试；
+# 默认单条 20 秒（R-9.8），显式开启的开发本机模式为 300 秒；401 / 403 是密钥被拒绝、429 是被限流（都不追加重试，本期不再继续）；截断不重复相同请求，其余失败可重试。
 # 响应体边读边截，上限 64 KB
 module Reasons::Provider
   Error = Class.new(StandardError)
@@ -9,8 +9,21 @@ module Reasons::Provider
   Rejected = Class.new(Error)
   Limited = Class.new(Error)
   Response = Data.define(:text, :prompt_tokens, :completion_tokens)
+  # 输出上限已耗尽时，即使最终内容为空也消耗了 token；保留实际用量，不把半截答案当成功。
+  class Incomplete < Error
+    attr_reader :prompt_tokens, :completion_tokens
+
+    def initialize(prompt_tokens:, completion_tokens:)
+      @prompt_tokens = prompt_tokens
+      @completion_tokens = completion_tokens
+      super("模型输出达到长度上限，未生成完整回复")
+    end
+  end
+
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 20
+  LOCAL_READ_TIMEOUT = 300
+  LOCAL_MAX_TOKENS = 8192
   MAX_BYTES = 64 * 1024
   ERROR_BYTES = 200            # 非 2xx 时只留一段摘要（error_summary 列也是 200）
   LOCAL_HOSTS = %w[ localhost 127.0.0.1 ].freeze
@@ -43,12 +56,15 @@ module Reasons::Provider
       raise Error, "地址不合法" unless valid_base_url?(base_url)
 
       uri = URI("#{base_url.sub(%r{/+\z}, "")}/chat/completions")
+      local = local_development?(uri)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.is_a?(URI::HTTPS)
       http.open_timeout = OPEN_TIMEOUT
-      http.read_timeout = READ_TIMEOUT
+      http.read_timeout = local ? LOCAL_READ_TIMEOUT : READ_TIMEOUT
       request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "Authorization" => "Bearer #{api_key}", "User-Agent" => Adapters::Http::USER_AGENT)
-      request.body = { model: model_name, messages: messages, temperature: temperature, max_tokens: max_tokens, response_format: { type: "json_object" } }.to_json
+      request.body = { model: model_name, messages: messages, temperature: temperature,
+                       max_tokens: local ? [ max_tokens, LOCAL_MAX_TOKENS ].max : max_tokens,
+                       response_format: { type: local ? "text" : "json_object" } }.to_json
       # 块形式：响应体边读边截（同 Adapters::Http#read_capped），上限之前就停手，
       # 不先把一个几百 KB 的回复整段读进内存再裁
       http.request(request) do |response|
@@ -66,6 +82,12 @@ module Reasons::Provider
     end
 
     private
+      # 本机 LM Studio 实测不接受 json_object；text 仍由 Prompt 要求 JSON、Parser 校验字段与长度。
+      # 开关不影响生产或开发环境里的远程服务，也不把 reasoning_content 当作最终答案。
+      def local_development?(uri)
+        Rails.env.development? && ENV["MODEL_LOCAL_COMPAT"] == "1" && LOCAL_HOSTS.include?(uri.host)
+      end
+
       # 成功路径：累计到超过上限就抛，后面的字节不再读
       def read_capped(response)
         buffer = "".b
@@ -96,10 +118,16 @@ module Reasons::Provider
 
       def parse(body)
         json = JSON.parse(body)
-        text = json.is_a?(Hash) ? json.dig("choices", 0, "message", "content").to_s : ""
+        choice = json.dig("choices", 0) if json.is_a?(Hash)
+        usage = json.is_a?(Hash) && json["usage"].is_a?(Hash) ? json["usage"] : {}
+        tokens = { prompt_tokens: usage["prompt_tokens"].to_i, completion_tokens: usage["completion_tokens"].to_i }
+        if choice.is_a?(Hash) && choice["finish_reason"] == "length"
+          raise Incomplete.new(**tokens)
+        end
+
+        text = choice.is_a?(Hash) ? choice.dig("message", "content").to_s : ""
         raise Error, "模型没有返回内容" if text.blank?
-        usage = json["usage"].is_a?(Hash) ? json["usage"] : {}
-        Response.new(text: text, prompt_tokens: usage["prompt_tokens"].to_i, completion_tokens: usage["completion_tokens"].to_i)
+        Response.new(text: text, **tokens)
       rescue JSON::ParserError
         raise Error, "模型响应不是 JSON"
       end

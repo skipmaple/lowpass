@@ -1,7 +1,10 @@
 require "test_helper"
 
 class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
-  setup { sign_in_as(users(:drew)) }
+  setup do
+    sign_in_as(users(:drew))
+    Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "The tool streams local log files, filters entries by level, and exports matching events as JSON.", url: items(:hn_one).url, error: nil))
+  end
 
   test "单条重生成：同步调用一次，成功回日刊页并提示" do
     with_model_provider do

@@ -7,7 +7,9 @@ import Dialog from '@/components/Dialog'
 import Icon from '@/components/Icon'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
+import ThemePicker from '@/components/ThemePicker'
 import { SESSION, USER, authHref, latestWeeklyHref } from '@/lib/paths'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { Mixed } from '@/lib/typeset'
 import type { FooterData, SettingsIdentity } from '@/types/lowpass'
 
@@ -46,7 +48,7 @@ function IdentityRow({ identity }: { identity: SettingsIdentity }) {
           <span className="cjk" style={{ fontSize: 'var(--fs-15)' }}>
             已绑定
           </span>
-          <Mixed text={`· ${identity.linked_at_label}`} size="var(--fs-13)" color="var(--ink2)" />
+          <Mixed text={`· ${normalizeDateLabel(identity.linked_at_label)}`} size="var(--fs-13)" color="var(--ink2)" />
         </>
       ) : (
         <>
@@ -102,7 +104,7 @@ function DeleteAccountRow({ user }: { user: SettingsShowProps['user'] }) {
       <button type="button" className="link-button" onClick={() => { setFailed(false); setConfirming(true) }}>
         注销
       </button>
-      <Dialog open={confirming} text="注销后无法恢复。确认注销这个账号？" cancel="取消" confirm={busy ? '正在注销…' : '确认注销'} busy={busy} onCancel={() => setConfirming(false)} onConfirm={destroy}>
+      <Dialog tone="danger" open={confirming} text="注销后无法恢复。确认注销这个账号？" cancel="取消" confirm="确认注销" busyConfirm="正在注销…" busy={busy} onCancel={() => setConfirming(false)} onConfirm={destroy}>
         {user.email ? (
           <p className="data" style={{ margin: 0, color: 'var(--ink)' }}>
             {user.email}
@@ -125,6 +127,13 @@ export default function Show({ user, identities, session }: SettingsShowProps) {
   return (
     <>
       <PageHead big="账户信息" />
+      <section className="settings-appearance" aria-labelledby="appearance-title">
+        <div>
+          <h2 id="appearance-title">外观</h2>
+          <p>选择适合此刻阅读的版式。仅保存在当前浏览器。</p>
+        </div>
+        <ThemePicker />
+      </section>
       <p className="operation-feedback">使用另一登录方式时，相同的已验证邮箱会合并到此账户；邮箱不同则切换到另一个账户。</p>
       <div className="settings-rows">
         <Row label="头像与显示名">
@@ -157,7 +166,7 @@ export default function Show({ user, identities, session }: SettingsShowProps) {
           <IdentityRow key={identity.provider} identity={identity} />
         ))}
         <Row label="本次会话">
-          <Mixed text={`${session.logged_in_label} 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · ${session.expires_label} 到期`} size="var(--fs-13)" color="var(--ink2)" />
+          <Mixed text={`${normalizeDateLabel(session.logged_in_label)} 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · ${normalizeDateLabel(session.expires_label)} 到期`} size="var(--fs-13)" color="var(--ink2)" />
           <button type="button" className="link-button" onClick={() => router.delete(SESSION)}>登出</button>
         </Row>
         <DeleteAccountRow user={user} />

@@ -39,7 +39,7 @@ class AdminTest < ApplicationSystemTestCase
     Adapters::HackerNews.any_instance.stubs(:fetch).returns([ Adapters::Entry.new(title: "重抓来的", url: "https://h/re") ])
 
     visit admin_issues_path(month: "2026-09")
-    within(:xpath, "//*[@role='row'][.//*[text()='2026-09-08']]") { click_on "重抓某源" }
+    within(:xpath, "//*[@role='row'][.//*[text()='2026/09/08']]") { click_on "重抓某源" }
     within("[role='dialog']") do
       choose "Hacker News"
       click_on "重抓 Hacker News"
@@ -115,6 +115,31 @@ class AdminTest < ApplicationSystemTestCase
     assert_text "你没有权限访问这个页面。"
   end
 
+  test "窄屏后台导航的末项获得键盘焦点时完整滚入视野" do
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 844, deviceScaleFactor: 1, mobile: false)
+    %w[daybreak duet unfold].each do |theme|
+      execute_script("localStorage.setItem('lowpass-theme', #{theme.to_json})")
+      visit new_admin_source_path
+      assert_selector "nav[aria-label='后台']"
+      24.times do
+        break if evaluate_script("document.activeElement?.textContent === '任务队列'")
+        page.driver.browser.action.send_keys(:tab).perform
+      end
+      assert_equal "任务队列", evaluate_script("document.activeElement.textContent"), theme
+      bounds = evaluate_script(<<~JS)
+        (() => {
+          const nav = document.querySelector('.admin-nav').getBoundingClientRect()
+          const item = document.activeElement.getBoundingClientRect()
+          return { left: item.left, right: item.right, start: nav.left, end: nav.right }
+        })()
+      JS
+      assert_operator bounds["left"], :>=, bounds["start"], theme
+      assert_operator bounds["right"], :<=, bounds["end"] + 0.5, theme
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
   test "AC-7.1 发送测试告警：webhook 收到一次，事件记下投递时间" do
     Alerts::Config.load!({ "ALERT_WEBHOOK_URL" => "https://hooks.example/lowpass", "BASE_URL" => "http://localhost:3000" })
     stub_request(:post, "https://hooks.example/lowpass").to_return(status: 200, body: "ok")
@@ -135,17 +160,22 @@ class AdminTest < ApplicationSystemTestCase
     Setting.set("model_base_url", "https://model.example/v1")
     Setting.set("model_name", "test-model")
     Reasons::Provider.stubs(:api_key).returns("test-key")
+    stub_request(:get, items(:hn_one).url).to_return(
+      status: 200, headers: { "Content-Type" => "text/html" }, body: file_fixture("reasons/termlog.html").read
+    )
     stub_request(:post, "https://model.example/v1/chat/completions").to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
 
     visit admin_issues_path(month: "2026-09")
-    within(:xpath, "//*[@role='row'][.//*[text()='2026-09-08']]") { click_on "重生成理由" }
-    assert_text "2026-09-08 · 已开始重生成理由"
+    within(:xpath, "//*[@role='row'][.//*[text()='2026/09/08']]") { click_on "重生成理由" }
+    assert_text "2026-09-08 · 理由任务已排队，进度会自动更新"
     perform_enqueued_jobs
+    assert_requested :get, items(:hn_one).url, times: 1
 
     visit daily_issue_path("2026-09-08")
     assert_text "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。"
     assert_text "AI / LLM"
-    assert_selector ".item-translation", text: "Show HN：一个用 Rust 写的终端日志查看器"
+    assert_selector ".item-title", text: "Show HN：一个用 Rust 写的终端日志查看器"
+    assert_selector ".item-original-title", text: items(:hn_one).title
   ensure
     Setting.set("model_base_url", "")
     Setting.set("model_name", "")

@@ -99,7 +99,10 @@ class SearchesController < ApplicationController
         published_label: record.published_label,
         url: item.url,
         title_runs: highlighter.runs(item.title),
-        snippet_runs: item.summary.presence && highlighter.snippet(SummaryCleaner.clean(item.summary))
+        snippet_runs: item.summary.presence && highlighter.snippet(SummaryCleaner.clean(item.summary)),
+        title_zh_runs: item.title_zh.presence && highlighter.runs(item.title_zh),
+        summary_zh_runs: item.summary_zh.presence && highlighter.snippet(item.summary_zh),
+        reason: (item.reason if record.daily?)
       }
     end
 

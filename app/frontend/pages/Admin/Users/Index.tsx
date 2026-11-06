@@ -3,6 +3,7 @@ import type * as React from 'react'
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import Chip from '@/components/Chip'
 import Table from '@/components/Table'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { Mixed } from '@/lib/typeset'
 import type { AdminUserRow } from '@/types/lowpass'
 
@@ -20,7 +21,7 @@ export default function Index({ users, summary }: AdminUsersIndexProps) {
       user.email ? <span className="data" style={{ color: 'var(--ink)' }}>{user.email}</span> : null,
       user.role === 'admin' ? <Chip text="管理员" /> : <span className="chip-outline">成员</span>,
       <Mixed text={user.providers_label} font="latin" size="var(--fs-15)" color="var(--ink2)" />,
-      user.last_login_label ? <span className="data">{user.last_login_label}</span> : null,
+      user.last_login_label ? <span className="data">{normalizeDateLabel(user.last_login_label)}</span> : null,
     ],
   }))
 

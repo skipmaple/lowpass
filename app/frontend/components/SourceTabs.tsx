@@ -1,53 +1,15 @@
-import { Tabs } from 'radix-ui'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
-import { SourceMark } from '@/components/Illustration'
 import { latinLang } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
-// 来源切换：三条并排的纸报式索引条，当前项反白成墨块，其余 1px 描边；
-// 44px 墨线图标 + 来源名 Newsreader 600。手机三格横排、图标在上名字在下。
-// 竖排书脊方案被产品负责人否过（round-9 笔记），不要再提。
-// 一次只显示一个来源（PRD 6.2）：条目已经全在 props 里，切换是本地状态，不回服务端。
-// 画布：docs/design/src/pages_front3.py 的 tabs() 与 tabs_m()。
-//
-// 墨块平移（设计 skill「动效」M1）：索引条上叠一份 aria-hidden 的反白副本，clip-path 只露出当前项；
-// 换来源时过渡 clip-path，墨块从旧来源滑到新来源，块里的字始终是纸色、块外是墨色。点击、焦点、读屏都还是
-// 下面那条真的索引条（副本 pointer-events: none、inert）。量不到位置（还没布局、jsdom）就不叠副本，
-// 当前项照旧自己反白。
-
-// 栏级状态直接标在索引条的名字下面（PRD 6.2）；ok 与 pending 不占这一行。
-// 用画布 tabs(kickers=…) 的短形：这一行是索引条上的小字，长句留给列表区。
 const STATE_LINES: Record<SourceSummary['state'], string | null> = {
   ok: null,
-  pending: null,
+  pending: '正在收录',
   failed: '抓取失败',
-  empty: '本期无新内容',
+  empty: '本期未收录',
   no_backfill: '无法回填',
-}
-
-export type Box = { left: number; top: number; width: number; height: number }
-
-// 当前项相对索引条容器的位置换成 clip-path 的 inset(上 右 下 左)，四舍五入到 0.01px
-export function inkInset(frame: { width: number; height: number }, tab: Box): string {
-  const round = (value: number) => Math.round(value * 100) / 100
-  const right = frame.width - (tab.left + tab.width)
-  const bottom = frame.height - (tab.top + tab.height)
-  return `inset(${round(tab.top)}px ${round(right)}px ${round(bottom)}px ${round(tab.left)}px)`
-}
-
-// 真的索引条与反白副本画同一张脸，位置才对得齐
-function TabFace({ source }: { source: SourceSummary }) {
-  return (
-    <>
-      <SourceMark adapter={source.adapter} hole="var(--tab-hole)" className="source-tab-icon" />
-      <span className="source-tab-body">
-        <span className="source-tab-name" lang={latinLang(source.name)}>{source.name}</span>
-        {STATE_LINES[source.state] ? <span className="source-tab-state">{STATE_LINES[source.state]}</span> : null}
-      </span>
-    </>
-  )
 }
 
 export type SourceTabsProps = {
@@ -57,77 +19,136 @@ export type SourceTabsProps = {
   children: (source: SourceSummary) => React.ReactNode
 }
 
+export const sourceSectionId = (id: string) => `source-${id}`
+
+// 目录是页内导航，不是互相隐藏的 tabs：全部来源组成同一期连续阅读。
+// 滚动只更新可见标记；只有主动选来源才写入 Inertia 的历史状态。
 export default function SourceTabs({ sources, activeId, onSelect, children }: SourceTabsProps) {
-  const frameRef = useRef<HTMLDivElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
-  const [clip, setClip] = useState<string | null>(null)
-  // 首次渲染的面板不做换入动画，读者切过一次之后新挂上的面板才做
-  const [switched, setSwitched] = useState(false)
+  const [visibleId, setVisibleId] = useState(activeId)
+  const sections = useRef<HTMLDivElement>(null)
+  const initialSource = useRef(activeId)
+  const positioned = useRef(false)
+  const explicitSource = useRef<string | null>(null)
 
-  useLayoutEffect(() => {
-    const frame = frameRef.current
-    const list = listRef.current
-    if (!frame || !list) return
-    let alive = true
+  useEffect(() => setVisibleId(activeId), [activeId])
 
-    function measure() {
-      if (!alive || !frame || !list) return
-      const tab = list.querySelector<HTMLElement>('[role="tab"][data-state="active"]')
-      const box = frame.getBoundingClientRect()
-      if (!tab || box.width === 0) {
-        setClip(null)
-        return
+  useEffect(() => {
+    if (positioned.current) return
+    positioned.current = true
+    const firstId = sources[0]?.id
+    const initial = initialSource.current
+    if (initial && initial !== firstId && !window.location.hash) {
+      const frame = requestAnimationFrame(() => document.getElementById(sourceSectionId(initial))?.scrollIntoView?.({ block: 'start' }))
+      return () => cancelAnimationFrame(frame)
+    }
+  }, [sources])
+
+  useEffect(() => {
+    let frame = 0
+    function update() {
+      frame = 0
+      if (explicitSource.current) return
+      const nodes = sections.current?.querySelectorAll<HTMLElement>('[data-source-id]')
+      if (!nodes?.length) return
+      // 目录进入视线时归属前一节，越过顶部阅读线后交给下一节。
+      let next = nodes[0].dataset.sourceId!
+      for (const node of nodes) {
+        if (node.getBoundingClientRect().top <= 150) next = node.dataset.sourceId!
+        else break
       }
-      const rect = tab.getBoundingClientRect()
-      setClip(inkInset(box, { left: rect.left - box.left, top: rect.top - box.top, width: rect.width, height: rect.height }))
+      const last = nodes[nodes.length - 1]
+      if (window.scrollY > 0 && last.getBoundingClientRect().bottom <= window.innerHeight + 1) next = last.dataset.sourceId!
+      setVisibleId(next)
     }
-
-    measure()
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
-    observer?.observe(frame)
-    // 网页字体到了，来源名的宽度会变（换行时连高度也变）：再量一次
-    document.fonts?.ready.then(measure).catch(() => {})
+    function schedule() {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    function hashChanged() {
+      const id = decodeURIComponent(window.location.hash.slice(1))
+      const section = document.getElementById(id)?.closest<HTMLElement>('[data-source-id]')
+      if (section?.dataset.sourceId) {
+        explicitSource.current = section.dataset.sourceId
+        setVisibleId(section.dataset.sourceId)
+      } else {
+        explicitSource.current = null
+        schedule()
+      }
+    }
+    // 空来源靠近页尾时无法滚到阅读线。主动导航的标记一直保留到读者自己继续滚动，
+    // 避免 smooth scroll 或浏览器的底部钳制立即把它切回上一来源。
+    function resumeTracking() {
+      explicitSource.current = null
+      schedule()
+    }
+    function keyScroll(event: KeyboardEvent) {
+      if ((event.target as HTMLElement)?.closest?.('input,textarea,select,[contenteditable]')) return
+      if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) resumeTracking()
+    }
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('hashchange', hashChanged)
+    window.addEventListener('wheel', resumeTracking, { passive: true })
+    window.addEventListener('touchmove', resumeTracking, { passive: true })
+    window.addEventListener('keydown', keyScroll)
     return () => {
-      alive = false
-      observer?.disconnect()
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('hashchange', hashChanged)
+      window.removeEventListener('wheel', resumeTracking)
+      window.removeEventListener('touchmove', resumeTracking)
+      window.removeEventListener('keydown', keyScroll)
     }
-  }, [activeId, sources])
+  }, [sources])
 
-  function select(id: string) {
-    setSwitched(true)
+  function select(event: React.MouseEvent<HTMLAnchorElement>, id: string) {
+    // 让修改键、复制链接和新标签页保留原生链接行为。
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    explicitSource.current = id
+    setVisibleId(id)
     onSelect(id)
+    document.getElementById(sourceSectionId(id))?.scrollIntoView?.({
+      block: 'start',
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    })
   }
 
   return (
-    <Tabs.Root value={activeId} onValueChange={select}>
-      <div className="source-tabs-frame" ref={frameRef} data-ink={clip ? '' : undefined}>
-        {/* 不覆盖 tabIndex：Radix 的 roving focus 让整条索引占 Tab 序列里的一站（进来落在当前源），
-            「返回来源目录」的锚点也靠这一站能聚焦。写成 -1 会把整条索引踢出 Tab 序列。 */}
-        <Tabs.List ref={listRef} id="source-directory" className="source-tabs" aria-label="来源">
+    <div className="source-collection">
+      <div className="source-tabs-frame">
+        <nav id="source-directory" className="source-tabs" aria-label="本期来源" tabIndex={-1}>
           {sources.map((source) => (
-            <Tabs.Trigger key={source.id} value={source.id} className="source-tab">
-              <TabFace source={source} />
-            </Tabs.Trigger>
+            <a
+              key={source.id}
+              className="source-tab"
+              href={`#${sourceSectionId(source.id)}`}
+              aria-current={source.id === visibleId ? 'location' : undefined}
+              data-source-state={source.state}
+              data-state={source.id === visibleId ? 'active' : 'inactive'}
+              onClick={(event) => select(event, source.id)}
+            >
+              <span className="source-tab-name" lang={latinLang(source.name)}>{source.name}</span>
+              {STATE_LINES[source.state] ? <span className="source-tab-state">{STATE_LINES[source.state]}</span> : null}
+            </a>
           ))}
-        </Tabs.List>
-        {clip ? (
-          <div className="source-tabs source-tabs-ink" aria-hidden="true" inert style={{ clipPath: clip }}>
-            {sources.map((source) => (
-              <span key={source.id} className="source-tab" data-state="active">
-                <TabFace source={source} />
-              </span>
-            ))}
-          </div>
-        ) : null}
+        </nav>
       </div>
-
-      {/* 每个源都摆一个面板，好让每条 trigger 的 aria-controls 指得到自己的 tabpanel；
-          非当前的面板 Radix 自己会卸载，所以列多少个源都不多渲染一条条目。 */}
-      {sources.map((source) => (
-        <Tabs.Content key={source.id} value={source.id} className="source-panel" data-switched={switched ? '' : undefined}>
-          {children(source)}
-        </Tabs.Content>
-      ))}
-    </Tabs.Root>
+      <div className="source-sections" ref={sections}>
+        {sources.map((source, index) => (
+          <section
+            key={source.id}
+            id={sourceSectionId(source.id)}
+            data-source-id={source.id}
+            data-source-state={source.state}
+            className={`source-section${index === 0 ? ' source-section--first' : ''}`}
+            aria-labelledby={`source-heading-${source.id}`}
+          >
+            <div className="source-section-head">
+              <h2 id={`source-heading-${source.id}`} lang={latinLang(source.name)}>{source.name}</h2>
+            </div>
+            {children(source)}
+          </section>
+        ))}
+      </div>
+    </div>
   )
 }

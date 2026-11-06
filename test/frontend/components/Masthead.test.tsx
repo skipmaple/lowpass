@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -11,16 +11,20 @@ import { currentUser } from '../support/props'
 afterEach(() => {
   setPageProps({})
   router.delete.mockClear()
+  document.documentElement.removeAttribute('data-theme')
+  localStorage.removeItem('lowpass-theme')
 })
 
 describe('Masthead 导航', () => {
-  it('刊名与两条导航指向日刊最新一期与周刊归档', () => {
+  it('刊名与独立的日刊、周刊、收藏、搜索导航', () => {
     setPageProps({})
     render(<Masthead />)
 
-    expect(screen.getByRole('link', { name: 'lowpass' })).toHaveAttribute('href', '/')
+    expect(screen.getAllByRole('link', { name: 'Lowpass 首页' })[0]).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: '日刊' })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: '周刊' })).toHaveAttribute('href', '/weekly')
+    expect(screen.getByRole('link', { name: '收藏' })).toHaveAttribute('href', '/favorites')
+    expect(screen.getByRole('link', { name: '搜索' })).toHaveAttribute('href', '/search')
   })
 
   it('当前栏目标 aria-current', () => {
@@ -53,7 +57,7 @@ describe('Masthead 搜索与账户', () => {
     const initial = path.getAttribute('d')
 
     await userEvent.click(button)
-    await waitFor(() => expect(path).toHaveAttribute('d', 'M18 6C14 10 10 14 6 18M6 6C10 10 14 14 18 18'))
+    await waitFor(() => expect(path).toHaveAttribute('d', 'M18 6 6 18'))
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(path).toHaveAttribute('d', initial!))
     expect(button).toHaveFocus()
@@ -164,13 +168,81 @@ describe('Masthead 搜索与账户', () => {
     expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['账户信息', '收藏', '登出'])
   })
 
-  it('菜单卡没有阴影（设计 L1）', async () => {
+  it('外观和账户面板互斥，切回外观仍可选择主题', async () => {
     setPageProps({ current_user: currentUser() })
     render(<Masthead />)
+    const appearance = screen.getByLabelText('切换阅读主题')
+    const account = screen.getByRole('button', { name: '账户' })
 
-    await userEvent.click(screen.getByRole('button', { name: '账户' }))
+    await userEvent.click(appearance)
+    expect(appearance.closest('details')).toHaveAttribute('open')
+    await userEvent.click(account)
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(appearance.closest('details')).not.toHaveAttribute('open')
 
-    expect(screen.getByRole('menu').getAttribute('style') ?? '').not.toMatch(/box-shadow/)
+    await userEvent.click(appearance)
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.getByRole('radio', { name: /双声部/ })).toBeVisible()
+  })
+
+  it('外观支持触屏点外关闭，Escape 返回触发器，不抢外部字段焦点', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<><Masthead /><input aria-label="页面字段" /></>)
+    const appearance = screen.getByLabelText('切换阅读主题')
+    const outside = screen.getByRole('textbox', { name: '页面字段' })
+
+    await userEvent.click(appearance)
+    fireEvent.pointerDown(document.body, { pointerType: 'touch' })
+    expect(appearance.closest('details')).not.toHaveAttribute('open')
+
+    await userEvent.click(appearance)
+    await userEvent.tab()
+    expect(screen.getByRole('radio', { name: /层叠清晨/ })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(appearance.closest('details')).not.toHaveAttribute('open')
+    expect(appearance).toHaveFocus()
+
+    await userEvent.click(appearance)
+    await userEvent.click(outside)
+    expect(appearance.closest('details')).not.toHaveAttribute('open')
+    expect(outside).toHaveFocus()
+  })
+
+  it('切换主题保留未保存输入和打开的面板，Tab 离开后面板关闭', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<><Masthead /><input aria-label="未保存输入" defaultValue="保留我的内容" /></>)
+    const draft = screen.getByRole('textbox', { name: '未保存输入' })
+    const appearance = screen.getByLabelText('切换阅读主题')
+
+    await userEvent.click(appearance)
+    await userEvent.click(screen.getByRole('radio', { name: /展开阅读/ }))
+    expect(document.documentElement.dataset.theme).toBe('unfold')
+    expect(screen.getByRole('textbox', { name: '未保存输入' })).toBe(draft)
+    expect(draft).toHaveValue('保留我的内容')
+    expect(appearance.closest('details')).toHaveAttribute('open')
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: '账户' })).toHaveFocus()
+    expect(appearance.closest('details')).not.toHaveAttribute('open')
+  })
+
+  it('账户菜单的 Tab 与 Shift+Tab 关闭面板且保留自然焦点顺序', async () => {
+    setPageProps({ current_user: currentUser() })
+    render(<><Masthead /><input aria-label="下一项" /></>)
+    const account = screen.getByRole('button', { name: '账户' })
+
+    await userEvent.click(account)
+    await userEvent.tab()
+    expect(screen.getByRole('textbox', { name: '下一项' })).toHaveFocus()
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await userEvent.click(account)
+    await userEvent.tab({ shift: true })
+    expect(account).toHaveFocus()
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await userEvent.click(account)
+    fireEvent.pointerDown(document.body, { pointerType: 'touch' })
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 })
 

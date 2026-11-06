@@ -24,46 +24,46 @@ describe('IssueHead', () => {
   it('跨年同月同日的页面显示年份，浏览器标题包含完整日期', () => {
     const { container } = head(dailyIssue({ period_key: '2025-09-08', year: 2025 }))
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('9月8日')
-    expect(container.querySelector('.issue-head-calendar')).toHaveTextContent('2025 年 · 星期二')
-    expect(document.title).toBe('日刊 · 2025年9月8日 · Lowpass')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('2025/09/08 日刊')
+    expect(container.querySelector('.calendar-meta')).toHaveTextContent('2025星期二')
+    expect(document.title).toBe('日刊 · 2025/09/08 · Lowpass')
   })
 
   it('日期是 h1，年份与星期合成一行，发布时间单独成第二层', () => {
     const { container } = head()
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('9月8日')
-    expect(container.querySelector('.issue-head-calendar')).toHaveTextContent('2026 年 · 星期二')
-    expect(container.querySelector('.issue-head-time')).toHaveTextContent('06:12 发布')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('2026/09/08 日刊')
+    expect(container.querySelector('.calendar-meta')).toHaveTextContent('2026星期二')
+    expect(container.querySelector('.calendar-date')).toHaveAttribute('title', '06:12 发布')
     expect(container.querySelector('.issue-head-weekday')).toBeNull()
   })
 
   it('有状态才挂标签', () => {
     const { container, unmount } = head()
-    expect(container.querySelector('.issue-head-tag')).toBeNull()
+    expect(container.querySelector('.issue-head-status')).toBeNull()
     unmount()
 
     const withTag = head(dailyIssue({ status: '昨日日刊，今日将于 06:00 生成' }))
-    expect(withTag.container.querySelector('.issue-head-tag')).toHaveTextContent('昨日日刊，今日将于 06:00 生成')
+    expect(withTag.container.querySelector('.issue-head-status')).toHaveTextContent('昨日日刊，今日将于 06:00 生成')
   })
 
-  it('前一期与归档按周期键拼地址', () => {
+  it('上一期与归档按周期键拼地址', () => {
     head()
 
-    for (const link of screen.getAllByRole('link', { name: '前一期' })) {
+    for (const link of screen.getAllByRole('link', { name: '上一期' })) {
       expect(link).toHaveAttribute('href', '/daily/2026-09-07')
     }
-    for (const link of screen.getAllByRole('link', { name: '归档' })) {
+    for (const link of screen.getAllByRole('link', { name: /查看日刊归档/ })) {
       expect(link).toHaveAttribute('href', '/daily')
     }
   })
 
-  // 最新一期没有「后一期」：退成不可点的记号，不是一个点了 404 的链接
-  it('没有后一期时按钮不可点', () => {
+  // 最新一期没有「下一期」：退成不可点的记号，不是一个点了 404 的链接
+  it('没有下一期时按钮不可点', () => {
     head()
 
-    const next = screen.getAllByRole('link', { name: '后一期' })
-    expect(next).toHaveLength(2)
+    const next = screen.getAllByRole('link', { name: '下一期' })
+    expect(next).toHaveLength(1)
     for (const control of next) {
       expect(control).toHaveAttribute('aria-disabled', 'true')
       expect(control).not.toHaveAttribute('href')
@@ -71,19 +71,19 @@ describe('IssueHead', () => {
     }
   })
 
-  it('有后一期时是真的链接', () => {
+  it('有下一期时是真的链接', () => {
     head(dailyIssue({ next_key: '2026-09-09' }))
 
-    for (const link of screen.getAllByRole('link', { name: '后一期' })) {
+    for (const link of screen.getAllByRole('link', { name: '下一期' })) {
       expect(link).toHaveAttribute('href', '/daily/2026-09-09')
       expect(link).not.toHaveAttribute('aria-disabled')
     }
   })
 
-  it('第一期没有「前一期」', () => {
+  it('第一期没有「上一期」', () => {
     head(dailyIssue({ prev_key: null }))
 
-    for (const control of screen.getAllByRole('link', { name: '前一期' })) {
+    for (const control of screen.getAllByRole('link', { name: '上一期' })) {
       expect(control).toHaveAttribute('aria-disabled', 'true')
     }
   })

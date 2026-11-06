@@ -1,0 +1,89 @@
+[
+  {
+    "theme": "daybreak",
+    "focus": {
+      "rect": {
+        "x": 212,
+        "y": 8,
+        "width": 44,
+        "height": 44,
+        "top": 8,
+        "right": 256,
+        "bottom": 52,
+        "left": 212
+      },
+      "outline": "rgb(0, 95, 101) solid 2px",
+      "offset": "3px",
+      "focusVisible": true,
+      "visualTop": 3,
+      "viewportHeight": 1000
+    },
+    "navs": [
+      {
+        "label": "后台",
+        "text": "信息源刊物管理用户设置任务队列",
+        "cls": "admin-nav",
+        "scrollWidth": 365,
+        "clientWidth": 320
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "focus": {
+      "rect": {
+        "x": 212,
+        "y": 145.5,
+        "width": 44,
+        "height": 44,
+        "top": 145.5,
+        "right": 256,
+        "bottom": 189.5,
+        "left": 212
+      },
+      "outline": "rgb(22, 22, 22) solid 2px",
+      "offset": "3px",
+      "focusVisible": true,
+      "visualTop": 140.5,
+      "viewportHeight": 1000
+    },
+    "navs": [
+      {
+        "label": "后台",
+        "text": "信息源刊物管理用户设置任务队列",
+        "cls": "admin-nav",
+        "scrollWidth": 312,
+        "clientWidth": 280
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "focus": {
+      "rect": {
+        "x": 212,
+        "y": 8,
+        "width": 44,
+        "height": 44,
+        "top": 8,
+        "right": 256,
+        "bottom": 52,
+        "left": 212
+      },
+      "outline": "rgb(208, 183, 117) solid 2px",
+      "offset": "3px",
+      "focusVisible": true,
+      "visualTop": 3,
+      "viewportHeight": 1000
+    },
+    "navs": [
+      {
+        "label": "后台",
+        "text": "信息源刊物管理用户设置任务队列",
+        "cls": "admin-nav",
+        "scrollWidth": 331,
+        "clientWidth": 280
+      }
+    ]
+  }
+]

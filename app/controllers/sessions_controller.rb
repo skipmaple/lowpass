@@ -11,7 +11,12 @@ class SessionsController < ApplicationController
   # 到了登录页就没有人登录着（登出、会话过期、撞登录墙都落在这里）：clear_history 清掉 Inertia 加密历史的密钥，
   # 共用的电脑上按后退拿不回上一个人的页面（收藏页的列表就在 props 里，R-10.8）
   def new
-    render inertia: "Login/Show", props: { providers: Rails.configuration.x.auth_providers, next: safe_next(params[:next]) }, clear_history: true
+    providers = Rails.configuration.x.auth_providers
+    props = { providers: providers, next: safe_next(params[:next]) }
+    if Rails.env.development? && providers.include?("developer")
+      props[:developer_accounts] = Identity::DevelopmentAccounts.call
+    end
+    render inertia: "Login/Show", props: props, clear_history: true
   end
 
   def create

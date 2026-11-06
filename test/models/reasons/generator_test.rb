@@ -7,6 +7,81 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     @issue = issues(:daily_0908)
     @item = items(:hn_one)
     @other = Item.create!(source: sources(:github), issue: @issue, title: "octo/tool", url: "https://github.com/octo/tool", url_hash: Digest::SHA256.hexdigest("https://github.com/octo/tool"), rank: 1, fetched_at: Time.current, meta: { "stars" => 10, "language" => "Go" })
+    # 此文件验证生成流程；原文 HTTP 与解析边界由 EvidenceTest 独立覆盖。
+    Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "The tool streams local log files, filters entries by level, and exports matching events as JSON.", url: @item.url, error: nil))
+  end
+
+  test "无说明条目先读正文，只调用一次模型且不改写刊物原字段" do
+    evidence = Reasons::Evidence::Result.new(text: "Streams logs with filters and aggregation without loading the full file.", url: @item.url, error: nil)
+    Reasons::Evidence.expects(:fetch).with(@item).once.returns(evidence)
+    before = @item.attributes.slice("title", "url", "summary", "content")
+    with_model_provider do
+      request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).with { |r| JSON.parse(r.body)["messages"].last["content"].include?(evidence.text) }
+        .to_return(status: 200, body: model_reply(reason: "流式过滤与聚合避免整份日志载入内存，可借鉴其处理大文件的方法。", interest_tag: "前端开发"))
+      assert Reasons::Generator.generate_item!(@item)
+      assert_requested request, times: 1
+    end
+    assert_equal before, @item.reload.attributes.slice("title", "url", "summary", "content")
+  end
+
+  test "短简介即使模型会直接回答，也先补读 README 供首次请求判断" do
+    @other.update!(summary: "Agent Skills for Google products and technologies.", meta: { "language" => "Python" })
+    evidence = Reasons::Evidence::Result.new(text: "Install skills with npx skills add google/skills. The repository contains instructions for agents using Google products and Google Cloud.", url: @other.url, error: nil)
+    Reasons::Evidence.expects(:fetch).with(@other).once.returns(evidence)
+    first_prompt = nil
+    with_model_provider do
+      request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |r|
+        first_prompt = JSON.parse(r.body)["messages"].last["content"]
+        { status: 200, body: model_reply(reason: "按产品安装所需技能说明，帮助智能体采用对应的工具和工作流程。", interest_tag: "AI / LLM") }
+      end
+
+      assert Reasons::Generator.generate_item!(@other)
+
+      assert_requested request, times: 1
+      assert_includes first_prompt, evidence.text
+    end
+    assert_equal [ "ok" ], ModelCall.pluck(:status)
+  end
+
+  test "较长简介仍不足时只补读一次原文，用新资料重试而非重复空输入" do
+    @other.update!(summary: "An agent toolkit for developers exploring new ways of working with modern technologies. Learn more about the project and its available resources in the repository.")
+    evidence = Reasons::Evidence::Result.new(text: "Provides reproducible browser workflows with assertions and execution traces.", url: @other.url, error: nil)
+    Reasons::Evidence.expects(:fetch).with(@other).once.returns(evidence)
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |r|
+        reason = JSON.parse(r.body)["messages"].last["content"].include?(evidence.text) ? "通过断言与执行轨迹复现浏览器工作流，便于定位智能体操作中的偏差。" : ""
+        { status: 200, body: model_reply(reason: reason, interest_tag: "AI / LLM") }
+      end
+      assert Reasons::Generator.generate_item!(@other)
+      assert_requested :post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2
+    end
+    assert_equal %w[ invalid ok ], ModelCall.order(:created_at).pluck(:status)
+  end
+
+  test "原文失败保留具体原因，不重复抓取或清掉旧理由" do
+    @item.update!(reason: "旧理由", title_zh: "旧译文")
+    Reasons::Evidence.expects(:fetch).with(@item).once.returns(Reasons::Evidence::Result.new(text: nil, url: @item.url, error: "原文获取失败：访问被拒绝（403/429）"))
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "", interest_tag: "AI / LLM"))
+      assert_not Reasons::Generator.generate_item!(@item)
+      assert_requested stub, times: 1
+    end
+    assert_equal "原文获取失败：访问被拒绝（403/429）", ModelCall.sole.error_summary
+    assert_equal [ "旧理由", "旧译文" ], [ @item.reload.reason, @item.title_zh ]
+  end
+
+  test "无摘要且原文失败，即使模型猜出格式合法的理由也不能落库" do
+    @item.update!(reason: "已确认的旧理由", title_zh: "已确认的旧译文")
+    before = @item.attributes.slice("reason", "title_zh", "reason_generated_at")
+    Reasons::Evidence.expects(:fetch).with(@item).once.returns(Reasons::Evidence::Result.new(text: nil, url: @item.url, error: "原文资料不足：未提取到可用正文"))
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200,
+        body: model_reply(reason: "采用流式解析避免将整个文件读入内存，方便分析大规模日志。", interest_tag: "AI / LLM", title_zh: "猜测的新译文"))
+      assert_not Reasons::Generator.generate_item!(@item)
+      assert_requested stub, times: 1
+    end
+    assert_equal before, @item.reload.attributes.slice("reason", "title_zh", "reason_generated_at")
+    assert_equal [ "invalid", "原文资料不足：未提取到可用正文" ], ModelCall.sole.then { |call| [ call.status, call.error_summary ] }
   end
 
   test "没配供应商：什么都不做，也不记账" do
@@ -92,6 +167,60 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_equal "缺领域名", ModelCall.last.error_summary
   end
 
+  test "明确资料不足只调用一次并记账，不覆盖现有理由与译文" do
+    @item.update!(reason: "原有理由", interest_tag: "AI / LLM", title_zh: "原有中文标题", reason_generated_at: 1.day.ago)
+    before = @item.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at")
+    with_model_provider do
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200,
+        body: model_reply(reason: "", interest_tag: "前端开发", title_zh: "这次译文", prompt_tokens: 100, completion_tokens: 40))
+
+      assert_not Reasons::Generator.generate_item!(@item)
+
+      assert_requested stub, times: 1
+    end
+    assert_equal before, @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at")
+    assert_equal [ "invalid", "条目资料不足，未生成理由", 100, 40 ],
+      ModelCall.sole.then { |call| [ call.status, call.error_summary, call.prompt_tokens, call.completion_tokens ] }
+  end
+
+  test "资料不足不阻止同一期其余条目继续生成" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
+        prompt = JSON.parse(request.body)["messages"].last["content"]
+        reason = prompt.include?("标题：#{@item.title}\n") ? "" : "这个工具通过命令行处理日常操作，能省去重复的手工步骤。"
+        { status: 200, body: model_reply(reason: reason, interest_tag: "AI / LLM") }
+      end
+
+      outcome = Reasons::Generator.generate!(@issue)
+
+      assert_equal [ 1, 1 ], [ outcome.generated, outcome.failed ]
+      assert_requested :post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2
+    end
+    assert_nil @item.reload.reason
+    assert_not_nil @other.reload.reason
+  end
+
+  test "错误结构与非法标签仍重试，不能冒充资料不足" do
+    with_model_provider do
+      [
+        "broken json",
+        { interest_tag: "AI / LLM" }.to_json,
+        { reason: nil, interest_tag: "AI / LLM" }.to_json,
+        { reason: [ "一" * 30 ], interest_tag: "AI / LLM" }.to_json,
+        { reason: "", interest_tag: "不存在" }.to_json,
+        { reason: "太短", interest_tag: "AI / LLM" }.to_json
+      ].each do |content|
+        response = Reasons::Provider::Response.new(text: content, prompt_tokens: 100, completion_tokens: 40)
+        Reasons::Provider.expects(:chat).times(3).returns(response)
+        assert_difference -> { ModelCall.where(item: @item, status: "invalid").count }, 3 do
+          assert_not Reasons::Generator.generate_item!(@item)
+        end
+      end
+    end
+    assert_nil @item.reload.reason
+    assert_not ModelCall.exists?(error_summary: "条目资料不足，未生成理由")
+  end
+
   test "超时记 timed_out 并重试；密钥被拒绝整期停止" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_timeout
@@ -103,6 +232,48 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       assert_equal 1, outcome.failed
       assert_equal 1, ModelCall.where(status: "failed", error_summary: "密钥被拒绝").count   # 第一条就停，第二条没调
     end
+  end
+
+  test "长度截断只记一次真实用量，不重复请求或覆盖旧理由译文" do
+    @item.update!(reason: "原有理由", interest_tag: "AI / LLM", title_zh: "原有中文标题", reason_generated_at: 1.day.ago)
+    before = @item.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at")
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      reply = JSON.parse(model_reply(reason: "看起来完整的推荐理由也不能绕过服务端的截断标记而覆盖旧内容。", interest_tag: "前端开发", title_zh: "不应保存的译文", prompt_tokens: 456, completion_tokens: 2047))
+      reply["choices"].first["finish_reason"] = "length"
+      request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: reply.to_json)
+
+      assert_not Reasons::Generator.generate_item!(@item)
+
+      assert_requested request, times: 1
+    end
+    assert_equal before, @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at")
+    assert_equal [ "failed", 456, 2047, BigDecimal("0.0209"), "模型输出达到长度上限，未生成完整回复" ],
+      ModelCall.sole.then { |call| [ call.status, call.prompt_tokens, call.completion_tokens, call.cost, call.error_summary ] }
+  end
+
+  test "空内容截断的真实费用计入上限，阻止同一期后续请求" do
+    with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
+      with_model_provider do
+        Setting.set("model_monthly_cap", "0.01")
+        Setting.set("model_output_price", "10")
+        request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: {
+          choices: [ { finish_reason: "length", message: { content: "", reasoning_content: "尚未给出最终答案" } } ],
+          usage: { prompt_tokens: 456, completion_tokens: 2047 }
+        }.to_json)
+
+        outcome = Reasons::Generator.generate!(@issue)
+
+        assert_equal [ 0, 1 ], [ outcome.generated, outcome.failed ]
+        assert_requested request, times: 1
+        assert Reasons::Budget.exhausted?
+      end
+    end
+    assert_nil @item.reload.reason
+    assert_nil @other.reload.reason
+    assert_equal 2047, ModelCall.sole.completion_tokens
+    assert_match(/本月费用已达上限/, AlertEvent.find_by!(kind: "reasons_missing").summary)
   end
 
   # 仓库不变量「429 / 403 不追加重试」：条内不重试，本期也到此为止（设计 C11）

@@ -13,6 +13,61 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     issues(:daily_0908).replace_section!(sources(:hn), [ Adapters::Entry.new(title: "Another", url: "https://h.example/other", rank: 1) ])
   end
 
+  test "关键词先筛全部收藏再分页，不只筛当前页" do
+    travel_to(Time.utc(2026, 9, 9)) { Favorite.keep(users(:drew), index_item("Needle framework")) }
+    21.times { |n| travel_to(Time.utc(2026, 9, 10, 0, n)) { Favorite.keep(users(:drew), index_item("Other #{n}")) } }
+
+    get favorites_path(q: "Needle")
+
+    assert_response :success
+    assert_equal [ "Needle framework" ], page_props["entries"].pluck("title")
+    assert_equal 1, page_props["total"]
+    assert_equal 1, page_props["pages"]
+    assert_equal "Needle", page_props["q"]
+  end
+
+  test "收藏搜索包含后补译文，同时保持本人和下架边界" do
+    Favorite.keep(users(:drew), @item)
+    @item.update!(title_zh: "新框架的终端查看器")
+    Favorite.keep(users(:guest), index_item("新框架 private"))
+
+    get favorites_path(q: "新框架")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+
+    @item.update!(hidden: true)
+    get favorites_path(q: "新框架")
+    assert_empty page_props["entries"]
+    assert_equal 0, page_props["total"]
+  end
+
+  test "收藏搜索把 LIKE 通配符当文字，并保留来源和越界分页条件" do
+    Favorite.keep(users(:drew), index_item("100% coverage"))
+    Favorite.keep(users(:drew), @item)
+
+    get favorites_path(q: "%", source: sources(:hn).id)
+    assert_equal [ "100% coverage" ], page_props["entries"].pluck("title")
+    assert_equal sources(:hn).id, page_props["source"]
+    assert_equal [ sources(:hn).id ], page_props["source_options"].pluck("id")
+
+    get favorites_path(q: "%", source: sources(:hn).id, page: 9)
+    assert_redirected_to favorites_path(q: "%", source: sources(:hn).id, page: 1)
+  end
+
+  test "收藏来源筛选只返回该来源，参数异常不会造成查询错误" do
+    Favorite.keep(users(:drew), @item)
+    Favorite.keep(users(:drew), index_item("astral-sh/uv", source: sources(:github)))
+
+    get favorites_path(source: sources(:github).id)
+    assert_equal [ "astral-sh/uv" ], page_props["entries"].pluck("title")
+    assert_equal 1, page_props["total"]
+
+    get favorites_path, params: { q: [ "Rust" ], source: [ sources(:github).id ] }
+    assert_response :success
+    assert_equal 2, page_props["total"]
+    assert_equal "", page_props["q"]
+    assert_equal "", page_props["source"]
+  end
+
   # ── 收藏页 ──
 
   test "没有收藏：空列表，带去最新日刊要的键（AC-10.10）" do

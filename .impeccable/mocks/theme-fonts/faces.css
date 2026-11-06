@@ -1,0 +1,10 @@
+@font-face{font-family:"LP Chinese A";font-style:normal;font-weight:400;font-display:swap;src:url("a-regular.woff2") format("woff2")}
+@font-face{font-family:"LP Chinese A";font-style:normal;font-weight:700;font-display:swap;src:url("a-bold.woff2") format("woff2")}
+@font-face{font-family:"LP Latin A";font-style:normal;font-weight:200 800;font-stretch:75% 100%;font-display:swap;src:url("a-latin.woff2") format("woff2")}
+@font-face{font-family:"LP Chinese B";font-style:normal;font-weight:400;font-display:swap;src:url("b-regular.woff2") format("woff2")}
+@font-face{font-family:"LP Chinese B";font-style:normal;font-weight:700;font-display:swap;src:url("b-bold.woff2") format("woff2")}
+@font-face{font-family:"LP Latin B";font-style:normal;font-weight:200 800;font-display:swap;src:url("b-latin.woff2") format("woff2")}
+@font-face{font-family:"LP Chinese C";font-style:normal;font-weight:400;font-display:swap;src:url("c-regular.woff2") format("woff2")}
+@font-face{font-family:"LP Chinese C";font-style:normal;font-weight:700;font-display:swap;src:url("c-bold.woff2") format("woff2")}
+@font-face{font-family:"LP Latin C";font-style:normal;font-weight:100 700;font-stretch:75% 100%;font-display:swap;src:url("c-latin.woff2") format("woff2")}
+@font-face{font-family:"LP Mono";font-style:normal;font-weight:400;font-display:swap;src:url("mono.woff2") format("woff2")}

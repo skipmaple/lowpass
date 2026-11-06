@@ -42,6 +42,10 @@ bin/dev
 跑着，`log/development.log` 里每分钟一条。日刊生成、周刊检查的时间点读 `Setting`（键
 `daily_time`、`weekly_time`），不是写死在代码里。
 
+Web 与 Vite 保留热重载。`bin/jobs` 的开发进程固定启动时的 Ruby 代码版本，避免整期模型推理期间
+其他任务触发类卸载，阻塞队列心跳后被误判为失联。修改任务或模型代码后，在空闲时重启 `bin/dev`
+（独立启动 jobs 时则重启 `bin/jobs`）；不用重建数据库，生产环境不受此开关影响。
+
 ## 队列面板
 
 ```
@@ -50,19 +54,25 @@ http://localhost:3000/admin/jobs
 
 `mission_control-jobs` 三个环境都挂在 `/admin/jobs`（`config/routes.rb`），只给 admin：认证由 `Admin::BaseController`
 做（登录墙 + 白名单角色，`config/application.rb` 的 `base_controller_class`），引擎自带的 HTTP Basic Auth 关掉了，
-仓库里没有凭证。本地要看它，先用开发登录、邮箱填在 `ADMIN_EMAILS` 里的那个（见下文「登录」）。
+仓库里没有凭证。本地要看它，在登录页点击管理员快捷入口（需先配置 `ADMIN_EMAILS`，见下文「登录」）。
 
 ## 登录
 
-全站要登录才能读（PRD D1）。development 的登录页多一个「开发登录」表单（OmniAuth 的 `developer` 策略，
-只在 development 挂载）：填显示名与邮箱就进来，不需要任何 OAuth 应用。管理员由白名单推导（R-5.5）：
+全站要登录才能读（PRD D1）。development 的登录页提供管理员、普通读者的一键入口，无需反复输入显示名和邮箱，
+也不需要 OAuth 应用；「使用其他账号」仍可手动填写，方便测试身份合并等流程。快捷入口继续使用仅在 development
+挂载的 OmniAuth `developer` 策略，不新增认证路径、不绕过管理员白名单（R-5.5）：
 
 ```
 # .env（仓库已忽略 /.env*；bin/dev 用的 Foreman 会自动读它）
 ADMIN_EMAILS=you@example.com
+# 可选：多个白名单账号时，指定快捷入口使用哪个；未指定时使用白名单第一项
+DEV_LOGIN_ADMIN_EMAIL=you@example.com
 ```
 
-填在白名单里的邮箱登录后，报头头像菜单多一项「管理」。换一个邮箱登录就是普通成员，方便看两种视图。
+管理员快捷入口只在所选邮箱确实位于白名单时出现；登录后报头头像菜单多一项「管理」。普通读者入口固定使用
+`reader@lowpass.test`，若它或其关联身份已在管理员白名单内则不提供该入口，避免把管理员误标成普通读者。
+已有账号会保留原显示名与收藏。仅访问登录页不会新建账号，第一次点击登录才会创建；之后重复使用同一个身份。
+修改 `.env` 后重启 `bin/dev`。production 不输出快捷账号，只保留已配置的 Google / GitHub 登录。
 
 想在本地走真实的 Google / GitHub 登录，在两家各建一个 OAuth 应用：Google Cloud Console 的「OAuth 客户端 ID」
 （Web 应用，已授权的重定向 URI 填 `http://localhost:3000/auth/google_oauth2/callback`，同意屏幕范围 `openid email profile`）；
@@ -133,12 +143,56 @@ MODEL_API_KEY=…
 
 三样齐了才生成：日刊发布后入队 `GenerateReasonsJob`，一期顺序做，单条 20 秒超时、重试 2 次，缺领域名判失败；跨天重复的条目沿用前一期理由。
 Hacker News 与 Hackaday（RSS 日刊源）的标题、GitHub Trending 的仓库简介在同一次调用里顺带拿回中文译文（PRD D25，`items.title_zh` / `items.summary_zh`），读者页排在各自原文下方；不多一次调用，译文不合规只当没有，不影响理由。D25 上线前已经发布的期没有译文：到后台期页对那一期点「重生成理由」就连同译文一起补上（整期覆盖，理由也会重写，一期约 30 次调用）。
-后台期页每期显示「已生成 / 缺 N 条」并可「重生成理由」（整期覆盖）；读者页不提供重生成入口，避免误触产生模型费用。受保护的单条重生成后端接口仍保留给管理流程。
+后台期页每期显示「已生成 / 缺 N 条」并可「重生成理由」（整期覆盖）。排队和执行期间每 5 秒更新实际写回条数，
+同一期不重复入队；队列结束后还会核对内容，区分完成、部分未生成与任务中断。资料不足时模型可明确留空理由，
+说明不足 80 字符的条目会先补读原文，较长说明仍不足的条目再补读一次，以新依据重试；同一份资料不无效重试，也不清除已有内容。
+原文读取总耗时最多 20 秒、响应不超过 2 MB，提取最多 12000 字符，正文只临时用于生成；原始标题、摘要与期内容不变。
+GitHub 使用 README；CVE 动态页面使用同一编号的官方 CVEProject JSON。源站拒绝、解析失败和无正文分别记录原因。
+读者页不提供重生成入口，避免误触产生模型费用。
+受保护的单条重生成后端接口仍保留给管理流程。
 账本在 `model_calls`（`ModelCall.order(created_at: :desc).limit(20)`），保留 90 天；月费用到上限就停止生成并告警一次。
 发布 30 分钟后仍缺理由会告警（③ 的「推荐理由缺失」）。初始兴趣画像由 `bin/rails db:seed` 建，后台可增删改。
 **已经存在的数据库要手动跑一次 `bin/rails db:seed`**：`bin/setup` 与 Kamal 的 `db:prepare` 只在新建数据库时播种，
 老库里的 `interest_areas` 是空的。画像里没有启用的领域就不生成（不调模型、不记费用），
 后台期页那一格与两个「重生成」都会写「兴趣画像为空」。
+
+### 开发环境使用本机模型
+
+在开发后台 `/admin/settings` 保存 API 基础地址 `http://localhost:1236/v1` 和本机服务实际提供的模型 ID
+（可从 `curl http://localhost:1236/v1/models` 查看）。地址与模型名保存在开发数据库，后续出刊、重抓后补缺、
+后台重生成都会使用这份设置，不限于种子数据。不要修改生产后台。
+
+根目录 `.env` 加入以下配置；文件已被 Git 和 Docker 忽略：
+
+```dotenv
+MODEL_API_KEY=local-development
+MODEL_LOCAL_COMPAT=1
+```
+
+占位 key 只适用于未开启鉴权的本机服务；开启鉴权时改为服务要求的真实 key。`bin/dev` 的 Foreman 自动读取 `.env`，
+同时传给 Web 和 jobs，修改后重启整个 `bin/dev`。直接运行 Rails 命令时用
+`mise exec -- foreman run -e .env bin/rails console`（或 `runner`），否则不会自动加载这个文件。
+数据库端口也在 `.env` 指定，例如本地审核库为 `PGPORT=55432`。
+
+若本机代理启用 fake-IP（例如将公开域名解析为 `198.18.0.0/15`），Surfguard 会正确阻止这些特殊地址。
+可仅在开发 `.env` 设置 `DEV_PUBLIC_DNS=cloudflare` 并重启 `bin/dev`：用固定 TLS 校验的 Cloudflare DoH
+取得 A 记录，仍逐条经过 Surfguard 公网校验，再固定 IP 连接源站；每次重定向重新校验。这个开关不会放行私网，
+也不会修改系统代理或生产 DNS；解析器失败时直接报告获取失败，不回退到 fake-IP。
+
+`MODEL_LOCAL_COMPAT=1` 仅在 development 且模型主机为 `localhost` / `127.0.0.1` 时改变请求：
+使用 `response_format: text`，仍要求最终内容为 JSON 并经过现有 Parser 校验；读取超时 300 秒，输出至少 8192 tokens，
+为本机模型的思考开销留出空间。只读 `message.content`，不将 `reasoning_content` 写入理由。
+`finish_reason: length` 表示输出额度耗尽，明确记录截断与实际 token 用量，不以相同参数重复调用，也不接纳半截内容。
+开发环境开启此开关时整期任务并发锁延长到 4 小时；生产及远程模型请求保持原有格式、20 秒超时与输出额度。
+连接超时、响应体上限、鉴权失败／限流不重试及费用记账规则保持原样。
+
+该兼容方式来自本机实测：服务拒绝 `json_object`，当前加载模型使用 `json_schema` 时最终 `content` 为空；
+文本模式可正常返回 JSON。结构化输出的协议说明见 [LM Studio 文档](https://lmstudio.ai/docs/developer/openai-compat/structured-output)。
+
+保持本机服务和模型运行；`bin/dev` 不会启动 LM Studio。接口离线时仍按现有规则记录失败，恢复后从后台重生成；
+定时器只告警缺理由，不会自动重新补写。模型单价可设为 0（本机推理不计外部 API 费用），月上限 0 代表不限。
+接入成功仅证明调用链可用；理由还要核对临时提取的原文依据，不能把补齐数量作为内容质量验收。
+无摘要且正文获取失败时，即使模型返回格式合法的理由也不写入，账本保留具体失败原因。
 
 ## 备份
 

@@ -26,7 +26,9 @@ module Issue::Finalization
     # 5.7 空刊是严重告警（AC-1.4）；正常发布则把之前的空刊事件收掉
     empty? ? Alerts.issue_empty!(self) : Alerts.recover!(kind: "issue_empty")
     # R-9.1 发布后异步生成推荐理由（D19：只有日刊）；生成与发布解耦
-    GenerateReasonsJob.perform_later(self) if kind == "daily" && state == "published"
+    if kind == "daily" && state == "published"
+      GenerateReasonsJob.perform_later(self, true, Translations.automatic_context(self, item_ids: items.visible.pluck(:id)))
+    end
   end
 
   private

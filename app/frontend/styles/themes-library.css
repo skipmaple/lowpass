@@ -1,8 +1,11 @@
 /* Search and saved discoveries share content semantics, not one theme's composition. */
 .library-page { min-width: 0; }
 .library-workspace { min-width: 0; }
+.library-page .search-results { max-width: none; margin-inline: 0; }
 .library-page .search-head { padding: 28px 0 12px; gap: 12px; border-bottom: 2px solid var(--accent, var(--ink)); }
 .library-page .search-input { padding: 4px 8px; font-family: var(--font-cjk); font-size: 24px; line-height: 1.5; }
+.library-page .search-field--has-clear .search-input { padding-right: 44px; }
+.library-page .search-hint { padding-left: 0; }
 .library-page .search-input:focus-visible { outline-offset: -2px; }
 .library-page .search-input::placeholder { font-size: 20px; }
 .library-page .search-head .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding-inline: 20px; }
@@ -36,6 +39,7 @@
 .library-page .search-mark { margin-left: auto; flex: none; }
 .library-page .favorite-removed { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; }
 .library-page .favorite-removed button { min-height: 44px; }
+.library-page .favorite-restore .favorite-ink { left: 2px; right: auto; }
 .library-page .record-rail { display: none; }
 .collection-search { display: flex; flex-wrap: wrap; gap: 10px 20px; padding: 28px 0 0; align-items: center; }
 .collection-search > label:first-child { flex: 0 0 100%; font-size: 14px; font-weight: 600; }

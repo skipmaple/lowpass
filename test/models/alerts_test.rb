@@ -108,4 +108,16 @@ class AlertsTest < ActiveSupport::TestCase
     assert_equal "本月费用已达上限，缺理由 2 条", event.summary
     assert_equal "理由缺失 3 条", Alerts.reasons_missing!(issues(:weekly_w36), 3).summary
   end
+
+  test "按期恢复仅收窄指定的同类事件" do
+    ours = alert_event(kind: "reasons_missing", source: nil, dedup_key: "ours")
+    other = alert_event(kind: "reasons_missing", source: nil, issue: issues(:weekly_w36), dedup_key: "other")
+    source = alert_event(dedup_key: "source")
+    Alerts.recover!(kind: "reasons_missing", issue: issues(:daily_0908))
+    assert_not_nil ours.reload.recovered_at
+    assert_nil other.reload.recovered_at
+    assert_nil source.reload.recovered_at
+    Alerts.recover!(kind: "source_failed", source: sources(:hn))
+    assert_not_nil source.reload.recovered_at
+  end
 end

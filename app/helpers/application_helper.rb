@@ -10,4 +10,14 @@ module ApplicationHelper
       fonts.map { |font| vite_asset_path("fonts/themes/#{font}.woff2") }
     end
   end
+
+  # 搜索专属模块和依赖与入口并行请求；公共依赖仍由入口负责，避免重复标签。
+  def search_page_preload_tag
+    return unless controller_path == "searches" && action_name == "show" && !Rails.env.development?
+
+    search = vite_manifest.resolve_entries("pages/Search/Show.tsx")
+    application = vite_manifest.resolve_entries("application.tsx", type: :typescript)
+    search_only = (search.fetch(:scripts) + search.fetch(:imports)) - (application.fetch(:scripts) + application.fetch(:imports))
+    vite_preload_tag(*search_only, crossorigin: "", data: { search_page: true })
+  end
 end

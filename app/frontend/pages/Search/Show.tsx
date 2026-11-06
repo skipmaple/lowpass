@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import { Ctrl } from '@/components/Ctrl'
@@ -7,12 +7,14 @@ import Icon from '@/components/Icon'
 import Layout from '@/components/Layout'
 import PageHead from '@/components/PageHead'
 import Pager from '@/components/Pager'
-import SearchFilters, { hasActiveFilters } from '@/components/SearchFilters'
+import SearchFilters, { hasActiveFilters, useFilterDraft } from '@/components/SearchFilters'
+import type { FilterDraft } from '@/components/SearchFilters'
 import SearchResultRow from '@/components/SearchResultRow'
 import Seg from '@/components/Seg'
 import { normalizeDateLabel } from '@/lib/displayDate'
 import { FavoritesProvider } from '@/lib/favorites'
 import { dailyHref, latestWeeklyHref, searchHref } from '@/lib/paths'
+import { searchResultTarget } from '@/lib/searchFocus'
 import { Mixed } from '@/lib/typeset'
 import type { DatePresets, FooterData, SearchFilters as Filters, SearchResult, SearchSourceOption, SearchState } from '@/types/lowpass'
 
@@ -54,7 +56,7 @@ function hrefOf(q: string, filters: Filters, page = 1) {
 
 // 查询词输入框和提交按钮；回车与按钮都提交。
 // 由 Inertia 访问 /search（GET），筛选原样带上、页码归 1。草稿由页面持有，让期头和筛选始终使用同一个值。
-function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, unsupported }: { draft: string; setDraft: (value: string) => void; filters: Filters; truncated: boolean; inputRef: React.RefObject<HTMLInputElement | null>; loading: boolean; unsupported: boolean }) {
+function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, unsupported, autoFocus }: { draft: string; setDraft: (value: string) => void; filters: Filters; truncated: boolean; inputRef: React.RefObject<HTMLInputElement | null>; loading: boolean; unsupported: boolean; autoFocus: boolean }) {
   function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!loading) router.get(hrefOf(draft.trim(), filters))
@@ -67,7 +69,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
 
   return (
     <form className="search-head" role="search" onSubmit={submit}>
-      <div className="search-field">
+      <div className={draft.length ? 'search-field search-field--has-clear' : 'search-field'}>
         <label className="sr-only" htmlFor="search-query">搜索</label>
         <input
           ref={inputRef}
@@ -79,9 +81,9 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
           onChange={(event) => setDraft(event.target.value)}
           placeholder={COPY.placeholder}
           aria-invalid={unsupported || undefined}
-          aria-describedby={unsupported ? 'search-status' : undefined}
+          aria-describedby={unsupported ? 'search-status search-hint' : 'search-hint'}
           autoComplete="off"
-          autoFocus
+          autoFocus={autoFocus}
         />
         <button type="button" className="search-clear" aria-label="清除搜索词" disabled={draft.length === 0} onClick={clear}>
           <Icon name="x" size={18} />
@@ -90,29 +92,31 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
       <button type="submit" className="btn-primary" disabled={loading} aria-busy={loading}>
         搜索
       </button>
+      <span id="search-hint" className="search-hint" aria-hidden="true">{COPY.placeholder}</span>
       {truncated ? <span className="search-note">{COPY.truncated}</span> : null}
     </form>
   )
 }
 
 // 结果计数（PRD 6.2 明确要求的计数）与排序分段（F-17）同一行
-function CountLine({ total, q, filters }: { total: number; q: string; filters: Filters }) {
+function CountLine({ total, q, draft, loading }: { total: number; q: string; draft: FilterDraft; loading: boolean }) {
+  const { filters } = draft
   const options = [
-    { label: '相关度', href: hrefOf(q, { ...filters, sort: 'relevance' }), active: filters.sort === 'relevance' },
-    { label: '时间', href: hrefOf(q, { ...filters, sort: 'date' }), active: filters.sort === 'date' },
+    { label: '相关度', href: hrefOf(q, { ...filters, sort: 'relevance' }), active: filters.sort === 'relevance', preserveState: true, onBefore: () => { draft.change({ sort: 'relevance' }); return false } },
+    { label: '时间', href: hrefOf(q, { ...filters, sort: 'date' }), active: filters.sort === 'date', preserveState: true, onBefore: () => { draft.change({ sort: 'date' }); return false } },
   ]
 
   return (
     <div className="search-count">
-      <span aria-hidden="true"><Mixed text={`${total} 条结果`} size="var(--fs-13)" color="var(--ink2)" /></span>
+      <span aria-hidden="true"><Mixed text={loading ? '正在搜索…' : `${total} 条结果`} size="var(--fs-13)" color="var(--ink2)" /></span>
       <Seg label="排序" options={options} />
     </div>
   )
 }
 
-// R-4.7 分页：草稿里的查询词变了，翻页就从新查询的第 1 页开始
-function SearchPager({ q, committedQuery, filters, page, pages }: { q: string; committedQuery: string; filters: Filters; page: number; pages: number }) {
-  const pageFor = (target: number) => q === committedQuery ? target : 1
+// R-4.7 分页：查询词或筛选目标变了，翻页就从新条件的第 1 页开始。
+function SearchPager({ q, filters, current, page, pages }: { q: string; filters: Filters; current: boolean; page: number; pages: number }) {
+  const pageFor = (target: number) => current ? target : 1
 
   return (
     <Pager
@@ -135,8 +139,9 @@ function statusText({ state, q, total }: SearchShowProps) {
   }
 }
 
-function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery: () => void; loading: boolean }) {
+function Body(props: SearchShowProps & { navigationQuery: string; filterDraft: FilterDraft; onModifyQuery: () => void; loading: boolean }) {
   const { state, q, filters, results, total, page, pages, latest_daily_key, latest_daily_label } = props
+  const current = props.navigationQuery === q && hrefOf('', props.filterDraft.filters) === hrefOf('', filters)
 
   switch (state) {
     case 'initial':
@@ -164,19 +169,19 @@ function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery:
     case 'unavailable':
       return (
         <div className="search-notice-action">
-          <button type="button" className="ctrl" disabled={props.loading} onClick={() => router.get(hrefOf(props.navigationQuery, filters, props.navigationQuery === q ? page : 1))}>重试</button>
+          <button type="button" className="ctrl" disabled={props.loading} onClick={() => router.get(hrefOf(props.navigationQuery, props.filterDraft.filters, current ? page : 1))}>重试</button>
         </div>
       )
     case 'results':
       return (
         <>
-          <CountLine total={total} q={props.navigationQuery} filters={filters} />
+          <CountLine total={total} q={props.navigationQuery} draft={props.filterDraft} loading={props.loading} />
           <div className="search-results">
             {results.map((result) => (
               <SearchResultRow key={result.item_id} result={result} q={q} />
             ))}
           </div>
-          {pages > 1 ? <SearchPager q={props.navigationQuery} committedQuery={q} filters={filters} page={page} pages={pages} /> : null}
+          {pages > 1 ? <SearchPager q={props.navigationQuery} filters={props.filterDraft.filters} current={current} page={page} pages={pages} /> : null}
         </>
       )
   }
@@ -184,13 +189,34 @@ function Body(props: SearchShowProps & { navigationQuery: string; onModifyQuery:
 
 export default function Show(props: SearchShowProps) {
   const { url: navigationUrl } = usePage<SearchShowProps>()
+  const pageUrl = new URL(navigationUrl, window.location.origin)
+  const queryUrl = pageUrl.pathname + pageUrl.search
   const [draft, setDraft] = useState(props.q)
+  const navigationQuery = draft.trim()
+  // 整页共用一个筛选目标；结果、计数和状态仍来自服务端确认的 props。
+  const filterDraft = useFilterDraft(navigationQuery, props.filters)
   const [loading, setLoading] = useState(false)
+  const [returnTarget] = useState(searchResultTarget)
   const inputRef = useRef<HTMLInputElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
 
-  useEffect(() => setDraft(props.q), [navigationUrl, props.q])
+  useLayoutEffect(() => {
+    if (!returnTarget) return
+
+    const main = document.getElementById('main-content')
+    if (document.activeElement !== main && main?.contains(document.activeElement)) return
+
+    const link = document.getElementById(returnTarget)
+    // 多个周刊结果可能共用一个板块地址；身份或链接消失时只播报页标题，不猜另一个结果。
+    const focusTarget = link instanceof HTMLAnchorElement && main?.contains(link) ? link : headingRef.current
+    focusTarget?.focus({ preventScroll: true })
+  }, [returnTarget])
+
+  useEffect(() => setDraft(props.q), [queryUrl, props.q])
   useEffect(() => {
-    const removeStart = router.on('start', () => setLoading(true))
+    const removeStart = router.on('start', (event) => {
+      if (event.detail.visit.url.pathname === '/search') setLoading(true)
+    })
     const removeFinish = router.on('finish', () => setLoading(false))
     return () => {
       removeStart()
@@ -206,17 +232,16 @@ export default function Show(props: SearchShowProps) {
   const liveText = loading ? '正在搜索…' : statusText(props)
   const notice = !['initial', 'results'].includes(props.state)
   const unsupported = props.state === 'unsupported' && draft === props.q && !loading
-  const navigationQuery = draft.trim()
 
   return (
     <FavoritesProvider favorites={props.favorites}>
       <section className="library-page discovery-page">
-        <PageHead big="搜索" title={props.q ? `搜索 · ${props.q}` : '搜索'} />
+        <PageHead big="搜索" headingRef={headingRef} title={props.q ? `搜索 · ${props.q}` : '搜索'} />
         <div className="library-workspace">
-          <SearchHead draft={draft} setDraft={setDraft} filters={props.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} />
-          <SearchFilters q={navigationQuery} filters={props.filters} sourceOptions={props.source_options} datePresets={props.date_presets} />
-          <div id="search-status" className={loading ? 'search-loading' : notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-label="搜索状态" aria-live="polite" aria-atomic="true">{liveText}</div>
-          <Body {...props} navigationQuery={navigationQuery} onModifyQuery={modifyQuery} loading={loading} />
+          <SearchHead draft={draft} setDraft={setDraft} filters={filterDraft.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} autoFocus={!returnTarget} />
+          <SearchFilters q={navigationQuery} draft={filterDraft} sourceOptions={props.source_options} datePresets={props.date_presets} />
+          <div id="search-status" className={loading && props.state !== 'results' ? 'search-loading' : !loading && notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-label="搜索状态" aria-live="polite" aria-atomic="true">{liveText}</div>
+          <Body {...props} navigationQuery={navigationQuery} filterDraft={filterDraft} onModifyQuery={modifyQuery} loading={loading} />
         </div>
       </section>
     </FavoritesProvider>

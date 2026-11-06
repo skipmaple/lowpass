@@ -25,7 +25,7 @@ const LibraryRecord = forwardRef<HTMLElement, LibraryRecordProps>(function Libra
   return (
     <article ref={ref} id={id} className="search-row library-record" data-has-detail={Boolean(detail)} data-reading-anchor>
       <div className="record-copy">
-        <h2 className="search-title record-title"><a className="t" href={href} target="_blank" rel="noopener noreferrer" onClick={onOpen} lang={lang}>{title}</a></h2>
+        <h2 className="search-title record-title"><a className="t" href={href} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" onClick={onOpen} lang={lang}>{title}</a></h2>
         <div className="search-eyebrow record-meta">{meta}</div>
         {summary ? <div className="record-purpose">{summary}</div> : null}
       </div>

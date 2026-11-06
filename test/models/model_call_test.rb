@@ -1,7 +1,7 @@
 require "test_helper"
 
 class ModelCallTest < ActiveSupport::TestCase
-  test "状态只认四种；保留 90 天" do
+  test "状态只认五种；保留 90 天" do
     call = ModelCall.new(issue: issues(:daily_0908), item: items(:hn_one), status: "nope")
     assert_not call.valid?
 

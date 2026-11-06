@@ -5,7 +5,7 @@ class Reasons::Evidence
   TIMEOUT = 20
   MAX_BYTES = 2.megabytes
   MAX_CHARACTERS = 12_000
-  MIN_BODY_CHARACTERS = 80
+  SUMMARY_READ_THRESHOLD = 80
   CVE_ID = /\ACVE-(\d{4})-(\d{5,})\z/
   NOISE = "script, style, nav, aside, form, header, footer, iframe, object, embed, svg, canvas, noscript, template, [hidden], [inert], [aria-hidden='true'], #comments, .comments, .comment, .comment-tree".freeze
   HEADINGS = "h1, h2, h3, h4, h5, h6".freeze
@@ -110,7 +110,7 @@ class Reasons::Evidence
       remove_comment_panels(document)
 
       root = article_root(document)
-      if root && body_text(root).length >= MIN_BODY_CHARACTERS
+      if root && body_text(root).present?
         root.css("br").each { |node| node.replace("\n") }
         root.css(BLOCKS).each { |node| node.add_next_sibling("\n") }
         result(normalize(root.text))
@@ -203,7 +203,7 @@ class Reasons::Evidence
     end
 
     def result(text)
-      if text.length >= MIN_BODY_CHARACTERS
+      if text.present?
         Result.new(text: text[0, MAX_CHARACTERS], url: @url, error: nil)
       else
         insufficient("未提取到可用正文")

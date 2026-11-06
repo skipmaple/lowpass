@@ -7,7 +7,7 @@ export default function IssueNotice({ text, children }: React.PropsWithChildren<
   return (
     <div className="issue-body">
       <div className="source-state">
-        <span className="state-line">{text}</span>
+        <p className="state-line">{text}</p>
         {/* 附加的一条外链（周刊降级的原文）另起一行，与画布 degraded_section 的纵向排布一致 */}
         {children ? <div>{children}</div> : null}
       </div>

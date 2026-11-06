@@ -91,20 +91,24 @@ class FavoritesController < ApplicationController
         where: { label: favorite.where_label, href: where_href(favorite, item) },
         url: favorite.url,
         title: favorite.title,
-        title_zh: item&.title_zh.presence || favorite.title_zh,
-        snippet: Search::Highlighter.excerpt(SummaryCleaner.clean(favorite.summary)),
-        summary_zh: item&.summary_zh.presence || favorite.summary_zh,
-        reason: (item&.reason if favorite.publication == "daily"),
+        title_zh: (item&.title == favorite.title ? item&.title_zh.presence : nil) || favorite.title_zh,
+        snippet: Search::Highlighter.excerpt(SummaryCleaner.stored(favorite.summary)),
+        summary_zh: (item&.summary == favorite.summary ? item&.summary_zh.presence : nil) || favorite.summary_zh,
+        reason: (item&.reason if favorite.publication == "daily" && item&.title == favorite.title && item&.summary == favorite.summary),
         saved_label: favorite.created_at.in_time_zone("Asia/Shanghai").strftime("%Y/%m/%d")
       }
     end
 
-    # 所在期（同搜索结果）：日刊带 ?source= 切到那一栏，条目还在就落到它；周刊落到板块锚点
+    # 周刊的实时条目仍在收藏时的板块，才直达条目；否则保留收藏时的板块落点。
     def where_href(favorite, item)
       if favorite.publication == "daily"
         daily_issue_path(favorite.period_key, source: favorite.source_id, anchor: ("item-#{item.id}" if item))
       else
-        weekly_issue_path(favorite.period_key, anchor: favorite.anchor)
+        if item && item.anchor.slice(0, Favorite::ANCHOR_LIMIT) == favorite.anchor
+          weekly_issue_path(favorite.period_key, section: favorite.anchor, anchor: "item-#{item.id}")
+        else
+          weekly_issue_path(favorite.period_key, anchor: favorite.anchor)
+        end
       end
     end
 end

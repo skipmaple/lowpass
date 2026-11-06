@@ -35,8 +35,14 @@ export function Ctrl({ href, label, icon, side, turn }: CtrlProps) {
       </span>
     )
   }
+  // 偏好可能在控件挂载后改变，在 Inertia 创建请求前决定是否翻页。
   return (
-    <Link className="ctrl" href={href} viewTransition={turn ? pageTurn(turn) : undefined} aria-keyshortcuts={turn ? KEYS[turn] : undefined}>
+    <Link
+      className="ctrl"
+      href={href}
+      onBefore={turn ? (visit) => { visit.viewTransition = pageTurn(turn) } : undefined}
+      aria-keyshortcuts={turn ? KEYS[turn] : undefined}
+    >
       {body}
     </Link>
   )
@@ -52,7 +58,13 @@ export function Square({ href, label, icon, turn }: { href: string | null; label
     )
   }
   return (
-    <Link className="ctrl ctrl-square" href={href} aria-label={label} viewTransition={turn ? pageTurn(turn) : undefined} aria-keyshortcuts={turn ? KEYS[turn] : undefined}>
+    <Link
+      className="ctrl ctrl-square"
+      href={href}
+      aria-label={label}
+      onBefore={turn ? (visit) => { visit.viewTransition = pageTurn(turn) } : undefined}
+      aria-keyshortcuts={turn ? KEYS[turn] : undefined}
+    >
       <Icon name={icon} size={18} color="currentColor" />
     </Link>
   )

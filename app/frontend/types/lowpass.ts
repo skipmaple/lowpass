@@ -2,10 +2,11 @@ export type Adapter = "hacker_news" | "github_trending" | "rss" | "ruanyf_weekly
 export type SourceSummary = { id: string; name: string; adapter: Adapter; state: "ok" | "empty" | "failed" | "pending" | "no_backfill"; home_url: string | null; last_ok_label: string | null };
 // 适配器往 meta 里放的全部键：HN 的分数与评论、GitHub 的语言与 star、阮一峰的期号与板块锚点、
 // RSS 的首图与「时间是抓取时间不是发布时间」标记（Adapters::Rss、Adapters::RuanyfWeekly）。
-export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; time_from_fetch?: boolean };
+export type ItemMeta = { score?: number; comments?: number; comments_url?: string; language?: string; stars?: number; stars_today?: number; issue_no?: number; issue_title?: string; degraded?: boolean; anchor?: string; image_url?: string; image_urls?: string[]; image_positions?: number[]; emphasis_positions?: number[]; quote_ranges?: [number, number][]; reference_links?: [number, number, number, string][]; time_from_fetch?: boolean };
 // title_zh 是 HN 与 Hackaday 标题的中文译文，summary_zh 是 GitHub Trending 简介的中文译文（D25）；
-// 都跟推荐理由同一次生成，没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
-export type Item = { id: string; url_hash: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; reason: string | null; interest_tag: string | null };
+// 可随合规理由生成，也可按 D39 独立补齐；没生成前与不译的源都是 null。url_hash 给书签用：收藏按链接认（D27）。
+export type ImageDimensions = { width: number; height: number };
+export type Item = { id: string; url_hash: string; title: string; title_zh: string | null; url: string; summary: string | null; summary_zh: string | null; content: string | null; section: string | null; author: string | null; published_at: string | null; rank: number | null; meta: ItemMeta; image_dimensions?: Record<string, ImageDimensions>; reason: string | null; interest_tag: string | null };
 export type IssueState = "generating" | "published" | "empty";
 // status 与 time_label 是服务端定稿的期头文案（附录 B）：没有开 SSR，页面上读得到的字符串都得先进 props。
 export type DailyIssue = { period_key: string; year: number; date_label: string; weekday: string; state: IssueState | null; time_label: string | null; status: string | null; daily_time: string; published_at: string | null; revised_at: string | null; generated_late: boolean; is_yesterday: boolean; prev_key: string | null; next_key: string | null };
@@ -20,9 +21,9 @@ export type WeeklySection = { source: WeeklySource; issue_no: number | null; iss
 
 // 归档（PRD 6.2）：翻月与翻年的按钮，越界时为 null。
 export type ArchiveNav = { key: string; label: string } | null;
-export type ArchiveMark = IssueState | "missing";
+export type ArchiveMark = IssueState | "missing" | "scheduled";
 export type ArchiveDay = { period_key: string; date_label: string; weekday: string; state: ArchiveMark; published_label: string | null; source_marks: string | null };
-export type ArchiveWeek = { period_key: string; week_label: string; range_label: string; state: ArchiveMark; summary: string; count: number | null };
+export type ArchiveWeek = { period_key: string; week_label: string; range_label: string; state: ArchiveMark; summary: string; summary_parts?: { source: string; label: string | null }[]; count: number | null };
 
 // 页脚在每个页面都要的两样（R51）
 export type FooterData = { daily_time: string; latest_weekly_key: string | null; latest_daily_key?: string | null };
@@ -38,7 +39,7 @@ export type DatePreset = { from: string; to: string };
 export type DatePresets = Record<"7d" | "30d", DatePreset>;
 // 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
 export type HitRun = { text: string; hit: boolean };
-export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; snippet_runs: HitRun[] | null; title_zh_runs?: HitRun[] | null; summary_zh_runs?: HitRun[] | null; reason?: string | null };
+export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; title_zh?: string | null; summary_zh?: string | null; snippet_runs: HitRun[] | null; title_zh_runs?: HitRun[] | null; summary_zh_runs?: HitRun[] | null; reason?: string | null };
 
 // 收藏（PRD 5.10）：日刊、周刊、搜索、收藏四个页面的 props 都带 favorites——这一页里已收藏链接的 url_hash 列表。
 // 收藏页的一行（FavoritesController#entry_props）：字段照搜索结果行，标题不带命中 run；snippet 是不超过 160 字的摘要片段
@@ -67,14 +68,16 @@ export type FinishedRun = { id: string; source_name: string; period_key: string 
 export type LatestIssue = { period_key: string; label: string } | null;
 // reasons 只有日刊行才有值（Issue::Administering#admin_reasons）：未发布 / 生成中 / 缺期是 null；周刊行整个键都不带
 export type ReasonProgress = { status: "queued" | "running" | "completed" | "partial" | "failed"; active: boolean; label: string; detail: string; error: string | null };
-export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[]; reasons?: { label: string; missing: number; ready: boolean; progress?: ReasonProgress | null } | null };
+export type AdminIssueReasons = { label: string; progress?: ReasonProgress | null; with_reason: number; abstained: number; retained: number; missing: number; ready: boolean; unready_label: string | null; last_assessed_label: string | null };
+export type AdminIssueTranslations = { pending: number; preserved: number; ready: boolean; unready_label: string | null };
+export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[]; reasons?: AdminIssueReasons | null; translations?: AdminIssueTranslations | null };
 export type AdminUserRow = { id: string; display_name: string; email: string | null; role: "admin" | "member"; providers_label: string; last_login_label: string | null };
 export type Schedule = { daily_time: string; weekly_time: string };
 export type AlertChannel = { configured: boolean; label: string };
 export type AlertChannels = { email: AlertChannel; webhook: AlertChannel };
 
 // P2-④ 推荐理由（设计 §6.1）：设置页「兴趣画像」「推荐理由」两节（Reasons::Status#props、InterestArea）
-export type ReasonsStatus = { currency: string; has_nonzero_costs: boolean; configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_cost: string; today_calls: number };
+export type ReasonsStatus = { currency: string; has_nonzero_costs: boolean; configured: boolean; key_configured: boolean; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string; month_calls: number; month_reason_calls: number; month_translation_calls: number; month_cost: string; today_calls: number };
 export type InterestArea = { id: string; name: string; keywords: string; sort_order: number; enabled: boolean };
 export type ModelConfig = { currency: string; currency_confirmation: string; base_url: string; model_name: string; input_price: string; output_price: string; monthly_cap: string };
 

@@ -279,3 +279,6 @@
 .pending-label { display: inline-grid; align-items: center; justify-items: center; }
 .pending-label > span { grid-area: 1 / 1; }
 .pending-label > [aria-hidden="true"] { visibility: hidden; pointer-events: none; }
+
+/* The bookmark label keeps the same hit area for 收藏 and 已收藏. */
+html[data-theme] .favorite-button > span:last-child { min-width: 3em; text-align: left; }

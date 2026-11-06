@@ -14,7 +14,7 @@
 
 ## 不变量
 
-- 期发布后不可变。例外只有两个：管理员按「某期某源」重抓整栏替换并记 `revised_at`；推荐理由（连同同一次调用产出的译文 `title_zh` / `summary_zh`，D25）可在发布后补写。
+- 期发布后不可变。例外包括：管理员按「某期某源」重抓整栏替换并记 `revised_at`；推荐理由（连同同一次调用产出的译文 `title_zh` / `summary_zh`，D25）可在发布后补写；D39另允许按冻结目标独立补齐缺译文或记录合法保留原文，不改Issue时间。
 - 周期键只在一处计算；展示按 Asia/Shanghai，存储 UTC；跨日与非上海时区有测试。
 - 调度是每分钟一次的 tick，读数据库里的生成时间；不是静态 cron；错过要补跑。
 - 某个源失败只告警，不阻塞发布。推荐理由异步生成，只有日刊条目有，周刊没有。
@@ -29,12 +29,15 @@
 - 后台任务：Solid Queue，浅 job 调富模型（`_later` 入队、`_now` 同步）；到点要做的事做成 `Scheduler.tick` 里的一步，读库判断、错过补跑（ADR T2），不在 `config/recurring.yml` 另加静态条目；job 幂等，某期某源同时只允许一个重抓。
 - 认证：OAuth（OmniAuth）。`Session` 记录 + 签名 cookie；`Current` 承载 session、user 与请求属性；登录回调限流在 OmniAuth 之前的 Rack 中间件，搜索用 `rate_limit` 按用户；`next` 只接受站内相对路径；development 有 `developer` 策略的开发登录。
 - 前端：控制器是 CRUD 资源，每个动作渲染一个 Inertia 页面；props 必须有类型；首屏资源不超过 300 KB（`script/first_screen_size`，`bin/ci` 里有一步）；颜色、字体、字号只从设计 skill 的令牌取。
+- For the UI, Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
 - 数据库：只支持 PostgreSQL 18，开发容器、CI 与生产同一个大版本，要升一起升。`string` / `text` 列写明 `limit`（值来自 PRD 7.2）并加 CHECK 约束；唯一性放数据库。条目 `content` 上限 50000 字，只给阮一峰周刊正文使用。
 - 测试：Rails 侧 Minitest + fixtures（含 `test/system/` 系统测试），前端 Vitest + Testing Library（`test/frontend/`）；不碰网络，源站样本放 `test/fixtures/files/`；`bin/rails test` 与 `npm test` 快速循环，`bin/ci` 是合并门禁（步骤见 `config/ci.rb`）。
 - 环境与部署：mise 钉工具版本；`bin/setup` 幂等；`bin/dev` 起 rails + vite + jobs；密钥只从环境读。`main` 分支用 Kamal 部署（CI 全绿后由 GitHub Actions 自动跑 `kamal deploy`）：起步 `web` 单容器（Solid Queue 作 Puma 插件，ADR T4 的 A）加 PostgreSQL 18 accessory，拆 `job` 角色是 `config/deploy.yml` 里的配置级变更；新增常驻进程先改 ADR 里的内存预算；队列面板 `mission_control-jobs` 挂在 `/admin/jobs`。主库每天 03:00 加密备份到 S3 兼容存储（`BACKUP_*`，恢复与演练见 `docs/development.md`「备份」），`/health` 给外部拨测，`/up` 只给 kamal-proxy。
-- 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。译文（D25：HN 与 RSS 源译标题，GitHub Trending 译简介）搭同一次调用，不合规只当没有，「缺理由」只看理由。
+- 推荐理由：模型接入只认 OpenAI 兼容协议，地址 / 模型名 / 单价 / 上限在后台，密钥只从环境读；生成与发布解耦，一期一个 job。译文（D25：HN 与 RSS 源译标题，GitHub Trending 译简介）只搭同次合法 generated 结果，不合规只当没有。D38 允许严格资料不足分支：按 abstained 记账并保存独立 ReasonAbstention，不改新旧条目内容或时间；普通补缺只取可见日刊、reason nil 且无判断记录，显式重生可重评估。模型协议、Prompt、持久化与消费方须作为完整候选发布；本地候选不代表已获生产启用或实网调用授权。
 - 收藏：按 `url_hash` 认，一人一链接一条，收藏时抄快照、不引用条目行（重抓会换掉条目 id）；取消是真删，恢复靠一天有效的签名凭据；只有本人可见，不进后台与审计。书签的两个动作是 fetch + JSON，资源的键是 `url_hash`。
 
 ## 不要做
 
 不引入多租户、SaaS 双 Gemfile、SQLite / MySQL 双适配器、外部搜索引擎、图片处理、Web Push、通行密钥、邮箱验证码登录、prek。
+
+2026-10-22 用户确认的狭义例外：既有周刊配图允许有界读取原图头部，仅在独立 `ImageDimension` 缓存中记录天然宽高，为加载前占位。每次最多 128 KiB、总超时 5 秒，沿用公网校验与有限重定向；不保存、代理、裁切或转码图片，不回写已发布刊期。未知尺寸与失败不阻塞发布，后台补全沿用现有队列与分钟 tick。此例外不扩展其他图片处理或展示范围。

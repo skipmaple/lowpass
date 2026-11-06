@@ -1,7 +1,9 @@
+import '@/styles/themes-login.css'
 import { Head, usePage } from '@inertiajs/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
+import { usePageTurnCommit } from '@/lib/pageTurn'
 import Icon from '@/components/Icon'
 import ThemePicker from '@/components/ThemePicker'
 import { authCallbackHref, authHref } from '@/lib/paths'
@@ -61,10 +63,13 @@ function ProviderForm({ provider, next, account }: { provider: AuthProvider; nex
 }
 
 export default function Show({ providers, next, developer_accounts = [] }: LoginShowProps) {
-  const { flash } = usePage<SharedProps>().props
+  const page = usePage<SharedProps>()
+  const { flash } = page.props
+  const surface = useRef<HTMLElement>(null)
+  usePageTurnCommit(page, surface)
 
   return (
-    <main className="paper login-ground">
+    <main className="paper login-ground" ref={surface}>
       <Head title="登录" />
       <div className="login-card">
         <div className="login-band">

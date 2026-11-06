@@ -58,6 +58,207 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert_includes entry.content, "符合 AI 时代的方向"
   end
 
+  test "配图保留清洗后段落的位置，图后的上图说明不再跑到图前" do
+    entry = Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(393).find { |item| item.title == "摄像头耳机" }
+
+    assert_equal [ 1 ], entry.meta[:image_positions]
+    assert_equal [ "https://cdn.beekka.com/blogimg/asset/202604/bg2026041610.webp" ], entry.meta[:image_urls]
+    attrs = entry.to_item_attributes(source: sources(:ruanyf), issue: issues(:weekly_w36))
+    assert_equal "上图中，耳机底部的小凸起就是微型摄像头。", attrs[:content].split("\n")[1]
+  end
+
+  test "标题之前的图片和普通行内代码不影响正文边界" do
+    entry = entry_from_markdown(<<~MARKDOWN)
+      1、![](https://cdn.example.com/before.webp)
+
+      [标题](https://example.com/article)（英文）
+
+      正文 `x_y` 和 `<T>`。
+
+      ![](../images/after.webp)
+
+      结尾。
+    MARKDOWN
+
+    assert_equal "标题", entry.title
+    assert_equal [ 0, 1 ], entry.meta[:image_positions]
+    assert_equal [ "https://cdn.example.com/before.webp", "#{RAW}/images/after.webp" ], entry.meta[:image_urls]
+    assert_equal "正文 x_y 和 <T>。\n结尾。", entry.to_item_attributes(source: sources(:ruanyf), issue: issues(:weekly_w36))[:content]
+    assert_includes entry.content, "`<T>`"
+  end
+
+  test "正文首行的链接并非独立标题时仍算图片前的一段" do
+    entry = entry_from_markdown(<<~MARKDOWN)
+      1、[欧盟](https://example.com/eu)规定，新车必须配摄像头。
+
+      ![](https://cdn.example.com/one.webp)
+
+      正文仍在。
+    MARKDOWN
+
+    assert_equal [ 1 ], entry.meta[:image_positions]
+    assert entry.content.start_with?("[欧盟](https://example.com/eu)规定")
+  end
+
+  test "行内图片或同一行多图不生成位置，旧正文和配图仍保留" do
+    [
+      "正文 ![](https://cdn.example.com/one.webp) 还在。",
+      "![](https://cdn.example.com/one.webp) ![](https://cdn.example.com/two.webp)"
+    ].each do |line|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n#{line}\n\n正文仍在。")
+
+      assert_nil entry.meta[:image_positions], line
+      assert_includes entry.summary, "正文仍在。"
+      assert_includes entry.meta[:image_urls], "https://cdn.example.com/one.webp"
+    end
+  end
+
+  test "标题行含图片时保留原摘要但不推断图片位置" do
+    entry = entry_from_markdown("1、[标题](https://example.com/article) ![](https://cdn.example.com/one.webp)\n\n正文仍在。")
+
+    assert_nil entry.meta[:image_positions]
+    assert_equal "正文仍在。", entry.summary
+    assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+  end
+
+  test "重复原图或绝对化后碰撞时整条保留旧图片集合而不定位" do
+    [
+      [ "https://cdn.example.com/one.webp", "https://cdn.example.com/one.webp", "https://cdn.example.com/one.webp" ],
+      [ "../images/one.webp", "#{RAW}/images/one.webp", "#{RAW}/images/one.webp" ]
+    ].each do |first, second, expected|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n![](#{first})\n\n![](#{second})")
+
+      assert_nil entry.meta[:image_positions]
+      assert_equal [ expected ], entry.meta[:image_urls]
+      assert_equal "正文仍在。", SummaryCleaner.content(entry.content)
+    end
+  end
+
+  test "任一图片地址非法时整条不定位，其他旧图片仍保留" do
+    [ "javascript:picture", "https://[" ].each do |invalid|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n![](https://cdn.example.com/one.webp)\n\n![](#{invalid})")
+
+      assert_nil entry.meta[:image_positions], invalid
+      assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+      assert_equal "正文仍在。", SummaryCleaner.content(entry.content)
+    end
+  end
+
+  test "反引号代码中的图片语法不生成位置" do
+    [
+      "`![](https://cdn.example.com/one.webp)`",
+      "``\n![](https://cdn.example.com/one.webp)\n``",
+      "```markdown\n![](https://cdn.example.com/one.webp)\n```"
+    ].each do |code|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n#{code}")
+
+      assert_nil entry.meta[:image_positions], code
+      assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+      assert_includes entry.content, "正文仍在。"
+    end
+  end
+
+  test "HTML 代码元素或缩进代码中的图片不生成位置" do
+    [
+      "<pre>\n![](https://cdn.example.com/one.webp)\n</pre>",
+      "<CODE class='sample'>\n![](https://cdn.example.com/one.webp)\n</CODE>",
+      "<pre>普通代码</pre>\n\n![](https://cdn.example.com/one.webp)",
+      "    ![](https://cdn.example.com/one.webp)",
+      "\t![](https://cdn.example.com/one.webp)",
+      "  \t![](https://cdn.example.com/one.webp)"
+    ].each do |code|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n#{code}")
+
+      assert_nil entry.meta[:image_positions], code
+      assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+      assert_includes entry.content, "正文仍在。"
+    end
+  end
+
+  test "闭合或未闭合的 tilde 围栏内图片都不生成位置" do
+    [ "~~~markdown\n![](https://cdn.example.com/one.webp)\n~~~", "~~~~\n![](https://cdn.example.com/one.webp)" ].each do |code|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n#{code}")
+
+      assert_nil entry.meta[:image_positions], code
+      assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+      assert_includes entry.content, "正文仍在。"
+    end
+  end
+
+  test "HTML 注释或标签属性中的图片语法不生成位置" do
+    [
+      "<!--\n![](https://cdn.example.com/one.webp)\n-->",
+      "<!--\n![](https://cdn.example.com/one.webp)",
+      "<span data-example='\n![](https://cdn.example.com/one.webp)\n'>示例</span>"
+    ].each do |html|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n#{html}")
+
+      assert_nil entry.meta[:image_positions], html
+      assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+      assert_includes entry.content, "正文仍在。"
+    end
+  end
+
+  test "普通代码围栏结束后的独占行图片可以定位" do
+    entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n~~~ruby\nputs 1\n~~~\n\n![](https://cdn.example.com/one.webp)\n\n结尾。")
+
+    assert_equal [ 3 ], entry.meta[:image_positions]
+  end
+
+  test "跨图片边界清洗使前缀不同则整条不定位" do
+    entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n**正文一。\n\n![](https://cdn.example.com/one.webp)\n\n正文二。**")
+
+    assert_nil entry.meta[:image_positions]
+    assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+    assert_equal "正文一。\n正文二。", SummaryCleaner.content(entry.content)
+  end
+
+  test "不能按独占行完整匹配的图片语法不返回部分位置" do
+    body = "正文。\n![跨行\n替代文字](https://cdn.example.com/one.webp)\n结尾。"
+    positions = Adapters::RuanyfWeekly::ImagePositions.for(
+      body: body, content: "正文。\n结尾。", image_urls: [ "https://cdn.example.com/one.webp" ]
+    )
+
+    assert_nil positions
+  end
+
+  test "没有正文的专图保持旧展示而不定位" do
+    entry = entry_from_markdown("![](https://cdn.example.com/one.webp)", section: "封面图")
+
+    assert_nil entry.meta[:image_positions]
+    assert_nil entry.content
+    assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+  end
+
+  test "最终正文达到安全上限时省略位置而不额外裁剪" do
+    [ SummaryCleaner::CONTENT_LIMIT - 1, SummaryCleaner::CONTENT_LIMIT, SummaryCleaner::CONTENT_LIMIT + 1 ].each do |length|
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n#{'文' * length}\n\n![](https://cdn.example.com/one.webp)")
+
+      assert_equal length, entry.content.length
+      assert_equal [ "https://cdn.example.com/one.webp" ], entry.meta[:image_urls]
+      if length < SummaryCleaner::CONTENT_LIMIT
+        assert_equal [ 1 ], entry.meta[:image_positions]
+      else
+        assert_nil entry.meta[:image_positions]
+      end
+    end
+  end
+
+  test "最多定位 128 张图，超过时保留所有旧图片" do
+    [ 128, 129 ].each do |count|
+      images = count.times.map { |i| "![](https://cdn.example.com/#{i}.webp)" }.join("\n\n")
+      entry = entry_from_markdown("1、[标题](https://example.com/article)\n\n正文仍在。\n\n#{images}")
+
+      assert_equal count, entry.meta[:image_urls].size
+      assert_equal "正文仍在。", SummaryCleaner.content(entry.content)
+      if count == 128
+        assert_equal [ 1 ] * count, entry.meta[:image_positions]
+      else
+        assert_nil entry.meta[:image_positions]
+      end
+    end
+  end
+
   test "条目少于 5 条降级" do
     stub_request(:get, "#{RAW}/docs/issue-999.md").to_return(body: "# 科技爱好者周刊（第 999 期）：坏了\n\n## 科技动态\n\n1、只有一条 [x](https://a.b)\n")
     error = assert_raises(Adapters::RuanyfWeekly::Degraded) { Adapters::RuanyfWeekly.new(sources(:ruanyf)).fetch_issue(999) }
@@ -186,8 +387,11 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     second = entries.find { |entry| entry.title == "第二条" }
 
     assert_equal [ "https://cdn.example.com/cover.webp" ], cover.meta[:image_urls]
+    assert_equal [ 0 ], cover.meta[:image_positions]
     assert_equal [ "https://cdn.example.com/one.webp", "#{RAW}/images/two.webp" ], first.meta[:image_urls]
+    assert_equal [ 0, 0 ], first.meta[:image_positions]
     assert_nil second.meta[:image_urls]
+    assert_nil second.meta[:image_positions]
     assert_not_includes first.summary, "!["
   end
 
@@ -244,6 +448,8 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
 
     assert_equal [ "封面图", "rsync 的争论", "科技动态" ], entries.map(&:section).uniq
     assert_equal [ "https://cdn.example.com/cover.webp" ], cover.meta[:image_urls]
+    assert_equal [ 0 ], cover.meta[:image_positions]
+    assert_equal [ 1 ], essay.meta[:image_positions]
     assert_equal 1, entries.count { |e| e.section == "rsync 的争论" }
     assert_equal "rsync 的争论", essay.title
     assert_equal "https://example.com/rsync", essay.url
@@ -327,4 +533,13 @@ class Adapters::RuanyfWeeklyTest < ActiveSupport::TestCase
     assert_operator section[:items].size, :>=, 3, "一句话消息 should have at least 3 items"
     assert section[:items].all? { |item| item[:title].present? }, "All items should have titles"
   end
+
+  private
+    def entry_from_markdown(body, section: "科技动态")
+      markdown = "# 科技爱好者周刊（第 990 期）：图片位置\n\n## #{section}\n\n#{body}\n"
+      stub_request(:get, "#{RAW}/docs/issue-990.md").to_return(body: markdown)
+      source = sources(:ruanyf).dup
+      source.config = { min_items: 1 }
+      Adapters::RuanyfWeekly.new(source).fetch_issue(990).sole
+    end
 end

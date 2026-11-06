@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import Index, { type FavoritesIndexProps } from '@/pages/Favorites/Index'
-import { router } from '../support/inertia'
+import { expectFavoritesReplace, router } from '../support/inertia'
 import { favoriteEntry } from '../support/props'
 
 // 收藏页（PRD 5.10、R-10.6、R-10.7）：行沿用搜索结果行；取消后原地留「已取消收藏」与「恢复」。
@@ -35,11 +35,11 @@ beforeEach(() => {
 afterEach(() => {
   document.head.innerHTML = ''
   vi.unstubAllGlobals()
-  router.replaceProp.mockClear()
+  router.replace.mockClear()
 })
 
 describe('收藏页的行', () => {
-  it('页名是 h1「收藏」；一行有刊物签、来源、所在期、标题外链、所在期链接、原文与书签', () => {
+  it('页名是 h1「收藏」；真实来源、刊期和原文入口保留', () => {
     const { container } = show()
 
     expect(screen.getByRole('heading', { level: 1, name: '收藏' })).toBeInTheDocument()
@@ -57,6 +57,7 @@ describe('收藏页的行', () => {
     expect(title).toHaveAttribute('target', '_blank')
     expect(title.getAttribute('rel')).toContain('noopener')
     expect(title).toHaveAttribute('lang', 'en')
+    expect(title).toHaveAttribute('aria-describedby', 'new-tab-description')
 
     expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026\/09\/08$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
     expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/termlog')
@@ -85,12 +86,13 @@ describe('收藏页的行', () => {
     expect(rows[1].querySelector('.record-original-summary')).toHaveTextContent('An extremely fast Python linter.')
   })
 
-  it('周刊收藏的刊物签是「周刊」，所在期带周次与板块', () => {
+  it('周刊收藏保留刊物、来源及所在期周次与板块', () => {
     const { container } = show({
       entries: [favoriteEntry({ publication: 'weekly', source_name: '阮一峰科技爱好者周刊', where: { label: '2026年 · 第 36 周 · 工具', href: '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7' } })],
     })
 
-    expect(container.querySelector('.search-eyebrow')).toHaveTextContent('周刊')
+    expect(container.querySelector('.record-meta')).toHaveTextContent('周刊')
+    expect(container.querySelector('.record-meta')).toHaveTextContent('第 36 周')
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toHaveAttribute('href', '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7')
   })
 
@@ -126,6 +128,37 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     await waitFor(() => expect(screen.getByText('24 条收藏')).toBeInTheDocument())
   })
 
+  it('取消时保留书签墨层；请求仍在途时恢复也立即可用', async () => {
+    let finishRemove: (value: unknown) => void = () => undefined
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(new Promise((resolve) => { finishRemove = resolve }))
+      .mockResolvedValueOnce(ok({ url_hash: 'hash-termlog' }))
+    vi.stubGlobal('fetch', fetchMock)
+    show()
+
+    const mark = screen.getByRole('button', { name: `取消收藏：${TITLE}` })
+    const ink = mark.querySelector('.favorite-ink')
+    expect(ink).not.toBeNull()
+    await userEvent.click(mark)
+
+    const restore = screen.getByRole('button', { name: '恢复' })
+    expect(restore).toBe(mark)
+    expect(restore.querySelector('.favorite-ink')).toBe(ink)
+    expect(restore).not.toHaveAttribute('data-on')
+    expect(restore).not.toHaveAttribute('data-stamp')
+    expect(restore).toHaveAccessibleDescription('已取消收藏')
+    expect(restore).toHaveFocus()
+    await userEvent.click(restore)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    finishRemove(ok({ undo: 'signed-token' }, 200))
+    await waitFor(() => expectFavoritesReplace(['hash-termlog']))
+    expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toBe(mark)
+    expect(mark.querySelector('.favorite-ink')).toBe(ink)
+    expect(mark).toHaveAttribute('data-on')
+    expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ undo: 'signed-token' }))
+  })
+
   it('取消后那一行原地留下「已取消收藏」与「恢复」，恢复凭取消时拿到的凭据', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(ok({ undo: 'signed-token' }, 200))
@@ -144,7 +177,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     expect(restore).toHaveAccessibleDescription('已取消收藏')
     expect(fetchMock.mock.calls[0][0]).toBe('/favorites/hash-termlog')
     expect(fetchMock.mock.calls[0][1].method).toBe('DELETE')
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledWith('favorites', []))
+    await waitFor(() => expectFavoritesReplace([]))
 
     await userEvent.click(restore)
 
@@ -155,7 +188,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('/favorites')
     expect(fetchMock.mock.calls[1][1].method).toBe('POST')
     expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ undo: 'signed-token' }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenLastCalledWith('favorites', ['hash-termlog']))
+    await waitFor(() => expectFavoritesReplace(['hash-termlog']))
   })
 
   it('取消没保存上：那一行回到已收藏并提示', async () => {
@@ -178,7 +211,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     show()
 
     await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1))
     await userEvent.click(screen.getByRole('button', { name: '恢复' }))
 
     expect(await screen.findByText('收藏没有保存，请重试。')).toBeInTheDocument()
@@ -231,7 +264,7 @@ describe('取消与恢复（R-10.7、AC-10.4）', () => {
     show()
 
     await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
-    await waitFor(() => expect(router.replaceProp).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1))
     await userEvent.click(screen.getByRole('button', { name: '恢复' }))
     expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveFocus()
     settle({ ok: false, status: 500, json: async () => ({}) })

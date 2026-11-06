@@ -1,6 +1,8 @@
 require "test_helper"
 
 class DeliverAlertJobTest < ActiveJob::TestCase
+  include ActionMailer::TestCase::ClearTestDeliveries
+
   test "两个渠道一个成一个败：只记成功的，抛错重试，重试时不重发成功的" do
     with_alert_channels(ALERT_EMAIL_TO: "drew@example.com", SMTP_ADDRESS: "smtp.example.com", ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) do
       event = alert_event

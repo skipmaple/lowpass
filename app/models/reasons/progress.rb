@@ -33,11 +33,15 @@ class Reasons::Progress
   end
 
   def to_h
-    items = @issue.items.visible
-    updated = items.where(reason_generated_at: @job.created_at..(@job.finished_at || Time.current)).where.not(reason: nil)
-    updated_count = updated.count
-    missing = items.where(reason: nil).count
-    detail = "已更新 #{updated_count} 条 · 仍缺 #{missing} 条"
+    items = @issue.items.visible.daily
+    period = @job.created_at..(@job.finished_at || Time.current)
+    updated = items.where(reason_generated_at: period).where.not(reason: nil)
+    assessed = items.joins(:reason_abstention).where(reason_abstentions: { assessed_at: period })
+    updated_ids = updated.pluck(:id)
+    assessed_ids = assessed.pluck(:id)
+    processed_ids = updated_ids | assessed_ids
+    missing = items.pending_reasons.count
+    detail = [ "已更新 #{updated_ids.size} 条", ("资料不足 #{assessed_ids.size} 条" if assessed_ids.any?), "仍缺 #{missing} 条" ].compact.join(" · ")
 
     if @job.failed?
       result("failed", "生成任务中断", detail, "任务中断，请在任务队列查看记录后重试。")
@@ -49,17 +53,17 @@ class Reasons::Progress
       end
     else
       only_missing = @job.arguments.fetch("arguments", [])[1] != false
-      complete = only_missing ? missing.zero? : updated_count == items.count
+      complete = only_missing ? missing.zero? : processed_ids.size == items.count
       if complete
         result("completed", "理由生成完成", detail)
       else
-        error = ModelCall.where(issue: @issue, created_at: @job.created_at..@job.finished_at)
-                         .where.not(item_id: updated.select(:id)).where.not(error_summary: nil).order(created_at: :desc).pick(:error_summary)
+        error = ModelCall.where(issue: @issue, purpose: "reason", created_at: period)
+                         .where.not(item_id: processed_ids).where.not(error_summary: nil).order(created_at: :desc, id: :desc).pick(:error_summary)
         error ||= if !Reasons.ready? then Reasons.unready_label
         elsif Reasons::Budget.exhausted? then "本月模型费用已达上限"
         else "部分条目未生成新理由，已有内容已保留。"
         end
-        result(updated_count.positive? ? "partial" : "failed", updated_count.positive? ? "部分理由未生成" : "本次未生成理由", detail, error)
+        result(processed_ids.any? ? "partial" : "failed", processed_ids.any? ? "部分理由未生成" : "本次未生成理由", detail, error)
       end
     end
   end

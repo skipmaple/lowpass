@@ -30,6 +30,14 @@ function Nav({ href, label, current }: { href: string; label: string; current: b
   )
 }
 
+function AccountAvatar({ url, open }: { url: string; open: boolean }) {
+  const [failed, setFailed] = useState(false)
+
+  return failed ? null : (
+    <img src={url} alt="" className={`account-avatar${open ? ' account-avatar--open' : ''}`} referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+  )
+}
+
 // 账户菜单保留真实权限入口。Escape、点卡外、选中项目关闭；打开时焦点进入菜单。
 function AccountMenu({ user, open, onOpenChange }: { user: CurrentUser; open: boolean; onOpenChange: (open: boolean) => void }) {
   const rootRef = useRef<HTMLDivElement>(null)
@@ -78,6 +86,8 @@ function AccountMenu({ user, open, onOpenChange }: { user: CurrentUser; open: bo
         onKeyDown={(event) => {
           if (!open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault()
+            // 打开后可能立即挂上 document 监听；本次按键已处理，不能再冒泡过去移动一次。
+            event.stopPropagation()
             focusLast.current = event.key === 'ArrowUp'
             onOpenChange(true)
           }
@@ -87,7 +97,7 @@ function AccountMenu({ user, open, onOpenChange }: { user: CurrentUser; open: bo
         {/* 头像覆盖人像占位，展开时淡出以露出关闭图标。
             provider 头像用 referrerPolicy 拦住 Referer，避免泄露读者正在看的页面。 */}
         {user.avatar_url ? (
-          <img src={user.avatar_url} alt="" className={`account-avatar${open ? ' account-avatar--open' : ''}`} referrerPolicy="no-referrer" />
+          <AccountAvatar key={user.avatar_url} url={user.avatar_url} open={open} />
         ) : null}
       </button>
       {open ? (

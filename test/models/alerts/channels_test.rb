@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Alerts::ChannelsTest < ActiveSupport::TestCase
+  include ActionMailer::TestCase::ClearTestDeliveries
+
   test "配了哪个就发哪个" do
     assert_equal [], Alerts::Channels.configured
     with_alert_channels(ALERT_WEBHOOK_URL: AlertTestHelpers::WEBHOOK) { assert_equal [ Alerts::Channels::Webhook ], Alerts::Channels.configured }

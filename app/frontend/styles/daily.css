@@ -1,0 +1,17 @@
+/* Native chapter navigation shares the approved theme frame. */
+.daily-source-anchor { position: absolute; top: 0; width: 0; height: 0; scroll-margin-top: 24px; }
+.daily-source-heading { width: fit-content; min-width: 0; max-width: 100%; }
+.daily-source-rule { display: none; }
+.daily-source:focus { outline: none; }
+.daily-source:focus-visible .daily-source-heading { outline: 2px solid currentColor; outline-offset: 4px; }
+.daily-source-content > .issue-body { border-top: 0; margin-top: 0; }
+.item-meta-text { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.item-meta .item-comments { min-width: 44px; min-height: 44px; }
+.item-meta .item-comments::after { inset: 0; min-width: 0; min-height: 0; transform: none; }
+.item-comments > span { text-decoration: underline; text-decoration-color: var(--underline); text-underline-offset: 3px; }
+.item-comments:hover > span, .item-comments:focus-visible > span { text-decoration-color: currentColor; }
+.item-age { font-family: var(--font-cjk); font-size: var(--fs-12); }
+
+@media print {
+  .daily-source:focus-visible .daily-source-heading { outline: none; }
+}

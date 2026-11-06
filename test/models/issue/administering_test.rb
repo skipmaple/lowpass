@@ -57,17 +57,17 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     assert_equal "发布 2026-09-04 09:03 · 修订 2026-09-05 09:03", row[:time_label]
   end
 
-  test "日刊行带理由状态：未配置 / 兴趣画像为空 / 缺 N 条 / 已生成" do
+  test "日刊真实计数与供应商及画像准备状态分开" do
     row = -> { Issue.admin_rows(kind: "daily", month: "2026-09", now: Time.find_zone("Asia/Shanghai").parse("2026-09-10 12:00"))[:rows].find { |r| r[:period_key] == "2026-09-08" } }
-    assert_equal({ label: "未配置模型供应商", missing: 1, ready: false }, row.call[:reasons])
+    assert_equal({ with_reason: 0, abstained: 0, retained: 0, missing: 1, ready: false, unready_label: "未配置模型供应商", last_assessed_label: nil }, row.call[:reasons])
     with_model_provider do
       InterestArea.update_all(enabled: false)
-      assert_equal({ label: "兴趣画像为空", missing: 1, ready: false }, row.call[:reasons])
+      assert_equal({ with_reason: 0, abstained: 0, retained: 0, missing: 1, ready: false, unready_label: "兴趣画像为空", last_assessed_label: nil }, row.call[:reasons])
       InterestArea.update_all(enabled: true)
 
-      assert_equal({ label: "缺 1 条", missing: 1, ready: true }, row.call[:reasons])
+      assert_equal({ with_reason: 0, abstained: 0, retained: 0, missing: 1, ready: true, unready_label: nil, last_assessed_label: nil }, row.call[:reasons])
       items(:hn_one).update!(reason: "有了", interest_tag: "AI / LLM")
-      assert_equal({ label: "已生成", missing: 0, ready: true }, row.call[:reasons])
+      assert_equal({ with_reason: 1, abstained: 0, retained: 0, missing: 0, ready: true, unready_label: nil, last_assessed_label: nil }, row.call[:reasons])
     end
   end
 
@@ -86,5 +86,61 @@ class Issue::AdministeringTest < ActiveSupport::TestCase
     assert_equal "9 月", august[:next_month][:label]
     assert_equal %w[ 2026-08-31 2026-08-30 ], august[:rows].select { |r| r[:kind] == "daily" }.map { |r| r[:period_key] }
     assert_equal "8 月", Issue.admin_rows(kind: "all", month: nil, now: now)[:prev_month][:label]
+  end
+
+  test "四类可见日刊计数互斥且最后判断独立转为上海时间" do
+    issue = issues(:daily_0908)
+    stamp = Time.utc(2026, 9, 8, 16, 30)
+    [ [ "written", "旧理由", nil, false ], [ "abstained", nil, stamp, false ], [ "retained", "保留内容", stamp - 1.hour, false ], [ "hidden", nil, stamp + 1.hour, true ] ].each do |key, reason, assessed_at, hidden|
+      item = items(:hn_one).dup
+      item.assign_attributes(url: "https://example.test/#{key}", url_hash: Digest::SHA256.hexdigest(key), reason: reason, hidden: hidden)
+      item.save!
+      item.record_reason_abstention(assessed_at: assessed_at) if assessed_at
+    end
+    counts = Item.reason_counts_by_issue([ issue.id, issues(:weekly_w36).id ])
+    assert_equal [ 1, 1, 1, 1 ], counts.fetch(issue.id).values_at(:with_reason, :abstained, :retained, :missing)
+    assert_equal 4, counts.fetch(issue.id).values_at(:with_reason, :abstained, :retained, :missing).sum
+    assert_equal stamp, counts.fetch(issue.id).fetch(:last_assessed_at)
+    assert_equal [ 0, 0, 0, 0, nil ], counts.fetch(issues(:weekly_w36).id).values_at(:with_reason, :abstained, :retained, :missing, :last_assessed_at)
+    row = Issue.admin_rows(kind: "daily", month: "2026-09", now: Time.utc(2026, 9, 10))[:rows].find { |entry| entry[:period_key] == issue.period_key }
+    assert_equal "最后处理 2026-09-09 00:30", row[:reasons][:last_assessed_label]
+    assert_equal [ 1, 1, 1, 1 ], row[:reasons].values_at(:with_reason, :abstained, :retained, :missing)
+    assert_equal "未配置模型供应商", row[:reasons][:unready_label]
+  end
+
+  test "一月多期批量统计不逐行加载条目" do
+    (1..30).each do |day|
+      next if day == 8
+      Issue.create!(kind: "daily", period_key: format("2026-09-%02d", day), state: "published", published_at: Time.current, generation_started_at: Time.current)
+    end
+    statements = []
+    listener = ->(*args) do
+      payload = args.last
+      statements << payload[:sql] if payload[:sql].match?(/FROM "items"/)
+    end
+    ActiveSupport::Notifications.subscribed(listener, "sql.active_record") do
+      Item.reason_counts_by_issue(Issue.daily.pluck(:id))
+    end
+    assert_operator statements.length, :<=, 3
+    assert statements.all? { |sql| sql.include?("GROUP BY") }, statements.inspect
+  end
+
+  test "处理结果在统计期间提交时四类仍来自同一快照" do
+    item = items(:hn_one)
+    changed = false
+    listener = ->(*args) do
+      sql = args.last[:sql]
+      if !changed && sql.include?('FROM "items"') && sql.include?("GROUP BY")
+        changed = true
+        item.record_reason_abstention(assessed_at: Time.current)
+      end
+    end
+    counts = nil
+    ActiveSupport::Notifications.subscribed(listener, "sql.active_record") do
+      counts = Item.reason_counts_by_issue([ item.issue_id ]).fetch(item.issue_id)
+    end
+    assert changed
+    assert_equal 1, counts.values_at(:with_reason, :abstained, :retained, :missing).sum
+    assert ReasonAbstention.exists?(item_id: item.id)
   end
 end

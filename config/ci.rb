@@ -13,6 +13,7 @@ CI.run do
   step "Frontend: build", "npm run build"
   # 首屏资源不超过 300 KB（PRD N-1，ADR T1 的守门指标）：读上一步的构建产物，超出就红
   step "Frontend: first screen budget", "script/first_screen_size"
+  step "Frontend: cumulative asset budget", "script/frontend_delta_size"
 
   step "Security: Gem audit", "bin/bundler-audit"
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"

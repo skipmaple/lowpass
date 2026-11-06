@@ -7,7 +7,7 @@ import Sources from '@/pages/Admin/Sources/Index'
 import Runs from '@/pages/Admin/Sources/Runs'
 import Users from '@/pages/Admin/Users/Index'
 import { setPageProps } from '../support/inertia'
-import { adminIssueRow, adminSourceRow, adminRunRow, adminUserRow } from '../support/props'
+import { adminIssueReasons, adminIssueRow, adminSourceRow, adminRunRow, adminUserRow } from '../support/props'
 
 beforeEach(() => {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
@@ -31,7 +31,7 @@ it('手机刊物先显示日期、状态和唯一操作，时间与结果放进�
 })
 
 it('手机理由任务的状态、进度和失败原因无需展开详情即可查看', () => {
-  render(<Issues month="2026-09" month_label="2026 年 9 月" prev_month={null} next_month={null} summary="" kind="all" rows={[adminIssueRow({ reasons: { label: '缺 3 条', missing: 3, ready: true, progress: { status: 'partial', active: false, label: '部分失败', detail: '成功 24 条，失败 3 条', error: '模型连接超时' } } })]} today_issue_exists={false} today_period_key="2026-09-09" today_issue_state={null} active_runs={[]} finished_runs={[]} />)
+  render(<Issues month="2026-09" month_label="2026 年 9 月" prev_month={null} next_month={null} summary="" kind="all" rows={[adminIssueRow({ reasons: { ...adminIssueReasons(), label: '缺 3 条', missing: 3, ready: true, progress: { status: 'partial', active: false, label: '部分失败', detail: '成功 24 条，失败 3 条', error: '模型连接超时' } } })]} today_issue_exists={false} today_period_key="2026-09-09" today_issue_state={null} active_runs={[]} finished_runs={[]} />)
 
   const row = screen.getByRole('listitem')
   expect(within(row).getByText('部分失败')).toBeVisible()
@@ -79,4 +79,14 @@ it('手机用户保留身份、角色和邮箱，把登录元数据收起', asyn
   expect(details).not.toHaveAttribute('open')
   await userEvent.click(within(row).getByText('登录详情'))
   expect(details).toHaveTextContent('Google · GitHub')
+})
+
+
+it('手机刊物详情呈现四类真实计数与最后处理时间', async () => {
+  render(<Issues month="2026-09" month_label="2026 年 9 月" prev_month={null} next_month={null} summary="" kind="all" rows={[adminIssueRow({ reasons: adminIssueReasons({ with_reason: 1, abstained: 2, retained: 3, missing: 4, last_assessed_label: '最后处理 2026-09-08 09:30' }) })]} today_issue_exists={true} today_period_key="2026-09-08" today_issue_state="published" active_runs={[]} finished_runs={[]} />)
+  const details = screen.getByText('刊物详情').closest('details')!
+  await userEvent.click(screen.getByText('刊物详情'))
+  expect(details).toHaveAttribute('open')
+  for (const text of ['已有理由 1 条', '资料不足未写 2 条', '保留旧理由 3 条（本次资料不足）', '缺 4 条', '最后处理 2026-09-08 09:30']) expect(screen.getByRole('listitem')).toHaveTextContent(text)
+  expect(screen.getAllByRole('button', { name: '重生成理由' })).toHaveLength(1)
 })

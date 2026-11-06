@@ -1,8 +1,10 @@
 import { usePage } from '@inertiajs/react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ToastRegion, Toasts } from '@/components/Toast'
 import type { SharedProps } from '@/types/lowpass'
 import type * as React from 'react'
+
+import { usePageTurnCommit } from '@/lib/pageTurn'
 
 import Footer, { type FooterProps } from '@/components/Footer'
 import Masthead, { type MastheadProps } from '@/components/Masthead'
@@ -18,13 +20,16 @@ export default function Layout({ children, masthead, footer }: LayoutProps) {
   const page = usePage<Partial<SharedProps>>()
   const { flash } = page.props
   const scene = page.component.startsWith('Admin/') ? 'admin' : page.component.split('/')[0].toLowerCase()
+  const surface = useRef<HTMLDivElement>(null)
+  usePageTurnCommit(page, surface)
   const [toastRegion, setToastRegion] = useState<HTMLDivElement | null>(null)
   return (
     <ToastRegion.Provider value={toastRegion}>
       <div className="paper sheet" data-scene={scene}>
         <a className="skip-link" href="#main-content">跳到正文</a>
+        <span id="new-tab-description" hidden>在新标签页打开</span>
         <Masthead {...masthead} />
-        <div className="sheet-body">
+        <div className="sheet-body" ref={surface}>
           <div className="toasts" role="status" ref={setToastRegion} />
           <main id="main-content" tabIndex={-1}>
             <Toasts flash={flash} />

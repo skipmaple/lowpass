@@ -172,7 +172,7 @@ class AdminTest < ApplicationSystemTestCase
     assert_requested :get, items(:hn_one).url, times: 1
 
     visit daily_issue_path("2026-09-08")
-    assert_text "用 Rust 写的终端日志工具，对开发者效率有帮助，值得一看。"
+    assert_text "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。"
     assert_text "AI / LLM"
     assert_selector ".item-title", text: "Show HN：一个用 Rust 写的终端日志查看器"
     assert_selector ".item-original-title", text: items(:hn_one).title

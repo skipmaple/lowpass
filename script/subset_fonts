@@ -12,6 +12,8 @@
   - 文楷 ui-admin：后台页面、后台报错与表单校验多出来的界面字；只有后台页用到。
   - Maple Mono NL：只留 ASCII、拉丁补充、常用标点、箭头与几何记号（元数据行、时间、序号用得到的）。
   - Bodoni Moda：只用于报头 LOWPASS 与 LP 邮戳，只留这几个字母，固定成 900 字重的静态字形。
+  - 文楷 period：期头日期的数字、空格与年月日第周，从 ui 再切一份并内联进 CSS。
+    沿用 ui 的字形和度量，普通字库迟到时日期不先用宋体排出另一种宽度。
 
 界面文案改了（新加了字）就重跑一次：没收进来的字不会缺，只是回落到包的分片、多下载一片。
 
@@ -34,12 +36,14 @@ from fontTools.varLib import instancer
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 FONTS = os.path.join(ROOT, "app/frontend/fonts")
 CSS = os.path.join(ROOT, "app/frontend/styles/fonts-subset.css")
+CONTENT_CSS = os.path.join(ROOT, "app/frontend/styles/fonts-content.css")
 WENKAI = os.path.join(ROOT, "node_modules/lxgw-wenkai-screen-webfont")
 BODONI = os.path.join(ROOT, "node_modules/@fontsource-variable/bodoni-moda/files/bodoni-moda-latin-wght-normal.woff2")
 MAPLE = os.path.join(ROOT, "vendor/fonts/MapleMonoNL-Regular.woff2")
 
 # 每页都有的外壳（报头、页脚、期头、提示）与日刊页、登录页、错误页：首屏要的字
 PRIMARY = [
+    "app/views/shared/_startup_recovery.html.erb",
     "app/frontend/components/Layout.tsx",
     "app/frontend/components/Masthead.tsx",
     "app/frontend/components/Footer.tsx",
@@ -69,7 +73,8 @@ CJK = re.compile(r"[⺀-鿿＀-￯　-〿]")
 CJK_PUNCT = "·—‘’“”…"
 ASCII = {chr(c) for c in range(0x20, 0x7F)}
 MAPLE_RANGES = [(0x20, 0x7E), (0xA0, 0x17F), (0x2010, 0x205E), (0x20AC, 0x20AC), (0x2190, 0x21FF), (0x2212, 0x2212), (0x25A0, 0x25FF), (0x2605, 0x2606)]
-BRAND = "LOWPASlowpas "
+BRAND = "LOWPAS "
+PERIOD = "0123456789 年月日第周"
 
 
 def main():
@@ -79,6 +84,13 @@ def main():
 
     if "--check" in sys.argv:
         check(primary | extra | admin)
+        brand = set(TTFont(os.path.join(FONTS, "bodoni-moda-brand.woff2")).getBestCmap())
+        declaration = open(CSS, encoding="utf-8").read().split('font-family: "Bodoni Moda Variable";')[1]
+        declared = parse_range(re.search(r"unicode-range:\s*([^;}]+)", declaration).group(1))
+        if brand != {ord(c) for c in BRAND} or declared != brand:
+            sys.exit("品牌字库或声明过期，跑一次 script/subset_fonts")
+        if open(CONTENT_CSS, encoding="utf-8").read() != content_css():
+            sys.exit("正文字体声明过期，跑一次 script/subset_fonts")
     else:
         slices = wenkai_slices()
         faces = [
@@ -87,8 +99,11 @@ def main():
             wenkai(slices, admin, "lxgw-wenkai-screen-ui-admin.woff2"),
             maple(),
             bodoni(),
+            period(),
         ]
         write_css(faces)
+        with open(CONTENT_CSS, "w", encoding="utf-8") as css:
+            css.write(content_css())
 
 
 # 源码里会渲染出来的字：去掉注释（// … 与 /* … */、{/* … */}、Ruby 的 # …）再收汉字
@@ -152,6 +167,14 @@ def bodoni():
     return save(font, "bodoni-moda-brand.woff2", "Bodoni Moda Variable", wanted, "font-weight: 900;")
 
 
+def period():
+    # 不重新计算整字库的边界或时间戳：切片的基线必须与普通 ui 字库一致。
+    font = TTFont(os.path.join(FONTS, "lxgw-wenkai-screen-ui.woff2"), recalcBBoxes=False, recalcTimestamp=False)
+    wanted = {ord(c) for c in PERIOD}
+    subset_font(font, wanted, drop=[])
+    return save(font, "lxgw-wenkai-screen-period.woff2", "LXGW WenKai Screen", wanted, "font-weight: 400;")
+
+
 def subset_font(font, codepoints, drop):
     options = subset.Options()
     options.drop_tables += drop
@@ -174,10 +197,11 @@ def save(font, filename, family, codepoints, weight):
 def write_css(faces):
     rules = []
     for family, filename, weight, codepoints in faces:
+        inline = "?inline" if filename == "lxgw-wenkai-screen-period.woff2" else ""
         rules.append(
             "@font-face {\n"
             f'  font-family: "{family}";\n'
-            f'  src: url("../fonts/{filename}") format("woff2");\n'
+            f'  src: url("../fonts/{filename}{inline}") format("woff2");\n'
             f"  {weight}\n"
             "  font-display: swap;\n"
             f"  unicode-range: {format_range(codepoints)};\n"
@@ -186,6 +210,35 @@ def write_css(faces):
     header = "/* 由 script/subset_fonts 生成，不要手改：界面文案改了就重跑。说明见那个脚本的开头。 */\n\n"
     with open(CSS, "w", encoding="utf-8") as css:
         css.write(header + "\n".join(rules))
+
+
+def content_css():
+    slices = wenkai_slices()
+    occupied = set()
+    for path, codepoints in slices:
+        occupied |= codepoints | set(TTFont(path).getBestCmap())
+    rules = []
+    for path, codepoints in slices:
+        # 仅桥接全套字体均未声明、也没有字形的汉字区单码位洞。
+        # unicode-range 与 cmap 的交集不变；原有字形选择及界面字体失败回退都保留。
+        compact = set(codepoints)
+        points = sorted(codepoints)
+        for left, right in zip(points, points[1:]):
+            hole = left + 1
+            if right == hole + 1 and 0x3400 <= hole <= 0x9fff and hole not in occupied:
+                compact.add(hole)
+        relative = os.path.relpath(path, os.path.dirname(CONTENT_CSS))
+        rules.append(
+            "@font-face {\n"
+            '  font-family: "LXGW WenKai Screen";\n'
+            f'  src: url("{relative}") format("woff2");\n'
+            "  font-style: normal;\n"
+            "  font-weight: 400;\n"
+            "  font-display: swap;\n"
+            f"  unicode-range: {format_range(compact)};\n"
+            "}\n"
+        )
+    return "/* 由 script/subset_fonts 生成：仅合并不含字形的汉字区单码位洞，原范围与字体文件保留。 */\n\n" + "\n".join(rules)
 
 
 def check(chars):

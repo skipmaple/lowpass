@@ -1,11 +1,13 @@
 import { createInertiaApp } from '@inertiajs/react'
 
+import { restoreHistoryScroll } from '@/lib/historyScroll'
 import { loadContentFonts } from '@/lib/contentFonts'
 import Layout from '@/components/Layout'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
 import { crossfadeFor } from '@/lib/pageTurn'
 
 void loadContentFonts()
+restoreHistoryScroll()
 focusMainOnNavigate()
 
 void createInertiaApp({

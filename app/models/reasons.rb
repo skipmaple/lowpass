@@ -9,4 +9,11 @@ module Reasons
 
   # 没准备好时告诉管理员缺的是哪一样（附录 B「推荐理由状态」「重生成理由」）
   def self.unready_label = Reasons::Provider.configured? ? "兴趣画像为空" : "未配置模型供应商"
+
+  def self.recover_if_complete(issue)
+    if issue.items.pending_reasons.none? && !Reasons::Budget.exhausted?
+      Alerts.recover!(kind: "reasons_missing", issue: issue)
+    end
+    nil
+  end
 end

@@ -60,14 +60,14 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
       <div className="admin-cell-stack"><span className="chip-outline">{row.publication === 'daily' ? '日刊' : '周刊'}</span><span className="cjk">{row.enabled ? '启用' : '停用'}</span></div>,
       <Health row={row} />,
       <div className="admin-actions">
-        <Link className="link-button" href={adminSourceEditHref(row.id)}>编辑</Link>
-        <Link className="link-button" href={adminSourceRunsHref(row.id)}>记录</Link>
-        <details className="admin-details"><summary>更多操作</summary><div className="admin-actions">
-        <button type="button" className="link-button" disabled={testingIds.has(row.id)} aria-busy={testingIds.has(row.id)} onClick={() => test(row)}><PendingLabel idle="测试抓取" pending="测试中…" busy={testingIds.has(row.id)} /></button>
+        <Link data-table-focus="edit" className="link-button" href={adminSourceEditHref(row.id)}>编辑</Link>
+        <Link data-table-focus="runs" className="link-button" href={adminSourceRunsHref(row.id)}>记录</Link>
+        <details className="admin-details"><summary data-table-focus="more">更多操作</summary><div className="admin-actions">
+        <button data-table-focus="test" type="button" className="link-button" disabled={testingIds.has(row.id)} aria-busy={testingIds.has(row.id)} onClick={() => test(row)}><PendingLabel idle="测试抓取" pending="测试中…" busy={testingIds.has(row.id)} /></button>
         {row.enabled ? (
-          <button type="button" className="link-button" disabled={operations.busy(row.id)} aria-busy={operations.busy(row.id)} onClick={() => setDisabling(row)}><PendingLabel idle="停用" pending="正在停用…" busy={operations.busy(row.id)} /></button>
+          <button data-table-focus="enablement" type="button" className="link-button" disabled={operations.busy(row.id)} aria-busy={operations.busy(row.id)} onClick={() => setDisabling(row)}><PendingLabel idle="停用" pending="正在停用…" busy={operations.busy(row.id)} /></button>
         ) : (
-          <button type="button" className="link-button" disabled={operations.busy(row.id)} aria-busy={operations.busy(row.id)} onClick={() => operations.post(row.id, row.name, adminSourceEnablementHref(row.id))}><PendingLabel idle="启用" pending="正在启用…" busy={operations.busy(row.id)} /></button>
+          <button data-table-focus="enablement" type="button" className="link-button" disabled={operations.busy(row.id)} aria-busy={operations.busy(row.id)} onClick={() => operations.post(row.id, row.name, adminSourceEnablementHref(row.id))}><PendingLabel idle="启用" pending="正在启用…" busy={operations.busy(row.id)} /></button>
         )}
         </div></details>
       </div>,
@@ -96,7 +96,7 @@ export default function Index({ sources, summary }: AdminSourcesIndexProps) {
             {attention.map((row) => (
               <li key={row.id}>
                 <span>{row.name} · {row.health_label}</span>
-                <Link className="link-button" href={adminSourceRunsHref(row.id)} aria-label={`查看记录 · ${row.name}`}>查看记录</Link>
+                <Link data-table-focus="runs" className="link-button" href={adminSourceRunsHref(row.id)} aria-label={`查看记录 · ${row.name}`}>查看记录</Link>
               </li>
             ))}
           </ul>

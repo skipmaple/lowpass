@@ -34,6 +34,7 @@ Google / GitHub 登录，单租户。
 
 - 期不可变（R-1.4）：发布后条目不再变化，地址永久稳定。例外只有两个：管理员对"某期某源"重抓整栏替换并记 `revised_at`（R-1.5）；
   推荐理由、兴趣标签与译文可在发布后补写（R-9.7、R-9.10）。
+  D38候选的合法不足判断只进独立ReasonAbstention，不touch Item/Issue，不扩展已发布源内容可变范围；有旧理由时保留原内容，不宣称新证据已核验。
 - 一日一期、周期键（3.2）：日刊 `YYYY-MM-DD`，周刊 ISO 周 `YYYY-Www`；展示按 Asia/Shanghai，存储 UTC；
   周期键的计算只在一处，且有跨日（23:59 / 00:00）与服务器时区非上海的测试。
 - 调度是每分钟一次的 tick（ADR T2），读数据库里的生成时间，到点入队、缺期补跑（R-1.1、R-1.7）；不是静态 cron。
@@ -69,7 +70,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
 留存夹，不是稍后读队列（PRD 5.10、D26）。设计见 `docs/superpowers/specs/2026-09-30-favorites-design.md`。
 
 - 一条收藏按链接的 `url_hash` 认，`(user_id, url_hash)` 唯一（D27）。收藏时把条目抄成快照，**不引用条目行**：管理员重抓是整栏先删后插，
-  条目 id 全换。收藏页渲染时按（刊物、周期键、来源、`url_hash`）现查条目还在不在（`Favorite.live_items`），在就用它现在的译文与条目锚点。
+  条目 id 全换。收藏页渲染时按（刊物、周期键、来源、`url_hash`）现查条目还在不在（`Favorite.live_items`），在则使用条目锚点；标题/简介分别与收藏原文精确匹配时才取当前后补译文，否则保留该字段快照译文（D39）。
 - 取消是真删，服务端不留「已取消」的行。删的同时回一张签名凭据（`Favorite::Undoing`，`MessageVerifier`，一天有效，只认本人），
   收藏页的「恢复」凭它把同一条原样插回去；凭据参数 `undo` 在 `filter_parameters` 里，不进请求日志。
 - 书签的两个动作（`POST /favorites`、`DELETE /favorites/:url_hash`）是 fetch + JSON，不是 Inertia 访问；未登录回 401 而不是 302。
@@ -97,7 +98,7 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   清理是模型类方法 `Model.cleanup`，分批 `delete_all`：抓取记录 30 天、搜索日志 30 天、结果点击 90 天、过期会话、审计日志 90 天、
   告警事件 90 天、模型调用账本 90 天。〔改造自 fizzy `config/recurring.yml` 与 `Webhook::Delivery.cleanup`〕
 - Job 必须幂等：tick 可能重复触发；"某期 + 某源"同时只允许一个重抓任务（R-3.10）。
-- 推荐理由生成是独立 job，失败不影响发布；单条重试 2 次，缺失在后台可见（R-9.6）。
+- 推荐理由生成是独立job，失败不影响发布；技术失败首次后最多重试2次，D38候选的合法拒写即终止、不额外重试，待处理在后台可见（R-9.6）。
 - 后台（P2-②）：`Admin::` 控制器是 CRUD 资源（启停是 `enablement`，重抓 / 补生成 / 立即生成各是一个资源，STYLE.md），
   写操作成功后 `Audit.record`；手动重抓复用 `FetchSourceJob`（`trigger: "manual"`），页面轮询 `FetchRun.manual_recent`；
   测试抓取是同步的 JSON 端点（30 秒超时）；源配置的模式与中文校验在 `Source::Config`。〔P2-② 设计文档〕
@@ -111,8 +112,20 @@ PostgreSQL 内建搜索（ADR T7：`pg_trgm` 做拉丁前缀与拼写容错，`I
   测试不跑真的 `pg_dump`（CI 的 runner 与 postgres service 大版本对不上），用假脚本代替。
 - 健康检查（N-5）：`Health` 查数据库、搜索探测（`Search::Runner.probe`，不计入 B5 的失败计数）、tick 心跳（`Setting` 的 `ticked_at`，
   每次 tick 第一步写）、日刊是否按时、备份是否新鲜；`HealthController` 继承 `ActionController::Base`，不登录，限流计数放进程内存。
-- 推荐理由（P2-④）：`Reasons::Provider` 只做 OpenAI 兼容协议（地址、模型名、单价、上限在 `settings`，密钥只从环境读）；`Reasons::Generator` 一期顺序生成、单条重试 2 次、补缺时跨天沿用；日刊条目在同一次调用里拿回译文（D25）：HN 与 RSS 源（Hackaday）译标题（`items.title_zh`，看 `Source#translates_titles?`），GitHub Trending 译简介（`items.summary_zh`，看 `Source#translates_summaries?`）；译文不合规只当没有、不触发重试，跨天沿用要求前一条原文相同且带译文；`GenerateReasonsJob` 按期限并发；账本 `model_calls` 90 天；缺理由由 tick 检查后走告警。
+- 推荐理由（P2-④）：`Reasons::Provider`只做OpenAI兼容协议（地址、模型名、单价、上限在settings，密钥只从环境读）；Generator一期顺序处理，技术失败首次后最多2次重试、每次请求前查预算。日刊同次generated结果顺带译文（D25）：HN与RSS日刊源译标题，GitHub Trending译简介；只保存需要且合规的译文，不为译文单独重试，本次无新译文保留旧值。补缺跨日复用须同原文且有合规译文，D38候选另要求旧条目无marker；`GenerateReasonsJob`按期限并发，调用账本保留90天，缺失由tick告警。
   模型端点与 feed 地址不同：它是管理员在后台填的可信地址，只要求 https（本机 http 允许，给本地 Ollama），**不经 surfguard**——这是对上面「出站 HTTP」那条不变量的明示例外，理由是它不是从源站内容里读来的地址，且请求体里带着密钥，不能被重定向到别处。401 / 403 与 429 都不追加重试，本期停止（`Rejected` / `Limited`）；没配供应商或画像为空（`Reasons.ready?`）一律不调模型。〔P2-④ 设计文档〕
+
+### D38：理由资料不足的本地候选契约
+
+2026-10-23完整方案已批准本地实现与离线验收；这里记录前瞻工程约束，不代表已通过测试或生产启用。规范为现行PRD §5.7/§5.9、D25/D37/D38与 `docs/superpowers/specs/2026-10-23-reason-abstention-design.md`，旧P2设计中的截断、每条强制生成、只看reason与全局恢复已被取代。
+
+- Prompt与Parser同批切换两分支：generated须严格字符串理由/标签、归一化20–60字符、不截断、含汉字且正文领域与标签相同；合法不足完整对象只能是 `{"decision":"insufficient_evidence"}`。附带字段、缺/未知decision、技术失败或解析异常均不是合法不足。模型仅用已有标题/说明/来源/有限元数据/画像；不因摘要为空或名称/热度机械判断，不提供URL/补全文/检索/第二次调用。形式校验不是事实核验。
+- Item层集中 `pending_reasons`：可见日刊、reason为nil且无ReasonAbstention。补缺、后台计数、Generator完成/预算摘要和Scheduler共用；合法拒写同条目普通补缺不再收费，显式单条/整期重生可重评估。新日期/重抓新item_id不复制拒写结论，带marker的旧理由不得再传播；改设置不清marker或改历史。
+- ReasonAbstention一对一保存最后合法不足及UTC assessed_at，id/item_id为25字符base36字符串，item_id非空且数据库唯一、FK删除CASCADE；重抓delete_all必须清旧marker。无自由诊断/原响应/资料快照、不依赖ModelCall、不历史回填、不touch Item/Issue；下架/恢复保留判断。锁Item后创建/更新marker；合法generated写内容与删marker同一事务，最后合法提交生效，失败保留旧字段/时间/marker。
+- 单条明确generated / abstained / failed，整期分别统计generated / reused / abstained / failed；skipped只保留未准备好的语义。每次真实请求先写账本，再做独立业务事务；合法不足记abstained，使用实际usage/单价/耗时、error_summary为空并立即结束重试。invalid收费，预算未发请求不记账；业务持久化失败不能回滚掉实际调用，不得额外请求模型。模型校验和数据库CHECK同时扩展，90天清账不清marker。
+- reasons_missing只在本期零pending且预算未耗尽时恢复本期已有事件，不关别期或未解除预算事件；最后一个合法结果完成且不需后续请求不额外制造预算终止。tick仍只查告警，不加模型请求、告警渠道或常驻进程。
+- 后台按可见条目互斥统计已有理由/资料不足未写/保留旧理由/缺失，配置事实独立；判断时间显示最后处理。单条审计记录实际结果，整期提交只表示已开始。读者新拒写无空标签、假译文或诊断，有旧理由者照常显示且不新增核验标识；原文与收藏不变。
+- 本轮交付完整本地候选与未合并PR，禁网stub测试、私密既有材料独立离线审查、实际375/390px和桌面网页验收、完整bin/ci与300KB门禁；不生成PDF，不把人工预期冒充实网结果。模型/端点/价格/月上限/max_tokens不改，无新增真实模型调用授权，不合并部署或自动重生成历史。后续试验与生产启用另行授权；若启用后回退，先停本轮理由任务并明确人工范围，保留marker表、abstained账本/CHECK，旧代码可能重复收费/误告警，不作透明回退。
 
 ## 认证、会话与请求上下文
 
@@ -194,3 +207,9 @@ prek 不引入。
 ## Coding style
 
 Before editing or reviewing code, read STYLE.md.
+
+## D39 独立译文候选（2026-10-25）
+
+完整契约见 `superpowers/specs/2026-10-25-independent-translations-design.md`。理由同次译文不合规仍只忽略，不采用失败/拒写响应译文；另一次独立翻译最多3次/字段/操作，不依赖画像或理由。当前为本地候选，未获真实调用/部署/生产历史补全授权。
+
+`ModelRequests`统一PG session advisory门：uncached读取锁、预算、额度，冻结配置后请求与记账，短Item事务复查指纹；锁顺序先advisory后Item，网络不持行事务。Busy只重排同键同签发时间，7天终止；旧理由参数翻译目标为空。无请求终止存在ModelOperationStop而非假账本。签名预览15分钟，绑定用户/期/重评选项/字段指纹，POST只消费凭据；自动仅入队时上海当日新id，历史不自动扫。

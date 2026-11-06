@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import SourceTabs from '@/components/SourceTabs'
 import { source } from '../support/props'
@@ -15,6 +15,7 @@ function Harness({ initial = 'src-hn', onSelect = vi.fn() }: { initial?: string;
 
 function links() { return within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link') }
 
+beforeEach(() => window.history.replaceState({}, '', '/'))
 afterEach(() => vi.restoreAllMocks())
 
 describe('连续来源导航', () => {
@@ -43,7 +44,7 @@ describe('连续来源导航', () => {
     expect(links()[2]).not.toHaveAttribute('aria-disabled')
   })
 
-  it('点击更新当前来源并滚动，其他章节仍保留', async () => {
+  it('点击更新当前来源，保留原生锚点跳转和其他章节', async () => {
     const onSelect = vi.fn()
     const scroll = vi.fn()
     Element.prototype.scrollIntoView = scroll
@@ -51,7 +52,8 @@ describe('连续来源导航', () => {
     await userEvent.click(links()[2])
     expect(onSelect).toHaveBeenLastCalledWith('src-had')
     expect(links()[2]).toHaveAttribute('aria-current', 'location')
-    expect(scroll).toHaveBeenCalled()
+    expect(links()[2]).toHaveAttribute('href', '#source-src-had')
+    expect(scroll).not.toHaveBeenCalled()
     expect(screen.getByText('内容 Hacker News')).toBeInTheDocument()
   })
 

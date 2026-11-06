@@ -3,11 +3,12 @@
 @import "../styles/fonts.css";
 @import "../styles/tokens.css";
 @import "../styles/motion.css";
+@import "../styles/daily.css";
+@import "../styles/weekly.css";
+@import "../styles/results.css";
 @import "../styles/themes.css";
 @import "../styles/themes-reading.css";
 @import "../styles/themes-library.css";
-@import "../styles/themes-admin.css";
-@import "../styles/themes-login.css";
 @import "../styles/themes-controls.css";
 @import "../styles/print.css";
 

@@ -2,11 +2,12 @@ import Icon from '@/components/Icon'
 import type { ArchiveMark } from '@/types/lowpass'
 
 // 归档的状态记号（画布 pages_site.py 的 mark()）：10px 实心方块 = 已发布，
-// 描边方块 = 空刊 / 无内容，叉 = 缺期，时钟 = 生成中。名字给读屏，别的地方不重复说。
+// 描边方块 = 空刊 / 无内容，叉 = 缺期，时钟 = 待生成 / 生成中。名字给读屏，别的地方不重复说。
 const NAMES: Record<ArchiveMark, string> = {
   published: '已发布',
   empty: '空刊',
   generating: '生成中',
+  scheduled: '待生成',
   missing: '缺期',
 }
 
@@ -16,7 +17,7 @@ export default function Mark({ state, label }: { state: ArchiveMark; label?: str
   const name = label ?? NAMES[state]
 
   if (state === 'missing') return <Icon name="x" size={12} color="var(--ink2)" title={name} />
-  if (state === 'generating') return <Icon name="clock" size={12} color="var(--ink2)" title={name} />
+  if (state === 'generating' || state === 'scheduled') return <Icon name="clock" size={12} color="var(--ink2)" title={name} />
 
   return (
     <span

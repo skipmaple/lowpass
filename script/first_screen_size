@@ -1,13 +1,14 @@
 #!/usr/bin/env ruby
-# Budget each persisted theme separately. Count entry + daily JS, shared CSS,
+# 2026-11-06 用户确认首屏预算为 500 KiB；逐主题统计，不更改字体覆盖。
+# Budget each persisted theme separately. Count entry + daily JS and their CSS,
 # the immediately requested content font-face stylesheet, and all shell fonts.
 # Content glyph shards depend on the edition; report their network cost in the
 # browser acceptance record, as before (PRD N-1), rather than treating it as zero.
 require "json"
 require "zlib"
 
-BUILD = File.expand_path("../public/vite", __dir__)
-BUDGET_KB = 300
+BUILD = File.expand_path(ARGV.fetch(0, "../public/vite"), __dir__)
+BUDGET_KB = 500
 ENTRIES = %w[entrypoints/application.tsx pages/Daily/Show.tsx].freeze
 THEMES = {
   "A 层叠清晨" => [ "daybreak", "a", %w[body display] ],
@@ -20,17 +21,21 @@ collect = lambda do |key, found|
   chunk = manifest.fetch(key)
   unless found.include?(chunk.fetch("file"))
     found << chunk.fetch("file")
+    found.concat(chunk.fetch("css", []))
     chunk.fetch("imports", []).each { |dependency| collect.call(dependency, found) }
   end
-  found
+  found.uniq
 end
 gzip_size = ->(name) { Zlib.gzip(File.binread(File.join(BUILD, name)), level: Zlib::BEST_COMPRESSION).bytesize }
 raw_size = ->(key) { File.size(File.join(BUILD, manifest.fetch(key).fetch("file"))) }
-scripts = ENTRIES.each_with_object([]) { |entry, files| collect.call(entry, files) }
-shared = scripts.sum { |file| gzip_size.call(file) } + gzip_size.call(manifest.fetch("entrypoints/application.css").fetch("file"))
+resources = ENTRIES.each_with_object([]) { |entry, files| collect.call(entry, files) }
+resources << manifest.fetch("entrypoints/application.css").fetch("file")
+resources.uniq!
+shared = resources.sum { |file| gzip_size.call(file) }
 passed = true
 THEMES.each do |label, (name, prefix, latin_roles)|
-  content_css = gzip_size.call(manifest.fetch("styles/fonts-#{name}-content.css").fetch("file"))
+  content_path = manifest.fetch("styles/fonts-#{name}-content.css").fetch("file")
+  content_css = resources.include?(content_path) ? 0 : gzip_size.call(content_path)
   fonts = %w[regular bold].sum { |weight| raw_size.call("fonts/themes/#{prefix}-#{weight}-ui.woff2") }
   fonts += latin_roles.sum { |role| raw_size.call("fonts/themes/#{prefix}-latin-#{role}.woff2") }
   total = (shared + content_css + fonts) / 1024.0

@@ -1,6 +1,17 @@
 require "test_helper"
 
 class Issue::PresentingTest < ActiveSupport::TestCase
+  test "拒写判断不进入读者props且历史理由仍原样显示" do
+    item = items(:hn_one)
+    item.record_reason_abstention(assessed_at: Time.current)
+    props = -> { item.issue.items_by_source.fetch(item.source_id).find { |entry| entry[:id] == item.id } }
+    assert_equal [ nil, nil, nil, nil ], props.call.values_at(:reason, :interest_tag, :title_zh, :summary_zh)
+    assert_empty props.call.keys & %i[ reason_abstention assessed_at diagnostic decision ]
+    item.update!(reason: "保留历史理由", interest_tag: "前端开发", title_zh: "原有译文")
+    assert_equal [ "保留历史理由", "前端开发", "原有译文" ], props.call.values_at(:reason, :interest_tag, :title_zh)
+    assert_empty props.call.keys & %i[ reason_abstention assessed_at diagnostic decision ]
+  end
+
   test "不同年份的同月同日日刊保留年份供期头和标题使用" do
     assert_equal 2025, Issue.daily_props_for("2025-09-08", issue: nil)[:year]
     assert_equal 2026, Issue.daily_props_for("2026-09-08", issue: nil)[:year]
@@ -43,6 +54,14 @@ class Issue::PresentingTest < ActiveSupport::TestCase
     assert_nil props[:status]
   end
 
+  test "今日未到配置时间且没有记录时说明计划生成时间" do
+    Setting.set("daily_time", "07:30")
+    assert_equal "今日将于 07:30 生成", Issue.daily_props_for("2026-09-09", issue: nil, now: BEFORE_DAILY_TIME)[:status]
+    assert_equal "本期未生成", Issue.daily_props_for("2026-09-08", issue: nil, now: BEFORE_DAILY_TIME)[:status]
+    assert_equal "本期未生成", Issue.daily_props_for("2026-09-09", issue: nil, now: Time.utc(2026, 9, 8, 23, 30))[:status]
+    assert_equal "本期未生成", Issue.daily_props_for("2026-09-10", issue: nil, now: BEFORE_DAILY_TIME)[:status]
+  end
+
   test "今天已经出了期，昨日那一期就不再标 is_yesterday" do
     publish!("2026-09-09")
 
@@ -76,6 +95,21 @@ end
 # 归档与周刊页的 props。上海 2026-09-10 12:00：fixture 的日刊 2026-09-08 与周刊 2026-W36 都在过去，本周是 2026-W37。
 class Issue::ArchivePresentingTest < ActiveSupport::TestCase
   NOW = Time.utc(2026, 9, 10, 4)
+
+  test "归档仅将尚未到生成时间的今日无记录显示为待生成" do
+    Setting.set("daily_time", "07:30")
+    before = Time.utc(2026, 9, 9, 23, 29)
+    rows = Issue.daily_archive_props(now: before)[:days].index_by { |day| day[:period_key] }
+    assert_equal [ "scheduled", "待 07:30 生成", nil ], rows["2026-09-10"].values_at(:state, :published_label, :source_marks)
+    assert_equal "missing", rows["2026-09-09"][:state]
+    assert_equal "missing", Issue.daily_archive_props(now: before + 1.minute)[:days].first[:state]
+  end
+
+  test "提前生成的今日期在计划时间之前保留真实状态" do
+    Issue.create!(kind: "daily", period_key: "2026-09-10", state: "generating", generation_started_at: Time.utc(2026, 9, 9, 20))
+    row = Issue.daily_archive_props(now: Time.utc(2026, 9, 9, 21))[:days].first
+    assert_equal [ "generating", "生成中" ], row.values_at(:state, :published_label)
+  end
 
   def entry(title, section: nil, rank: 1, issue_no: nil, issue_title: nil, url: nil, summary: nil, content: nil)
     attributes = { title: title, url: url || "https://r.example/#{rank}#{issue_no}", summary: summary, section: section, rank: rank,
@@ -170,6 +204,46 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal 3, row[:count]
   end
 
+  test "周刊条目全部下架后归档说明无内容，恢复后重新显示主题" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由")
+    ], issue_no: 366)
+    item = issue.items.sole
+    item.update!(hidden: true)
+    row = nil
+
+    assert_no_changes -> { issue.reload.attributes } do
+      row = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    end
+
+    assert_equal "本周无内容", row[:summary]
+    assert_equal 0, row[:count]
+    assert_equal "published", row[:state]
+
+    item.update!(hidden: false)
+    restored = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由", restored[:summary]
+    assert_equal 1, restored[:count]
+  end
+
+  test "周刊重抓清空条目后归档仍有事实说明" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("慢下来的理由", section: "本周话题", issue_no: 366, issue_title: "慢下来的理由")
+    ], issue_no: 366)
+    issue.replace_section!(sources(:ruanyf), [], issue_no: 366)
+    row = nil
+
+    assert_no_changes -> { issue.reload.attributes } do
+      row = Issue.weekly_archive_props(now: NOW)[:weeks].find { |week| week[:period_key] == issue.period_key }
+    end
+
+    assert_equal "本周无内容", row[:summary]
+    assert_equal 0, row[:count]
+    assert_equal "published", row[:state]
+  end
+
   # weekly_archive_props 原本每期都经 Issue#weekly_sections 单独查一遍（≈2 条查询/有内容的周），
   # 一年最多 53 周就是 N+1。批量改法要做到查询数不随「有内容的周数」增长，摘要字符串跟改之前
   # （上面那条测试、Issue#section_issue_label 的文案）逐字一样。
@@ -197,12 +271,15 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
 
     weeks = props[:weeks].index_by { |week| week[:period_key] }
     assert_equal "阮一峰科技爱好者周刊 第 365 期 · 上一期的主题", weeks["2026-W34"][:summary]
+    assert_equal [ { source: "阮一峰科技爱好者周刊", label: "第 365 期 · 上一期的主题" } ], weeks["2026-W34"][:summary_parts]
     assert_equal 1, weeks["2026-W34"][:count]
     assert_equal "独立开发周刊", weeks["2026-W35"][:summary]
     assert_equal 2, weeks["2026-W35"][:count]
     assert_equal "阮一峰科技爱好者周刊 第 366 期 · 慢下来的理由 / 命令行周报", weeks["2026-W36"][:summary]
+    assert_equal [ { source: "阮一峰科技爱好者周刊", label: "第 366 期 · 慢下来的理由" }, { source: "命令行周报", label: nil } ], weeks["2026-W36"][:summary_parts]
     assert_equal 3, weeks["2026-W36"][:count]
     assert_equal "本周无内容", weeks["2026-W37"][:summary]
+    assert_equal [], weeks["2026-W37"][:summary_parts]
     assert_nil weeks["2026-W37"][:count]
   end
 
@@ -265,6 +342,19 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", issues(:daily_0908).items_by_source.fetch(item.source_id).sole[:title_zh]
   end
 
+  test "已存摘要只去阅读更多尾巴，保留代码符号与实体文字" do
+    summary = "变量_用户_名称，目录**/文件.rb、目录**/文件.ts，<T> 与 &lt;value&gt;。"
+    item = items(:hn_one)
+    item.update!(summary: summary + " …read more")
+    row = nil
+
+    assert_no_changes -> { item.reload.attributes } do
+      row = issues(:daily_0908).items_by_source.fetch(item.source_id).sole
+    end
+
+    assert_equal summary, row[:summary]
+  end
+
   test "日刊条目带简介译文（GitHub Trending）" do
     repo = Item.create!(source: sources(:github), issue: issues(:daily_0908), title: "octo/tool", summary: "A tiny CLI tool", summary_zh: "一个命令行小工具",
                         url: "https://github.com/octo/tool", url_hash: Digest::SHA256.hexdigest("https://github.com/octo/tool"), rank: 1, fetched_at: Time.current)
@@ -292,6 +382,24 @@ class Issue::ArchivePresentingTest < ActiveSupport::TestCase
 
     assert_equal content, item[:content]
     assert_equal 500, item[:summary].length
+  end
+
+  test "既刊正文已丢失代码边界，读出时保留原文与数据库记录" do
+    issue = issues(:weekly_w36)
+    issue.replace_section!(sources(:ruanyf), [
+      entry("发布节奏", section: "本周话题", issue_no: 366)
+    ], issue_no: 366)
+    stored_content = "改成**每月发一个版本**。\n代码是变量_用户_名称。\n写作目录**/文件.rb，配合目录**/文件.ts使用。\n模板里的 <section> 与 &lt;value&gt; 是文字。"
+    item = issue.items.sole
+    item.update!(content: stored_content)
+    row = nil
+
+    assert_no_changes -> { item.reload.attributes } do
+      row = Issue.weekly_props_for("2026-W36")[:sections].sole[:groups].sole[:items].sole
+    end
+
+    assert_equal stored_content, row[:content]
+    assert_equal stored_content, item.reload.content
   end
 
   test "没有期的周仍然给出周次与附录 B 的一句" do

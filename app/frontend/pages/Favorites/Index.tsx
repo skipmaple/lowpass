@@ -41,8 +41,8 @@ function Row({ entry, rank }: { entry: FavoriteEntry; rank: number }) {
   const summary = entry.summary_zh || entry.snippet
   const detail = entry.reason || entry.title_zh || (entry.summary_zh && entry.snippet)
 
-  // Keep keyboard focus on the replacement action after removing/restoring.
-  // A failed request must not steal focus if the reader already moved elsewhere.
+  // 同一个书签控件在取消后提供恢复；两态沿用原来的焦点跟随限制（PRD 6.4）。
+  // 只在读者还在这一行时跟（焦点在行里，或者随换掉的控件掉回了 body）：请求失败回滚时读者可能已经去了别处，不拽回来
   useEffect(() => {
     const active = document.activeElement
     const stayed = !active || active === document.body || rowRef.current?.contains(active)
@@ -71,16 +71,12 @@ function Row({ entry, rank }: { entry: FavoriteEntry; rank: number }) {
         {entry.summary_zh && entry.snippet ? <p className="record-original-summary" lang={latinLang(entry.snippet)}>{entry.snippet}</p> : null}
       </> : null}
       actions={<>
-        <a className="search-original" href={entry.url} target="_blank" rel="noopener noreferrer">原文<Icon name="arrow-up-right" size={16} /></a>
+        <a className="search-original" href={entry.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description">原文<Icon name="arrow-up-right" size={16} /></a>
         <Link className="record-issue-link" href={entry.where.href}>所在期 · {normalizeDateLabel(entry.where.label)}</Link>
-        {kept ? (
-          <FavoriteButton ref={markRef} className="search-mark" urlHash={entry.url_hash} title={title} />
-        ) : (
-          <span className="favorite-removed search-mark">
-            <span id={statusId}>已取消收藏</span>
-            <button ref={restoreRef} type="button" className="link-button" aria-describedby={statusId} onClick={() => favorites?.restore(entry.url_hash)}>恢复</button>
-          </span>
-        )}
+        <span className={`favorite-controls search-mark${kept ? '' : ' favorite-removed'}`}>
+          {!kept ? <span id={statusId}>已取消收藏</span> : null}
+          <FavoriteButton ref={kept ? markRef : restoreRef} urlHash={entry.url_hash} title={title} undo={{ describedBy: statusId }} />
+        </span>
       </>}
     />
   )

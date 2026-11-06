@@ -58,7 +58,7 @@ group :test do
   gem "selenium-webdriver"
 end
 
-gem "inertia_rails", "~> 3.6"
+gem "inertia_rails", "~> 3.23"
 gem "vite_rails", "~> 3.0"
 gem "rss"                     # Ruby 3.4 起是 bundled gem，必须显式声明
 gem "nokogiri"

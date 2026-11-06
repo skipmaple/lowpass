@@ -18,7 +18,7 @@
   --font-data: "Maple Mono NL", ui-monospace, monospace;
 
   /* 基础字号序列；16 / 64 只用于 1920px 以上的大屏阅读模式。 */
-  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-16: 16px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-40: 40px; --fs-56: 56px; --fs-64: 64px;
+  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-16: 16px; --fs-18: 18px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-40: 40px; --fs-56: 56px; --fs-64: 64px;
 
   /* 操作控件使用主题角色；刊头与正文边界不依赖此兼容变量。 */
   --radius: var(--control-radius, 8px);
@@ -40,6 +40,7 @@ body { margin: 0; color: var(--ink); font-family: var(--font-latin); font-size: 
 a { color: inherit; text-decoration: none; }
 a.t { text-decoration: underline; text-decoration-color: var(--underline); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 a.t:hover { text-decoration-color: var(--ink); }
+a.t:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* Inertia 页面跳转进度条（NProgress）。application.tsx 里 includeCSS: false，
    自己写这份最小样式：墨色细线，没有光晕、没有圆角、没有小圆点/转圈图标。 */
@@ -50,6 +51,11 @@ a.t:hover { text-decoration-color: var(--ink); }
 /* 全窗口纸面与正文行长分开：宽屏/短页都不露出深色外框，内容保持居中。 */
 .sheet { width: 100%; min-height: 100dvh; box-sizing: border-box; }
 .sheet-body { width: 100%; max-width: 1240px; box-sizing: border-box; margin: 0 auto; padding: 0 40px 28px; }
+
+/* 应用入口失败时仍能由服务端 HTML 提供一个原生重载动作；迟到的应用一旦挂载就让回正文。 */
+.startup-recovery.sheet-body { padding-top: 64px; padding-bottom: 64px; }
+.startup-recovery h1 { margin: 0 0 24px; font-size: var(--fs-22); font-weight: 400; line-height: 1.6; }
+#app:not(:empty) ~ .startup-recovery { display: none; }
 
 /* 报头黑带。尺寸写在这里而不是组件的行内样式里：行内样式盖不住下面的 @media。 */
 .masthead { box-sizing: border-box; height: 80px; padding: 0 max(40px, calc((100% - 1160px) / 2)); background: var(--ink); display: flex; align-items: center; justify-content: space-between; }
@@ -67,7 +73,7 @@ a.t:hover { text-decoration-color: var(--ink); }
 .account-button { width: 32px; height: 32px; padding: 0; border: 1px solid var(--paper); border-radius: 50%; background: none; color: var(--paper);
                   position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; }
 .account-button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
-.account-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; transition: opacity 160ms ease; }
+.account-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; transition: opacity var(--dur-1) var(--ease-out); }
 .account-avatar--open { opacity: 0; }
 .menu-card { position: absolute; right: 0; top: 44px; width: 220px; background: var(--paper); border: 1px solid var(--ink); padding: 6px 0; z-index: 20; }
 .menu-head { padding: 8px 16px 10px 16px; border-bottom: 1px solid var(--rule); }
@@ -141,23 +147,8 @@ a.t:hover { text-decoration-color: var(--ink); }
         border: 1px solid var(--ink); background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink);
         white-space: nowrap; cursor: pointer; }
 .ctrl-off { border-color: var(--rule); color: var(--ink2); cursor: default; }
+.ctrl:not(.ctrl-off):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .ctrl-square { width: 44px; height: 44px; padding: 0; }
-
-/* 来源索引条：并排等宽，当前项反白成墨块，其余 1px 描边；相邻两条共用一条边。
-   --tab-hole 是插图里「挖空」处的填充：纸上留纸色，反白后填墨色。 */
-.source-tabs { display: flex; padding: 24px 0 0 0; }
-.source-tab { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 18px 24px 18px 18px;
-              border: 1px solid var(--ink); background: transparent; color: var(--ink); text-align: left; cursor: pointer;
-              --tab-hole: var(--paper); }
-.source-tab + .source-tab { margin-left: -1px; }
-.source-tab[data-state="active"] { background: var(--ink); color: var(--paper); --tab-hole: var(--ink); }
-.source-tab:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.source-tab[data-state="active"]:focus-visible { outline-color: var(--paper); outline-offset: -6px; }
-.source-tab-icon { width: 68px; height: 44px; flex: none; display: block; }
-.source-tab-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.source-tab-name { font-family: var(--font-latin); font-size: var(--fs-32); font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
-.source-tab-state { font-family: var(--font-cjk); font-size: var(--fs-12); line-height: 1.6; color: var(--ink2); white-space: nowrap; }
-.source-tab[data-state="active"] .source-tab-state { color: var(--paper); opacity: 0.72; }
 
 /* 列表区：顶上一条 1px 墨线，条目之间 1px 分隔线 */
 .issue-body { border-top: 1px solid var(--ink); }
@@ -165,6 +156,10 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 条目：序号与阅读列；桌面标签锚定整行末端，标题、摘要仍保持舒适行长。 */
 .item-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "rank body"; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+.item-row--weekly { scroll-margin-top: 24px; }
+.item-row--weekly:focus { outline: none; }
+.item-row--weekly:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.weekly-anchor-alias { display: block; height: 0; scroll-margin-top: 24px; }
 .item-rank { grid-area: rank; padding-top: 5px; text-align: right; font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
 .item-body { grid-area: body; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .item-heading { display: block; min-width: 0; max-width: 780px; }
@@ -182,10 +177,10 @@ a.t:hover { text-decoration-color: var(--ink); }
 .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px;
              font-family: var(--font-data); font-size: var(--fs-13); line-height: 1.5; color: var(--ink2); }
 .item-metric { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; white-space: nowrap; }
-.item-comments { transition: color 160ms ease; }
+.item-comments { transition: color var(--dur-1) var(--ease-out); }
 .item-comments:hover, .item-comments:focus-visible { color: var(--ink); }
 .item-comments:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
-.item-reason { margin-top: 4px; max-width: 820px; border-left: 2px solid var(--green); padding: 1px 0 1px 12px; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.7; color: var(--ink2); }
+.item-reason { margin-top: 4px; max-width: 820px; border-left: 1px solid var(--green); padding: 1px 0 1px 12px; font-family: var(--font-cjk); font-size: var(--fs-15); line-height: 1.7; color: var(--ink2); }
 
 /* 栏级与期级状态：一句文楷 20 的事实（+ 失败时一幅日出小图与上次成功时间） */
 .state-line { font-family: var(--font-cjk); font-size: var(--fs-20); }
@@ -208,14 +203,6 @@ a.t:hover { text-decoration-color: var(--ink); }
   /* 翻月、翻年的按钮带的是月份与年份，收不成图标：整行留在期头下面，44px 触控目标 */
   .page-nav { width: 100%; }
   .page-nav .ctrl { height: 44px; flex: 1 1 0; }
-
-  /* 期头底线下面已经有一行按钮，索引条不用再空 24px */
-  .source-tabs { padding-top: 16px; }
-  .source-tab { flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px 8px; }
-  .source-tab-icon { width: 37px; height: 24px; }
-  .source-tab-body { align-items: center; gap: 4px; }
-  .source-tab-name { font-size: var(--fs-13); line-height: 1.2; text-align: center; }
-  .source-tab-state { white-space: normal; text-align: center; }
 
   .issue-body { margin-top: 24px; }
   .source-foot { padding-top: 22px; }
@@ -242,16 +229,16 @@ a.t:hover { text-decoration-color: var(--ink); }
 /* 源节反白横带：源名与期号组成一个信息组，右端只保留原文操作。 */
 .source-band { margin-top: 24px; min-height: 80px; background: var(--ink); display: flex; align-items: center;
                justify-content: space-between; gap: 16px; padding: 0 24px; }
-.source-band-name { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.source-band-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+
 .source-band-title { margin: 0; font-weight: 400; font-size: var(--fs-32); line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .source-band-meta { display: flex; align-items: center; gap: 16px; flex: none; }
 .source-band-issue { line-height: 1.5; opacity: 0.72; }
+
 .source-band-link { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--paper); }
 .source-band-link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 
 /* 板块锚点目录：1px 描边小块横排一行，窄屏横向滚动；底下一条 1px 墨线 */
-.anchors { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--ink); overflow-x: auto; scrollbar-width: none; }
+.anchors { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--ink); overflow-x: auto; scrollbar-width: none; scroll-margin-top: 24px; }
 .anchors::-webkit-scrollbar { display: none; }
 .anchor-chip { display: inline-flex; align-items: center; flex: none; height: 40px; padding: 0 14px; border: 1px solid var(--rule);
                font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); white-space: nowrap; }
@@ -267,22 +254,48 @@ a.t:hover { text-decoration-color: var(--ink); }
                     font-size: var(--fs-13); color: var(--ink2); }
 .directory-return:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 .directory-return:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.source-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; }
+.source-actions .source-foot { margin-right: 0; }
+.source-actions .directory-return { margin-top: 0; margin-bottom: 0; }
+#source-directory:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 
 /* 周刊正文完整展开：不继承日刊摘要的两行裁剪。 */
-.item-content--weekly { display: block; width: 100%; max-width: 72em; overflow-wrap: anywhere; }
+.item-content--weekly { display: block; width: 100%; max-width: 780px; overflow-wrap: anywhere; }
 .item-content--weekly > p { margin: 0; }
-.item-content--weekly > p + p { margin-top: 12px; }
+.item-content--weekly > p + p, .item-content--weekly > .item-media + p,
+.item-content--weekly > p + blockquote, .item-content--weekly > blockquote + p,
+.item-content--weekly > blockquote + blockquote, .item-content--weekly > .item-media + blockquote { margin-top: 12px; }
+.item-content--weekly > blockquote { margin: 0; padding: 0 0 0 16px; border-left: 1px solid var(--rule); }
+.item-content--weekly > blockquote > p { margin: 0; }
+.item-content--weekly > blockquote > p + p { margin-top: 12px; }
+.item-content--weekly .weekly-reference { display: inline-block; max-width: 100%; min-height: 44px; line-height: 44px; vertical-align: baseline; }
+.item-content--weekly .weekly-reference-group { white-space: nowrap; }
+/* 纯鼠标设备按正文行距排版；任何触屏设备继续保留 44px 高的独立目标。 */
+@media screen and (hover: hover) and (pointer: fine) {
+  .item-content--weekly .weekly-reference { display: inline; min-height: 0; line-height: inherit; }
+}
+@media screen and (any-pointer: coarse) {
+  .item-content--weekly .weekly-reference { display: inline-block; min-height: 44px; line-height: 44px; }
+}
 
 /* 周刊图片按自身比例占位。多图同行时不互相拉高，边框也不再把留白误读成空卡片。 */
-.item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; width: 100%; max-width: 1080px; padding: 8px 0 4px; }
-.item-media--single { justify-items: center; }
+.item-media { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 60px 16px; width: 100%; max-width: 780px; padding: 8px 0 48px; }
+.item-media--single { justify-items: start; }
 .item-media--multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.item-media-frame { display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; width: fit-content; max-width: 100%; margin: 0; }
+.item-media-frame { position: relative; display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; width: fit-content; max-width: 100%; margin: 0; }
+/* 未知尺寸的懒加载图片暂时宽为 0：入口靠左保留在正文内，图片足够宽时仍与右边缘对齐。 */
+.item-media-original { position: absolute; top: 100%; left: max(0px, calc(100% - 44px)); min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); white-space: nowrap; }
 .item-media-image { display: block; width: auto; max-width: 100%; height: auto; max-height: 640px; }
 .item-media--multiple .item-media-frame { width: 100%; }
 .item-media--multiple .item-media-image { width: 100%; max-height: none; }
+/* 独立缓存给出天然尺寸后，解码前就保留同一比例；源图变更时完整适应框，不裁切或推移正文。 */
+.item-media-frame--sized { width: min(var(--image-width), calc(640px * var(--image-ratio))); aspect-ratio: var(--image-ratio); }
+.item-media-frame--loading { outline: 1px solid var(--rule); outline-offset: -1px; }
+.item-media-frame--sized .item-media-image { width: 100%; height: 100%; max-height: none; object-fit: contain; }
+.item-media--multiple .item-media-frame--sized { width: 100%; }
 
 @media (max-width: 767px) {
+  .item-media-frame--sized { width: 100%; }
   .item-media--multiple { grid-template-columns: minmax(0, 1fr); }
   .item-media-image { width: 100%; max-height: none; }
 }
@@ -300,6 +313,9 @@ a.t:hover { text-decoration-color: var(--ink); }
 .archive-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .archive-sub { grid-area: sub; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
 .archive-label { grid-area: label; min-width: 0; }
+.archive-weekly .archive-label-part { display: block; text-wrap: pretty; overflow-wrap: anywhere; }
+.archive-weekly .archive-label-part + .archive-label-part { margin-top: 4px; }
+.archive-weekly .archive-label-source { display: inline-block; max-width: 100%; overflow-wrap: anywhere; vertical-align: baseline; }
 .archive-meta { grid-area: meta; }
 
 @media (max-width: 480px) {
@@ -323,18 +339,20 @@ a.t:hover { text-decoration-color: var(--ink); }
 
 /* 期头：搜索图标 + 文楷 32 输入框 + 反白按钮，底线 2px（与 .page-head 同一条线） */
 .search-head { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 32px 0 20px 0; border-bottom: 2px solid var(--ink); }
-.search-field { flex: 1 1 320px; display: flex; align-items: center; gap: 16px; min-width: 0; }
-.search-input { flex: 1 1 auto; min-width: 0; min-height: 44px; border: 0; padding: 0; background: transparent; color: var(--ink);
+.search-field { position: relative; flex: 1 1 320px; display: flex; align-items: center; gap: 16px; min-width: 0; }
+.search-input { flex: 1 1 auto; box-sizing: border-box; min-width: 0; min-height: 44px; border: 0; padding: 0; background: transparent; color: var(--ink);
                 font-family: var(--font-cjk); font-size: var(--fs-32); line-height: 1.2; }
 .search-input::placeholder { color: var(--ink2); font-size: var(--fs-20); }
 /* 隐藏 Chrome / Safari 自带的清除叉，改用右侧有明确名称与 44px 目标的 .search-clear。 */
 .search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .search-input:focus { outline: none; }
 .search-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
-.search-clear { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+.search-field--has-clear .search-input { padding-right: 52px; }
+.search-clear { position: absolute; right: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
                 border: 0; background: transparent; cursor: pointer; }
-.search-clear:disabled { visibility: hidden; }
+.search-clear:disabled { display: none; }
 .search-clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
+.search-hint { display: none; }
 .search-note { flex-basis: 100%; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
 /* 反白按钮（画布 btn(primary=True)）：40px 墨块，纸色文楷 15 */
 .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px;
@@ -343,11 +361,11 @@ a.t:hover { text-decoration-color: var(--ink); }
 .btn-primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* 筛选栏：三组「小标 + 控件」横排，底线 1px */
-.filters { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
-.filter-toggle { display: none; }
-.filter-toggle-icon { transition: transform 120ms ease; }
+.filters { display: flex; gap: 20px 40px; align-items: flex-start; flex-wrap: wrap; padding: 20px 0; border-bottom: 1px solid var(--ink); }
+/* 展开按钮由 React 的 mobile 条件挂载，避免 CSS 先隐藏造成断点交接前失焦。 */
+.filter-toggle-icon { transition: transform var(--dur-1) var(--ease-move); }
 .filter-toggle-icon[data-open] { transform: rotate(90deg); }
-.filter-group { display: flex; flex-direction: column; gap: 8px; }
+.filter-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 100%; }
 .filter-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); }
 .filter-row { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 
@@ -363,6 +381,11 @@ a.t:hover { text-decoration-color: var(--ink); }
 .chip-outline { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid var(--rule); background: transparent;
                 letter-spacing: 0.04em; white-space: nowrap; cursor: pointer; }
 button.chip-outline { min-height: 44px; }
+/* 来源名允许到 100 字：完整换行，短名称仍保留原来的 44px 目标。 */
+.filters .chips > button { height: auto; max-width: 100%; padding-block: 8px; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.filters .chips > button > span { min-width: 0; }
+.filter-toggle > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.filter-toggle-icon { flex: none; }
 .chip-outline:hover { border-color: var(--ink); }
 .chip-outline:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .chip-on { border-color: var(--ink); background: var(--ink); }
@@ -375,13 +398,18 @@ button.chip-outline { min-height: 44px; }
 /* 结果计数与排序分段同一行；结果行：眉行、标题 20、片段 15、底行两个链接，行间 35% 墨线 */
 .search-count { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0 4px 0; }
 .search-row { padding: 20px 0; border-bottom: 1px solid var(--rule); }
-.search-eyebrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.search-dot { font-family: var(--font-data); font-size: var(--fs-13); color: var(--ink2); }
+
 .search-title { margin: 10px 0 0 0; font-weight: 500; line-height: 1.35; }
-.search-snippet { margin: 6px 0 0 0; max-width: 820px; line-height: 1.7; }
-.search-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin-top: 10px; }
-.search-links > a { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
-.search-original { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-cjk); font-size: var(--fs-13); }
+.search-snippet { margin: 6px 0 0 0; line-height: 1.7; }
+/* 搜索与收藏沿用日周刊的阅读列，整行分隔线与书签仍贴版心右缘。 */
+.search-title, .search-snippet { max-width: 780px; overflow-wrap: anywhere; }
+.search-links { display: flex; align-items: center; gap: 4px 20px; margin-top: 10px; }
+.search-links > .search-mark { flex-shrink: 0; }
+.search-links > .t { word-break: keep-all; text-wrap: balance; }
+/* 取消后的事实与恢复按钮需要独立空间，不挤压所在期链接。 */
+.search-links:has(.favorite-removed) { flex-wrap: wrap; }
+.search-links > a, a.field-note { max-width: 100%; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; overflow-wrap: anywhere; }
+
 /* 命中词：2px 墨色下划线（D22），不用颜色块 */
 .hit { text-decoration: underline; text-decoration-color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 4px; }
 .search-pager { display: flex; align-items: center; justify-content: space-between; padding-top: 20px; }
@@ -391,11 +419,18 @@ button.chip-outline { min-height: 44px; }
 .search-entry { padding-top: 24px; }
 .search-notice { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 0 8px 0; }
 
+@media (max-width: 600px) {
+  .search-head { row-gap: 8px; }
+  .search-input::placeholder { opacity: 0; }
+  .search-hint { display: block; flex-basis: 100%; box-sizing: border-box; padding-left: 40px;
+                 font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); line-height: 1.5; }
+}
+
 @media (max-width: 480px) {
   .search-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 24px 0 16px 0; }
   .search-field { gap: 8px; }
   .search-input { font-size: var(--fs-20); }
-  .search-input::placeholder { font-size: var(--fs-15); }
+  .search-hint { grid-column: 1 / -1; padding-left: 32px; }
   .search-note { grid-column: 1 / -1; }
   .btn-primary { height: 44px; }
   .filter-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 8px 0;
@@ -433,7 +468,7 @@ button.chip-outline { min-height: 44px; }
 .settings-rows { padding-top: 8px; }
 .kv-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0 24px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--rule); }
 .kv-key { font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
-.kv-value { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.kv-value { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; overflow-wrap: anywhere; }
 .settings-avatar { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
 .settings-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .link-button { padding: 0; border: 0; background: none; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink); cursor: pointer;
@@ -534,6 +569,7 @@ button.chip-outline { min-height: 44px; }
 .page-context { margin: 0; width: 100%; font-family: var(--font-cjk); font-size: var(--fs-15); color: var(--ink2); }
 .issue-head-main { flex-wrap: wrap; min-width: 0; gap: 12px 16px; }
 .issue-head-title { flex-wrap: wrap; gap: 12px 20px; }
+/* 日期行高由期头控制；桌面实测沿用 1.2，Mixed 继承以免额外撑高。 */
 .issue-head-date { line-height: 1.2; overflow-wrap: anywhere; }
 .issue-head-weekday { line-height: 1.4; }
 .page-nav { flex-wrap: wrap; }
@@ -547,12 +583,7 @@ button.chip-outline { min-height: 44px; }
 .ctrl, .btn-primary, .link-button, .anchor-chip, .source-band-link { min-height: 44px; height: auto; }
 .ctrl, .btn-primary, .anchor-chip { box-sizing: border-box; padding-top: 8px; padding-bottom: 8px; }
 .toast-close { min-width: 44px; min-height: 44px; }
-.source-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 0; }
-.source-tab { padding: 14px 16px; gap: 12px; min-height: 80px; }
-.source-tab + .source-tab { margin-left: 0; }
-.source-tab-icon { width: 44px; }
-.source-tab-name { font-size: var(--fs-26); line-height: 1.2; overflow-wrap: anywhere; }
-.source-tab-state { white-space: normal; }
+
 .item-body { width: 100%; max-width: none; }
 .item-title, .item-translation, .item-summary, .item-reason { overflow-wrap: anywhere; }
 .source-foot { min-height: 44px; padding: 8px 0; margin-right: 24px; font-family: var(--font-cjk); font-size: var(--fs-15); }
@@ -562,19 +593,19 @@ button.chip-outline { min-height: 44px; }
 .anchors { flex-wrap: wrap; overflow: visible; }
 .anchor-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .source-band { flex-wrap: wrap; padding-top: 14px; padding-bottom: 14px; }
-.source-band-name, .source-band-meta { min-width: 0; max-width: 100%; }
-.source-band-name svg { flex: none; }
+
 .source-band-title { overflow: visible; line-height: 1.4; overflow-wrap: anywhere; }
 .source-band-meta { flex-wrap: wrap; }
 .source-band-issue { opacity: 0.72; }
 .archive-daily .archive-row { grid-template-columns: 24px 120px 90px minmax(0, 1fr); grid-template-areas: 'mark key sub label' '. meta meta meta'; row-gap: 10px; }
 .archive-weekly .archive-label { font-size: var(--fs-20); }
 .archive-meta { overflow-wrap: anywhere; }
+.archive-source-result { display: inline-block; max-inline-size: 100%; vertical-align: baseline; }
+.archive-source-value { white-space: nowrap; }
+.archive-range-date { white-space: nowrap; }
 .dialog { max-height: calc(100dvh - 48px); overflow-y: auto; }
 @media (max-width: 1023px) {
-  .source-tab { flex-direction: column; align-items: center; padding: 12px 8px; }
-  .source-tab-body { align-items: center; text-align: center; }
-  .source-tab-name { font-size: var(--fs-20); }
+
   .archive-weekly .archive-row { grid-template-columns: 24px 130px minmax(0, 1fr); grid-template-areas: 'mark key sub' '. label label' '. meta meta'; gap: 10px 16px; }
 }
 @media (max-width: 767px) {
@@ -588,10 +619,7 @@ button.chip-outline { min-height: 44px; }
   .issue-head-date { font-size: var(--fs-40); }
   .issue-nav { display: none; }
   .issue-nav-mobile { display: flex; }
-  .source-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 16px; }
-  .source-tab-name { font-size: var(--fs-13); }
-  .source-tab-icon { width: 37px; height: 24px; }
-  .source-tab { min-height: 80px; gap: 6px; }
+
   .item-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'rank' 'body'; gap: 10px 12px; padding: 24px 0; }
   .archive-daily .archive-row, .archive-weekly .archive-row { grid-template-columns: 24px auto minmax(0, 1fr); grid-template-areas: 'mark key sub' '. label label' '. meta meta'; }
   .source-band { flex-direction: column; align-items: flex-start; }
@@ -604,7 +632,7 @@ button.chip-outline { min-height: 44px; }
   .masthead-brand { grid-column: 1; grid-row: 1; }
   .masthead-actions { grid-column: 2; grid-row: 1; }
   .masthead-nav { grid-column: 1 / -1; grid-row: 2; }
-  .source-tab-name { font-size: var(--fs-13); }
+
 }
 
 @media (max-width: 767px) {
@@ -613,7 +641,7 @@ button.chip-outline { min-height: 44px; }
   .issue-head-date { font-size: var(--fs-32); }
   .issue-head-weekday { font-size: var(--fs-15); }
   .issue-nav-mobile { padding-top: 10px; }
-  .source-tabs { padding-top: 12px; }
+
 }
 
 footer a { display: inline-flex; min-height: 44px; align-items: center; }
@@ -697,7 +725,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .issue-head-date > span, .source-band-title > span { line-height: inherit !important; }
 .weekly-directory { border-bottom: 1px solid var(--ink); }
 .weekly-directory > summary { min-height: 44px; align-content: center; cursor: pointer; font-family: var(--font-cjk); font-size: var(--fs-15); }
-.weekly-directory > summary:focus-visible, .anchors:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.weekly-directory > summary:focus-visible, .anchors:focus-visible, .anchor-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .weekly-directory .anchors { padding-top: 0; border-bottom: 0; }
 .form-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .interest-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; }
@@ -706,7 +734,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .interest-table .interest-row > td { width: auto; padding: 12px 0; }
 @media (max-width: 767px) {
   .source-band { gap: 4px; margin-top: 16px; padding: 12px 16px; }
-  .source-band-name { gap: 10px; }
+
   .source-band-title { font-size: var(--fs-20); }
   .source-band-meta { gap: 0 12px; }
   .source-band-issue { flex: none; }
@@ -719,10 +747,21 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .admin-form-row { width: 100%; gap: 16px; }
   .admin-form-row > .field { width: 100% !important; }
 }
-/* 高对比（forced-colors）：背景都被换成 Canvas，平时靠墨色底反白的选中态就和其余项一样了，补一圈系统色描边；
+/* 高对比（forced-colors）：背景都被换成 Canvas，平时靠墨色底反白的选中态就和其余项一样了，用内侧系统色描边标记选中，外侧描边保留给键盘焦点；
    边框颜色也会被统一改写，透明的占位下划线会显形，这里改成不画边、用等宽的内边距占位。 */
 @media (forced-colors: active) {
-  .source-tab[data-state="active"], .seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"] { outline: 3px solid CanvasText; outline-offset: -5px; }
+  .ui-icon, .editorial-art { stroke: currentColor; }
+  .editorial-art [fill="var(--paper)"] { fill: Canvas; }
+  .editorial-art [fill="var(--green)"] { fill: CanvasText; }
+  .source-art [fill="var(--paper)"], .source-art [fill="var(--band-hole)"] { fill: Canvas; }
+  .source-art [fill="var(--ink)"], .source-art [fill="var(--green)"] { fill: currentColor; }
+  :is(.seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"]) { position: relative; }
+  :is(.seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"])::after {
+    content: ""; position: absolute; inset: 4px; border: 3px solid CanvasText; pointer-events: none;
+  }
+  :is(.seg-item[aria-current="true"], .chip-on, .admin-nav-item[aria-current="page"]):focus-visible {
+    outline: 2px solid CanvasText; outline-offset: 2px; z-index: 1;
+  }
   .masthead-nav a:not([aria-current="page"]) { border-bottom-style: none; padding-bottom: 3px !important; }
 }
 
@@ -753,11 +792,6 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .issue-head-date { font-size: var(--fs-64); }
   .page-context { font-size: var(--fs-16); }
 
-  .source-tabs { padding-top: 28px; }
-  .source-tab { min-height: 88px; padding: 18px 20px; gap: 16px; }
-  .source-tab-icon { width: 52px; height: 44px; }
-  .source-tab-name { font-size: var(--fs-32); }
-
   .item-row {
     grid-template-columns: 32px minmax(0, 1fr);
     gap: 20px;
@@ -772,6 +806,8 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
   .item-translation { max-width: 920px; font-size: var(--fs-16); }
   .item-summary { max-width: 920px; font-size: var(--fs-16); line-height: 1.6; }
   .item-reason { max-width: 920px; font-size: var(--fs-16); line-height: 1.75; }
+  .item-content--weekly, .item-media { max-width: 920px; }
+  .search-title, .search-snippet { max-width: 920px; }
 }
 .management-row-primary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .management-primary-field { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
@@ -780,7 +816,8 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .management-row .admin-actions { gap: 0 16px; }
 .management-row .admin-details { width: auto; }
 .management-row-details > summary { font-family: var(--font-cjk); font-size: var(--fs-13); min-height: 44px; align-content: center; cursor: pointer; }
-.management-row-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.table:focus-visible, .table-row:focus-visible, .management-list:focus-visible, .management-row:focus-visible, .table-empty:focus-visible,
+.table summary:focus-visible, .management-list summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .management-secondary-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px 24px; margin: 0; padding: 8px 0; }
 .management-field-label { font-family: var(--font-cjk); font-size: var(--fs-12); color: var(--ink2); margin-bottom: 4px; }
 .management-field-content { margin: 0; min-width: 0; overflow-wrap: anywhere; }
@@ -808,8 +845,7 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .model-name-field { min-width: 0; max-width: 100%; }
 .model-name-detail { max-width: 320px; }
 .model-name-detail code { display: block; overflow-wrap: anywhere; font-family: var(--font-data); font-size: var(--fs-13); padding-bottom: 8px; }
-.search-eyebrow { min-width: 0; overflow-wrap: anywhere; }
-.search-eyebrow > span { max-width: 100%; }
+
 @media (max-width: 767px) {
   .model-name-field, .model-name-field > .field, .model-name-detail { width: 100% !important; max-width: 100%; }
   .source-band-meta { width: 100%; }
@@ -825,18 +861,13 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .favorite-button:hover, .favorite-button[data-on] { color: var(--ink); }
 .favorite-button[data-on] svg, .favorite-button[data-on] svg path { fill: currentColor; }
 .favorite-button:focus-visible { outline: 2px solid var(--ink); outline-offset: -6px; }
-.item-row { grid-template-columns: 28px minmax(0, 1fr) 31px; grid-template-areas: "rank body mark"; }
-.item-mark { grid-area: mark; margin-top: -8px; }
-.search-mark { margin-left: auto; }
+
 /* 收藏页上取消的那一行：原地留一句状态与「恢复」（R-10.7） */
-.favorite-removed { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
-@media (max-width: 767px) {
-  .item-row { grid-template-columns: minmax(0, 1fr) 31px; grid-template-areas: "rank mark" "body body"; align-items: center; }
-  .item-mark { margin-top: -12px; margin-bottom: -12px; }
-}
-@media (min-width: 1920px) {
-  .item-row { grid-template-columns: 32px minmax(0, 1fr) 31px; }
-}
+.favorite-controls, .favorite-removed { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; font-family: var(--font-cjk); font-size: var(--fs-13); color: var(--ink2); }
+/* 恢复立即可点；书签保留在右端，既有墨层能退完，不与文字叠在一起。 */
+.favorite-button.favorite-restore { width: auto; gap: 12px; padding-right: 13px; }
+.favorite-restore:hover .favorite-restore-label { text-decoration-color: var(--ink); }
+.favorite-restore:focus-visible { outline-offset: 2px; }
 
 /* ─── 2026-10-14 品质提升（docs/superpowers/specs/2026-10-14-award-quality-design.md）────────────────
    写在文件末尾：前面同一选择器有好几层覆盖，放这里才是最后的定论。后续任务往这一段追加。 */
@@ -845,17 +876,18 @@ footer a { display: inline-flex; min-height: 44px; align-items: center; }
 .item-title, .item-translation, .item-summary, .item-reason, .item-content--weekly, .source-band-issue, .search-title, .search-snippet { text-autospace: normal; }
 
 /* T2 标题均衡换行（不剩单个词），段落避免末行孤字 */
-.item-heading, .search-title, .state-line { text-wrap: balance; }
+.item-heading, .search-title, .state-line, .source-band-title, .source-band-issue, .source-original-title, .archive-weekly .archive-label { text-wrap: balance; }
+.item-title-tail { display: inline-block; max-inline-size: 100%; overflow-wrap: anywhere; vertical-align: baseline; text-decoration: inherit; }
 .item-translation, .item-summary, .item-reason, .item-content--weekly p, .search-snippet, .dialog-text { text-wrap: pretty; }
 
 /* T3 选区反白：墨底纸字（浏览器的蓝色选区是令牌之外的颜色） */
 ::selection { background: var(--ink); color: var(--paper); }
 /* 墨底上的字选中时反过来：纸底墨字（墨上墨看不见） */
-:is(.masthead, .login-band, .source-band, .source-tab[data-state="active"], .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"])::selection,
-:is(.masthead, .login-band, .source-band, .source-tab[data-state="active"], .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"]) ::selection { background: var(--paper); color: var(--ink); }
+:is(.masthead, .login-band, .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"])::selection,
+:is(.masthead, .login-band, .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"]) ::selection { background: var(--paper); color: var(--ink); }
 
 /* T5 墨底上的纸色字用灰度抗锯齿，字不发胖 */
-.masthead, .login-band, .source-tab[data-state="active"], .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"] {
+.masthead, .login-band, .source-band, .btn-primary, .chip-on, .seg-item[aria-current="true"], .admin-nav-item[aria-current="page"] {
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 
@@ -875,11 +907,6 @@ details > summary::before {
 }
 details[open] > summary::before { rotate: 90deg; }
 
-/* Q3 索引条相邻的边合成一条 1px：每条向左压 1px 叠住左邻的右边、向下压 1px 让下一行（与下面列表的顶线）叠住底边；
-   容器左边补回 1px，最左一条仍贴齐版心。墨块副本（M1）用同一组类名，位置跟着一致 */
-.source-tabs { padding-left: 1px; }
-.source-tabs > .source-tab { margin: 0 0 -1px -1px; }
-
 /* Q5 评论链接：44px 触控区由伪元素扩出，元数据行回到 24px 高（手机上原先被 min-height 撑高，间距忽大忽小） */
 .item-comments { position: relative; }
 .item-comments::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%); }
@@ -896,6 +923,24 @@ details[open] > summary::before { rotate: 90deg; }
 .item-tag { display: inline-flex; vertical-align: baseline; margin-left: 0; padding-top: 0; }
 @media (min-width: 1920px) { .item-heading { max-width: 920px; } }
 
+/* 标题触控（PRD 6.4）：目标至少 44px 高，原生垂直 padding 覆盖换行分片而不改变行距。
+   保留默认 box-decoration-break: slice；clone 会让 WebKit 的均衡换行退化。
+   标题后留 8px，兼顾较高的回退字体，避免扩展侵入下一段上沿；序号与标签保有自己的非链接命中层。打印仍用原几何。 */
+@media screen {
+  .item-title > a.t { position: relative; padding-block: 12px; padding-inline: 0; }
+  .item-rank, .item-tag { position: relative; z-index: 1; }
+  .item-heading { padding-bottom: 8px; }
+}
+
+/* 搜索与收藏的标题由 Mixed / HitText 排出 20px 字形，外层链接仍继承 15px。
+   每个分片上加 17px、下加 12px 原生 padding，补足 44px；不改外层字号，以免改变中文多行的行距。
+   标题后留 8px 保护译文与片段，眉行保持非链接命中。 */
+@media screen {
+  .search-title > a.t { position: relative; padding-block: 17px 12px; padding-inline: 0; }
+  .search-title { padding-bottom: 8px; }
+
+}
+
 /* T4 序号与标题首行同一条基线（桌面两列时）；期头右侧小字的最后一行落在大字日期的基线上 */
 .item-rank, .item-body { align-self: baseline; }
 .item-rank { padding-top: 0; }
@@ -907,9 +952,7 @@ details[open] > summary::before { rotate: 90deg; }
 }
 
 /* Q1 横带图形「翻开的书」：纸色线、挖空填墨，比例 120:78。挖空的颜色走变量，打印时换成透明（print.css） */
-.source-band { --band-hole: var(--ink); }
-.source-band-mark { flex: none; display: block; width: 52px; height: 34px; }
-@media (max-width: 767px) { .source-band-mark { width: 37px; height: 24px; } }
+
 
 /* C3（O2 选 a）：周刊配图正片叠底压进纸面，白处呈纸色，像印在纸上；打印时恢复原样（print.css） */
 .item-media-image { mix-blend-mode: multiply; }
@@ -935,3 +978,35 @@ details[open] > summary::before { rotate: 90deg; }
 
 /* 自查第 2 轮：登录页那句话放不下时只在逗号后断行，不在词中间断出一个孤字（「登录后阅 / 读」） */
 .login-tagline { word-break: keep-all; }
+
+/* 手机先进入阅读：期导航留在日期旁，元信息单独一行；仅期详情使用，归档控件不变。 */
+@media screen and (max-width: 767px) {
+  .page-head--issue {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title nav" "meta meta";
+    align-items: center;
+    gap: 4px 8px;
+    padding-top: 12px;
+  }
+  .page-head--issue .issue-head-main, .page-head--issue .issue-head-title { display: contents; }
+  .page-head--issue .issue-head-date { grid-area: title; line-height: 1.2; }
+  .page-head--issue .issue-head-stack {
+    grid-area: meta;
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 12px;
+  }
+  .page-head--issue .issue-head-tag { grid-column: 1 / -1; padding-bottom: 0; }
+  .page-head--issue .issue-nav-mobile { grid-area: nav; justify-self: end; padding-top: 0; }
+  .page-head--issue .page-nav { grid-column: 1 / -1; }
+
+}
+
+/* 320px 的日期与三个按钮不硬挤；日期信息与 44px 操作目标保持完整。 */
+@media screen and (max-width: 359px) {
+  .page-head--issue { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "meta" "nav"; }
+  .page-head--issue .issue-nav-mobile { justify-self: start; }
+}

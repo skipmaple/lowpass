@@ -38,6 +38,7 @@ Rails.application.routes.draw do
       resource :refetch, only: :create, module: :issues
       resource :backfill, only: :create, module: :issues
       resource :reasons, only: :create, module: :issues
+      resource :translations, only: [ :new, :create ], module: :issues
     end
     resources :items, only: [] do
       resource :reason, only: :create, module: :items

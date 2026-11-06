@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
@@ -21,7 +21,8 @@ function show(overrides: Partial<SettingsShowProps> = {}) {
     ...overrides,
   }
   setPageProps({ ...props, flash: {} })
-  return render(<Show {...props} />)
+  const view = render(<Show {...props} />)
+  return { ...view, rerenderUser: (user: SettingsShowProps['user']) => view.rerender(<Show {...props} user={user} />) }
 }
 
 beforeEach(() => {
@@ -174,5 +175,90 @@ describe('Settings/Show', () => {
     const img = container.querySelector('.settings-avatar img')
     expect(img).toHaveAttribute('src', 'https://avatars.example/drew.png')
     expect(img).toHaveAttribute('referrerpolicy', 'no-referrer')
+  })
+
+  it('没有头像时沿用装饰性的人像占位与显示名', () => {
+    const { container } = show()
+
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+    const fallback = container.querySelector('.settings-avatar svg')
+    expect(fallback).toHaveAttribute('width', '20')
+    expect(fallback).toHaveAttribute('height', '20')
+    expect(fallback).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('Drew Lee')).toBeInTheDocument()
+  })
+
+  it('头像加载失败后移除破图，沿用人像占位；同一 URL 重渲染不重试', () => {
+    const user: SettingsShowProps['user'] = { display_name: 'Drew Lee', email: 'drew@example.com', avatar_url: 'https://avatars.example/drew.png', role: 'admin' }
+    const { container, rerenderUser } = show({ user })
+    const img = container.querySelector('.settings-avatar img')!
+    expect(img).toHaveAttribute('alt', '')
+
+    fireEvent.error(img)
+
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+    expect(container.querySelector('.settings-avatar svg')).toHaveAttribute('width', '20')
+    expect(screen.getByText('Drew Lee')).toBeInTheDocument()
+    expect(screen.getByText('drew@example.com')).toBeInTheDocument()
+    expect(screen.getByText('管理员')).toBeInTheDocument()
+
+    rerenderUser({ ...user, display_name: 'Drew' })
+
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+    expect(container.querySelector('.settings-avatar svg')).toBeInTheDocument()
+    expect(screen.getByText('Drew')).toBeInTheDocument()
+  })
+
+  it('失败头像换成新的 URL 后正常显示，成功加载后仍保留图片', () => {
+    const user: SettingsShowProps['user'] = { display_name: 'Drew Lee', email: 'drew@example.com', avatar_url: 'https://avatars.example/drew.png', role: 'admin' }
+    const { container, rerenderUser } = show({ user })
+    fireEvent.error(container.querySelector('.settings-avatar img')!)
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+
+    rerenderUser({ ...user, avatar_url: 'https://avatars.example/drew-new.png' })
+
+    const replacement = container.querySelector('.settings-avatar img')!
+    expect(replacement).toHaveAttribute('src', 'https://avatars.example/drew-new.png')
+    expect(replacement).toHaveAttribute('alt', '')
+    expect(replacement).toHaveAttribute('referrerpolicy', 'no-referrer')
+    expect(container.querySelector('.settings-avatar svg')).toBeNull()
+
+    fireEvent.load(replacement)
+
+    expect(container.querySelector('.settings-avatar img')).toBe(replacement)
+    expect(container.querySelector('.settings-avatar svg')).toBeNull()
+  })
+
+  it('换过 URL 再返回原失败 URL 时重新尝试，新的失败仍回退', () => {
+    const user: SettingsShowProps['user'] = { display_name: 'Drew Lee', email: 'drew@example.com', avatar_url: 'https://avatars.example/drew.png', role: 'admin' }
+    const { container, rerenderUser } = show({ user })
+    fireEvent.error(container.querySelector('.settings-avatar img')!)
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+
+    rerenderUser({ ...user, avatar_url: 'https://avatars.example/drew-new.png' })
+    rerenderUser(user)
+
+    const retried = container.querySelector('.settings-avatar img')!
+    expect(retried).toHaveAttribute('src', user.avatar_url)
+    fireEvent.error(retried)
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+    expect(container.querySelector('.settings-avatar svg')).toBeInTheDocument()
+  })
+
+  it('失败头像清空后仍是人像占位，恢复相同 URL 时重新尝试', () => {
+    const user: SettingsShowProps['user'] = { display_name: 'Drew Lee', email: 'drew@example.com', avatar_url: 'https://avatars.example/drew.png', role: 'admin' }
+    const { container, rerenderUser } = show({ user })
+    fireEvent.error(container.querySelector('.settings-avatar img')!)
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+
+    rerenderUser({ ...user, avatar_url: null })
+
+    expect(container.querySelector('.settings-avatar img')).toBeNull()
+    expect(container.querySelector('.settings-avatar svg')).toBeInTheDocument()
+
+    rerenderUser(user)
+
+    expect(container.querySelector('.settings-avatar img')).toHaveAttribute('src', user.avatar_url)
+    expect(container.querySelector('.settings-avatar svg')).toBeNull()
   })
 })

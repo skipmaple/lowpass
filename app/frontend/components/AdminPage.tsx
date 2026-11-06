@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react'
 import AdminNav, { type AdminSection } from '@/components/AdminNav'
 import Layout from '@/components/Layout'
 import { Toasts, type ToastItem } from '@/components/Toast'
+import '@/styles/themes-admin.css'
 import '@/styles/themes-admin-workspace.css'
 
 // 管理导航与工作区共用结构；C 把导航放到页边，A/B 保留横向导航。

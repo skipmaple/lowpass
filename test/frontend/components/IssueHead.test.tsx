@@ -58,6 +58,16 @@ describe('IssueHead', () => {
     }
   })
 
+  it('日期与各宽度的期导航都属于同一个期头', () => {
+    head()
+
+    const header = screen.getByRole('banner')
+    expect(header).toContainElement(screen.getByRole('heading', { level: 1 }))
+    for (const navigation of screen.getAllByRole('navigation', { name: '期导航' })) {
+      expect(header).toContainElement(navigation)
+    }
+  })
+
   // 最新一期没有「下一期」：退成不可点的记号，不是一个点了 404 的链接
   it('没有下一期时按钮不可点', () => {
     head()

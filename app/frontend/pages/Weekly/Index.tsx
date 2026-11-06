@@ -20,8 +20,23 @@ export type WeeklyIndexProps = FooterData & {
   weeks: ArchiveWeek[]
 }
 
+function Summary({ source, label, published }: { source: string; label: string | null; published: boolean }) {
+  const boundary = label?.indexOf(' · ') ?? -1
+  const theme = boundary >= 0 ? label!.slice(boundary + 3) : null
+  const title = theme || source
+  const context = theme ? `${source} · ${label!.slice(0, boundary)}` : label
+
+  return (
+    <span className="archive-label-part">
+      <Mixed className="archive-label-title" text={title} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
+      {context ? <Mixed className="archive-label-source" text={context} font="latin" size="var(--fs-13)" color="var(--ink2)" /> : null}
+    </span>
+  )
+}
+
 function Row({ week }: { week: ArchiveWeek }) {
   const published = week.state === 'published'
+  const labels = week.summary_parts?.length ? week.summary_parts : [{ source: week.summary, label: null }]
 
   return (
     <Link className="archive-row" href={weeklyHref(week.period_key)}>
@@ -30,11 +45,15 @@ function Row({ week }: { week: ArchiveWeek }) {
         <Mark state={week.state} label={week.state === 'empty' ? '无内容' : undefined} />
       </span>
       <span className="archive-key">{week.week_label}</span>
-      <span className="archive-sub">{week.range_label}</span>
+      <span className="archive-sub">
+        {week.range_label.split(' 至 ').map((date, index) => (
+          <span key={index}>{index > 0 ? ' 至 ' : null}<span className="archive-range-date">{date}</span></span>
+        ))}
+      </span>
       <span className="archive-label">
-        {week.summary ? (
-          <Mixed text={week.summary} font="latin" size={published ? 'var(--fs-20)' : 'var(--fs-15)'} weight={published ? 600 : 400} color={published ? 'var(--ink)' : 'var(--ink2)'} />
-        ) : null}
+        {labels.map(({ source, label }, index) => source ? (
+          <Summary key={index} source={source} label={label} published={published} />
+        ) : null)}
       </span>
       <span className="archive-meta">{week.count ? <Mixed text={`${week.count} 条`} /> : null}</span>
     </Link>

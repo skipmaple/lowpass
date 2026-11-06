@@ -39,7 +39,7 @@ export type SourceMarkProps = {
 
 function Bubbles({ hole, className }: SourceMarkProps) {
   return (
-    <svg viewBox="0 0 120 78" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 120 78" className={['source-art', className].filter(Boolean).join(' ')} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <rect x="10" y="10" width="62" height="34" rx="8" fill={hole} />
       <path d="M22 44 l-4 10 l12 -10" />
       <rect x="48" y="30" width="62" height="34" rx="8" fill={hole} />
@@ -53,7 +53,7 @@ function Bubbles({ hole, className }: SourceMarkProps) {
 
 function Branches({ hole, className }: SourceMarkProps) {
   return (
-    <svg viewBox="0 0 120 78" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 120 78" className={['source-art', className].filter(Boolean).join(' ')} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <line x1="30" y1="72" x2="30" y2="14" />
       <path d="M30 46 C 40 30 56 30 70 30" />
       <path d="M70 30 C 84 30 92 22 100 16" />
@@ -68,7 +68,7 @@ function Branches({ hole, className }: SourceMarkProps) {
 
 function Solder({ hole, className }: SourceMarkProps) {
   return (
-    <svg viewBox="0 0 120 78" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 120 78" className={['source-art', className].filter(Boolean).join(' ')} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path d="M14 68 L 52 40" strokeWidth={6} />
       <path d="M52 40 L 82 20" strokeWidth={1.8} />
       <path d="M84 20 c 3 -4 -2 -6 2 -10 s 5 -2 3 -5" />
@@ -88,7 +88,7 @@ function Solder({ hole, className }: SourceMarkProps) {
 // 与其余三幅同一套笔法：2px 墨线、圆头、45° 排线；反白时挖空处填墨（hole）。
 export function OpenBook({ hole, className }: SourceMarkProps) {
   return (
-    <svg viewBox="0 0 120 78" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 120 78" className={['source-art', className].filter(Boolean).join(' ')} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path d="M60 18 C 48 12 30 10 14 13 L 14 64 C 30 61 48 63 60 70 Z" fill={hole} />
       <path d="M60 18 C 72 12 90 10 106 13 L 106 64 C 90 61 72 63 60 70 Z" fill={hole} />
       <line x1="60" y1="18" x2="60" y2="70" />
@@ -110,7 +110,7 @@ const RAY_ANGLES = [0.35, 0.7, 1.05, 1.4, 1.75, 2.1, 2.45, 2.8]
 // 升起前藏在地平线下面，不压到水纹上。
 export function Sunrise({ className, animated = false }: { className?: string; animated?: boolean }) {
   const horizon = useId()
-  const classes = [className, animated ? 'sunrise--animated' : null].filter(Boolean).join(' ') || undefined
+  const classes = ['editorial-art', className, animated ? 'sunrise--animated' : null].filter(Boolean).join(' ') || undefined
 
   return (
     <svg viewBox="0 0 260 138" className={classes} fill="none" stroke="var(--ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
@@ -149,7 +149,7 @@ export function Sunrise({ className, animated = false }: { className?: string; a
 // 缺页：一张对折的报纸，右页正中被裁去一块（虚线是裁口），缺口里是 45° 排线的阴影。404 与 403 用（viewBox 同日出，260×138）。
 export function MissingPage({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 260 138" className={className} fill="none" stroke="var(--ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 260 138" className={['editorial-art', className].filter(Boolean).join(' ')} fill="none" stroke="var(--ink)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path d="M30 20 L 128 14 L 128 124 L 30 118 Z" fill="var(--paper)" />
       <path d="M132 14 L 230 20 L 230 118 L 132 124 Z" fill="var(--paper)" />
       <line x1="130" y1="12" x2="130" y2="126" strokeWidth={1} />

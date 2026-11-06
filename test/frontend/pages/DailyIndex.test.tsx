@@ -72,6 +72,17 @@ describe('日刊归档', () => {
     expect(row.querySelector('.archive-meta')?.textContent).toBe('')
   })
 
+  it('未到生成时间的今日显示待生成和计划时间', () => {
+    const { container } = index({
+      days: [archiveDay({ state: 'scheduled', published_label: '待 07:30 生成', source_marks: null })],
+    })
+
+    const row = rows(container)[0]
+    expect(within(row).getByRole('img', { name: '待生成' })).toBeInTheDocument()
+    expect(row.querySelector('.archive-label')).toHaveTextContent('待 07:30 生成')
+    expect(row).toHaveAttribute('href', '/daily/2026-09-08')
+  })
+
   it('生成中是时钟加那一句', () => {
     const { container } = index({
       days: [archiveDay({ state: 'generating', published_label: '生成中', source_marks: 'HN 生成中' })],

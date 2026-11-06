@@ -34,6 +34,17 @@ class Reasons::EvidenceTest < ActiveSupport::TestCase
     assert_not_requested :get, "https://another.example/guide"
   end
 
+  test "短但具体的正文不按字符数拒绝，页面标题仍不算正文" do
+    body = "流式读取本地日志，按错误级别筛选，并导出为 JSON。"
+    stub_page "<main><article><h1>日志工具</h1><p>#{body}</p></article></main>"
+    evidence = Reasons::Evidence.fetch(@item)
+    assert_nil evidence.error
+    assert_includes evidence.text, body
+
+    stub_page body, content_type: "text/plain"
+    assert_equal body, Reasons::Evidence.fetch(@item).text
+  end
+
   test "没有 article 时读取 main 的正文" do
     stub_page "<main><h1>Logging</h1><p>#{@body}</p></main>"
 

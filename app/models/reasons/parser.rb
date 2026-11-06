@@ -1,6 +1,5 @@
 # 模型输出 → 理由、标签与译文（R-9.3、设计 C4、D25）：先当整段 JSON 解析，不行就取第一个 {…}（不支持 response_format 的端点会夹杂文字）；
-# 20 到 60 字，超长截断、过短判失败；领域名必须是画像里启用的名字，否则判失败（调用方重试）。
-# 合法标签配上明确的空字符串是按提示词弃答：资料不足，调用方不拿同一份资料反复重试。
+# 归一化后 20 到 60 字，超长或过短都判失败，不截断；领域名必须是画像里启用的名字，否则判失败（调用方重试）。
 # 译文（标题 title_zh、说明 summary_zh）是顺带的：缺了、不含汉字、超过上限都只当没有，不判失败——不能为了译文把理由也重试掉
 module Reasons::Parser
   MIN = 20
@@ -8,21 +7,25 @@ module Reasons::Parser
   TITLE_MAX = 300
   SUMMARY_MAX = 500
   Invalid = Class.new(StandardError)
-  InsufficientContext = Class.new(Invalid)
-  Result = Data.define(:reason, :interest_tag, :title_zh, :summary_zh)
+  Result = Data.define(:decision, :reason, :interest_tag, :title_zh, :summary_zh)
 
   class << self
     def parse(text, allowed_names)
       json = extract(text.to_s)
-      raise Invalid, "理由格式不正确" unless json["reason"].is_a?(String)
-
-      tag = json["interest_tag"].to_s.strip
-      raise Invalid, "缺领域名" unless allowed_names.include?(tag)
-      raise InsufficientContext, "条目资料不足，未生成理由" if json["reason"] == ""
+      if json["decision"] == "insufficient_evidence"
+        raise Invalid, "拒写包含额外字段" unless json.keys == [ "decision" ]
+        return Result.new(decision: "insufficient_evidence", reason: nil, interest_tag: nil, title_zh: nil, summary_zh: nil)
+      end
+      raise Invalid, "缺少或未知 decision" unless json["decision"] == "generated"
+      raise Invalid, "理由必须为字符串" unless json["reason"].is_a?(String)
 
       reason = json["reason"].strip.gsub(/\s+/, " ")
+      tag = json["interest_tag"]
       raise Invalid, "理由太短（#{reason.length} 字）" if reason.length < MIN
-      Result.new(reason: reason[0, MAX], interest_tag: tag,
+      raise Invalid, "理由太长（#{reason.length} 字）" if reason.length > MAX
+      raise Invalid, "缺领域名" unless tag.is_a?(String) && allowed_names.include?(tag)
+      raise Invalid, "理由须含汉字" unless reason.match?(/\p{Han}/)
+      Result.new(decision: "generated", reason: reason, interest_tag: tag,
                  title_zh: translation(json["title_zh"], TITLE_MAX), summary_zh: translation(json["summary_zh"], SUMMARY_MAX))
     end
 

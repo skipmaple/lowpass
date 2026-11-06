@@ -58,6 +58,33 @@ class Reasons::ProgressTest < ActiveSupport::TestCase
     assert_nil progress[:error]
   end
 
+  test "合法拒写算本次已处理，不计为缺理由或任务失败" do
+    item = items(:hn_one)
+    job = Job.new(created_at: 1.minute.ago, finished_at: nil, claimed: false, failed: false)
+    item.record_reason_abstention(assessed_at: Time.current)
+    job.finished_at = Time.current
+
+    progress = Reasons::Progress.new(item.issue, job).to_h
+    assert_equal "completed", progress[:status]
+    assert_includes progress[:detail], "资料不足 1 条"
+    assert_includes progress[:detail], "仍缺 0 条"
+    assert_nil progress[:error]
+  end
+
+  test "历史拒写不能冒充本次整期重评估，翻译错误也不是理由失败原因" do
+    item = items(:hn_one)
+    item.record_reason_abstention(assessed_at: 2.days.ago)
+    job = Job.new(created_at: 1.minute.ago, finished_at: nil, claimed: false, failed: false)
+    ModelCall.create!(issue: item.issue, item: item, purpose: "translation", status: "invalid", error_summary: "独立译文格式错误",
+      operation_key: SecureRandom.uuid, input_field: "title", input_digest: "a" * 64)
+    job.finished_at = Time.current
+
+    progress = Reasons::Progress.new(item.issue, job).to_h
+    assert_equal "failed", progress[:status]
+    assert_includes progress[:detail], "仍缺 0 条"
+    assert_not_equal "独立译文格式错误", progress[:error]
+  end
+
   test "worker 异常中止明确失败且不暴露底层堆栈" do
     job = Job.new(created_at: 1.minute.ago, claimed: false, failed: true)
     progress = Reasons::Progress.new(issues(:daily_0908), job).to_h

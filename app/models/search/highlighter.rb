@@ -64,6 +64,13 @@ class Search::Highlighter
     # 终点落在拉丁词中间就往前退到上一个空格（不退进命中里，最多退 SLACK 字）
     def word_end(text, start, finish, first)
       return finish if finish >= text.length || !latin_boundary?(text, finish)
+      # 词已完整，只是后面紧跟句末标点时，不要把整个词误当作被切断。
+      return finish if text[finish..].match?(/\A[,.!?;:]+["'”’）)\]】」』]*(?=[[:space:]]|\z)/)
+      if text[finish..].match?(/\A[。，！？；：、]/)
+        token_start = text.rindex(/[[:space:]]/, finish - 1)
+        token = text[(token_start ? token_start + 1 : 0)...finish]
+        return finish unless token.match?(%r{https?://|www\.}i)
+      end
 
       gap = text.rindex(/\s/, finish)
       gap && gap > (first || start) + 1 && finish - gap <= SLACK ? gap : finish

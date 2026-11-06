@@ -99,19 +99,21 @@ class SearchesController < ApplicationController
         published_label: record.published_label,
         url: item.url,
         title_runs: highlighter.runs(item.title),
-        snippet_runs: item.summary.presence && highlighter.snippet(SummaryCleaner.clean(item.summary)),
-        title_zh_runs: item.title_zh.presence && highlighter.runs(item.title_zh),
-        summary_zh_runs: item.summary_zh.presence && highlighter.snippet(item.summary_zh),
+        title_zh: (item.title_zh.presence if record.daily?),
+        snippet_runs: item.summary.presence && highlighter.snippet(SummaryCleaner.stored(item.summary)),
+        summary_zh: (item.summary_zh.presence if record.daily? && item.summary.present?),
+        title_zh_runs: (highlighter.runs(item.title_zh) if record.daily? && item.title_zh.present?),
+        summary_zh_runs: (highlighter.snippet(item.summary_zh) if record.daily? && item.summary.present? && item.summary_zh.present?),
         reason: (item.reason if record.daily?)
       }
     end
 
-    # 所在期（设计 6.3）：日刊带 ?source= 切到那一栏并落到条目锚点；周刊落到板块的稳定锚点（Item#anchor）
+    # 所在期直达条目；重抓换掉条目时，日刊回退来源，周刊回退原板块。
     def where_href(record)
       if record.daily?
         daily_issue_path(record.period_key, source: record.source_id, anchor: "item-#{record.item_id}")
       else
-        weekly_issue_path(record.period_key, anchor: record.anchor)
+        weekly_issue_path(record.period_key, section: record.anchor, anchor: "item-#{record.item_id}")
       end
     end
 end

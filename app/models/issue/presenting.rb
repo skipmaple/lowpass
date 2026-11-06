@@ -25,7 +25,7 @@ module Issue::Presenting
         weekday: WEEKDAYS[date.wday],
         state: issue&.state,
         time_label: head_time_label(issue),
-        status: head_status(issue, is_yesterday, daily_time),
+        status: head_status(issue, is_yesterday, daily_time, scheduled_daily?(period_key, issue, now, daily_time)),
         daily_time: daily_time,
         published_at: hhmm(issue&.published_at),
         revised_at: hhmm(issue&.revised_at),
@@ -94,7 +94,7 @@ module Issue::Presenting
         month_label: "#{month.year} 年 #{month.month} 月",
         prev_month: month_nav(month.prev_month, month, earliest, today),
         next_month: month_nav(month.next_month, month, earliest, today),
-        days: archive_days([ month, earliest ].max, [ month.end_of_month, today ].min)
+        days: archive_days([ month, earliest ].max, [ month.end_of_month, today ].min, now, Setting.get("daily_time"))
       }
     end
 
@@ -126,7 +126,7 @@ module Issue::Presenting
         "#{range.first.month}月#{range.first.day}日 至 #{range.last.month}月#{range.last.day}日"
       end
 
-      def archive_days(first, last)
+      def archive_days(first, last, now, daily_time)
         return [] if first > last
 
         issues = daily.where(period_key: first.iso8601..last.iso8601).includes(:fetch_runs).index_by(&:period_key)
@@ -134,16 +134,17 @@ module Issue::Presenting
         sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
 
-        (first..last).to_a.reverse.map { |date| archive_day(date, issues[date.iso8601], sources, counts) }
+        (first..last).to_a.reverse.map { |date| archive_day(date, issues[date.iso8601], sources, counts, now, daily_time) }
       end
 
-      def archive_day(date, issue, sources, counts)
+      def archive_day(date, issue, sources, counts, now, daily_time)
+        scheduled = scheduled_daily?(date.iso8601, issue, now, daily_time)
         {
           period_key: date.iso8601,
           date_label: "#{date.month}月#{date.day}日",
           weekday: WEEKDAYS[date.wday],
-          state: issue&.state || "missing",
-          published_label: archive_label(issue),
+          state: issue&.state || (scheduled ? "scheduled" : "missing"),
+          published_label: scheduled ? "待 #{daily_time} 生成" : archive_label(issue),
           source_marks: issue && daily_columns(issue, sources).map { |source| "#{source.name} #{mark(issue, source, counts)}" }.join(" · ")
         }
       end
@@ -181,7 +182,7 @@ module Issue::Presenting
           # 周维度的「没有」只有一种文案与记号（本周无内容 · 描边方块）：不分「没有这一期」与
           # 「这一期是空刊」，缺期的叉留给日刊（archive_day）
           state: issue&.state || "empty"
-        }.merge(issue ? summaries.fetch(issue.id) : { summary: "本周无内容", count: nil })
+        }.merge(issue ? summaries.fetch(issue.id) : { summary: "本周无内容", summary_parts: [], count: nil })
       end
 
       # 一年最多 53 周：每期都单独经 Issue#weekly_sections 查一遍是 N+1。这里用三条定长查询
@@ -198,19 +199,22 @@ module Issue::Presenting
         sources = Source.where(id: rows.map { |row| row[1] }).ordered.index_by(&:id)
         by_issue = rows.group_by { |issue_id, *| issue_id }
 
-        ids.index_with { |id| { summary: archive_summary(by_issue[id] || [], sources), count: counts.fetch(id, 0) } }
+        ids.index_with do |id|
+          parts = archive_summary_parts(by_issue[id] || [], sources)
+          summary = parts.map { |part| [ part[:source], part[:label] ].compact.join(" ") }.join(" / ")
+          { summary: summary.presence || "本周无内容", summary_parts: parts, count: counts.fetch(id, 0) }
+        end
       end
 
       # 阮一峰几条 entry 共用一个 issue_no，拼「源名 第 X 期 · 标题」；RSS 源没有 issue_no，
       # 只留源名（跟 Issue#section_issue_label 是同一套文案，这里批量算，不能反过来调用实例方法）
-      def archive_summary(rows, sources)
+      def archive_summary_parts(rows, sources)
         rows.group_by { |_, source_id, issue_no, _| [ source_id, issue_no ] }
           .sort_by { |(source_id, issue_no), _| source = sources.fetch(source_id); [ source.sort_order, source.name, issue_no.to_i ] }
           .map do |(source_id, issue_no), group_rows|
             label = [ "第 #{issue_no} 期", group_rows.first[3].presence ].compact.join(" · ") if issue_no.present?
-            [ sources.fetch(source_id).name, label ].compact.join(" ")
+            { source: sources.fetch(source_id).name, label: label }
           end
-          .join(" / ")
       end
 
       def month_nav(target, month, earliest, today)
@@ -225,9 +229,9 @@ module Issue::Presenting
       end
 
       # 一个期头只挂一个标签：期级状态先于期的来历，来历里修订又先于延迟（附录 B 的六句）
-      def head_status(issue, is_yesterday, daily_time)
+      def head_status(issue, is_yesterday, daily_time, scheduled)
         if issue.nil?
-          "本期未生成"
+          scheduled ? "今日将于 #{daily_time} 生成" : "本期未生成"
         elsif issue.generating?
           "生成中，约 1 分钟后刷新"
         elsif issue.empty?
@@ -257,6 +261,10 @@ module Issue::Presenting
           !daily.exists?(period_key: PeriodKey.daily(now))
       end
 
+      def scheduled_daily?(period_key, issue, now, daily_time)
+        issue.nil? && period_key == PeriodKey.daily(now) && now.in_time_zone(PeriodKey::ZONE).strftime("%H:%M") < daily_time
+      end
+
       def day_stamp(time)
         if time
           local = time.in_time_zone(PeriodKey::ZONE)
@@ -276,10 +284,17 @@ module Issue::Presenting
 
   # R-2.5 一节 = 一个源的一期：源、该源自己的期号与标题、原文链接、按板块分组的条目。
   # 板块锚点是稳定的 slug（Item#anchor：阮一峰 issue-<期号>-<板块>，RSS 源 source-<源 id>），
-  # 搜索结果的「所在期」链接指向同一个值（设计 6.3），所以不能再按位置编号。
+  # 搜索和收藏的「所在期」用它作为回退落点，旧板块链接也依赖它，因此不能再按位置编号。
   # D19：周刊条目不生成推荐理由，条目字段与日刊同一套（reason 与 interest_tag 一直是空的）。
   def weekly_section_props
-    weekly_sections.map do |section|
+    sections = weekly_sections
+    image_urls = sections.flat_map do |section|
+      section[:sections].flat_map { |_, list| list.flat_map { |item| Array(item.meta["image_urls"]).grep(String) } }
+    end.uniq
+    dimensions = ImageDimension.for_urls(image_urls)
+    ImageDimension.enqueue_for(image_urls) if image_urls.any?
+
+    sections.map do |section|
       source = section[:source]
       {
         source: { id: source.id, name: source.name, adapter: source.adapter, home_url: source.home_url },
@@ -289,7 +304,21 @@ module Issue::Presenting
         degraded: section[:degraded],
         original_url: section_original_url(section),
         groups: section[:sections].map do |(name, list)|
-          { name: name, anchor: list.first.anchor, items: list.map { |item| item_props(item) } }
+          { name: name, anchor: list.first.anchor, items: list.map do |item|
+            positions = HistoricalImagePositions.current.positions_for(item: item, issue: self, source: source)
+            props = item_props(item, image_dimensions: dimensions, historical_positions: positions)
+            emphasis = HistoricalWeeklyEmphasis.current.positions_for(item: item, issue: self, source: source, verified_image_positions: positions)
+            props[:meta] = props[:meta].merge("emphasis_positions" => emphasis) if emphasis
+            quotes = HistoricalWeeklyQuotes.current.ranges_for(item: item, issue: self, source: source)
+            props[:meta] = props[:meta].merge("quote_ranges" => quotes) if quotes
+            references = HistoricalWeeklyReferenceLinks.current.links_for(item: item, issue: self, source: source)
+            props[:meta] = props[:meta].merge("reference_links" => references) if references
+            if content = HistoricalParagraphBoundaries.current.content_for(item: item, issue: self, source: source, meta: props[:meta])
+              props[:meta] = props[:meta].except("quote_ranges", "emphasis_positions", "reference_links") if content != props[:content]
+              props[:content] = content
+            end
+            props
+          end }
         end
       }
     end
@@ -314,23 +343,25 @@ module Issue::Presenting
     # url_hash 给书签用：收藏按链接认（D27），页面的 favorites 列的就是它；
     # title_zh 是 HN 与 Hackaday 标题的中文译文、summary_zh 是 GitHub Trending 简介的中文译文（D25），
     # 跟推荐理由同一次生成，没生成前是 nil。
-    def item_props(item)
-      {
+    def item_props(item, image_dimensions: nil, historical_positions: nil)
+      props = {
         id: item.id,
         url_hash: item.url_hash,
         title: item.title,
         title_zh: item.title_zh,
         url: item.url,
-        summary: SummaryCleaner.clean(item.summary),
+        summary: HistoricalExcerptMarkers.current.summary_for(item: item, issue: self) || SummaryCleaner.stored(item.summary),
         summary_zh: item.summary_zh,
         content: item.content,
         section: item.section,
         author: item.author,
         published_at: item.published_at&.iso8601,
         rank: item.rank,
-        meta: item.meta,
+        meta: historical_positions ? item.meta.merge("image_positions" => historical_positions) : item.meta,
+        image_dimensions: (image_dimensions || {}).slice(*Array(item.meta["image_urls"]).grep(String)),
         reason: item.reason,
         interest_tag: item.interest_tag
       }
+      props
     end
 end

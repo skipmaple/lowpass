@@ -1,0 +1,415 @@
+require "application_system_test_case"
+
+class DailyChaptersTest < ApplicationSystemTestCase
+  WIDTHS = [ 320, 375, 481, 768, 1440, 1920, 2560 ].freeze
+  INTERACTION_WIDTHS = [ 320, 375, 1440 ].freeze
+
+  setup do
+    issue = issues(:daily_0908)
+    items(:hn_one).update!(published_at: 11.hours.ago - 15.minutes, title_zh: "用 Rust 制作终端日志查看器")
+    [ sources(:github), sources(:hackaday) ].each do |source|
+      url = "https://example.com/chapter/#{source.id}"
+      Item.create!(issue: issue, source: source, title: source == sources(:github) ? "tools/readable-terminal" : "A repairable handheld computer",
+        url: url, url_hash: Digest::SHA256.hexdigest(url), rank: 1, fetched_at: Time.current,
+        summary: "A practical tool for reading and understanding technical systems.", summary_zh: "适合日常阅读和理解技术系统的工具。",
+        reason: "可以直接查看实现，理解工具的工作方式。", meta: source == sources(:github) ? { language: "Rust", stars: 12345, stars_today: 312 } : {})
+    end
+    issue.update!(source_states: issue.source_states.transform_values { "ok" })
+    sign_in_with_browser(users(:drew))
+  end
+
+  teardown do
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
+  end
+
+  test "相邻日刊条目的标题和操作保持独立的触控范围" do
+    first = items(:hn_one)
+    first.update!(title: "Genie 4", title_zh: nil, meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
+    url = "https://example.com/daily-rhythm-second"
+    second = issues(:daily_0908).items.create!(source: sources(:hn), title: "Ghostty 1.4", rank: 2,
+      url: url, url_hash: Digest::SHA256.hexdigest(url), fetched_at: Time.current,
+      meta: { score: 546, comments: 161, comments_url: "https://news.ycombinator.com/item?id=2" })
+
+    [ 320, 375, 1440 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{first.id}")
+      execute_script("arguments[0].scrollIntoView({ block: 'center' })", row)
+      geometry = evaluate_script(<<~JS, row, second.id)
+        (() => {
+          const first = arguments[0], second = document.getElementById(`item-${arguments[1]}`);
+          const title = second.querySelector('.item-title a'), rect = title.getBoundingClientRect(), bounds = second.getBoundingClientRect();
+          const controls = [...first.querySelectorAll('.item-comments, .favorite-button')].map(control => {
+            const r = control.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            return { width: r.width, height: r.height, bottom: r.bottom,
+              hits: [[-21, -21], [21, -21], [-21, 21], [21, 21]].map(([dx, dy]) => document.elementFromPoint(x + dx, y + dy)?.closest('a, button') === control) };
+          });
+          return { titleTop: rect.top, rowTop: bounds.top, controls };
+        })()
+      JS
+      assert_operator geometry.fetch("titleTop"), :>=, geometry.fetch("rowTop") - 1, "#{width}px：下一条标题不能侵入上一条"
+      geometry.fetch("controls").each do |control|
+        assert_operator control.fetch("width"), :>=, 44
+        assert_operator control.fetch("height"), :>=, 44
+        assert_operator geometry.fetch("titleTop"), :>=, control.fetch("bottom"), "#{width}px：相邻控件不能重叠"
+        assert control.fetch("hits").all?, "#{width}px：控件的四角应命中自身"
+      end
+      assert_no_horizontal_overflow
+    end
+  end
+
+  test "窄屏短标题可触控，元信息与完整内容后的收藏均可读" do
+    items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
+    [ 305, 320, 375 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{items(:hn_one).id}")
+      assert row.has_selector?(".item-comments"), "评论应为可操作的链接"
+      title = row.find(".item-title a")
+      execute_script("arguments[0].scrollIntoView({ block: 'center' })", title)
+      geometry = evaluate_script(<<~JS, row)
+        (() => {
+          const row = arguments[0], link = row.querySelector('.item-title a'), r = link.getBoundingClientRect();
+          const x = r.left + r.width / 2, y = r.top + r.height / 2;
+          const age = row.querySelector('.item-age').getBoundingClientRect();
+          const bookmark = row.querySelector('.item-comments').getBoundingClientRect();
+          const meta = row.querySelector('.item-meta'), gap = parseFloat(getComputedStyle(meta).columnGap);
+          const children = [...meta.children], required = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + gap * (children.length - 1);
+          return { height: r.height, hits: [-21.5, 0, 21.5].map(dy => document.elementFromPoint(x, y + dy)?.closest('a') === link),
+            ageY: age.top + age.height / 2, bookmarkY: bookmark.top + bookmark.height / 2,
+            gap, required, available: meta.getBoundingClientRect().width,
+            overflow: document.documentElement.scrollWidth > innerWidth };
+        })()
+      JS
+      assert_operator geometry.fetch("height"), :>=, 44, "#{width}px 短标题触控高度"
+      assert geometry.fetch("hits").all?, "#{width}px 标题的 44px 区域应命中链接"
+      if geometry.fetch("required") <= geometry.fetch("available") + 0.01
+        assert_in_delta geometry.fetch("bookmarkY"), geometry.fetch("ageY"), 1, "#{width}px 空间足够时元信息应在同一行"
+      end
+      assert_not geometry.fetch("overflow"), "#{width}px 无横向溢出"
+    end
+  end
+
+  test "三套主题桌面与窄屏章节保留自己的配色，普通和减少动态模式下正文都可读" do
+    [ 320, 768, 1440 ].each do |width|
+      viewport(width)
+      %w[daybreak duet unfold].each do |theme|
+        [ "no-preference", "reduce" ].each do |motion|
+          page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: motion } ])
+          visit daily_issue_path("2026-09-08")
+          select_theme theme
+          assert_selector ".daily-source", count: 3
+          all(".daily-source").each do |section|
+            colors = chapter_colors(section)
+            context = "#{theme} #{width}px #{motion} #{section[:id]}"
+            assert_equal "none", colors.fetch("texture"), "三主题不恢复已否决的旧纸纹；#{context}"
+            assert_not_empty colors.fetch("text"), context
+            colors.fetch("text").each do |entry|
+              foreground = luminance(entry.fetch("color"))
+              background = luminance(entry.fetch("background"))
+              assert_operator contrast(foreground, background), :>=, 4.5, "正文与数字必须能读清；#{context} #{entry.inspect}"
+            end
+          end
+          assert_no_horizontal_overflow
+        end
+      end
+    end
+  end
+
+  test "正文后的文字图标收藏切换保留可访问名称与稳定命中区" do
+    with_forgery_protection do
+      INTERACTION_WIDTHS.each do |width|
+        viewport(width)
+        visit daily_issue_path("2026-09-08")
+        row = find("#item-#{items(:hn_one).id}")
+        assert_selector "#item-#{items(:hn_one).id} .item-meta time", text: "11 小时前提交"
+        time = row.find("time")
+        assert_includes time["aria-label"], "提交到 Hacker News"
+        assert_includes time["title"], "Asia/Shanghai"
+        assert_equal items(:hn_one).published_at.iso8601, time["datetime"]
+
+        bookmark = row.find(".item-actions .favorite-button")
+        execute_script("arguments[0].scrollIntoView({ block: 'center' })", bookmark)
+        settle_frames
+        assert_controls_independent(row, width)
+        assert_equal "收藏：#{items(:hn_one).title_zh || items(:hn_one).title}", bookmark["aria-label"]
+        assert_nil bookmark["data-on"]
+        before = bookmark_geometry(bookmark)
+        assert_bookmark_layers(before, width)
+
+        bookmark.click
+        assert_selector "#item-#{items(:hn_one).id} .favorite-button[data-on]"
+        assert_equal "取消收藏：#{items(:hn_one).title_zh || items(:hn_one).title}", bookmark["aria-label"]
+        wait_until { users(:drew).favorites.exists?(url_hash: items(:hn_one).url_hash) }
+        wait_for_favorite_requests(1)
+        wait_until { bookmark.evaluate_script("this.getAnimations().length === 0") }
+        saved = bookmark_geometry(bookmark)
+        assert_bookmark_layers(saved, width)
+        %w[ x y width height ].each do |key|
+          assert_in_delta before.fetch("button").fetch(key), saved.fetch("button").fetch(key), 0.5, "收藏切换不能移动命中区；#{width}px #{key}"
+        end
+        assert_controls_independent(row, width)
+
+        bookmark.click
+        assert_selector "#item-#{items(:hn_one).id} .favorite-button:not([data-on])"
+        assert_equal "收藏：#{items(:hn_one).title_zh || items(:hn_one).title}", bookmark["aria-label"]
+        wait_until { users(:drew).favorites.where(url_hash: items(:hn_one).url_hash).empty? }
+        wait_for_favorite_requests(2)
+        assert_bookmark_layers(bookmark_geometry(bookmark), width)
+        assert_no_horizontal_overflow
+      end
+    end
+  end
+
+  test "主题来源导航完整提供实际一二四个来源与状态" do
+    issue = issues(:daily_0908)
+    extra = Source.create!(name: "Technical Notes", adapter: "rss", publication: "daily", sort_order: 4,
+      config: { feed_url: "https://notes.example/feed" })
+    available = [ sources(:hn), sources(:github), sources(:hackaday), extra ]
+    [ 320, 1440 ].each do |width|
+      viewport(width)
+      [ 1, 2, 4 ].each do |count|
+        selected = available.first(count)
+        issue.update!(source_states: selected.to_h { |source| [ source.id, source == extra ? "empty" : "ok" ] })
+        visit daily_issue_path("2026-09-08")
+        assert_selector "#source-directory"
+        assert_selector ".daily-source", count: count
+        assert_selector "#item-#{items(:hn_one).id} .item-title"
+        links = all("#source-directory a.source-link", count: count)
+        assert_equal selected.map { |source| "#source-#{source.id}" }, links.map { |link| "##{link[:href].split('#', 2).last}" }
+        links.zip(selected).each do |link, source|
+          assert_includes link.text, source.name
+          assert_operator link.native.rect.height, :>=, 44
+          assert_operator link.native.rect.width, :>=, 44
+        end
+        assert_selector "#source-#{extra.id}", text: "本期未收录" if count == 4
+        rectangles = evaluate_script("[...document.querySelectorAll('#source-directory a.source-link')].map(link => link.getBoundingClientRect().toJSON())")
+        rectangles.combination(2).each do |a, b|
+          overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
+            [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
+          assert_equal 0, overlap, "#{width}px：来源入口不能重叠"
+        end
+        assert_no_horizontal_overflow
+      end
+    end
+  end
+
+  test "三套主题的章节与条目保持完整阅读宽度，来源标题后直接进入正文" do
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+    [ 320, 768, 1440 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      %w[daybreak duet unfold].each do |theme|
+        select_theme theme
+        geometry = evaluate_script(<<~JS)
+          [...document.querySelectorAll('.daily-source')].map(section => {
+            const rect = element => element.getBoundingClientRect().toJSON();
+            return { section: rect(section), header: rect(section.querySelector('.daily-source-head')),
+              row: rect(section.querySelector('.item-row')), title: rect(section.querySelector('.item-heading')),
+              allowedGap: parseFloat(getComputedStyle(section.querySelector('.item-row')).marginTop) + parseFloat(getComputedStyle(section.querySelector('.item-row')).paddingTop) + section.querySelector('.item-rank').getBoundingClientRect().height + parseFloat(getComputedStyle(section.querySelector('.item-heading')).marginTop) + 2 };
+          })
+        JS
+        geometry.each_with_index do |source, index|
+          column, header, row, title = source.values_at("section", "header", "row", "title")
+          assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{theme}/#{width}px 条目与栏目同列"
+          assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{theme}/#{width}px 条目与栏目同列"
+          assert_operator title.fetch("width"), :>, 100, "#{theme}/#{width}px 正文保留可读宽度"
+          if index > 0
+            assert_operator title.fetch("top"), :>=, header.fetch("bottom") - 1
+            assert_operator title.fetch("top") - header.fetch("bottom"), :<=, source.fetch("allowedGap"), "#{theme}/#{width}px 栏首不插入额外空块"
+          end
+        end
+        assert_no_horizontal_overflow
+      end
+    end
+  end
+
+  test "时间保持可读的次级字号，不与标题和译文争抢层次" do
+    WIDTHS.each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{items(:hn_one).id}")
+      sizes = evaluate_script(<<~JS, row)
+        (() => {
+          const row = arguments[0], size = selector => parseFloat(getComputedStyle(row.querySelector(selector)).fontSize);
+          return { time: size('.item-age'), title: size('.item-title'), translation: size('.item-original-title') };
+        })()
+      JS
+      assert_equal 12, sizes.fetch("time"), "#{width}px：时间应保持次级字号"
+      assert_operator sizes.fetch("time"), :<, sizes.fetch("title"), "#{width}px"
+      assert_operator sizes.fetch("time"), :<, sizes.fetch("translation"), "#{width}px"
+      assert_no_selector "#item-#{items(:hn_one).id} .item-age svg"
+    end
+  end
+
+  test "窄屏完整长作者名自然折行，不挤出正文或收藏" do
+    author = "A" * 100
+    item = Item.find_by!(issue: issues(:daily_0908), source: sources(:hackaday))
+    item.update!(author: author)
+
+    [ 320, 375 ].each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      row = find("#item-#{item.id}")
+      author_element = row.find(".item-meta span", text: author, exact_text: true)
+      assert_equal author, author_element.text
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      geometry = evaluate_script(<<~JS, author_element, row)
+        (() => {
+          const author = arguments[0], body = arguments[1].querySelector('.item-provenance').getBoundingClientRect();
+          const range = document.createRange(); range.selectNodeContents(author);
+          return { body: body.toJSON(), lines: [...range.getClientRects()].filter(rect => rect.width > 0).map(rect => rect.toJSON()) };
+        })()
+      JS
+      assert_operator geometry.fetch("lines").map { |line| line.fetch("top") }.uniq.size, :>, 1, "#{width}px：长作者名应完整折行"
+      geometry.fetch("lines").each do |line|
+        assert_operator line.fetch("left"), :>=, geometry.fetch("body").fetch("left") - 0.5, "#{width}px"
+        assert_operator line.fetch("right"), :<=, geometry.fetch("body").fetch("right") + 0.5, "#{width}px：实际字形不能越出阅读列"
+      end
+      assert_bookmark_layers(bookmark_geometry(row.find(".favorite-button")), width)
+      assert_no_horizontal_overflow
+    end
+  end
+
+  test "章节目录保留原生 hash 和从栏目标题继续阅读的键盘路径" do
+    WIDTHS.each do |width|
+      viewport(width)
+      visit daily_issue_path("2026-09-08")
+      target = "source-#{sources(:github).id}"
+      find("#source-directory a[href='##{target}']").send_keys(:enter)
+      wait_until { evaluate_script("location.hash") == "##{target}" && evaluate_script("document.activeElement.id") == target }
+      assert_selector "#source-directory"
+      heading = find("##{target} .daily-source-heading")
+      visible = evaluate_script("(() => { const r = arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })()", heading)
+      assert visible, "#{width}px：目录落点的栏目标题应完整在视口内"
+      page.driver.browser.switch_to.active_element.send_keys(:tab)
+      assert evaluate_script("document.activeElement.matches('##{target} .item-title a')"), "#{width}px：Tab 应从栏目进入正文"
+
+      find("##{target} .directory-return").send_keys(:enter)
+      wait_until { evaluate_script("location.hash") == "#source-directory" && evaluate_script("document.activeElement.id") == "source-directory" }
+      assert_selector "#source-directory"
+      page.driver.browser.switch_to.active_element.send_keys(:tab)
+      assert_selector "#source-directory a.source-link:first-child:focus"
+      assert_no_horizontal_overflow
+    end
+  end
+
+  private
+    def viewport(width)
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1000, deviceScaleFactor: 1, mobile: false)
+    end
+
+    def settle_frames
+      evaluate_async_script("const done = arguments[0]; requestAnimationFrame(() => requestAnimationFrame(done))")
+    end
+
+    def assert_no_horizontal_overflow
+      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, evaluate_script("document.documentElement.clientWidth")
+    end
+
+    def chapter_colors(section)
+      evaluate_script(<<~JS, section)
+        (() => {
+          const section = arguments[0];
+          function background(element) {
+            const layers = [];
+            for (let node = element; node; node = node.parentElement) {
+              const channels = getComputedStyle(node).backgroundColor.match(/[\\d.]+/g)?.map(Number);
+              if (channels) layers.push(channels);
+            }
+            const composite = layers.reverse().reduce((base, layer) => {
+              const alpha = layer[3] ?? 1;
+              return base.map((channel, index) => layer[index] * alpha + channel * (1 - alpha));
+            }, [255, 255, 255]);
+            return `rgb(${composite.join(', ')})`;
+          }
+          const text = [];
+          for (const block of section.querySelectorAll('.print-source-name, .item-rank, .item-title, .item-summary, .item-original-title, .item-reason, .item-meta')) {
+            const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+              const node = walker.currentNode, element = node.parentElement;
+              if (node.textContent.trim() && !element.closest('svg') && element.getClientRects().length && !element.closest('.source-section--first .source-section-head')) {
+                text.push({ text: node.textContent.trim(), color: getComputedStyle(element).color, background: background(element) });
+              }
+            }
+          }
+          const directory = document.querySelector('#source-directory');
+          const planes = [section, section.querySelector('.daily-source-sheet'), section.querySelector('.daily-source-head'), directory].map(element => {
+            const style = getComputedStyle(element);
+            return { color: style.backgroundColor, image: style.backgroundImage };
+          });
+          return { surface: background(section.querySelector('.daily-source-sheet')), text, planes,
+            texture: getComputedStyle(document.querySelector('.paper')).backgroundImage };
+        })()
+      JS
+    end
+
+    def luminance(color)
+      channels = color.scan(/[\d.]+/).first(3).map do |value|
+        channel = value.to_f / 255
+        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055)**2.4
+      end
+      channels.zip([ 0.2126, 0.7152, 0.0722 ]).sum { |channel, weight| channel * weight }
+    end
+
+    def contrast(foreground, background)
+      light, dark = [ foreground, background ].max, [ foreground, background ].min
+      (light + 0.05) / (dark + 0.05)
+    end
+
+    def assert_controls_independent(row, width)
+      controls = row.all(".item-comments, .favorite-button")
+      assert_equal 2, controls.length
+      controls.each do |control|
+        execute_script("arguments[0].scrollIntoView({ block: 'center' })", control)
+        settle_frames
+        geometry = control.evaluate_script(<<~JS)
+          (() => {
+            const rect = this.getBoundingClientRect(), x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+            return { width: rect.width, height: rect.height, hits: [[-21,-21],[21,-21],[-21,21],[21,21],[0,0]].map(([dx,dy]) => document.elementFromPoint(x+dx,y+dy)?.closest('a,button') === this) };
+          })()
+        JS
+        assert_operator geometry.fetch("width"), :>=, 44, "#{width}px"
+        assert_operator geometry.fetch("height"), :>=, 44, "#{width}px"
+        assert geometry.fetch("hits").all?, "#{width}px 控件区域应命中自己"
+      end
+      assert row.find(".item-actions").has_selector?(".favorite-button"), "#{width}px 收藏位于完整正文后"
+    end
+
+    def bookmark_geometry(bookmark)
+      evaluate_script(<<~JS, bookmark)
+        (() => {
+          const button = arguments[0];
+          const rect = element => element.getBoundingClientRect().toJSON();
+          const style = getComputedStyle(button);
+          return { button: rect(button), text: button.textContent.trim(), labels: button.querySelectorAll('.favorite-label').length,
+            borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth].map(parseFloat),
+            line: rect(button.querySelector('.favorite-line svg')), ink: rect(button.querySelector('.favorite-ink svg')) };
+        })()
+      JS
+    end
+
+    def assert_bookmark_layers(geometry, width)
+      button, line, ink = geometry.values_at("button", "line", "ink")
+      assert_includes [ "收藏", "已收藏" ], geometry.fetch("text"), "#{width}px 收藏状态保留可读文字"
+      assert_operator button.fetch("width"), :>=, 44, "#{width}px"
+      assert_operator button.fetch("height"), :>=, 44, "#{width}px"
+      %w[ x y width height ].each { |key| assert_in_delta line.fetch(key), ink.fetch(key), 0.5, "#{width}px 描线与墨层须重合" }
+      assert_in_delta button.fetch("top") + button.fetch("height") / 2, line.fetch("top") + line.fetch("height") / 2, 0.5, "#{width}px 图标垂直居中"
+      assert_operator line.fetch("left"), :>=, button.fetch("left"), "#{width}px 图标应位于按钮内"
+      assert_operator line.fetch("right"), :<=, button.fetch("right"), "#{width}px 图标应位于按钮内"
+    end
+
+    def select_theme(theme)
+      find(".theme-menu > summary").click
+      find(".theme-choice[data-preview='#{theme}']").click
+      assert_selector "html[data-theme='#{theme}']", visible: :all
+      evaluate_async_script("const done = arguments[0]; requestAnimationFrame(() => document.fonts.ready.then(done))")
+      find(".theme-menu > summary").send_keys(:escape)
+      evaluate_async_script(<<~JS)
+        const done = arguments[0]
+        Promise.all(document.getAnimations().filter(animation => animation.effect?.target?.closest?.('.daily-reading') && animation.effect.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))).then(done)
+      JS
+    end
+end

@@ -51,8 +51,11 @@ class Admin::SettingsController < Admin::BaseController
       if errors.any?
         redirect_to admin_settings_path, inertia: { errors: errors }
       else
-        changes = values.filter_map { |key, value| [ key, [ Setting.get(MODEL_KEYS[key]), value ] ] if Setting.get(MODEL_KEYS[key]) != value }.to_h
-        values.each { |key, value| Setting.set(MODEL_KEYS[key], value) }
+        changes = Setting.transaction do
+          changes = values.filter_map { |key, value| [ key, [ Setting.get(MODEL_KEYS[key]), value ] ] if Setting.get(MODEL_KEYS[key]) != value }.to_h
+          values.each { |key, value| Setting.set(MODEL_KEYS[key], value) }
+          changes
+        end
         Audit.record("settings.update", "Setting#model", changes)
         redirect_to admin_settings_path, notice: "已保存"
       end

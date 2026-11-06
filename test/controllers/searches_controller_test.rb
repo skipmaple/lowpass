@@ -77,7 +77,25 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @item.title, entry["title_runs"].pluck("text").join
   end
 
-  test "周刊条目的所在期落到周刊页的板块锚点" do
+  test "日刊搜索结果带已有标题译文，与理由是否存在无关" do
+    @item.update!(title_zh: "用 Rust 编写的 Kubernetes 控制器", reason: nil)
+    get search_path(q: "kuber rust")
+    assert_equal "用 Rust 编写的 Kubernetes 控制器", page_props["results"].sole["title_zh"]
+  end
+
+  test "日刊搜索结果带已有简介译文；周刊不显示日刊译文" do
+    daily = index_item("Rust application", source: sources(:github), summary: "A helpful application", summary_zh: "一个实用的应用程序")
+    weekly = index_item("Rust weekly note", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具")
+    weekly.update_columns(title_zh: "不应展示的周刊译文")
+    get search_path(q: "rust")
+    entries = page_props["results"].index_by { |entry| entry["item_id"] }
+    assert_equal "一个实用的应用程序", entries.fetch(daily.id)["summary_zh"]
+    assert_nil entries.fetch(weekly.id)["title_zh"]
+    assert_nil entries.fetch(weekly.id)["title_zh_runs"]
+    assert_nil entries.fetch(weekly.id)["summary_zh_runs"]
+  end
+
+  test "周刊搜索结果直达条目，并携带板块以便条目被替换时回退" do
     weekly = index_item("Rust weekly note", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
                         meta: { "issue_no" => 366, "anchor" => "工具" })
 
@@ -86,11 +104,11 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     entry = page_props["results"].sole
     assert_equal weekly.id, entry["item_id"]
     assert_equal "2026年 · 第 36 周 · 工具", entry["where"]["label"]
-    assert_equal weekly_issue_path("2026-W36", anchor: "issue-366-工具"), entry["where"]["href"]
+    assert_equal weekly_issue_path("2026-W36", section: "issue-366-工具", anchor: "item-#{weekly.id}"), entry["where"]["href"]
     assert_nil entry["snippet_runs"]
   end
 
-  test "RSS 周刊条目的所在期落到源节头" do
+  test "RSS 周刊条目的所在期直达条目，并可回退源节头" do
     feed = Source.create!(name: "命令行周报", adapter: "rss", publication: "weekly", sort_order: 2, config: { feed_url: "https://w.example/feed" })
     weekly = index_item("Rust in a feed weekly", issue: issues(:weekly_w36), source: feed, published_at: Time.utc(2026, 9, 3, 4))
 
@@ -99,7 +117,7 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     entry = page_props["results"].sole
     assert_equal weekly.id, entry["item_id"]
     assert_equal "2026年 · 第 36 周", entry["where"]["label"]
-    assert_equal weekly_issue_path("2026-W36", anchor: "source-#{feed.id}"), entry["where"]["href"]
+    assert_equal weekly_issue_path("2026-W36", section: "source-#{feed.id}", anchor: "item-#{weekly.id}"), entry["where"]["href"]
   end
 
   test "AC-4.7 地址参数往返：关键词与全部筛选恢复" do
@@ -206,7 +224,18 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ @item.url_hash ], page_props["favorites"]
   end
 
-  # 旧条目库里存着「…read more」：片段先过一遍清洗（PRD 7.5），不把源站的尾巴带进结果
+  test "已存摘要的片段保留代码符号与实体文字" do
+    summary = "变量_用户_名称，目录**/文件.rb、目录**/文件.ts，<T> 与 &lt;value&gt;。"
+    item = index_item("Literal preservation", summary: summary + " …read more")
+
+    get search_path(q: "preservation")
+
+    snippet = page_props["results"].sole["snippet_runs"].map { |run| run["text"] }.join
+    assert_equal summary, snippet
+    assert_equal summary + " …read more", item.reload.summary
+  end
+
+  # 旧条目库里存着「…read more」：片段只清理尾巴（PRD 7.5），保留已经清洗过的正文
   test "片段不带源站附加的阅读更多" do
     index_item("Negative resistance explained", summary: "A look at negative resistance that goes further than expected …read more")
 

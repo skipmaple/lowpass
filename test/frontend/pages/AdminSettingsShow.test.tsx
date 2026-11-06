@@ -207,7 +207,8 @@ describe('Admin/Settings/Show', () => {
   })
 
   it('推荐理由：配置好后显示用量', () => {
-    show({ reasons: reasonsStatus({ configured: true, key_configured: true, base_url: 'https://model.example/v1', model_name: 'gpt-x', month_calls: 12, month_cost: '0.35', monthly_cap: '10', today_calls: 3 }) })
+    show({ reasons: reasonsStatus({ configured: true, key_configured: true, base_url: 'https://model.example/v1', model_name: 'gpt-x', month_calls: 12, month_reason_calls: 8, month_translation_calls: 4, month_cost: '0.35', monthly_cap: '10', today_calls: 3 }) })
+    expect(document.body).toHaveTextContent('本月理由 8 次 · 翻译 4 次')
     expect(within(screen.getByText('密钥').closest('.kv-row')!).getByText('已配置')).toBeInTheDocument()
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('本月 12 次 · 费用 0.35 未指定币种 / 上限 10 未指定币种')
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('今日 3 次')

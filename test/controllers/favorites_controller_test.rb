@@ -40,6 +40,23 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, page_props["total"]
   end
 
+  test "收藏搜索只匹配仍属于快照原文的后补译文" do
+    @item.update!(summary: "Saved description")
+    Favorite.keep(users(:drew), @item)
+    @item.update!(title: "Replacement title", title_zh: "重抓后的新标题", summary_zh: "快照仍匹配的简介")
+
+    get favorites_path(q: "重抓后的新标题")
+    assert_empty page_props["entries"]
+    get favorites_path(q: "快照仍匹配的简介")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+
+    @item.update!(title: TITLE, title_zh: "快照仍匹配的标题", summary: "Replacement description", summary_zh: "重抓后的新简介")
+    get favorites_path(q: "重抓后的新简介")
+    assert_empty page_props["entries"]
+    get favorites_path(q: "快照仍匹配的标题")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+  end
+
   test "收藏搜索把 LIKE 通配符当文字，并保留来源和越界分页条件" do
     Favorite.keep(users(:drew), index_item("100% coverage"))
     Favorite.keep(users(:drew), @item)
@@ -103,7 +120,7 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, page_props["pages"]
   end
 
-  test "周刊收藏的所在期落到板块锚点（AC-10.8）" do
+  test "周刊收藏直达仍在原板块的条目，并携带板块回退" do
     weekly = index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具", summary: "一个用 Rust 写的代码编辑器。",
                         meta: { "issue_no" => 366, "anchor" => "工具" })
     Favorite.keep(users(:drew), weekly)
@@ -114,8 +131,35 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "weekly", entry["publication"]
     assert_equal "阮一峰科技爱好者周刊", entry["source_name"]
     assert_equal "2026年 · 第 36 周 · 工具", entry.dig("where", "label")
-    assert_equal weekly_issue_path("2026-W36", anchor: "issue-366-工具"), entry.dig("where", "href")
+    assert_equal weekly_issue_path("2026-W36", section: "issue-366-工具", anchor: "item-#{weekly.id}"), entry.dig("where", "href")
     assert_equal "一个用 Rust 写的代码编辑器。", entry["snippet"]
+  end
+
+  test "周刊收藏条目不存在或移动板块时仍指向收藏时的板块" do
+    weekly = index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
+      meta: { "issue_no" => 366, "anchor" => "工具" })
+    favorite = Favorite.keep(users(:drew), weekly)
+    expected = weekly_issue_path("2026-W36", anchor: "issue-366-工具")
+    weekly.update!(section: "文章", meta: { "issue_no" => 366, "anchor" => "文章" })
+    get favorites_path
+    assert_equal expected, page_props["entries"].sole.dig("where", "href")
+    weekly.destroy!
+    get favorites_path
+    assert_equal expected, page_props["entries"].sole.dig("where", "href")
+    assert_equal "工具", favorite.reload.section
+  end
+
+  test "周刊重抓后同一链接仍在原板块时定位新条目" do
+    weekly = index_item("Zed", issue: issues(:weekly_w36), source: sources(:ruanyf), section: "工具",
+      meta: { "issue_no" => 366, "anchor" => "工具" })
+    favorite = Favorite.keep(users(:drew), weekly)
+    url = weekly.url
+    issues(:weekly_w36).replace_section!(sources(:ruanyf), [ Adapters::Entry.new(title: "Zed", url: url, rank: 1,
+      section: "工具", meta: { issue_no: 366, anchor: "工具" }) ], issue_no: 366)
+    live = Favorite.live_items([ favorite ])[favorite.live_key]
+    assert_not_equal weekly.id, live.id
+    get favorites_path
+    assert_equal weekly_issue_path("2026-W36", section: "issue-366-工具", anchor: "item-#{live.id}"), page_props["entries"].sole.dig("where", "href")
   end
 
   test "摘要片段不超过 160 字" do
@@ -128,6 +172,16 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     assert snippet.end_with?("…")
   end
 
+  test "收藏快照的摘要保留代码符号与实体文字，只去阅读更多尾巴" do
+    summary = "变量_用户_名称，目录**/文件.rb、目录**/文件.ts，<T> 与 &lt;value&gt;。"
+    favorite = Favorite.keep(users(:drew), index_item("Literal preservation", summary: summary + " …read more"))
+
+    get favorites_path
+
+    assert_equal summary, page_props["entries"].sole["snippet"]
+    assert_equal summary + " …read more", favorite.reload.summary
+  end
+
   test "收藏之后才生成的译文也显示" do
     Favorite.keep(users(:drew), @item)
     @item.update!(title_zh: "Show HN：一个用 Rust 写的终端日志查看器", summary_zh: "一个用 Rust 写的终端日志查看器。")
@@ -137,6 +191,31 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     entry = page_props["entries"].sole
     assert_equal "Show HN：一个用 Rust 写的终端日志查看器", entry["title_zh"]
     assert_equal "一个用 Rust 写的终端日志查看器。", entry["summary_zh"]
+  end
+
+  test "收藏译文按标题简介分别匹配原文且快照不变" do
+    @item.update!(summary: "Old description", title_zh: "收藏时的标题", summary_zh: "收藏时的简介")
+    favorite = Favorite.keep(users(:drew), @item)
+    before = favorite.attributes
+    @item.update!(title: "Different English title", title_zh: "新标题译文", summary_zh: "后补的旧简介译文")
+    get favorites_path
+    assert_equal [ "收藏时的标题", "后补的旧简介译文" ], page_props["entries"].sole.values_at("title_zh", "summary_zh")
+    @item.update!(title: TITLE, title_zh: "后补的旧标题译文", summary: "Different summary", summary_zh: "新简介译文")
+    get favorites_path
+    assert_equal [ "后补的旧标题译文", "收藏时的简介" ], page_props["entries"].sole.values_at("title_zh", "summary_zh")
+    assert_equal before, favorite.reload.attributes
+  end
+
+  test "收藏仅在原文仍匹配快照时显示实时理由" do
+    @item.update!(reason: "可比较终端日志的筛选策略。")
+    Favorite.keep(users(:drew), @item)
+
+    get favorites_path
+    assert_equal @item.reason, page_props["entries"].sole["reason"]
+
+    @item.update!(summary: "A replacement description", reason: "这段理由对应新的简介。")
+    get favorites_path
+    assert_nil page_props["entries"].sole["reason"]
   end
 
   # AC-10.3 重抓把条目行换掉、新内容不含这条链接：收藏仍在，用收藏时的快照；所在期打开那一栏，不带条目锚点

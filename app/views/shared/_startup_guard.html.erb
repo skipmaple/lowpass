@@ -1,0 +1,35 @@
+<%= javascript_tag do %>
+  (() => {
+    const reveal = () => {
+      const app = document.getElementById('app')
+      const recovery = document.getElementById('startup-recovery')
+      if (app && !app.hasChildNodes() && recovery) recovery.hidden = false
+    }
+    window.addEventListener('error', event => {
+      if (event.target.tagName === 'SCRIPT' && event.target.hasAttribute('data-startup-entry')) {
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', reveal, { once: true })
+        else reveal()
+      }
+    }, true)
+    const timeout = window.setTimeout(reveal, 8000)
+    const watch = () => {
+      const app = document.getElementById('app')
+      const recovery = document.getElementById('startup-recovery')
+      if (!app || !recovery) return
+      const observer = new MutationObserver(() => {
+        if (app.hasChildNodes()) {
+          recovery.hidden = true
+          window.clearTimeout(timeout)
+          observer.disconnect()
+        }
+      })
+      if (app.hasChildNodes()) {
+        recovery.hidden = true
+        window.clearTimeout(timeout)
+      }
+      else observer.observe(app, { childList: true })
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch, { once: true })
+    else watch()
+  })()
+<% end %>

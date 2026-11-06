@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+# bin/rails runner script/historical_weekly_paragraph_index REPOSITORY SNAPSHOT ISSUE_NO
+# 快照为离线只读数据；输出只包含哈希与字节偏移，不写数据库。
+require "json"
+
+repository, snapshot_path, number_arg = ARGV
+number = Integer(number_arg)
+versions = {
+  412 => { commit: "7f89820fa715b2e3d77b3f4d9c3316b58e25411b", sha: "7e6c967c508e898bbd7ebae88f521e7f6c10324e28204e27f2a242bfbda2113d", ranks: [ 2, 4, 5, 6, 7, 9, 10, 26, 27, 28, 29, 30, 31, 32 ] },
+  413 => { commit: "0f914dff7cecdfa71072d03d7fd44aa527bd4b06", sha: "91f0d22d03e3319c7e779528518e2825572f749cef251c0f3c1fad8e03eaedf7", ranks: [ 3, 4, 5, 26, 27, 29, 30, 31, 32, 33 ] }
+}.freeze
+version = versions.fetch(number)
+rows = JSON.parse(File.read(snapshot_path)).select { |row| row.dig("meta", "issue_no") == number }
+manifest = HistoricalWeeklyParagraphIndex.generate(repository: repository, snapshot: { "period" => "2026-W38", "issue_no" => number, "rows" => rows },
+  source_commit: version.fetch(:commit), source_sha256: version.fetch(:sha), reviewed_ranks: version.fetch(:ranks))
+puts JSON.pretty_generate(manifest)

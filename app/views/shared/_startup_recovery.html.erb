@@ -1,0 +1,4 @@
+<%= tag.main id: (hidden ? "startup-recovery" : nil), class: "startup-recovery sheet-body cjk", hidden: hidden do %>
+  <div role="status"><h1><%= hidden ? "页面尚未加载完成" : "请启用 JavaScript 后重新加载" %></h1></div>
+  <%= link_to "重新加载", request.fullpath, class: "ctrl" %>
+<% end %>

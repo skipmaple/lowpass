@@ -12,6 +12,28 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original, Setting.get("model_base_url")
   end
 
+  test "保存整组模型配置中途失败时旧地址模型和价格整体保留" do
+    with_model_provider do
+      keys = Admin::SettingsController::MODEL_KEYS.values
+      before = keys.index_with { |key| Setting.get(key) }
+      original = Setting.method(:set)
+      interrupted = ->(key, value) do
+        raise ActiveRecord::StatementInvalid, "simulated write failure" if key == "model_name"
+        original.call(key, value)
+      end
+      Setting.define_singleton_method(:set, &interrupted)
+      begin
+        assert_raises(ActiveRecord::StatementInvalid) do
+          patch admin_settings_path, params: { model: { base_url: "https://next.example/v1", model_name: "next-model", input_price: "1", output_price: "10", monthly_cap: "5" } }
+        end
+      ensure
+        Setting.define_singleton_method(:set, original)
+      end
+      assert_equal before, keys.index_with { |key| Setting.get(key) }
+      assert_equal 0, AuditLog.count
+    end
+  end
+
   test "设置页：调度时间与白名单" do
     get admin_settings_path
 

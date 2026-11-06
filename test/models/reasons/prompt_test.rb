@@ -49,13 +49,13 @@ class Reasons::PromptTest < ActiveSupport::TestCase
     assert_not_includes system, "相关度较低"
   end
 
-  test "资料不足允许理由留空，不为凑字数编写判断" do
+  test "资料不足只输出严格拒写分支，不为凑字数编写判断" do
     [ items(:hn_one), github(nil), github("A tiny CLI tool") ].each do |item|
       system = system_for(item)
 
-      assert_includes system, '资料不足以支持具体理由时，reason 输出空字符串 ""'
+      assert_includes system, '{"decision":"insufficient_evidence"}'
       assert_includes system, "不要为凑满字数编写理由"
-      assert_includes system, "interest_tag 仍按上面的规则填写"
+      assert_includes system, "不附理由、标签、译文或诊断"
       assert_includes system, "20 到 60 字"
     end
   end
@@ -68,7 +68,7 @@ class Reasons::PromptTest < ActiveSupport::TestCase
       system = system_for(item)
       assert_includes system, "把条目标题译成简体中文"
       assert_not_includes system, "把条目说明译成简体中文"
-      assert_includes system, '{"reason": "...", "interest_tag": "<领域名>", "title_zh": "<标题译文>"}'
+      assert_includes system, '{"decision": "generated", "reason": "...", "interest_tag": "<领域名>", "title_zh": "<标题译文>"}'
       assert_equal Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::TITLE_TOKENS, Reasons::Prompt.max_tokens(item)
     end
   end
@@ -80,19 +80,27 @@ class Reasons::PromptTest < ActiveSupport::TestCase
 
     assert_includes system, "把条目说明译成简体中文"
     assert_not_includes system, "把条目标题译成简体中文"
-    assert_includes system, '{"reason": "...", "interest_tag": "<领域名>", "summary_zh": "<说明译文>"}'
+    assert_includes system, '{"decision": "generated", "reason": "...", "interest_tag": "<领域名>", "summary_zh": "<说明译文>"}'
     assert_equal Reasons::Prompt::MAX_TOKENS + Reasons::Prompt::SUMMARY_TOKENS, Reasons::Prompt.max_tokens(item)
   end
 
-  test "没什么可译的条目：只要理由与标签，输出上限照旧" do
+  test "没什么可译的条目仍用两分支协议且上限照旧" do
     chinese_title = Item.new(source: sources(:hn), issue: issues(:daily_0908), title: "中文互联网正在消失", url: "https://example.com/zh", meta: {})
 
     [ github(nil), github("一个命令行小工具"), chinese_title ].each do |item|
-      system = system_for(item)
-      assert_includes system, '只输出 JSON：{"reason": "...", "interest_tag": "<领域名>"}。'
-      assert_not_includes system, "title_zh"
-      assert_not_includes system, "summary_zh"
+      assert_includes system_for(item), '{"decision":"insufficient_evidence"}'
+      assert_includes system_for(item), '"decision": "generated"'
+      assert_not_includes system_for(item), '"title_zh"'
+      assert_not_includes system_for(item), '"summary_zh"'
       assert_equal Reasons::Prompt::MAX_TOKENS, Reasons::Prompt.max_tokens(item)
     end
+  end
+
+  test "资料约束涵盖事实归属与范围，输出 token 预算不变" do
+    system = system_for(items(:hn_one))
+    [ "资料依据", "比较基线", "未来计划", "关键适用条件", "原文节选", "只输出该键值" ].each { |rule| assert_includes system, rule }
+    user = Reasons::Prompt.messages(items(:hn_one), "前端开发：工具")[1][:content]
+    assert_not_includes user, items(:hn_one).url
+    assert_equal [ 200, 120, 400 ], [ Reasons::Prompt::MAX_TOKENS, Reasons::Prompt::TITLE_TOKENS, Reasons::Prompt::SUMMARY_TOKENS ]
   end
 end

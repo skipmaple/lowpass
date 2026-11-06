@@ -223,7 +223,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
           <button type="button" className="btn-primary" disabled={!configured || sending} aria-busy={sending} onClick={sendTestAlert}>
             <PendingLabel idle="发送测试告警" pending="发送中…" busy={sending} />
           </button>
-          {configured ? null : <span className="field-note">未配置告警渠道，无法发送测试。<a href="#deployment">查看部署配置帮助</a></span>}
+          {configured ? null : <><span className="field-note">未配置告警渠道，无法发送测试。</span><a className="field-note t" href="#deployment">查看部署配置帮助</a></>}
         </div>
         <span role="status" className="field-note">{alertStatus}</span>
       </Section>
@@ -238,7 +238,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
           <button type="button" className="btn-primary" disabled={!backup.configured || backup.active || backingUp} aria-busy={backingUp} onClick={startBackup}>
             <PendingLabel idle="立即备份" pending="备份中…" busy={backup.active || backingUp} />
           </button>
-          {backup.configured ? null : <span className="field-note">未配置备份存储，无法立即备份。<a href="#deployment">查看部署配置帮助</a></span>}
+          {backup.configured ? null : <><span className="field-note">未配置备份存储，无法立即备份。</span><a className="field-note t" href="#deployment">查看部署配置帮助</a></>}
         </div>
         <span className="field-note"><Mixed text="每天 03:00 自动备份；保留天数由存储桶的生命周期规则决定。" /></span>
         <span role="status" className="field-note">{backupStatus}</span>
@@ -284,8 +284,12 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
         {model.conflicted ? <p role="status" className="field-note">服务端设置已有变化，请核对恢复的草稿后保存。</p> : null}
         <div className="kv-row"><span className="kv-key">密钥</span><div className="kv-value"><span className="cjk" style={{ fontSize: 'var(--fs-15)', color: reasons.key_configured ? 'var(--ink)' : 'var(--ink2)' }}>{reasons.key_configured ? '已配置' : '未配置'}</span></div></div>
         <div className="reasons-usage">
-          <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / 上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : `${reasons.monthly_cap} ${reasons.currency || '未指定币种'}`}`} />
+          <span>
+            <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / `} />
+            <Mixed text={`上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : `${reasons.monthly_cap} ${reasons.currency || '未指定币种'}`}`} nowrap={Number(reasons.monthly_cap) === 0} />
+          </span>
           <Mixed text={`今日 ${reasons.today_calls} 次`} />
+          <Mixed text={`本月理由 ${reasons.month_reason_calls} 次 · 翻译 ${reasons.month_translation_calls} 次`} />
         </div>
       </Section>
       <Section title="部署配置帮助" id="deployment">

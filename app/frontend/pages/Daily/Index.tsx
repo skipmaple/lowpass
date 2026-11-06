@@ -22,9 +22,18 @@ export type DailyIndexProps = FooterData & {
 }
 
 function SourceMarks({ text }: { text: string }) {
-  return text.split(' · ').map((mark, index) => {
+  const marks = text.split(' · ')
+  return marks.map((mark, index) => {
     const boundary = mark.lastIndexOf(' ')
-    return <span key={index}>{index > 0 ? ' · ' : null}<Mixed text={mark.slice(0, boundary)} font="latin" /> <Mixed text={mark.slice(boundary + 1)} /></span>
+    return (
+      <span key={index}>
+        <span className="archive-source-result">
+          <Mixed text={mark.slice(0, boundary)} font="latin" />{' '}
+          <span className="archive-source-value"><Mixed text={mark.slice(boundary + 1)} />{index < marks.length - 1 ? ' ·' : null}</span>
+        </span>
+        {index < marks.length - 1 ? ' ' : null}
+      </span>
+    )
   })
 }
 

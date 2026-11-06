@@ -33,11 +33,12 @@ function show(overrides: Partial<DailyShowProps> = {}) {
 
 // 列表区顶上那句事实句（IssueNotice / SourceState 共用 .state-line）
 function noticeText(container: HTMLElement) {
-  return container.querySelector('.issue-body .state-line')?.textContent ?? null
+  return Array.from(container.querySelectorAll('.issue-body .state-line')).find((line) => !line.closest('.daily-source'))?.textContent ?? null
 }
 
 beforeEach(() => {
   window.history.replaceState({ page: 'daily' }, '', '/daily/2026-09-08')
+  Element.prototype.scrollIntoView = vi.fn()
 })
 
 afterEach(() => {
@@ -52,17 +53,22 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     const { container } = show({ missing: true, issue: dailyIssue({ state: null, status: '本期未生成' }) })
 
     expect(noticeText(container)).toBe('本期未生成')
-    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
+    expect(screen.queryAllByRole('link', { name: /^(Hacker News|GitHub Trending|Hackaday)$/ })).toHaveLength(0)
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
-  it('生成中在列表区说「生成中，约 1 分钟后刷新」，索引条还在', () => {
+  it('生成中保留来源清单，不提供没有正文目标的跳转', () => {
     const { container } = show({
       issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新', time_label: '06:00' }),
     })
 
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
-    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')).toHaveLength(3)
+    const overview = within(screen.getByRole('list', { name: '来源' }))
+    expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
+    expect(container.querySelector('details.source-directory')).toBeNull()
+    expect(overview.queryAllByRole('link')).toHaveLength(0)
+    expect(screen.queryByRole('navigation', { name: '本期来源' })).toBeNull()
+    expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
 
@@ -82,79 +88,127 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     vi.useRealTimers()
   })
 
-  it('空刊说「本期为空刊，管理员已收到通知」', () => {
-    const { container } = show({ issue: dailyIssue({ state: 'empty', status: '本期为空刊，管理员已收到通知' }) })
+  it('空刊保留每个来源的失败事实，不提供没有正文目标的跳转', () => {
+    const { container } = show({
+      issue: dailyIssue({ state: 'empty', status: '本期为空刊，管理员已收到通知' }),
+      sources: sources.map((entry) => ({ ...entry, state: 'failed' })),
+    })
 
     expect(noticeText(container)).toBe('本期为空刊，管理员已收到通知')
+    const overview = within(screen.getByRole('list', { name: '来源' }))
+    expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News抓取失败', 'GitHub Trending抓取失败', 'Hackaday抓取失败'])
+    expect(container.querySelector('details.source-directory')).toBeNull()
+    expect(overview.queryAllByRole('link')).toHaveLength(0)
+    expect(screen.queryByRole('navigation', { name: '本期来源' })).toBeNull()
+    expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
   })
 
   // 已发布的期不在列表区说话，哪怕期头挂着「已于 06:42 修订」这种来历标签
   it('已发布没有事实句，直接是条目', () => {
     const { container } = show({ issue: dailyIssue({ status: '已于 06:42 修订' }) })
 
-    expect(container.querySelector('.source-section--first .state-line')).toBeNull()
+    expect(noticeText(container)).toBeNull()
     expect(container.querySelectorAll('.item-row')).toHaveLength(1)
   })
 })
 
-describe('切来源（本地状态 + ?source= 深链）', () => {
-  it('切一次通过 Inertia 更新当前页面地址并保留状态与滚动，不回服务端', async () => {
-    const user = userEvent.setup()
-    const replaceState = vi.spyOn(window.history, 'replaceState')
-    show()
+describe('连续阅读与来源目录', () => {
+  async function openDirectory() {
+    return within(screen.getByRole('navigation', { name: '本期来源' }))
+  }
 
-    await user.click(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')[1])
+  it('主题来源导航直接可用，全部来源正文连续可读', async () => {
+    const { container } = show()
+    expect(container.querySelector('details.source-directory')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Hacker News' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeVisible()
 
-    expect(router.replace).toHaveBeenCalledWith({
-      url: '/daily/2026-09-08?source=src-gh#source-src-gh',
-      props: expect.any(Function),
-      preserveState: true,
-      preserveScroll: true,
-    })
-    const replace = router.replace.mock.calls[0][0]
-    expect(replace.props({ active_source_id: 'src-hn', retained: 'yes' })).toEqual({
-      active_source_id: 'src-gh',
-      retained: 'yes',
-    })
-    expect(replaceState).not.toHaveBeenCalled()
-    expect(router.visit).not.toHaveBeenCalled()
+    const navigation = await openDirectory()
+    expect(navigation.getAllByRole('link').map((link) => link.querySelector('.source-tab-name')?.textContent)).toEqual(sources.map((source) => source.name))
+    await userEvent.click(navigation.getByRole('link', { name: /GitHub Trending/ }))
+    expect(screen.getByRole('region', { name: 'Hacker News' })).toBeVisible()
   })
 
-  it('跳转来源保留整期条目，不卸载前一来源', async () => {
-    const user = userEvent.setup()
+  it('已发布的失败或无新内容来源仍然可以跳到真实正文', async () => {
+    show({ sources: [sources[0], { ...sources[1], state: 'failed' }, { ...sources[2], state: 'empty' }] })
+
+    const directory = await openDirectory()
+    const links = directory.getAllByRole('link')
+    expect(links).toHaveLength(3)
+    for (const link of links) {
+      const target = document.getElementById(link.getAttribute('href')!.slice(1))
+      expect(target).toBeInTheDocument()
+      expect(target).toHaveClass('daily-source')
+    }
+    expect(screen.getByRole('region', { name: 'GitHub Trending' })).toHaveTextContent('本期抓取失败，已通知管理员')
+    expect(screen.getByRole('region', { name: 'Hackaday' })).toHaveTextContent('本期未收录')
+  })
+
+  it('同一期生成完成后来源清单恢复正文导航', async () => {
+    const { rerender } = show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
+    expect(screen.getByRole('list', { name: '来源' })).toBeInTheDocument()
+
+    rerender(<Show issue={dailyIssue()} missing={false} sources={sources} items_by_source={{ 'src-hn': [item()] }} favorites={[]} active_source_id="src-hn" latest_weekly_key="2026-W36" />)
+
+    expect(screen.queryByRole('list', { name: '来源' })).toBeNull()
+    const directory = await openDirectory()
+    expect(directory.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getByRole('region', { name: 'Hacker News' })).toContainElement(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' }))
+    expect(screen.queryByText('生成中，约 1 分钟后刷新')).toBeNull()
+  })
+
+  it('每栏均可返回并聚焦来源目录，失败或没有源站外链时也保留入口', async () => {
+    show({ sources: [sources[0], { ...sources[1], state: 'failed', home_url: null }, sources[2]] })
+    const returns = screen.getAllByRole('link', { name: '返回来源目录' })
+    expect(returns).toHaveLength(3)
+    for (const link of returns) expect(link).toHaveAttribute('href', '#source-directory')
+    await userEvent.click(returns[1])
+    expect(screen.getByRole('navigation', { name: '本期来源' })).toHaveFocus()
+  })
+
+  it('全部来源按配置顺序同时呈现，展开目录后使用正文的原生锚点', async () => {
     show({
+      active_source_id: 'src-had',
       items_by_source: {
         'src-hn': [item()],
-        'src-gh': [item({ id: 'itm-gh-1', title: 'openclaw/openclaw', url: 'https://github.com/openclaw/openclaw' })],
+        'src-gh': [item({ id: 'itm-gh-1', url_hash: 'hash-gh', title: 'openclaw/openclaw' })],
+        'src-had': [item({ id: 'itm-had-1', url_hash: 'hash-had', title: 'A rotary phone' })],
       },
     })
-
-    expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeInTheDocument()
-
-    await user.click(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')[1])
-
-    expect(screen.getByRole('link', { name: 'openclaw/openclaw' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeInTheDocument()
+    const directory = await openDirectory()
+    expect(directory.getByRole('link', { name: /GitHub Trending/ })).toHaveAttribute('href', '#source-src-gh')
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Show HN: A terminal log viewer written in Rust', 'openclaw/openclaw', 'A rotary phone'])
+    expect(screen.getByRole('region', { name: 'GitHub Trending' })).toContainElement(screen.getByText('openclaw/openclaw'))
   })
 
-  // 服务端已经按 ?source= 挑好了当前来源（DailyIssuesController#show），页面拿它当种子
-  it('当前来源的种子来自 props', () => {
-    show({ active_source_id: 'src-had', items_by_source: { 'src-had': [item({ title: 'A 3D-printed rotary phone' })] } })
+  it('失败来源保留事实句，后续来源照常可读', () => {
+    show({
+      sources: [sources[0], { ...sources[1], state: 'failed' }, sources[2]],
+      items_by_source: { 'src-had': [item({ title: 'A rotary phone' })] },
+    })
+    expect(within(screen.getByRole('region', { name: 'GitHub Trending' })).getByText('本期抓取失败，已通知管理员')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'A rotary phone' })).toBeInTheDocument()
+  })
 
-    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')[2]).toHaveAttribute('aria-current', 'location')
-    expect(screen.getByRole('link', { name: 'A 3D-printed rotary phone' })).toBeInTheDocument()
+  it('中文标题、摘要与推荐理由共同保留，操作紧随完整内容', () => {
+    const { container } = show({
+      items_by_source: { 'src-hn': [item({ title_zh: '终端日志工具', summary: 'A practical tool for reading logs.', reason: '适合直接查看实现。' })] },
+    })
+    const row = container.querySelector('.item-row')!
+    const parts = ['.item-heading', '.item-summary', '.item-reason', '.item-actions'].map((selector) => row.querySelector(selector)!)
+    parts.slice(1).forEach((part, index) => {
+      expect(parts[index].compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+    expect(row.querySelector('.item-heading')).toHaveTextContent('终端日志工具')
+    expect(row.querySelector('.item-original')).toHaveTextContent('Show HN: A terminal log viewer written in Rust')
+    expect(row.querySelector('.item-actions')).toContainElement(screen.getByRole('button', { name: '收藏：终端日志工具' }))
   })
 
   it('一个来源都没有时只留事实句', () => {
-    const { container } = show({
-      sources: [],
-      active_source_id: null,
-      items_by_source: {},
-      issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }),
-    })
-
+    const { container } = show({ sources: [], active_source_id: null, items_by_source: {}, issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
-    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
+    expect(screen.queryByRole('navigation', { name: '本期来源' })).toBeNull()
   })
 })
 
@@ -255,10 +309,39 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
     const { container } = show()
     expect(scroll).not.toHaveBeenCalled()
 
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
 
     expect(scroll).toHaveBeenCalledTimes(1)
     expect(scroll.mock.contexts[0]).toBe(container.querySelector('#item-itm-hn-1'))
+  })
+
+  it('旧 source 查询参数定位来源，条目 hash 优先于 source', () => {
+    window.history.replaceState({}, '', '/daily/2026-09-08?source=src-gh')
+    const { container, unmount } = show()
+    vi.advanceTimersByTime(32)
+    expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts[0]).toBe(container.querySelector('#source-src-gh'))
+    unmount()
+    vi.mocked(Element.prototype.scrollIntoView).mockClear()
+    window.history.replaceState({}, '', '/daily/2026-09-08?source=src-gh#item-itm-hn-1')
+    const next = show()
+    vi.advanceTimersByTime(32)
+    expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts[0]).toBe(next.container.querySelector('#item-itm-hn-1'))
+  })
+
+  it('重抓后条目锚点已不存在时回到旧链接指定的来源栏首', () => {
+    window.history.replaceState({}, '', '/daily/2026-09-08?source=src-gh#item-replaced')
+    const { container } = show()
+    vi.advanceTimersByTime(32)
+    const fallback = container.querySelector('#item-replaced')
+    expect(fallback?.closest('.daily-source')).toBe(container.querySelector('#source-src-gh'))
+    expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts[0]).toBe(fallback)
+  })
+
+  it('历史页面已完成初始化时不重新执行锚点定位，由 Inertia 恢复阅读位置', () => {
+    window.history.replaceState({ documentScrollPosition: { top: 450, left: 0 } }, '', '/daily/2026-09-08?source=src-gh')
+    show()
+    vi.advanceTimersByTime(32)
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
   })
 
   it('没有 hash 或找不到元素时什么都不做', () => {
@@ -266,7 +349,7 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
     const scroll = vi.mocked(Element.prototype.scrollIntoView)
 
     show()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
 
     expect(scroll).not.toHaveBeenCalled()
   })
@@ -277,7 +360,7 @@ describe('按 hash 定位（搜索结果的所在期）', () => {
 
     const { unmount } = show()
     unmount()
-    vi.runAllTimers()
+    vi.advanceTimersByTime(32)
 
     expect(scroll).not.toHaveBeenCalled()
   })
@@ -310,42 +393,19 @@ it('条目行有书签，已收藏的链接是实心', () => {
 })
 
 describe('打印（D34）', () => {
-  it('打印前渲染全部来源、每个来源前印来源名，失败的来源印它的事实句；打印完收回', () => {
-    show({
-      sources: [
-        source(),
-        source({ id: 'src-gh', name: 'GitHub Trending', adapter: 'github_trending' }),
-        source({ id: 'src-had', name: 'Hackaday', adapter: 'rss', state: 'failed' }),
-      ],
-      items_by_source: { 'src-hn': [item()], 'src-gh': [item({ id: 'itm-gh-1', url_hash: 'hash-gh', title: 'openclaw/openclaw' })] },
-    })
-    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')).toHaveLength(3)
-
+  it('使用同一份完整正文，进入和退出打印不会卸载条目或重复来源', () => {
+    show({ items_by_source: { 'src-hn': [item()], 'src-gh': [item({ id: 'itm-gh-1', url_hash: 'hash-gh', title: 'openclaw/openclaw' })] } })
+    const article = screen.getByText('openclaw/openclaw')
     act(() => { window.dispatchEvent(new Event('beforeprint')) })
-    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
-    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
-    expect(screen.getByText('openclaw/openclaw')).toBeInTheDocument()
-    expect(screen.getByText('本期抓取失败，已通知管理员')).toBeInTheDocument()
-
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3)
+    expect(screen.getByText('openclaw/openclaw')).toBe(article)
     act(() => { window.dispatchEvent(new Event('afterprint')) })
-    expect(within(screen.getByRole('navigation', { name: '本期来源' })).getAllByRole('link')).toHaveLength(3)
+    expect(screen.getByText('openclaw/openclaw')).toBe(article)
   })
 
   it('期级事实句（生成中）打印时只印一次', () => {
     show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
-
     act(() => { window.dispatchEvent(new Event('beforeprint')) })
     expect(screen.getAllByText('生成中，约 1 分钟后刷新')).toHaveLength(1)
-  })
-
-  // 自查第 1 轮：页面一打开就已经是打印媒体（无头浏览器打印成 PDF、打印预览里刷新）时，没有 beforeprint 也没有 change
-  it('打开时已经是打印媒体，就直接渲染全部来源', () => {
-    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: query === 'print', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
-
-    show({ items_by_source: { 'src-hn': [item()], 'src-gh': [], 'src-had': [] } })
-
-    expect(screen.queryAllByRole('navigation', { name: '本期来源' })).toHaveLength(0)
-    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
-    vi.unstubAllGlobals()
   })
 })

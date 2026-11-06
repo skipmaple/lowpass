@@ -9,32 +9,35 @@ class FavoritingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
   end
 
-  test "收藏一条，从头像菜单进收藏页，取消后恢复" do
-    with_forgery_protection do
-      visit daily_issue_path("2026-09-08")
+  %w[ daybreak duet unfold ].each do |theme|
+    test "#{theme} 收藏一条，从头像菜单进收藏页，取消后恢复" do
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      with_forgery_protection do
+        visit daily_issue_path("2026-09-08")
 
-      find("button[aria-label='收藏：#{TITLE}']").click
-      assert_selector "button[aria-label='取消收藏：#{TITLE}'][data-on]"
-      wait_until { users(:drew).favorites.count == 1 }
+        find("button[aria-label='收藏：#{TITLE}']").click
+        assert_selector "button[aria-label='取消收藏：#{TITLE}'][data-on]"
+        wait_until { users(:drew).favorites.count == 1 }
 
-      find("button[aria-label='账户']").click
-      within(".menu-card") { click_on "收藏" }
+        find("button[aria-label='账户']").click
+        within(".menu-card") { click_on "收藏" }
 
-      assert_current_path favorites_path
-      assert_selector "h1", text: "收藏"
-      assert_selector ".search-row", text: TITLE
+        assert_current_path favorites_path
+        assert_selector "h1", text: "收藏"
+        assert_selector ".search-row", text: TITLE
 
-      find("button[aria-label='取消收藏：#{TITLE}']").click
-      assert_text "已取消收藏"
-      wait_until { users(:drew).favorites.count.zero? }
+        find("button[aria-label='取消收藏：#{TITLE}']").click
+        assert_text "已取消收藏"
+        wait_until { users(:drew).favorites.count.zero? }
 
-      click_on "恢复"
-      assert_no_text "已取消收藏"
-      assert_selector "button[aria-label='取消收藏：#{TITLE}'][data-on]"
-      wait_until { users(:drew).favorites.count == 1 }
+        click_on "恢复"
+        assert_no_text "已取消收藏"
+        assert_selector "button[aria-label='取消收藏：#{TITLE}'][data-on]"
+        wait_until { users(:drew).favorites.count == 1 }
 
-      refresh
-      assert_selector ".search-row", text: TITLE
+        refresh
+        assert_selector ".search-row", text: TITLE
+      end
     end
   end
 
@@ -109,17 +112,68 @@ class FavoritingTest < ApplicationSystemTestCase
   end
 
   # AC-10.14：手机宽度下书签仍是 44 见方的目标，页面不横向溢出
-  test "手机宽度下书签是 44 见方，页面不横向溢出" do
-    with_viewport(375, 812) do
-      visit daily_issue_path("2026-09-08")
+  %w[ daybreak duet unfold ].each do |theme|
+    test "#{theme} 手机宽度下书签是 44 见方，页面不横向溢出" do
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      with_viewport(375, 812) do
+        visit daily_issue_path("2026-09-08")
 
-      assert_selector ".favorite-button"
-      assert_equal 375, evaluate_script("window.innerWidth")
-      width, height = evaluate_script("(() => { const box = document.querySelector('.favorite-button').getBoundingClientRect(); return [box.width, box.height] })()")
-      assert_operator width, :>=, 44
-      assert_operator height, :>=, 44
-      # 跟可见宽度比，不跟 375 比：有常驻滚动条的系统上，375 里还含着滚动条那一条
-      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, evaluate_script("document.documentElement.clientWidth")
+        assert_selector ".favorite-button"
+        assert_equal 375, evaluate_script("window.innerWidth")
+        width, height = evaluate_script("(() => { const box = document.querySelector('.favorite-button').getBoundingClientRect(); return [box.width, box.height] })()")
+        assert_operator width, :>=, 44
+        assert_operator height, :>=, 44
+        # 跟可见宽度比，不跟 375 比：有常驻滚动条的系统上，375 里还含着滚动条那一条
+        assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, evaluate_script("document.documentElement.clientWidth")
+      end
+    end
+  end
+
+  %w[ daybreak duet unfold ].each do |theme|
+    test "#{theme} 减少动态时取消恢复不产生布局过渡，墨层保留在同一个控件" do
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+      with_viewport(375, 812) do
+        Favorite.keep(users(:drew), items(:hn_one))
+        visit favorites_path
+        assert_selector ".favorite-button[data-on]"
+        execute_script(<<~JS)
+          window.favoriteControl = document.querySelector('.favorite-button');
+          window.favoriteInk = favoriteControl.querySelector('.favorite-ink');
+          window.favoriteTransitions = [];
+          favoriteControl.addEventListener('transitionrun', (event) => {
+            if (event.target === favoriteControl) favoriteTransitions.push(event.propertyName);
+          });
+        JS
+
+        find("button[aria-label='取消收藏：#{TITLE}']").send_keys(:space)
+        assert_selector "button[aria-label='恢复']"
+        wait_for_favorite_requests(1)
+        evaluate_async_script("const done=arguments[0];requestAnimationFrame(()=>requestAnimationFrame(done))")
+        assert evaluate_script("favoriteInk.isConnected && favoriteControl === document.querySelector('.favorite-button')")
+        assert evaluate_script(<<~JS), "恢复控件应保留可见焦点、对齐的书签和完整文字"
+          (() => {
+            const button = favoriteControl.getBoundingClientRect();
+            const label = favoriteControl.querySelector('.favorite-restore-label').getBoundingClientRect();
+            const line = favoriteControl.querySelector('.favorite-line').getBoundingClientRect();
+            const ink = favoriteInk.getBoundingClientRect(), style = getComputedStyle(favoriteControl);
+            return favoriteControl.matches(':focus-visible') && style.outlineStyle !== 'none' &&
+              parseFloat(style.outlineWidth) >= 2 && button.width >= 44 && button.height >= 44 &&
+              label.left >= button.left && label.right <= button.right && label.bottom <= button.bottom &&
+              Math.abs(line.left - ink.left) <= 1 && Math.abs(line.top - ink.top) <= 1 && line.right <= label.left;
+          })()
+        JS
+        assert_empty evaluate_script("favoriteTransitions.filter(name => !['color','text-decoration-color'].includes(name))")
+
+        click_on "恢复"
+        wait_for_favorite_requests(2)
+        assert_selector ".favorite-button[data-on]"
+        evaluate_async_script("const done=arguments[0];requestAnimationFrame(()=>requestAnimationFrame(done))")
+        assert evaluate_script("favoriteInk === document.querySelector('.favorite-ink')")
+        assert_empty evaluate_script("favoriteTransitions.filter(name => !['color','text-decoration-color'].includes(name))")
+      end
+    ensure
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
     end
   end
 

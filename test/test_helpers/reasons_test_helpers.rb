@@ -5,12 +5,15 @@ module ReasonsTestHelpers
   def with_model_provider(base_url: "https://model.example/v1", model: "test-model")
     Setting.set("model_base_url", base_url)
     Setting.set("model_name", model)
+    # 普通生成测试隔离原文网络；证据提取与缺资料另有专门测试。
+    Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "工具在本地流式读取日志，支持按级别检索，并将命中记录导出 JSON。", url: "https://example.com/article", error: nil))
     Reasons::Provider.stubs(:api_key).returns("test-key")
     yield
   ensure
     Setting.set("model_base_url", "")
     Setting.set("model_name", "")
     Reasons::Provider.unstub(:api_key)
+    Reasons::Evidence.unstub(:fetch)
   end
 
   # title_zh / summary_zh 只有要译的条目（D25）才会被要；不给就不出现在回复里，跟不译的回复一个样

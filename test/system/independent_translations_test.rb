@@ -71,8 +71,9 @@ class IndependentTranslationsTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       visit search_path(q: "terminal")
       within find("#search-result-#{item.id}").ancestor("article") do
-        assert_selector ".search-title + .item-translation", text: "一个用 Rust 写的终端日志查看器"
-        assert_link item.title, href: item.url
+        assert_link "一个用 Rust 写的终端日志查看器", href: item.url
+        assert_selector ".record-original-title.search-match-context", text: item.title
+        assert_selector ".record-original-title .hit", text: "terminal"
       end
       assert page.evaluate_script("document.documentElement.scrollWidth <= innerWidth")
     end

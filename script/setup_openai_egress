@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Ubuntu 24.04; run on the dedicated LA host as root. No API credentials here.
+set -euo pipefail
+if [[ $# != 2 || $EUID != 0 ]]; then
+  echo 'Usage (root): setup_openai_egress LA_TAILSCALE_IP HK_TAILSCALE_IP' >&2
+  exit 1
+fi
+python3 - "$1" "$2" <<'PY'
+import ipaddress, sys
+network = ipaddress.ip_network('100.64.0.0/10')
+for value in sys.argv[1:]:
+    if ipaddress.ip_address(value) not in network:
+        raise SystemExit('Both addresses must be Tailscale IPv4 addresses')
+if sys.argv[1] == sys.argv[2]:
+    raise SystemExit('Proxy and client must be different nodes')
+PY
+# Never let the distro's default broad-listen service start, including on reboot.
+systemctl mask tinyproxy.service
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tinyproxy
+install -d -m 755 /etc/lowpass-openai-egress
+cat > /etc/lowpass-openai-egress/allowed-hosts <<'EOF'
+^api\.openai\.com$
+EOF
+cat > /etc/lowpass-openai-egress/tinyproxy.conf <<EOF
+User tinyproxy
+Group tinyproxy
+Port 8888
+Listen $1
+Timeout 25
+MaxClients 8
+PidFile "/run/lowpass-openai-egress/tinyproxy.pid"
+Syslog On
+LogLevel Warning
+Allow $2/32
+ConnectPort 443
+Filter "/etc/lowpass-openai-egress/allowed-hosts"
+FilterDefaultDeny Yes
+FilterURLs Off
+FilterType ere
+DisableViaHeader Yes
+EOF
+cat > /etc/systemd/system/lowpass-openai-egress.service <<'EOF'
+[Unit]
+Description=Lowpass private OpenAI egress
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tinyproxy
+Group=tinyproxy
+RuntimeDirectory=lowpass-openai-egress
+ExecStart=/usr/bin/tinyproxy -d -c /etc/lowpass-openai-egress/tinyproxy.conf
+Restart=on-failure
+RestartSec=5
+MemoryMax=64M
+TasksMax=16
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable lowpass-openai-egress.service
+systemctl restart lowpass-openai-egress.service
+systemctl is-active lowpass-openai-egress.service

@@ -1,12 +1,12 @@
 import { Head } from '@inertiajs/react'
 import type * as React from 'react'
 
-import { Ctrl, Square } from '@/components/Ctrl'
+import { Ctrl } from '@/components/Ctrl'
 import { Mixed } from '@/lib/typeset'
 
 // 通用期头（画布 pages_site.py 的 page_head()）：大字文楷 56 在左，右侧叠放 Maple 13 与文楷 20，
 // 右端控件，底线 2px。日刊详情、周刊详情、两个归档页共用这一个装置。
-// 期导航（前一期 / 归档 / 后一期）在手机上收成三个 44px 方形图标按钮；
+// 期导航在所有宽度使用同一组文字链接；手机上独立一行，保留 44px 触控高度。
 // 归档页的翻月、翻年按钮带的是月份与年份，收不成图标，就整行留在期头下面。
 
 export type PageHeadNav = {
@@ -52,14 +52,6 @@ export default function PageHead({ big, headingRef, context, title, top, bottom,
             <Ctrl href={nav.prevHref} label="上一期" icon="chevron-left" side="left" turn="back" />
             <Ctrl href={nav.archiveHref} label={nav.archiveLabel ?? '归档'} />
             <Ctrl href={nav.nextHref} label="下一期" icon="chevron-right" side="right" turn="forward" />
-          </nav>
-        ) : null}
-        {/* 手机期导航与日期同属期头：容得下时同行，极窄屏自然退成独立一行。 */}
-        {nav ? (
-          <nav className="issue-nav-mobile" aria-label="期导航">
-            <Square href={nav.prevHref} label="前一期" icon="chevron-left" turn="back" />
-            <Square href={nav.archiveHref} label={nav.archiveLabel ?? '归档'} icon="archive" />
-            <Square href={nav.nextHref} label="后一期" icon="chevron-right" turn="forward" />
           </nav>
         ) : null}
         {controls ? <nav className="page-nav" aria-label="页面导航">{controls}</nav> : null}

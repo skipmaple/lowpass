@@ -37,7 +37,7 @@ class HistoryRestorationTest < ApplicationSystemTestCase
       wait_until { evaluate_script("window.history.state.documentScrollPosition?.top") == reading_position }
 
       # Search 真实归零的 scroll 事件安排原生 Back，避免 WebDriver 往返先耗掉框架的100ms记录窗口。
-      execute_script("window.__historyFrameGate.backOnSearchScroll = true; document.querySelector('a[aria-label=搜索]').click()")
+      execute_script("window.__historyFrameGate.backOnSearchScroll = true; document.querySelector('nav[aria-label=主导航] a[href=\"/search\"]').click()")
       wait_until { evaluate_script("window.__historyFrameGate.released") }
       assert_current_path reading_path
       assert_selector ".daily-source", count: 3

@@ -10,7 +10,7 @@ require "digest"
 build = File.expand_path(ARGV.fetch(0, "../public/vite"), __dir__)
 references = {
   "js" => [ "aee2d5f", "4382add9f5da24339750d24128142d01c645a9b18ac984dc8440d94a37620177" ],
-  "css" => [ "abc-themes-2026-11-06", "FINAL_BUILD_REQUIRED" ]
+  "css" => [ "abc-themes-2026-11-06", "58538f86537144a47407106557ea42764c53a599cfa26be2d76f517aa4e8eb97" ]
 }
 load_reference = lambda do |name, digest|
   path = File.expand_path("../vendor/frontend-budget/#{name}.json.gz", __dir__)

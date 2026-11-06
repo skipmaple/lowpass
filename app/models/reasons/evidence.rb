@@ -51,6 +51,8 @@ class Reasons::Evidence
     failure("连接超时")
   rescue Adapters::Http::Error => e
     failure(Adapters::Failure.reason(e))
+  rescue Net::HTTPBadResponse, Net::HTTPExceptions, IOError, SystemCallError, SocketError
+    failure("原文连接异常")
   rescue URI::Error
     failure("原文地址无效")
   rescue Nokogiri::XML::SyntaxError, EncodingError, JSON::ParserError

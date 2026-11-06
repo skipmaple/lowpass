@@ -1,8 +1,8 @@
 require "application_system_test_case"
 require "base64"
 
-# 设计说明 2026-10-14 里能用计算样式与几何量出来的规则。直接把生产 CSS 和最小的 HTML 片段装进一页
-# （同 paper_test），不经 Vite、不登录：量的是样式表本身。动效与打印的样式表还没建时就跳过它们。
+# 共享触控、排版与打印规则用最小 CSS 片段隔离检查。三主题的构图检查使用完整主题样式，
+# 来源导航与序号使用真实页面，避免旧 DOM 的几何断言与已经批准的新布局冲突。
 class DesignRulesTest < ApplicationSystemTestCase
   STYLES = %w[ tokens.css motion.css daily.css weekly.css results.css print.css ].freeze
   PAPER = "rgb(232, 227, 218)".freeze
@@ -21,16 +21,40 @@ class DesignRulesTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "", features: [])
   end
 
-  test "Q1 周刊主题与原文入口使用墨色，次级来源事实保留暖纸背景" do
-    [ 375, 1440 ].each do |width|
-      render_fragment(WEEKLY_HEADER, width: width)
-
-      assert_equal PAPER, style("body", "background-color")
-      assert_equal "rgba(0, 0, 0, 0)", style(".source-band", "background-color")
-      [ ".source-band-title", ".source-band-link", ".source-band-link svg" ].each do |selector|
-        assert_equal INK, style(selector, "color"), "#{width}px #{selector}"
+  test "三主题周刊各断点只呈现一组完整期导航" do
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      [ 390, 760, 1440 ].each do |width|
+        page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1000, deviceScaleFactor: 1, mobile: false)
+        visit weekly_issue_path("2026-W36")
+        assert_selector ".page-head nav[aria-label='期导航']", count: 1
+        assert_selector ".page-head .issue-nav .ctrl", count: 3
+        assert_link "归档", href: weekly_issues_path
+        bounds = evaluate_script(<<~JS)
+          (() => {
+            const nav = document.querySelector('.page-head .issue-nav'), r = nav.getBoundingClientRect()
+            return { left: r.left, right: r.right, controls: [...nav.children].map(e => e.getBoundingClientRect().height) }
+          })()
+        JS
+        assert_operator bounds.fetch("left"), :>=, 0
+        assert_operator bounds.fetch("right"), :<=, width
+        bounds.fetch("controls").each { |height| assert_operator height, :>=, 44 }
       end
-      assert_operator style(".source-band-title", "font-size").to_f, :>, style(".source-band-meta", "font-size").to_f
+    end
+  end
+
+  test "三主题周刊标题、来源事实和原文入口在各自色面上可读" do
+    %w[daybreak duet unfold].each do |theme|
+      [ 375, 1440 ].each do |width|
+        render_fragment(WEEKLY_HEADER, width: width, theme: theme)
+        assert_equal token_color("--paper"), style("body", "background-color")
+        background = style(".source-band", "background-color")
+        [ ".source-band-title", ".source-band-meta", ".source-band-link", ".source-band-link svg" ].each do |selector|
+          assert_operator contrast(style(selector, "color"), background), :>=, 4.5, "#{theme} #{width}px #{selector}"
+        end
+        assert_operator style(".source-band-title", "font-size").to_f, :>, style(".source-band-meta", "font-size").to_f
+      end
     end
   end
 
@@ -66,35 +90,30 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "90deg", style("summary", "rotate", "::before")
   end
 
-  test "来源目录展开后的独立链接保留足够命中面积，窄屏不重叠或溢出" do
-    [ 1440, 375, 320 ].each do |width|
-      render_fragment(<<~HTML, width: width)
-        <details class="source-directory source-tabs-frame">
-          <summary>来源目录</summary>
-          <nav id="source-directory" class="source-links" aria-label="来源" tabindex="-1">
-            <a class="source-link" href="#hn">Hacker News</a>
-            <a class="source-link" href="#gh">GitHub Trending</a>
-            <a class="source-link" href="#rss">Hackaday</a>
-          </nav>
-        </details>
-        <div class="issue-body"><p>x</p></div>
-      HTML
-      assert_no_selector "#source-directory", visible: true
-      find(".source-directory > summary").send_keys(:enter)
-      assert_selector ".source-directory[open] .source-link", count: 3
-      links = evaluate_script("[...document.querySelectorAll('.source-link')].map(link => link.getBoundingClientRect().toJSON())")
-      links.each do |link|
-        assert_operator link.fetch("width"), :>=, 44, "#{width}px"
-        assert_operator link.fetch("height"), :>=, 44, "#{width}px"
-        assert_operator link.fetch("left"), :>=, 0, "#{width}px"
-        assert_operator link.fetch("right"), :<=, width, "#{width}px"
+  test "三主题来源导航保留独立命中面积且窄屏不重叠或溢出页面" do
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      [ 1440, 375, 320 ].each do |width|
+        visit_theme_daily(theme, width: width)
+        assert_selector "#source-directory .source-link", count: 3
+        links = evaluate_script("[...document.querySelectorAll('.source-link')].map(link => link.getBoundingClientRect().toJSON())")
+        links.each do |link|
+          assert_operator link.fetch("width"), :>=, 44, "#{theme} #{width}px"
+          assert_operator link.fetch("height"), :>=, 44, "#{theme} #{width}px"
+        end
+        links.combination(2).each do |a, b|
+          overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
+            [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
+          assert_equal 0, overlap, "#{theme} #{width}px：来源链接不能重叠"
+        end
+        all(".source-link").each do |link|
+          link.click
+          assert_equal link["href"].split("#").last, evaluate_script("location.hash.slice(1)")
+          assert_equal "location", link["aria-current"]
+          assert_equal 1, all(".source-link[aria-current='location']").size
+        end
+        assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
       end
-      links.combination(2).each do |a, b|
-        overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
-          [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
-        assert_equal 0, overlap, "#{width}px：来源链接不能重叠"
-      end
-      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
     end
   end
 
@@ -291,21 +310,24 @@ class DesignRulesTest < ApplicationSystemTestCase
     end
   end
 
-  test "T4 序号与标题首行同一条基线；期头小字末行与大字日期同一条基线" do
-    baseline = <<~JS
-      ((selector) => { const el = document.querySelector(selector); const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.prepend(probe); const y = probe.getBoundingClientRect().top; probe.remove(); return y })
-    JS
-
-    [ 320, 375, 1440, 1920 ].each do |width|
-      [ :translated, :weekly ].each do |variant|
-        render_fragment(touch_item("A practical guide to asynchronous systems and readable tools", variant), width: width)
-        assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1,
-          "#{width}px #{variant}：序号必须对齐完整标题的首行"
+  test "三主题序号靠近标题开头且不覆盖标题，日历日期保持完整" do
+    url = "https://example.com/theme-rank-weekly"
+    issues(:weekly_w36).items.create!(source: sources(:ruanyf), title: "A practical guide to asynchronous systems and readable tools", section: "工具", rank: 1,
+      url: url, url_hash: Digest::SHA256.hexdigest(url), fetched_at: Time.current,
+      meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" })
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      [ 320, 375, 1440, 1920 ].each do |width|
+        visit_theme_daily(theme, width: width)
+        assert_rank_near_title(".item-row--daily", theme: theme, width: width)
+        assert_equal "09/08", find(".calendar-date", visible: true).text.gsub(/\s+/, "")
+        assert_equal "nowrap", style(".calendar-date", "white-space")
+        visit weekly_issue_path("2026-W36")
+        evaluate_async_script("document.fonts.ready.then(arguments[0])")
+        assert_rank_near_title(".item-row--weekly", theme: theme, width: width)
+        assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
       end
     end
-
-    render_fragment(%(<header class="page-head"><div class="issue-head-main"><div class="issue-head-title"><h1 class="issue-head-date">10月14日</h1><div class="issue-head-stack"><span class="issue-head-calendar">2026 年 · 星期三</span><span class="issue-head-time">06:00 发布</span></div></div></div></header>))
-    assert_in_delta evaluate_script("#{baseline}('.issue-head-date')"), evaluate_script("#{baseline}('.issue-head-time')"), 1
   end
 
   test "阅读翻期保留原有动效令牌" do
@@ -336,15 +358,23 @@ class DesignRulesTest < ApplicationSystemTestCase
     end
   end
 
-  test "M4 来源目录链接悬停加深下划线，不反白纸面" do
-    render_fragment(%(<details class="source-directory source-tabs-frame" open><summary>来源目录</summary><nav id="source-directory" class="source-links" aria-label="来源" tabindex="-1"><a class="source-link" href="#hn">Hacker News</a></nav></details>), hover: true)
-
-    assert_equal "underline", style(".source-link", "text-decoration-line")
-    refute_equal "rgba(0, 0, 0, 0)", style(".source-link", "text-decoration-color")
-    refute_equal INK, style(".source-link", "text-decoration-color")
-    find(".source-link").hover
-    wait_until { style(".source-link", "text-decoration-color") == INK }
-    assert_not_equal INK, style(".source-link", "background-color")
+  test "三主题来源链接悬停不移动布局且保留当前位置，激活后才更新选中项" do
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      visit_theme_daily(theme, width: 1440)
+      selected = find(".source-link[aria-current='location']")
+      link = find(".source-link", text: "GitHub Trending")
+      bounds = link.evaluate_script("this.getBoundingClientRect().toJSON()")
+      link.hover
+      assert_equal bounds, link.evaluate_script("this.getBoundingClientRect().toJSON()"), theme
+      assert_equal "location", selected["aria-current"]
+      assert_nil link["aria-current"]
+      assert_not_equal style(".source-link[aria-current]", "color"), style(".source-link[aria-current]", "background-color"), theme
+      link.click
+      assert_equal "location", link["aria-current"]
+      assert_nil selected["aria-current"]
+      assert_equal link["href"].split("#").last, evaluate_script("location.hash.slice(1)")
+    end
   end
 
   test "三主题禁用及等待中的文字操作和分段选项不产生悬停反馈" do
@@ -581,6 +611,47 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   private
+    def visit_theme_daily(theme, width:)
+      execute_script("localStorage.setItem('lowpass-theme', #{theme.to_json})")
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1000, deviceScaleFactor: 1, mobile: false)
+      visit daily_issue_path("2026-09-08")
+      assert_selector "html[data-theme='#{theme}']"
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+    end
+
+    def assert_rank_near_title(selector, theme:, width:)
+      assert_selector "#{selector} .item-rank", text: "01"
+      geometry = evaluate_script(<<~JS)
+        (() => {
+          const row = document.querySelector(#{selector.to_json}), rank = row.querySelector('.item-rank').getBoundingClientRect();
+          const title = row.querySelector('.item-title a'), range = document.createRange(); range.selectNodeContents(title);
+          const lines = [...range.getClientRects()].filter(rect => rect.width > 0);
+          return { rank: rank.toJSON(), first: lines[0].toJSON(), overlaps: lines.some(line =>
+            Math.min(rank.right, line.right) > Math.max(rank.left, line.left) && Math.min(rank.bottom, line.bottom) > Math.max(rank.top, line.top)) };
+        })()
+      JS
+      assert_operator geometry.fetch("rank").fetch("top"), :<, geometry.fetch("first").fetch("bottom"), "#{theme} #{width}px：序号靠近标题开头，不沉到正文中间"
+      assert_not geometry.fetch("overlaps"), "#{theme} #{width}px：序号不覆盖标题"
+    end
+
+    def token_color(name)
+      evaluate_script(<<~JS)
+        (() => { const probe = document.createElement('span'); probe.style.color = 'var(#{name})';
+          document.body.append(probe); const color = getComputedStyle(probe).color; probe.remove(); return color; })()
+      JS
+    end
+
+    def contrast(first, second)
+      luminances = [ first, second ].map do |color|
+        channels = color.scan(/[\d.]+/).first(3).map do |channel|
+          value = channel.to_f / 255
+          value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055)**2.4
+        end
+        channels.zip([ 0.2126, 0.7152, 0.0722 ]).sum { |value, weight| value * weight }
+      end
+      (luminances.max + 0.05) / (luminances.min + 0.05)
+    end
+
     def title_touch_rectangle(selector)
       evaluate_script(<<~JS)
         (() => {
@@ -760,7 +831,7 @@ class DesignRulesTest < ApplicationSystemTestCase
     # hover: true 把悬停规则外面那层 (hover: hover) and (pointer: fine) 换成 all：那层只是给触屏设备的保护，
     # GitHub Actions 的无头 Chrome 没有指针设备、不匹配它，悬停的效果却正是这里要量的（CDP 也模拟不了这两个媒体特性）
     def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false, theme: nil, preflight: false)
-      styles = theme ? %w[tokens.css motion.css themes.css themes-controls.css themes-admin-workspace.css print.css] : STYLES
+      styles = theme ? %w[tokens.css motion.css daily.css weekly.css results.css themes.css themes-reading.css themes-library.css themes-controls.css themes-admin-workspace.css print.css] : STYLES
       css = styles.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
       css = Rails.root.join("node_modules/tailwindcss/preflight.css").read + "\n" + css if preflight
       css = css.gsub("@media (hover: hover) and (pointer: fine)", "@media all") if hover

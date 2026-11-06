@@ -11,12 +11,13 @@ module Reasons::Status
       output_price: Setting.get("model_output_price"),
       monthly_cap: Setting.get("model_monthly_cap"),
       currency: Setting.get("model_currency"),
-      has_nonzero_costs: ModelCall.where.not(cost: 0).exists?,
+      has_nonzero_costs: ModelCall.where(currency: nil).where.not(cost: 0).exists?,
       month_calls: calls.values.sum,
       month_reason_calls: calls.fetch("reason", 0),
       month_translation_calls: calls.fetch("translation", 0),
       month_cost: Reasons::Budget.month_cost.to_s("F"),
-      today_calls: Reasons::Budget.today_calls
+      today_calls: Reasons::Budget.today_calls,
+      month_usage: Reasons::Budget.month_usage
     }
   end
 end

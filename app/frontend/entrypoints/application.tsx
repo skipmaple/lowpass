@@ -6,6 +6,11 @@ import Layout from '@/components/Layout'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
 import { crossfadeFor } from '@/lib/pageTurn'
 
+// 登录与常用阅读页随入口加载，避免应用启动后再串行等待页面分片。
+import '@/pages/Login/Show'
+import '@/pages/Daily/Show'
+import '@/pages/Weekly/Show'
+
 void loadContentFonts()
 restoreHistoryScroll()
 focusMainOnNavigate()

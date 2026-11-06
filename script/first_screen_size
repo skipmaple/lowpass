@@ -9,7 +9,8 @@ require "zlib"
 
 BUILD = File.expand_path(ARGV.fetch(0, "../public/vite"), __dir__)
 BUDGET_KB = 500
-ENTRIES = %w[entrypoints/application.tsx pages/Daily/Show.tsx].freeze
+ENTRY = "entrypoints/application.tsx".freeze
+DAILY = "pages/Daily/Show.tsx".freeze
 THEMES = {
   "A 层叠清晨" => [ "daybreak", "a", %w[body display] ],
   "B 双声部" => [ "duet", "b", %w[body display] ],
@@ -28,7 +29,9 @@ collect = lambda do |key, found|
 end
 gzip_size = ->(name) { Zlib.gzip(File.binread(File.join(BUILD, name)), level: Zlib::BEST_COMPRESSION).bytesize }
 raw_size = ->(key) { File.size(File.join(BUILD, manifest.fetch(key).fetch("file"))) }
-resources = ENTRIES.each_with_object([]) { |entry, files| collect.call(entry, files) }
+resources = collect.call(ENTRY, [])
+# 日刊独立成片时额外计入；静态并入入口时已包含在入口及其 CSS 中。
+collect.call(DAILY, resources) if manifest.key?(DAILY)
 resources << manifest.fetch("entrypoints/application.css").fetch("file")
 resources.uniq!
 shared = resources.sum { |file| gzip_size.call(file) }

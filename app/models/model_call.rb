@@ -8,6 +8,10 @@ class ModelCall < ApplicationRecord
 
   validates :status, inclusion: { in: STATUSES }
   validates :error_summary, length: { maximum: 200 }, allow_nil: true
+  validates :provider_host, length: { maximum: 253 }, allow_nil: true
+  validates :provider_model, length: { maximum: 255 }, allow_nil: true
+  validates :fallback_reason, inclusion: { in: %w[ proxy_connect_failed openai_quota_exhausted ] }, allow_nil: true
+  validates :currency, inclusion: { in: %w[ USD CNY ] }, allow_nil: true
   validates :purpose, inclusion: { in: %w[ reason translation ] }
   validates :operation_key, length: { maximum: 36 }, allow_nil: true
   with_options if: -> { purpose == "translation" } do

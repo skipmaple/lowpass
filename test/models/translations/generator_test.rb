@@ -86,7 +86,7 @@ class Translations::GeneratorTest < ActiveSupport::TestCase
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: body)
       2.times { assert_equal 1, generate(operation: operation, targets: targets).failed }
       assert_requested stub, times: 1
-      assert_equal [ "failed", 100, 8192, BigDecimal("0.0820") ], ModelCall.sole.attributes.values_at("status", "prompt_tokens", "completion_tokens", "cost")
+      assert_equal [ "failed", 100, 8192, BigDecimal("0.08202") ], ModelCall.sole.attributes.values_at("status", "prompt_tokens", "completion_tokens", "cost")
       assert_nil @item.reload.title_zh
     end
   end

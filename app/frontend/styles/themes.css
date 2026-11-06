@@ -222,7 +222,7 @@ input,textarea {caret-color:var(--accent)}
   .theme-menu>summary {width:44px}
   .account-button,.account-placeholder {width:44px}
 }
-@media (prefers-reduced-motion:reduce) {html {scroll-behavior:auto} *,*::before,*::after {animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media (prefers-reduced-motion:reduce) {html {scroll-behavior:auto}}
 @media print {
   html[data-theme] {--paper:#fff;--ink:#000;--ink2:#333;--rule:#999;--surface:#fff;color-scheme:light}
   .theme-menu,.masthead-actions,.period-controls,.site-footer {display:none!important}
@@ -306,9 +306,13 @@ pre,code,kbd,samp {font-family:var(--font-mono)}
 .page-head .issue-nav {display:flex;align-items:center;gap:24px}
 .page-head .issue-nav .ctrl {background:none;border:0;padding:0;min-height:44px;font-size:14px}
 .page-head .issue-nav .ctrl::before {display:none}
-@media(max-width:700px) {
+@media(max-width:767px) {
+  .page-head--issue {grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "meta" "nav"}
+  .page-head--issue .issue-nav {grid-area:nav}
   .page-head .issue-nav {width:100%;justify-content:space-between;gap:8px;border-top:1px solid var(--rule);padding-top:8px}
   .page-head .issue-nav .ctrl {font-size:13px}
+}
+@media(max-width:700px) {
   :root[data-theme="daybreak"] .sheet:is([data-scene="favorites"],[data-scene="search"]) .page-head {padding-inline:20px}
 }
 @media(max-width:700px) {.theme-menu-panel {right:-40px}}

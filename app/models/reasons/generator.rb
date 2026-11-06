@@ -61,6 +61,7 @@ module Reasons::Generator
 
       # 同一条的证据补读与有界重试共用请求门，重放不会在首次拒写与补试之间插入。
       ModelRequests.synchronize do
+        return :failed unless ModelRequests.valid_operation?(operation)
         return :failed if ModelRequests.stop_reason(operation)
 
         calls = ModelRequests.calls(item, purpose: "reason", operation: operation)
@@ -85,39 +86,44 @@ module Reasons::Generator
           started = now_ms
           response = result = nil
           begin
-            response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item), configuration: configuration)
-            result = Reasons::Parser.parse(response.text, names)
-            # 仍无正文依据时不把格式合格当成事实可靠；以 D38 独立判断保留旧内容。
             if item.summary.blank? && evidence&.text.blank?
+              if evidence&.error.to_s.start_with?("原文获取失败")
+                record(item, "failed", nil, started, evidence.error, operation: operation, configuration: configuration, request_made: false)
+                return :failed
+              end
+              # 无可用资料时不发模型请求；保留独立拒写判断与操作幂等。
               result = Reasons::Parser::Result.new(decision: "insufficient_evidence", reason: nil, interest_tag: nil, title_zh: nil, summary_zh: nil)
+            else
+              response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item), configuration: configuration)
+              result = Reasons::Parser.parse(response.text, names)
             end
           rescue Reasons::Parser::Invalid => e
-            record(item, "invalid", response, started, e.message, operation: operation, configuration: configuration)
+            record(item, "invalid", response, started, e, operation: operation, configuration: configuration)
           rescue Reasons::Provider::Incomplete => e
             # 截断保留真实 usage；重放也不重复同样的请求。
-            record(item, "failed", e, started, e.message, operation: operation, configuration: configuration)
+            record(item, "failed", e, started, e, operation: operation, configuration: configuration)
             if Reasons::Budget.exhausted?
               ModelRequests.halt(operation, "budget")
               alert_budget_exhausted(item.issue)
             end
             return evidence_retry ? :abstained : :failed
           rescue Reasons::Provider::Rejected => e
-            record(item, "failed", nil, started, "密钥被拒绝", operation: operation, configuration: configuration)
+            record(item, "failed", nil, started, e, operation: operation, configuration: configuration)
             ModelRequests.halt(operation, "rejected")
             raise
           rescue Reasons::Provider::Limited => e
-            record(item, "failed", nil, started, e.message, operation: operation, configuration: configuration)
+            record(item, "failed", nil, started, e, operation: operation, configuration: configuration)
             ModelRequests.halt(operation, "limited")
             raise
           rescue Reasons::Provider::TimedOut => e
-            record(item, "timed_out", nil, started, e.message, operation: operation, configuration: configuration)
+            record(item, "timed_out", nil, started, e, operation: operation, configuration: configuration)
           rescue Reasons::Provider::Error => e
-            record(item, "failed", nil, started, e.message, operation: operation, configuration: configuration)
+            record(item, "failed", nil, started, e, operation: operation, configuration: configuration)
           end
           # 账本先完成；业务持久化失败上抛，绝不放进请求重试的 rescue。
           if result
             if result.decision == "insufficient_evidence"
-              call = record(item, "abstained", response, started, evidence&.error, operation: operation, configuration: configuration)
+              call = record(item, "abstained", response, started, evidence&.error, operation: operation, configuration: configuration, request_made: !response.nil?)
               item.record_reason_abstention(assessed_at: Time.current)
               if evidence.nil? && attempt + 1 < attempts_left && !Reasons::Budget.exhausted?
                 evidence = Reasons::Evidence.fetch(item)
@@ -195,8 +201,8 @@ module Reasons::Generator
         item.store_generated_reason(generated, generated_at: Time.current)
       end
 
-      def record(item, status, response, started, error = nil, operation:, configuration:)
-        ModelRequests.record(item, status, response, started, error, purpose: "reason", operation: operation, configuration: configuration)
+      def record(item, status, response, started, error = nil, operation:, configuration:, request_made: true)
+        ModelRequests.record(item, status, response, started, error, purpose: "reason", operation: operation, configuration: configuration, request_made: request_made)
       end
 
       def now_ms = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)

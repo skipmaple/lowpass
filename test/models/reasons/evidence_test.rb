@@ -7,6 +7,13 @@ class Reasons::EvidenceTest < ActiveSupport::TestCase
     @body = "The tool records structured events locally, supports queries by process and severity, and exports matching events as JSON for offline analysis."
   end
 
+  test "malformed upstream HTTP stays a recoverable evidence failure" do
+    Adapters::Http.stubs(:get).raises(Net::HTTPBadResponse, "malformed status")
+    evidence = Reasons::Evidence.fetch(@item)
+    assert_nil evidence.text
+    assert_match(/原文获取失败/, evidence.error)
+  end
+
   test "只读取原文正文并清掉导航脚本隐藏内容与评论，不跟随正文链接" do
     stub_page <<~HTML
       <html><head><title>Site title</title><meta name="description" content="Metadata only"></head><body>

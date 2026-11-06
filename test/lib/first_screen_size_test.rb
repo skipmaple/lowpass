@@ -57,6 +57,17 @@ class FirstScreenSizeTest < ActiveSupport::TestCase
     assert_not status.success?
   end
 
+  test "日刊静态并入入口时仍统计全部入口依赖和CSS" do
+    @manifest.delete("pages/Daily/Show.tsx")
+    @manifest.fetch("entrypoints/application.tsx").fetch("css") << "daily.css"
+    expected = %w[application.js shared.js application.css daily.css shared.css].sum do |path|
+      Zlib.gzip(File.binread(File.join(@build, path)), level: Zlib::BEST_COMPRESSION).bytesize
+    end
+    output, status = measure
+    assert status.success?, output
+    assert_equal 3, output.scan("JS/CSS #{format('%.2f', expected / 1024.0)}").length
+  end
+
   private
     def font(name, bytes)
       file = "#{name}.woff2"

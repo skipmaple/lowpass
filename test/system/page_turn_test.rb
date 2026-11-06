@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-# 自然原生时钟：不暂停、不改速率、不延长 240/360ms。
+# 自然原生时钟：不暂停、不改速率、不延长主题定义的时长。
 class PageTurnTest < ApplicationSystemTestCase
   include ContinuousReadingHelpers
   setup do
@@ -13,7 +13,7 @@ class PageTurnTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "no-preference" } ])
       visit daily_issue_path("2026-09-08")
-      assert_selector ".issue-head-date", text: "9月8日"
+      assert_selector '.calendar-date[aria-label="2026/09/08，查看日刊归档"]'
       execute_script(<<~JS)
         const original = document.startViewTransition.bind(document)
         window.__dynamicTurns = 0
@@ -21,9 +21,9 @@ class PageTurnTest < ApplicationSystemTestCase
       JS
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
       assert evaluate_script("matchMedia('(prefers-reduced-motion: reduce)').matches")
-      find(".issue-nav a[aria-keyshortcuts=ArrowLeft], .issue-nav-mobile a[aria-keyshortcuts=ArrowLeft]").click
+      find(".period-controls a[aria-keyshortcuts=ArrowLeft]").click
       assert_current_path daily_issue_path("2026-09-07")
-      assert_selector ".issue-head-date", text: "9月7日"
+      assert_selector '.calendar-date[aria-label="2026/09/07，查看日刊归档"]'
       assert_equal 0, evaluate_script("window.__dynamicTurns"), "#{width}px 的已挂载控件必须按当前减动效偏好直接换页"
     end
   ensure
@@ -37,15 +37,15 @@ class PageTurnTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
       visit daily_issue_path("2026-09-08")
-      assert_selector ".issue-head-date", text: "9月8日"
+      assert_selector '.calendar-date[aria-label="2026/09/08，查看日刊归档"]'
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "no-preference" } ])
       assert_not evaluate_script("matchMedia('(prefers-reduced-motion: reduce)').matches")
       record_turn
-      find(".issue-nav a[aria-keyshortcuts=ArrowLeft], .issue-nav-mobile a[aria-keyshortcuts=ArrowLeft]").click
+      find(".period-controls a[aria-keyshortcuts=ArrowLeft]").click
       wait_until { evaluate_script("window.__turn?.finished") }
       assert_current_path daily_issue_path("2026-09-07")
       state = evaluate_script("window.__turn")
-      assert_equal 360, state.dig("native", "duration"), "#{width}px 应恢复翻期而非普通跨页"
+      assert_equal state["turnDuration"], state.dig("native", "duration"), "#{width}px 应恢复翻期而非普通跨页"
       assert_equal 24, state["oldEndpoint"]
     end
   ensure
@@ -58,7 +58,7 @@ class PageTurnTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       visit daily_issue_path("2026-09-08")
       record_turn
-      execute_script("document.querySelector('a[aria-label=搜索]').click()")
+      execute_script("document.querySelector('nav[aria-label=主导航] a[href=\"/search\"]').click()")
       wait_until { evaluate_script("window.__turn?.finished") }
       state = evaluate_script("window.__turn")
       puts "M2_NATIVE #{state.to_json}"
@@ -70,8 +70,8 @@ class PageTurnTest < ApplicationSystemTestCase
       assert_not_nil state["animationReady"]["start"]
       assert_equal state["animationReady"]["start"], state["incomingReady"]["start"]
       assert state["sameTimeline"]
-      assert_equal 240, state["native"]["duration"]
-      assert_equal 240, state["incoming"]["duration"]
+      assert_equal state["crossfadeDuration"], state["native"]["duration"]
+      assert_equal state["native"]["duration"], state["incoming"]["duration"]
       assert_equal state["rects"].first, state["rects"].last
       assert_equal "none", state["transform"]
       assert_equal "border-box", state["origin"]
@@ -86,15 +86,17 @@ class PageTurnTest < ApplicationSystemTestCase
   test "pending OLD 与 NEW 在同一次原生 update 获得严格相同起点" do
     Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
     captures = []
-    [ 375, 1440 ].each do |width|
+    %w[daybreak duet unfold].product([ 375, 1440 ]).each do |theme, width|
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
-      [ "a[aria-label=搜索]", ".issue-nav a[aria-keyshortcuts=ArrowLeft]" ].each do |selector|
+      [ 'nav[aria-label=主导航] a[href="/search"]', ".period-controls a[aria-keyshortcuts=ArrowLeft]" ].each do |selector|
         visit daily_issue_path("2026-09-08")
         record_turn
-        execute_script("document.querySelector(#{selector.to_json}).click()")
+        execute_script("[...document.querySelectorAll(#{selector.to_json})].find(node => node.getClientRects().length).click()")
         wait_until { evaluate_script("window.__turn?.finished") }
         state = evaluate_script("window.__turn")
         state["width"] = width
+        state["theme"] = theme
         state["selector"] = selector
         state["chrome"] = page.driver.browser.capabilities.browser_version
         captures << state
@@ -103,11 +105,19 @@ class PageTurnTest < ApplicationSystemTestCase
     end
     captures.each do |state|
       assert state["native"], state.inspect
+      if state["selector"].include?("ArrowLeft")
+        assert_operator state.dig("dateAtReady", "rect", "width"), :>, 0
+        assert_not_equal "none", state.dig("dateAtReady", "groupTransform")
+      end
       assert_not_nil state["animationReady"]["start"], state.inspect
       assert_equal state["animationReady"]["start"], state["incomingReady"]["start"], state.inspect
       assert state["sameTimeline"], state.inspect
+      assert_equal state["native"]["duration"], state["incoming"]["duration"], state.inspect
+      assert_equal state["native"]["easing"], state["incoming"]["easing"], state.inspect
+      assert_equal state["native"]["intervalEasing"], state["incoming"]["intervalEasing"], state.inspect
     end
   ensure
+    execute_script("localStorage.removeItem('lowpass-theme')")
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
@@ -117,9 +127,9 @@ class PageTurnTest < ApplicationSystemTestCase
     [ [ "2026-09-08", "ArrowLeft", 24, true ], [ "2026-09-07", "ArrowRight", -24, false ] ].each do |period, arrow, endpoint, footer|
       visit daily_issue_path(period)
       execute_script("scrollTo(0,document.documentElement.scrollHeight)") if footer
-      assert_operator evaluate_script("document.querySelector('.masthead').getBoundingClientRect().bottom"), :<=, 0 if footer
+      assert_operator evaluate_script("document.querySelector('.site-header').getBoundingClientRect().bottom"), :<=, 0 if footer
       record_turn
-      execute_script("document.querySelector('.issue-nav a[aria-keyshortcuts=#{arrow}]').click()")
+      execute_script("document.querySelector('.period-controls a[aria-keyshortcuts=#{arrow}]').click()")
       wait_until { evaluate_script("window.__turn?.finished") }
       state = evaluate_script("window.__turn")
       assert_equal "inset(#{state['clip']['headerBottom'].to_i}px 0px 0px)", state["clip"]["root"]
@@ -127,7 +137,7 @@ class PageTurnTest < ApplicationSystemTestCase
       assert_equal "none", state["clip"]["date"]
       assert_equal "none", state["clip"]["old"]
       assert_equal endpoint, state["oldEndpoint"]
-      assert_equal 360, state["native"]["duration"]
+      assert_equal state["turnDuration"], state["native"]["duration"]
       assert_equal "", evaluate_script("document.documentElement.style.getPropertyValue('--vt-masthead-bottom')")
     end
   ensure
@@ -266,7 +276,7 @@ class PageTurnTest < ApplicationSystemTestCase
       window.__navigates=0
       document.addEventListener('inertia:navigate',()=>window.__navigates++)
       document.addEventListener('inertia:before',event=>event.detail.visit.replace=true,{once:true})
-      document.querySelector('a[aria-label=搜索]').click()
+      document.querySelector('nav[aria-label=主导航] a[href="/search"]').click()
     JS
     wait_until { evaluate_script("window.__turn?.finished") }
     assert_current_path search_path
@@ -287,7 +297,7 @@ class PageTurnTest < ApplicationSystemTestCase
     visit daily_issue_path("2026-09-08")
     users(:drew).sessions.delete_all
     record_turn
-    execute_script("document.querySelector('a[aria-label=搜索]').click()")
+    execute_script("document.querySelector('nav[aria-label=主导航] a[href=\"/search\"]').click()")
     assert_current_path login_path(next: search_path)
     wait_until { evaluate_script("window.__turn?.finished") }
     state = evaluate_script("window.__turn")
@@ -304,7 +314,7 @@ class PageTurnTest < ApplicationSystemTestCase
   test "受控 swap 前原生 Back 仍恢复历史，连续往返保持 URL 和正文一致" do
     prepare_continuous_issue
     visit search_path
-    find(".masthead-brand").click
+    find(".masthead-monogram").click
     assert_current_path daily_issue_path("2026-09-08")
     assert_no_selector "html[data-vt]", visible: :all
     execute_script("scrollTo(0, 220)")
@@ -335,7 +345,7 @@ class PageTurnTest < ApplicationSystemTestCase
         history.back()
         return transition
       }
-      document.querySelector('a[aria-label=搜索]').click()
+      document.querySelector('nav[aria-label=主导航] a[href="/search"]').click()
     JS
     wait_until { evaluate_script("window.__swapDone && window.__backTurnFinished") }
     assert_current_path daily_issue_path("2026-09-08")
@@ -374,7 +384,7 @@ class PageTurnTest < ApplicationSystemTestCase
           if(target.matches('input')){const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');const style=getComputedStyle(target);ctx.font=style.fontWeight+' '+style.fontSize+' '+style.fontFamily;x=rect.left+ctx.measureText('abc').width}
           done({x,y:rect.top+rect.height/2,value:target.value,input:target.matches('input'),phase:document.documentElement.dataset.vt,time:performance.now()})
         }
-        document.addEventListener('inertia:before',event=>event.detail.visit.url.searchParams.set('q','abcdef'),{once:true});document.querySelector(#{(daily ? '.masthead-brand' : 'a[aria-label=搜索]').to_json}).click()
+        document.addEventListener('inertia:before',event=>event.detail.visit.url.searchParams.set('q','abcdef'),{once:true});document.querySelector(#{(daily ? '.masthead-monogram' : 'nav[aria-label=主导航] a[href="/search"]').to_json}).click()
       JS
     end
 
@@ -419,11 +429,12 @@ class PageTurnTest < ApplicationSystemTestCase
             const p = paper.getBoundingClientRect()
             const old = document.getAnimations().find(a => a.effect?.pseudoElement === '::view-transition-old(root)')
             const incoming = surface.getAnimations().find(a => a.effect?.target === surface)
-            const clipState = () => ({headerBottom: document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? null, root:getComputedStyle(root,'::view-transition-group(root)').clipPath, old:getComputedStyle(root,'::view-transition-old(root)').clipPath, date:getComputedStyle(root,'::view-transition-group(issue-date)').clipPath})
-            const dateState = () => ({scrollY, rect: document.querySelector('.issue-head-date')?.getBoundingClientRect().toJSON(), groupTransform: getComputedStyle(root, '::view-transition-group(issue-date)').transform})
-            const read = a => a && ({start: a.startTime, current: a.currentTime, duration: a.effect.getTiming().duration, pending: a.pending, playState: a.playState, timeline: a.timeline?.constructor.name, timelineTime: a.timeline?.currentTime})
-            Object.assign(s, {readyAt: performance.now(), dateAtReady: dateState(), phase: root.dataset.vt,
-              names: [getComputedStyle(root).viewTransitionName, document.querySelector('.masthead') ? getComputedStyle(document.querySelector('.masthead')).viewTransitionName : null],
+            const clipState = () => ({headerBottom: document.querySelector('.site-header')?.getBoundingClientRect().bottom ?? null, root:getComputedStyle(root,'::view-transition-group(root)').clipPath, old:getComputedStyle(root,'::view-transition-old(root)').clipPath, date:getComputedStyle(root,'::view-transition-group(issue-date)').clipPath})
+            const dateState = () => ({scrollY, rect: [...document.querySelectorAll('.calendar-date')].find(node => node.getClientRects().length)?.getBoundingClientRect().toJSON(), groupTransform: getComputedStyle(root, '::view-transition-group(issue-date)').transform})
+            const read = a => a && ({start: a.startTime, current: a.currentTime, duration: a.effect.getTiming().duration, easing: a.effect.getTiming().easing, intervalEasing: a.effect.getKeyframes()[0].easing, pending: a.pending, playState: a.playState, timeline: a.timeline?.constructor.name, timelineTime: a.timeline?.currentTime})
+            const milliseconds = name => { const value = getComputedStyle(root).getPropertyValue(name).trim(); return parseFloat(value) * (value.endsWith('ms') ? 1 : 1000) }
+            Object.assign(s, {crossfadeDuration: milliseconds('--dur-2'), turnDuration: milliseconds('--dur-3'), readyAt: performance.now(), dateAtReady: dateState(), phase: root.dataset.vt,
+              names: [getComputedStyle(root).viewTransitionName, document.querySelector('.site-header') ? getComputedStyle(document.querySelector('.site-header')).viewTransitionName : null],
               clip: clipState(), oldEndpoint: old?.effect.getKeyframes().at(-1).transform ? new DOMMatrix(old.effect.getKeyframes().at(-1).transform).m41 : null,
               native: read(old), incoming: read(incoming), sameTimeline: old?.timeline === incoming?.timeline,
               origin: surface.style.backgroundOrigin, position: surface.style.backgroundPosition,

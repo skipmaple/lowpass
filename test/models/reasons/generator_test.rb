@@ -13,9 +13,9 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
 
   test "无说明条目先读正文，只调用一次模型且不改写刊物原字段" do
     evidence = Reasons::Evidence::Result.new(text: "Streams logs with filters and aggregation without loading the full file.", url: @item.url, error: nil)
-    Reasons::Evidence.expects(:fetch).with(@item).once.returns(evidence)
     before = @item.attributes.slice("title", "url", "summary", "content")
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@item).once.returns(evidence)
       request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).with { |r| JSON.parse(r.body)["messages"].last["content"].include?(evidence.text) }
         .to_return(status: 200, body: model_reply(reason: "流式过滤与聚合避免整份日志载入内存，可借鉴其处理大文件的方法。", interest_tag: "前端开发"))
       assert_equal :generated, Reasons::Generator.generate_item!(@item)
@@ -27,9 +27,9 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "短简介即使模型会直接回答，也先补读 README 供首次请求判断" do
     @other.update!(summary: "Agent Skills for Google products and technologies.", meta: { "language" => "Python" })
     evidence = Reasons::Evidence::Result.new(text: "Install skills with npx skills add google/skills. The repository contains instructions for agents using Google products and Google Cloud.", url: @other.url, error: nil)
-    Reasons::Evidence.expects(:fetch).with(@other).once.returns(evidence)
     first_prompt = nil
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@other).once.returns(evidence)
       request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |r|
         first_prompt = JSON.parse(r.body)["messages"].last["content"]
         { status: 200, body: model_reply(reason: "按产品安装所需技能说明，帮助智能体采用对应的工具和工作流程。", interest_tag: "AI / LLM") }
@@ -45,8 +45,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
 
   test "原文获取失败但短摘要有具体用途时仍可生成" do
     @other.update!(summary: "Streams local logs and filters entries by severity.")
-    Reasons::Evidence.expects(:fetch).with(@other).once.returns(Reasons::Evidence::Result.new(text: nil, url: @other.url, error: "原文获取失败：连接超时"))
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@other).once.returns(Reasons::Evidence::Result.new(text: nil, url: @other.url, error: "原文获取失败：连接超时"))
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200,
         body: model_reply(reason: "流式读取本地日志并按级别筛选，便于从大量记录中定位目标事件。", interest_tag: "前端开发"))
       assert_equal :generated, Reasons::Generator.generate_item!(@other)
@@ -59,8 +59,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "较长简介仍不足时只补读一次原文，用新资料重试而非重复空输入" do
     @other.update!(summary: "An agent toolkit for developers exploring new ways of working with modern technologies. Learn more about the project and its available resources in the repository.")
     evidence = Reasons::Evidence::Result.new(text: "Provides reproducible browser workflows with assertions and execution traces.", url: @other.url, error: nil)
-    Reasons::Evidence.expects(:fetch).with(@other).once.returns(evidence)
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@other).once.returns(evidence)
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |r|
         body = if JSON.parse(r.body)["messages"].last["content"].include?(evidence.text)
           model_reply(reason: "通过断言与执行轨迹复现浏览器工作流，便于定位智能体操作中的偏差。", interest_tag: "AI / LLM")
@@ -73,6 +73,32 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       assert_requested :post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2
     end
     assert_equal %w[ abstained ok ], ModelCall.order(:created_at, :id).pluck(:status)
+  end
+
+  test "长摘要拒写后的补读再次检查停止、到期与预算" do
+    @other.update!(summary: "A toolkit with a long overview that still provides no concrete description of its capabilities, supported workflows, or implementation details.")
+    with_model_provider do
+      [ "limited", "expired", "budget" ].each do |reason|
+        operation = ModelRequests.operation
+        Reasons::Evidence.expects(:fetch).with(@other).once.with do
+          case reason
+          when "limited" then ModelRequests.halt(operation, "limited")
+          when "expired" then operation["issued_at"] = 8.days.ago.iso8601(6)
+          when "budget"
+            Setting.set("model_monthly_cap", "1")
+            ModelCall.create!(status: "ok", cost: 1)
+          end
+          true
+        end.returns(Reasons::Evidence::Result.new(text: "Additional documentation about reproducible browser workflows.", url: @other.url, error: nil))
+        request = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
+        assert_equal :abstained, Reasons::Generator.generate_item!(@other, operation: operation)
+        assert_requested request, times: 1
+        assert @other.reload.reason_abstention
+        assert_equal 1, ModelRequests.calls(@other, purpose: "reason", operation: operation).count
+        Setting.set("model_monthly_cap", "0")
+        WebMock.reset!
+      end
+    end
   end
 
   test "新资料仍拒写或不合规只补试一次，操作重放不再取原文或请求" do
@@ -96,8 +122,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "原文只重复已有摘要时不能充当新证据追加请求" do
     summary = "The tool records structured events locally, filters entries by severity, and exports matching records as JSON for offline inspection."
     @other.update!(summary: summary)
-    Reasons::Evidence.expects(:fetch).with(@other).once.returns(Reasons::Evidence::Result.new(text: "  #{summary}\n", url: @other.url, error: nil))
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@other).once.returns(Reasons::Evidence::Result.new(text: "  #{summary}\n", url: @other.url, error: nil))
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
       assert_equal :abstained, Reasons::Generator.generate_item!(@other)
       assert_requested stub, times: 1
@@ -108,8 +134,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "首次拒写耗尽预算后不补读原文或追加模型请求" do
     @other.update!(summary: "A toolkit with a long overview that still provides no concrete description of its capabilities, supported workflows, or implementation details.")
     @item.destroy!
-    Reasons::Evidence.expects(:fetch).never
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).never
       Setting.set("model_monthly_cap", "0.0005")
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
@@ -136,9 +162,9 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   end
 
   test "补读原文期间预算或停止状态变化时不再发模型请求" do
-    Reasons::Evidence.unstub(:fetch)
     Surfguard.stubs(:resolve_public_ips).returns([ "93.184.216.34" ])
     with_model_provider do
+      Reasons::Evidence.unstub(:fetch)
       [ "budget", "limited" ].each do |reason|
         operation = ModelRequests.operation
         stub_request(:get, @item.url).to_return do
@@ -159,13 +185,13 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  test "原文失败保留具体原因，不重复抓取或清掉旧理由" do
+  test "原文暂时失败保留具体原因，不请求模型或清掉旧理由" do
     @item.update!(reason: "旧理由", title_zh: "旧译文")
-    Reasons::Evidence.expects(:fetch).with(@item).once.returns(Reasons::Evidence::Result.new(text: nil, url: @item.url, error: "原文获取失败：访问被拒绝（403/429）"))
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@item).once.returns(Reasons::Evidence::Result.new(text: nil, url: @item.url, error: "原文获取失败：访问被拒绝（403/429）"))
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: abstained_reply)
-      assert_equal :abstained, Reasons::Generator.generate_item!(@item)
-      assert_requested stub, times: 1
+      assert_equal :failed, Reasons::Generator.generate_item!(@item)
+      assert_not_requested stub
     end
     assert_equal "原文获取失败：访问被拒绝（403/429）", ModelCall.sole.error_summary
     assert_equal [ "旧理由", "旧译文" ], [ @item.reload.reason, @item.title_zh ]
@@ -174,12 +200,12 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
   test "无摘要且原文失败，即使模型猜出格式合法的理由也不能落库" do
     @item.update!(reason: "已确认的旧理由", title_zh: "已确认的旧译文")
     before = @item.attributes
-    Reasons::Evidence.expects(:fetch).with(@item).once.returns(Reasons::Evidence::Result.new(text: nil, url: @item.url, error: "原文资料不足：未提取到可用正文"))
     with_model_provider do
+      Reasons::Evidence.expects(:fetch).with(@item).once.returns(Reasons::Evidence::Result.new(text: nil, url: @item.url, error: "原文资料不足：未提取到可用正文"))
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200,
         body: model_reply(reason: "采用流式解析避免将整个文件读入内存，方便分析大规模日志。", interest_tag: "AI / LLM", title_zh: "猜测的新译文"))
       assert_equal :abstained, Reasons::Generator.generate_item!(@item)
-      assert_requested stub, times: 1
+      assert_not_requested stub
     end
     assert_equal before, @item.reload.attributes
     assert_equal [ "abstained", "原文资料不足：未提取到可用正文" ], ModelCall.sole.then { |call| [ call.status, call.error_summary ] }
@@ -663,7 +689,7 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
       assert_requested request, times: 1
     end
     assert_equal before, @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at")
-    assert_equal [ "failed", 456, 2047, BigDecimal("0.0209"), "模型输出达到长度上限，未生成完整回复" ],
+    assert_equal [ "failed", 456, 2047, BigDecimal("0.020926"), "模型输出达到长度上限，未生成完整回复" ],
       ModelCall.sole.then { |call| [ call.status, call.prompt_tokens, call.completion_tokens, call.cost, call.error_summary ] }
   end
 

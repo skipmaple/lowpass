@@ -53,9 +53,9 @@ a.t, .link-button, .archive-key { transition: text-decoration-color var(--dur-1)
 
 /* 只有 OLD 捕获：NEW 正文固定在最终位置，真实 DOM 只做 opacity（pageTurn.ts）。 */
 html[data-vt="old"] { view-transition-name: root; }
-html[data-vt="old"] .masthead { view-transition-name: masthead; }
-html[data-vt="old"] .issue-head-date { view-transition-name: issue-date; }
-html[data-vt="new"], html[data-vt="new"] .masthead, html[data-vt="new"] .issue-head-date { view-transition-name: none; }
+html[data-vt="old"] .site-header { view-transition-name: masthead; }
+html[data-vt="old"] :is(.issue-head-date, .calendar-date) { view-transition-name: issue-date; }
+html[data-vt="new"], html[data-vt="new"] .site-header, html[data-vt="new"] :is(.issue-head-date, .calendar-date) { view-transition-name: none; }
 html[data-vt] { --vt-duration: var(--dur-2); --vt-easing: var(--ease-out); }
 html[data-vt][data-turn] { --vt-duration: var(--dur-3); --vt-easing: var(--ease-move); }
 ::view-transition, ::view-transition-group(*), ::view-transition-image-pair(*), ::view-transition-old(*), ::view-transition-new(*) { pointer-events: none; }
@@ -90,17 +90,14 @@ details[open] > .anchors { animation: lp-rise var(--dur-2) var(--ease-out); }
 
 /* ─── 减少动态效果 ───────────────────────────────────────────────────── */
 
-/* 所有状态瞬间切换。留 1ms 而不是 0：animationend / transitionend 照常触发，靠它们收尾的代码不会卡住 */
+/* 减少动态时直接呈现状态。只禁用实际动效，不给 transition: all 的默认值添加时长。 */
 @media (prefers-reduced-motion: reduce) {
   /* 日出是纯 SVG，没有依赖 animationend 的收尾：第一帧直接呈现终态，避免 1ms 动画仍先画起始姿态。 */
   .sunrise--animated .sunrise-sun, .sunrise--animated .sunrise-ray, .sunrise--animated .sunrise-wave { animation: none !important; }
   .daily-source { overflow: visible !important; }
   .daily-source > .daily-source-sheet { transform: none !important; }
   .daily-source .item-row { color: var(--ink) !important; }
-  *, *::before, *::after {
-    animation-duration: 1ms !important; animation-delay: 0ms !important;
-    transition-duration: 1ms !important; transition-delay: 0ms !important;
-  }
+  :is(.favorite-button, .favorite-ink, .menu-card, .theme-menu-panel, .dialog-shade, .dialog, .toast, .anchors) { animation: none !important; transition: none; }
   .daily-source *, .daily-source *::before, .daily-source *::after { animation: none !important; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

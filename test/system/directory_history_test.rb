@@ -40,7 +40,8 @@ class DirectoryHistoryTest < ApplicationSystemTestCase
         hash = URI(destination[:href]).fragment
         destination.click
         wait_until { evaluate_script("location.hash") == "##{hash}" }
-        evaluate_async_script("document.fonts.ready.then(arguments[0])")
+        # 原生 hash 导航触发 Inertia 的延后 scrollToAnchor；落定后才模拟继续阅读。
+        evaluate_async_script("document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(arguments[0], 0))))")
         execute_script("window.scrollTo(0, window.scrollY + document.getElementById(arguments[0]).getBoundingClientRect().top - 180)", "item-#{target.id}")
         wait_until { (item_top(target) - 180).abs < 2 }
         position = item_top(target)

@@ -28,7 +28,7 @@ class StartupRecoveryTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Network.setBlockedURLs", urls: [])
       page.driver.browser.action.send_keys(:tab).perform
       assert_equal "重新加载", evaluate_script("document.activeElement.textContent")
-      assert_equal "rgb(29, 29, 27)", evaluate_script("getComputedStyle(document.activeElement).outlineColor")
+      assert_equal evaluate_script("getComputedStyle(document.body).color"), evaluate_script("getComputedStyle(document.activeElement).outlineColor")
       page.driver.browser.action.send_keys(:enter).perform
 
       assert_selector "h1", text: "搜索"
@@ -59,7 +59,7 @@ class StartupRecoveryTest < ApplicationSystemTestCase
       entry.src = document.querySelector('script[data-startup-entry]').src + '?late-arrival=1'
       document.head.append(entry)
     JS
-    assert_selector "h1", text: "9月8日"
+    assert_selector "h1", text: "2026/09/08 日刊"
     assert_no_selector ".startup-recovery"
     assert_equal 1, evaluate_script("document.querySelectorAll('main:not([hidden])').length")
   end

@@ -117,7 +117,7 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      # 首屏资源不超过 300 KB（PRD N-1）：读上一步的构建产物，超出就红（同 config/ci.rb 的那一步）
+      # 每套主题首屏资源不超过 500 KiB（PRD N-1）：读上一步的构建产物，超出就红（同 config/ci.rb 的那一步）
       - name: Check first screen budget
         run: script/first_screen_size
 

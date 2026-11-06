@@ -11,7 +11,7 @@ CI.run do
   step "Frontend: unit tests", "npm test"
   step "Frontend: audit", "npm audit --audit-level=high"
   step "Frontend: build", "npm run build"
-  # 首屏资源不超过 300 KB（PRD N-1，ADR T1 的守门指标）：读上一步的构建产物，超出就红
+  # 每套主题首屏资源不超过 500 KiB（PRD N-1，ADR T1 的守门指标）：读上一步的构建产物，超出就红
   step "Frontend: first screen budget", "script/first_screen_size"
   step "Frontend: cumulative asset budget", "script/frontend_delta_size"
 

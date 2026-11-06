@@ -9,9 +9,10 @@ class ScheduledArchiveTest < ApplicationSystemTestCase
       [ 320, 375, 1440 ].each do |width|
         page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
         visit daily_issues_path(month: "2026-09")
-        row = find(".archive-row", text: "9月9日")
+        row = find(".archive-row[href='#{daily_issue_path("2026-09-09")}']")
+        assert row.has_css?(".archive-key", text: "09/09")
         assert_selector ".archive-row", text: "待 07:30 生成"
-        assert row.has_css?("svg[role='img'] title", text: "待生成", visible: :all)
+        assert row.has_css?("svg[role='img'][aria-label='待生成']")
         assert_not row.has_text?("缺期")
         assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0
         row.click

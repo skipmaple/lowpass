@@ -38,6 +38,14 @@ class PublicationViewportTest < ApplicationSystemTestCase
           assert_operator geometry.fetch("rootScrollWidth"), :<=, geometry.fetch("rootWidth"), context
           assert_operator geometry.fetch("sheetScrollWidth"), :<=, geometry.fetch("sheetWidth"), context
           assert_operator geometry.fetch("mastheadScrollWidth"), :<=, geometry.fetch("mastheadWidth"), context
+          if path == daily_issue_path("2026-09-08")
+            find(".theme-menu > summary").click
+            panel = evaluate_script("document.querySelector('.theme-menu-panel').getBoundingClientRect().toJSON()")
+            assert_operator panel.fetch("left"), :>=, 0, "#{context}: open theme panel #{panel}"
+            assert_operator panel.fetch("right"), :<=, geometry.fetch("edge"), "#{context}: open theme panel #{panel}"
+            find(".theme-menu > summary").send_keys(:escape)
+            assert_no_selector ".theme-menu[open]"
+          end
         end
       end
     end

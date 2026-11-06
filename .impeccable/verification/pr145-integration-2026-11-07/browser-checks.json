@@ -498,5 +498,26 @@
     "cases": 36,
     "reservedWidth": 15,
     "passed": true
+  },
+  "themeMenuScrollbarRegression": {
+    "cases": 12,
+    "widths": [
+      320,
+      375,
+      1440,
+      1920
+    ],
+    "themes": [
+      "daybreak",
+      "duet",
+      "unfold"
+    ],
+    "reservedWidth": 15,
+    "passed": true,
+    "duet320": {
+      "left": 12,
+      "right": 277,
+      "width": 265
+    }
   }
 }

@@ -1,0 +1,1454 @@
+[
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "name": "search",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "expanded": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "筛选：日刊",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": false,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": true,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "name": "settings",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Settings/Show\",\"props\":{\"errors",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "themePanel": {
+      "left": 12,
+      "right": 292,
+      "width": 280,
+      "bottom": 345.59375,
+      "viewport": 320
+    },
+    "mutuallyExclusive": true,
+    "accountEscape": true,
+    "themeEscape": true,
+    "outsideClosed": true,
+    "dialog": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "取消",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "dialogKeyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "确认注销",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "name": "source-form",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Admin/Sources/Form\",\"props\":{\"e",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "名称",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "name": "login",
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Login/Show\",\"props\":{\"errors\":{",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "name": "search",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "expanded": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": false,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": true,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "name": "settings",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Settings/Show\",\"props\":{\"errors",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "themePanel": {
+      "left": 386.359375,
+      "right": 686.359375,
+      "width": 300,
+      "bottom": 347.59375,
+      "viewport": 768
+    },
+    "mutuallyExclusive": true,
+    "accountEscape": true,
+    "themeEscape": true,
+    "outsideClosed": true,
+    "dialog": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "取消",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "dialogKeyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "确认注销",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "name": "source-form",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Admin/Sources/Form\",\"props\":{\"e",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "名称",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "name": "login",
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Login/Show\",\"props\":{\"errors\":{",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "name": "search",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "expanded": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "筛选：日刊",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": false,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": true,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "name": "settings",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Settings/Show\",\"props\":{\"errors",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "themePanel": {
+      "left": 12,
+      "right": 292,
+      "width": 280,
+      "bottom": 483.09375,
+      "viewport": 320
+    },
+    "mutuallyExclusive": true,
+    "accountEscape": true,
+    "themeEscape": true,
+    "outsideClosed": true,
+    "dialog": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "取消",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "dialogKeyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "确认注销",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "name": "source-form",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Admin/Sources/Form\",\"props\":{\"e",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "名称",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "name": "login",
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Login/Show\",\"props\":{\"errors\":{",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "name": "search",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "expanded": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": false,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": true,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "name": "settings",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Settings/Show\",\"props\":{\"errors",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "themePanel": {
+      "left": 386.34375,
+      "right": 686.34375,
+      "width": 300,
+      "bottom": 504.59375,
+      "viewport": 768
+    },
+    "mutuallyExclusive": true,
+    "accountEscape": true,
+    "themeEscape": true,
+    "outsideClosed": true,
+    "dialog": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "取消",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "dialogKeyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "确认注销",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "name": "source-form",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Admin/Sources/Form\",\"props\":{\"e",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "名称",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "name": "login",
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Login/Show\",\"props\":{\"errors\":{",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "name": "search",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "expanded": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "筛选：日刊",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": false,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": true,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "name": "settings",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Settings/Show\",\"props\":{\"errors",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "themePanel": {
+      "left": 12,
+      "right": 292,
+      "width": 280,
+      "bottom": 337.59375,
+      "viewport": 320
+    },
+    "mutuallyExclusive": true,
+    "accountEscape": true,
+    "themeEscape": true,
+    "outsideClosed": true,
+    "dialog": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "取消",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "dialogKeyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "确认注销",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "name": "source-form",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Admin/Sources/Form\",\"props\":{\"e",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "名称",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "name": "login",
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Login/Show\",\"props\":{\"errors\":{",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "name": "search",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "expanded": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "-2px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "statePreserved": false,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": true,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "name": "settings",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Settings/Show\",\"props\":{\"errors",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "themePanel": {
+      "left": 386.34375,
+      "right": 686.34375,
+      "width": 300,
+      "bottom": 361.09375,
+      "viewport": 768
+    },
+    "mutuallyExclusive": true,
+    "accountEscape": true,
+    "themeEscape": true,
+    "outsideClosed": true,
+    "dialog": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "取消",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "dialogKeyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BUTTON",
+        "label": "确认注销",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "name": "source-form",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Admin/Sources/Form\",\"props\":{\"e",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "名称",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "name": "login",
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Login/Show\",\"props\":{\"errors\":{",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "keyboard": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "INPUT",
+        "label": "",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false
+  }
+]

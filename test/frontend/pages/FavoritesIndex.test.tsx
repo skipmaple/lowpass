@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -39,17 +39,17 @@ afterEach(() => {
 })
 
 describe('收藏页的行', () => {
-  it('页名是 h1「收藏」；正文先读，来源与所在期在后，标题是唯一原文入口', () => {
+  it('页名是 h1「收藏」；真实来源、刊期和原文入口保留', () => {
     const { container } = show()
 
     expect(screen.getByRole('heading', { level: 1, name: '收藏' })).toBeInTheDocument()
     expect(document.title).toBe('收藏 · Lowpass')
 
     const row = container.querySelector('.search-row') as HTMLElement
-    const context = row.querySelector('.result-context') as HTMLElement
-    expect(context).toHaveTextContent('日刊')
-    expect(context).toHaveTextContent('Hacker News')
-    expect(context).not.toHaveTextContent('2026年9月8日')
+    const eyebrow = row.querySelector('.search-eyebrow') as HTMLElement
+    expect(eyebrow).toHaveTextContent('日刊')
+    expect(eyebrow).toHaveTextContent('Hacker News')
+    expect(eyebrow).toHaveTextContent('2026\/09\/08')
 
     const title = within(row).getByRole('link', { name: TITLE })
     expect(within(row).getByRole('heading', { level: 2 })).toContainElement(title)
@@ -57,12 +57,10 @@ describe('收藏页的行', () => {
     expect(title).toHaveAttribute('target', '_blank')
     expect(title.getAttribute('rel')).toContain('noopener')
     expect(title).toHaveAttribute('lang', 'en')
+    expect(title).toHaveAttribute('aria-describedby', 'new-tab-description')
 
-    expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026年9月8日$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
-    expect(row.firstElementChild).toBe(row.querySelector('.search-title'))
-    expect(row.lastElementChild).toBe(row.querySelector('.result-meta'))
-    expect(row.querySelectorAll('a[href="https://example.com/termlog"]')).toHaveLength(1)
-    expect(within(row).queryByRole('link', { name: '原文' })).not.toBeInTheDocument()
+    expect(within(row).getByRole('link', { name: /^所在期\s*·\s*2026\/09\/08$/ })).toHaveAttribute('href', '/daily/2026-09-08?source=src-hn#item-itm-hn-1')
+    expect(within(row).getByRole('link', { name: '原文' })).toHaveAttribute('href', 'https://example.com/termlog')
     expect(within(row).getByRole('button', { name: `取消收藏：${TITLE}` })).toHaveAttribute('data-on')
   })
 
@@ -81,11 +79,11 @@ describe('收藏页的行', () => {
     })
 
     const rows = view.container.querySelectorAll('.search-row')
-    // D25 的位置：标题译文紧跟标题，简介译文紧跟简介
-    expect(rows[0].querySelector('.search-title')?.nextElementSibling).toHaveTextContent('Show HN：一个用 Rust 写的终端日志查看器')
-    expect(rows[0].querySelector('.search-title')?.nextElementSibling).toHaveClass('item-translation')
-    expect(rows[1].querySelector('.search-snippet')).toHaveTextContent('An extremely fast Python linter.')
-    expect(rows[1].querySelector('.search-snippet')?.nextElementSibling).toHaveTextContent('一个极快的 Python 代码检查工具。')
+    // 中文帮助直接辨认用途；原文仍在同条的可展开线索里。
+    expect(rows[0].querySelector('.search-title')).toHaveTextContent('Show HN：一个用 Rust 写的终端日志查看器')
+    expect(rows[0].querySelector('.record-original-title')).toHaveTextContent(TITLE)
+    expect(rows[1].querySelector('.search-snippet')).toHaveTextContent('一个极快的 Python 代码检查工具。')
+    expect(rows[1].querySelector('.record-original-summary')).toHaveTextContent('An extremely fast Python linter.')
   })
 
   it('周刊收藏保留刊物、来源及所在期周次与板块', () => {
@@ -93,8 +91,8 @@ describe('收藏页的行', () => {
       entries: [favoriteEntry({ publication: 'weekly', source_name: '阮一峰科技爱好者周刊', where: { label: '2026年 · 第 36 周 · 工具', href: '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7' } })],
     })
 
-    expect(container.querySelector('.result-context')).toHaveTextContent('周刊')
-    expect(container.querySelector('.result-context')).not.toHaveTextContent('第 36 周')
+    expect(container.querySelector('.record-meta')).toHaveTextContent('周刊')
+    expect(container.querySelector('.record-meta')).toHaveTextContent('第 36 周')
     expect(screen.getByRole('link', { name: /^所在期\s*·\s*2026年\s*·\s*第 36 周\s*·\s*工具$/ })).toHaveAttribute('href', '/weekly/2026-W36#issue-366-%E5%B7%A5%E5%85%B7')
   })
 
@@ -119,6 +117,17 @@ describe('收藏页的行', () => {
 })
 
 describe('取消与恢复（R-10.7、AC-10.4）', () => {
+  it('取消和恢复后同步调整收藏总数，保留当前页外的计数', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok({ undo: 'signed-token' }, 200)).mockResolvedValueOnce(ok({ url_hash: 'hash-termlog' })))
+    show({ total: 24, pages: 2 })
+
+    expect(screen.getByText('24 条收藏')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: `取消收藏：${TITLE}` }))
+    expect(screen.getByText('23 条收藏')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '恢复' }))
+    await waitFor(() => expect(screen.getByText('24 条收藏')).toBeInTheDocument())
+  })
+
   it('取消时保留书签墨层；请求仍在途时恢复也立即可用', async () => {
     let finishRemove: (value: unknown) => void = () => undefined
     const fetchMock = vi.fn()
@@ -333,5 +342,40 @@ describe('空态与分页', () => {
     const { container } = show()
 
     expect(container.textContent).not.toMatch(/共\s*\d+\s*条|\d+\s*条收藏/)
+  })
+})
+
+
+describe('收藏内搜索', () => {
+  it('搜索期间明确播报等待状态、阻止重复提交，完成后恢复可操作', async () => {
+    show()
+    await userEvent.click(screen.getByRole('button', { name: '搜索' }))
+    const options = router.get.mock.calls[router.get.mock.calls.length - 1][2]
+    act(() => options.onStart())
+    const pending = screen.getByRole('button', { name: '搜索中…' })
+    expect(pending).toBeDisabled()
+    expect(pending).toHaveAttribute('aria-busy', 'true')
+    const calls = router.get.mock.calls.length
+    await userEvent.click(pending)
+    expect(router.get.mock.calls).toHaveLength(calls)
+    act(() => options.onFinish())
+    expect(screen.getByRole('button', { name: '搜索' })).toBeEnabled()
+  })
+  it('提交关键词时搜索所有收藏并回到第一页，保留来源', async () => {
+    show({ q: 'old', source: 'src-hn', page: 2, pages: 3 })
+    const input = screen.getByRole('searchbox', { name: '搜索收藏' })
+    await userEvent.clear(input)
+    await userEvent.type(input, '  新框架  ')
+    await userEvent.click(screen.getByRole('button', { name: '搜索' }))
+    expect(router.get).toHaveBeenLastCalledWith('/favorites?q=%E6%96%B0%E6%A1%86%E6%9E%B6&source=src-hn', {}, expect.objectContaining({ preserveState: true }))
+  })
+
+  it('分页保留关键词和来源；无匹配时清除筛选不会混入全站搜索', () => {
+    const { unmount } = show({ q: 'rust', source: 'src-hn', page: 1, pages: 3 })
+    expect(screen.getByRole('link', { name: '下一页' })).toHaveAttribute('href', '/favorites?q=rust&source=src-hn&page=2')
+    unmount()
+    show({ q: 'rust', entries: [], favorites: [], total: 0 })
+    expect(screen.getByText('收藏中没有找到「rust」。')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '清除筛选' })).toHaveAttribute('href', '/favorites')
   })
 })

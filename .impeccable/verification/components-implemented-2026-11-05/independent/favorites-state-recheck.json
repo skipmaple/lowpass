@@ -1,0 +1,278 @@
+[
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "favoriteState": {
+      "value": "保留收藏查询草稿",
+      "url": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "selected": "03h6hduknkisosiurp79udsmw",
+      "expectedUrl": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "expectedSource": "03h6hduknkisosiurp79udsmw"
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(32, 62, 48) none 3px",
+        "offset": "0px"
+      }
+    },
+    "favoriteState": {
+      "value": "保留收藏查询草稿",
+      "url": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "selected": "03h6hduknkisosiurp79udsmw",
+      "expectedUrl": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "expectedSource": "03h6hduknkisosiurp79udsmw"
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "duet"
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "favoriteState": {
+      "value": "保留收藏查询草稿",
+      "url": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "selected": "03h6hduknkisosiurp79udsmw",
+      "expectedUrl": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "expectedSource": "03h6hduknkisosiurp79udsmw"
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(22, 22, 22) none 3px",
+        "offset": "0px"
+      }
+    },
+    "favoriteState": {
+      "value": "保留收藏查询草稿",
+      "url": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "selected": "03h6hduknkisosiurp79udsmw",
+      "expectedUrl": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "expectedSource": "03h6hduknkisosiurp79udsmw"
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(208, 183, 117) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "unfold"
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "favoriteState": {
+      "value": "保留收藏查询草稿",
+      "url": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "selected": "03h6hduknkisosiurp79udsmw",
+      "expectedUrl": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "expectedSource": "03h6hduknkisosiurp79udsmw"
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 320,
+      "docWidth": 320,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "name": "favorites",
+    "status": 200,
+    "base": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "BODY",
+        "label": "{\"component\":\"Favorites/Index\",\"props\":{\"erro",
+        "visible": false,
+        "outline": "rgb(236, 237, 231) none 3px",
+        "offset": "0px"
+      }
+    },
+    "favoriteState": {
+      "value": "保留收藏查询草稿",
+      "url": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "selected": "03h6hduknkisosiurp79udsmw",
+      "expectedUrl": "http://127.0.0.1:3000/favorites?source=03h6hduknkisosiurp79udsmw",
+      "expectedSource": "03h6hduknkisosiurp79udsmw"
+    },
+    "statePreserved": true,
+    "afterSwitch": {
+      "width": 768,
+      "docWidth": 768,
+      "overflow": false,
+      "controls": [],
+      "tinyControls": [],
+      "focus": {
+        "tag": "SUMMARY",
+        "label": "切换阅读主题",
+        "visible": true,
+        "outline": "rgb(0, 95, 101) solid 2px",
+        "offset": "3px"
+      }
+    },
+    "failed": false,
+    "errors": [],
+    "blocked": [],
+    "capturedTheme": "daybreak"
+  }
+]

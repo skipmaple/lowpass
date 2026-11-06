@@ -19,12 +19,13 @@ export type LayoutProps = React.PropsWithChildren<{
 export default function Layout({ children, masthead, footer }: LayoutProps) {
   const page = usePage<Partial<SharedProps>>()
   const { flash } = page.props
+  const scene = page.component.startsWith('Admin/') ? 'admin' : page.component.split('/')[0].toLowerCase()
   const surface = useRef<HTMLDivElement>(null)
   usePageTurnCommit(page, surface)
   const [toastRegion, setToastRegion] = useState<HTMLDivElement | null>(null)
   return (
     <ToastRegion.Provider value={toastRegion}>
-      <div className="paper sheet">
+      <div className="paper sheet" data-scene={scene}>
         <a className="skip-link" href="#main-content">跳到正文</a>
         <span id="new-tab-description" hidden>在新标签页打开</span>
         <Masthead {...masthead} />

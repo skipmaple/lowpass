@@ -1,53 +1,48 @@
 #!/usr/bin/env ruby
-# 首屏资源有多大（PRD N-1：不超过 300 KB）。先 npm run build，再跑这个脚本；超出预算以 1 退出。
-# 这里的 KB 都按 1024 字节算（KiB）。
-#
-# 首屏 = 打开 /daily/<周期键> 时浏览器必须下载的东西：
-#   - JS：入口 entrypoints/application.tsx、日刊页 pages/Daily/Show.tsx，以及它们静态 import 的分片（按 gzip 后算）
-#   - CSS：entrypoints/application.css（按 gzip 后算）
-#   - 字体：文楷界面子集（布局里 preload 的只有它）、Maple Mono 子集、Newsreader 拉丁分片（这两个经 @font-face 在用到时下载，
-#     日刊页首屏都用得到）；woff2 本身已压缩，按原大小算
-# 正文与推荐理由里的汉字按需下载的文楷分片不算：那是内容，不是界面。报头的 Bodoni 已经内联进 CSS。
-# 文楷 97 个分片的 @font-face 声明（entrypoints/fonts-content.css）也不算：它由布局 preload、启动时挂上，不阻塞渲染，
-# 跟按需下载的分片一样属于内容（设计说明 2026-10-14 D3）。
+# 2026-11-06 用户确认首屏预算为 500 KiB；逐主题统计，不更改字体覆盖。
+# Budget each persisted theme separately. Count entry + daily JS and their CSS,
+# the immediately requested content font-face stylesheet, and all shell fonts.
+# Content glyph shards depend on the edition; report their network cost in the
+# browser acceptance record, as before (PRD N-1), rather than treating it as zero.
 require "json"
 require "zlib"
 
-BUILD = File.expand_path("../public/vite", __dir__)
-BUDGET_KB = 300
+BUILD = File.expand_path(ARGV.fetch(0, "../public/vite"), __dir__)
+BUDGET_KB = 500
 ENTRY = "entrypoints/application.tsx".freeze
 DAILY = "pages/Daily/Show.tsx".freeze
-STYLES = %w[ entrypoints/application.css ].freeze
-FONTS = %w[
-  fonts/lxgw-wenkai-screen-ui.woff2
-  fonts/maple-mono-nl.woff2
-  ../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2
-].freeze
+THEMES = {
+  "A 层叠清晨" => [ "daybreak", "a", %w[body display] ],
+  "B 双声部" => [ "duet", "b", %w[body display] ],
+  "C 展开阅读" => [ "unfold", "c", %w[body title date] ]
+}.freeze
 
 manifest = JSON.parse(File.read(File.join(BUILD, ".vite/manifest.json")))
-
-# 一个入口加上它静态 import 的分片；动态 import（别的页面）不算
 collect = lambda do |key, found|
   chunk = manifest.fetch(key)
-  unless found.include?(chunk["file"])
-    found << chunk["file"]
-    chunk.fetch("imports", []).each { |imported| collect.call(imported, found) }
+  unless found.include?(chunk.fetch("file"))
+    found << chunk.fetch("file")
+    found.concat(chunk.fetch("css", []))
+    chunk.fetch("imports", []).each { |dependency| collect.call(dependency, found) }
   end
-  found
+  found.uniq
 end
-
-gzipped = ->(name) { Zlib.gzip(File.binread(File.join(BUILD, name)), level: Zlib::BEST_COMPRESSION).bytesize }
-raw = ->(name) { File.size(File.join(BUILD, name)) }
-
-# 日刊独立成片时计入它；随入口合并后，字节已经包含在入口的静态依赖里。
-scripts = collect.call(ENTRY, [])
-collect.call(DAILY, scripts) if manifest.key?(DAILY)
-scripts.sort!
-rows = scripts.map { |name| [ "JS #{name}", gzipped.call(name) ] }
-rows += STYLES.map { |key| manifest.fetch(key)["file"] }.map { |name| [ "CSS #{name}", gzipped.call(name) ] }
-rows += FONTS.map { |key| manifest.fetch(key)["file"] }.map { |name| [ "字体 #{name}", raw.call(name) ] }
-
-rows.each { |label, size| puts format("%8.2f KB  %s", size / 1024.0, label) }
-total = rows.sum { |_, size| size } / 1024.0
-puts format("%8.2f KB  合计（预算 %d KB）", total, BUDGET_KB)
-exit(total <= BUDGET_KB ? 0 : 1)
+gzip_size = ->(name) { Zlib.gzip(File.binread(File.join(BUILD, name)), level: Zlib::BEST_COMPRESSION).bytesize }
+raw_size = ->(key) { File.size(File.join(BUILD, manifest.fetch(key).fetch("file"))) }
+resources = collect.call(ENTRY, [])
+# 日刊独立成片时额外计入；静态并入入口时已包含在入口及其 CSS 中。
+collect.call(DAILY, resources) if manifest.key?(DAILY)
+resources << manifest.fetch("entrypoints/application.css").fetch("file")
+resources.uniq!
+shared = resources.sum { |file| gzip_size.call(file) }
+passed = true
+THEMES.each do |label, (name, prefix, latin_roles)|
+  content_path = manifest.fetch("styles/fonts-#{name}-content.css").fetch("file")
+  content_css = resources.include?(content_path) ? 0 : gzip_size.call(content_path)
+  fonts = %w[regular bold].sum { |weight| raw_size.call("fonts/themes/#{prefix}-#{weight}-ui.woff2") }
+  fonts += latin_roles.sum { |role| raw_size.call("fonts/themes/#{prefix}-latin-#{role}.woff2") }
+  total = (shared + content_css + fonts) / 1024.0
+  puts format("%s: JS/CSS %.2f + content declarations %.2f + shell fonts %.2f = %.2f KiB (budget %d)", label, shared / 1024.0, content_css / 1024.0, fonts / 1024.0, total, BUDGET_KB)
+  passed &&= total <= BUDGET_KB
+end
+exit(passed ? 0 : 1)

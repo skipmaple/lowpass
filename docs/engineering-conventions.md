@@ -213,3 +213,7 @@ Before editing or reviewing code, read STYLE.md.
 完整契约见 `superpowers/specs/2026-10-25-independent-translations-design.md`。理由同次译文不合规仍只忽略，不采用失败/拒写响应译文；另一次独立翻译最多3次/字段/操作，不依赖画像或理由。当前为本地候选，未获真实调用/部署/生产历史补全授权。
 
 `ModelRequests`统一PG session advisory门：uncached读取锁、预算、额度，冻结配置后请求与记账，短Item事务复查指纹；锁顺序先advisory后Item，网络不持行事务。Busy只重排同键同签发时间，7天终止；旧理由参数翻译目标为空。无请求终止存在ModelOperationStop而非假账本。签名预览15分钟，绑定用户/期/重评选项/字段指纹，POST只消费凭据；自动仅入队时上海当日新id，历史不自动扫。
+
+## 2026-11-06 三主题预算补记
+
+当前 A/B/C 主题的字体和视觉实现以 `DESIGN.md` 为准，上述单主题字体实施细节保留为历史记录。产品负责人批准每主题首屏 500 KiB，三主题 CSS 冻结新基线；原 JS 累计 +3 KiB 和 CSS 后续 +4 KiB 门禁继续生效。统计口径和基线校验见 `docs/design/notes/2026-11-06-frontend-budget.md`。

@@ -29,20 +29,24 @@ describe('Admin/Sources/Form', () => {
     vi.spyOn(admin, 'testFetch').mockReturnValue(response)
     show()
     const button = screen.getByRole('button', { name: '测试抓取' })
-    const path = button.querySelector('path')!
-    const initial = path.getAttribute('d')
+    const iconMarkup = () => button.querySelector('svg')!.innerHTML
+    const initial = iconMarkup()
 
     await userEvent.click(button)
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
     expect(button).toHaveTextContent('测试中…')
-    await waitFor(() => expect(path.getAttribute('d')).not.toBe(initial))
+    await waitFor(() => expect(iconMarkup()).not.toBe(initial))
+    const pending = iconMarkup()
 
     await act(async () => resolve(testFetchResult()))
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-busy', 'false')
     expect(button).toHaveTextContent('测试抓取')
-    await waitFor(() => expect(path).toHaveAttribute('d', 'M20 6C16.3333 9.6667 12.6667 13.3333 9 17C7.3333 15.3333 5.6667 13.6667 4 12'))
+    await waitFor(() => {
+      expect(iconMarkup()).not.toBe(initial)
+      expect(iconMarkup()).not.toBe(pending)
+    })
   })
 
   it('新建：适配器分段、RSS 字段、保存 POST', async () => {

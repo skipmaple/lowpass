@@ -61,19 +61,38 @@ class SigningInTest < ApplicationSystemTestCase
     assert_current_path login_path
   end
 
-  # 设计说明 2026-10-14 C1：登录卡在视口里居中，视觉重心略高（上方留白约占 40%）
-  test "登录卡在 1440×900 的视口里垂直居中、略偏上" do
-    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 1440, height: 900, deviceScaleFactor: 1, mobile: false)
-    visit login_path
-
-    top, height = evaluate_script("(() => { const r = document.querySelector('.login-card').getBoundingClientRect(); return [r.top, r.height] })()")
-    share = top / (900 - height)
-    assert_in_delta 0.4, share, 0.06
+  # 登录是操作入口：短刊头后直接进入表单，外观选择不能把主操作挤出首屏。
+  test "三主题登录首屏可完成登录并选择外观" do
+    [ [ 1440, 900 ], [ 390, 844 ], [ 320, 800 ] ].each do |width, height|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
+      %w[daybreak duet unfold].each do |theme|
+        visit login_path
+        page.execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+        page.refresh
+        assert_selector "html[data-theme='#{theme}']"
+        assert_selector ".login-button"
+        bounds = evaluate_script(<<~JS)
+          (() => {
+            const card = document.querySelector('.login-card').getBoundingClientRect();
+            const forms = document.querySelector('.login-forms').getBoundingClientRect();
+            const appearance = document.querySelector('.login-appearance').getBoundingClientRect();
+            return { top: card.top, formBottom: forms.bottom, appearanceTop: appearance.top,
+                     appearanceBottom: appearance.bottom, width: document.documentElement.scrollWidth };
+          })()
+        JS
+        context = "#{theme} #{width}×#{height}"
+        assert_operator bounds["top"], :>=, 20, context
+        assert_operator bounds["top"], :<, height * 0.15, context
+        assert_operator bounds["formBottom"], :<=, bounds["appearanceTop"], context
+        assert_operator bounds["appearanceBottom"], :<=, height, context
+        assert_operator bounds["width"], :<=, width, context
+      end
+    end
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
-  # 自查第 1 轮：登录卡最宽 400px，窄屏上要收进视口，不撑出横向滚动
+  # 窄屏表单不能撑出横向滚动。
   test "登录页在 320、375 宽不横向溢出" do
     [ 320, 375 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 800, deviceScaleFactor: 1, mobile: false)

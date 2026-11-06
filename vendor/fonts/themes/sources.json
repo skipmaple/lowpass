@@ -1,0 +1,73 @@
+[
+  {
+    "file": "fonts/a-regular.otf",
+    "url": "https://raw.githubusercontent.com/Warren2060/ChillRoundGothic/53505f0818983d2fcdda00dc66e051ad13e81ffb/ChillRoundGothic/ChillRoundGothic_Regular.otf",
+    "bytes": 9375692,
+    "sha256": "d09f8e91919dfe70ee1174e6a917f84fef4e13f95e5e4db9d692bc551472753d",
+    "commit": "53505f0818983d2fcdda00dc66e051ad13e81ffb"
+  },
+  {
+    "file": "fonts/a-bold.otf",
+    "url": "https://raw.githubusercontent.com/Warren2060/ChillRoundGothic/53505f0818983d2fcdda00dc66e051ad13e81ffb/ChillRoundGothic/ChillRoundGothic_Bold.otf",
+    "bytes": 9567740,
+    "sha256": "7786713cbc1bde2ec2a4161fbb552e2a7d3e187737eeb581a48485d352a14caa",
+    "commit": "53505f0818983d2fcdda00dc66e051ad13e81ffb"
+  },
+  {
+    "file": "licenses/a-OFL.txt",
+    "url": "https://raw.githubusercontent.com/Warren2060/ChillRoundGothic/53505f0818983d2fcdda00dc66e051ad13e81ffb/License.txt",
+    "bytes": 4355,
+    "sha256": "bdefa7c6496762298804550255762c4532124282910e976db960b24d04665ad4",
+    "commit": "53505f0818983d2fcdda00dc66e051ad13e81ffb"
+  },
+  {
+    "file": "fonts/b-regular.otf",
+    "url": "https://raw.githubusercontent.com/Warren2060/ChillJinshuSong/58b387e4a2c49c38c9113bbccdc64d2486e45829/%E5%AF%92%E8%9D%89%E9%94%A6%E4%B9%A6%E5%AE%8BPro_v1.7/ChillJinshuSongTextRegular.otf",
+    "bytes": 25012564,
+    "sha256": "e2e531040b86b66d94016707a044f3f2658f81eb9fef358c8b0ddf1ebb628090",
+    "commit": "58b387e4a2c49c38c9113bbccdc64d2486e45829"
+  },
+  {
+    "file": "fonts/b-bold.otf",
+    "url": "https://raw.githubusercontent.com/Warren2060/ChillJinshuSong/58b387e4a2c49c38c9113bbccdc64d2486e45829/%E5%AF%92%E8%9D%89%E9%94%A6%E4%B9%A6%E5%AE%8BPro_v1.7/ChillJinshuSongBold.otf",
+    "bytes": 24341872,
+    "sha256": "7302546612441815342005e4f1934bdfd62d27a0553b42b5ed6dd1e9f8b820b2",
+    "commit": "58b387e4a2c49c38c9113bbccdc64d2486e45829"
+  },
+  {
+    "file": "licenses/b-OFL.txt",
+    "url": "https://raw.githubusercontent.com/Warren2060/ChillJinshuSong/58b387e4a2c49c38c9113bbccdc64d2486e45829/LICENSE",
+    "bytes": 4325,
+    "sha256": "027f6f68aa3c651a771d3368e7d1620acaeadfd5d00d23da44332565bc151869",
+    "commit": "58b387e4a2c49c38c9113bbccdc64d2486e45829"
+  },
+  {
+    "file": "licenses/c-OFL.txt",
+    "url": "https://raw.githubusercontent.com/welai/glow-sans/81d8993ef84a1a475cc7e971d8bd2d9dd81d351c/OFL.txt",
+    "bytes": 4432,
+    "sha256": "294348a0b170240633883e62548c2d3bc76306a5571a5235b2e407e0ace3b232",
+    "commit": "81d8993ef84a1a475cc7e971d8bd2d9dd81d351c"
+  },
+  {
+    "url": "https://github.com/welai/glow-sans/releases/download/v0.93/GlowSansSC-Normal-v0.93.zip",
+    "sha256": "aa2e1fdb20337113a1d2670b695bfee83910eefa2e48f51c704e5f4a9f8ec9f1",
+    "members": {
+      "fonts/c-regular.otf": "GlowSansSC-Normal-Regular.otf",
+      "fonts/c-bold.otf": "GlowSansSC-Normal-Bold.otf"
+    }
+  },
+  {
+    "file": "fonts/c-regular.otf",
+    "archive": "GlowSansSC-Normal-v0.93.zip",
+    "member": "GlowSansSC-Normal-Regular.otf",
+    "bytes": 9119372,
+    "sha256": "ca7d34947401b2fa6dd4fd46676d970a8cc47a40ee60c022eb7dd5068bee67ff"
+  },
+  {
+    "file": "fonts/c-bold.otf",
+    "archive": "GlowSansSC-Normal-v0.93.zip",
+    "member": "GlowSansSC-Normal-Bold.otf",
+    "bytes": 9148860,
+    "sha256": "b8381b3457bfb612e57e19517d000a169686485f57f4f9504cda59b28b4c590a"
+  }
+]

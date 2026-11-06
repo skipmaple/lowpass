@@ -39,11 +39,11 @@ export type DatePreset = { from: string; to: string };
 export type DatePresets = Record<"7d" | "30d", DatePreset>;
 // 命中 run：hit 为真的那一段画 2px 墨色下划线（D22）
 export type HitRun = { text: string; hit: boolean };
-export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; title_zh: string | null; snippet_runs: HitRun[] | null; summary_zh: string | null };
+export type SearchResult = { item_id: string; url_hash: string; rank: number; publication: Publication; source_name: string; where: { label: string; href: string }; published_label: string; url: string; title_runs: HitRun[]; title_zh?: string | null; summary_zh?: string | null; snippet_runs: HitRun[] | null; title_zh_runs?: HitRun[] | null; summary_zh_runs?: HitRun[] | null; reason?: string | null };
 
 // 收藏（PRD 5.10）：日刊、周刊、搜索、收藏四个页面的 props 都带 favorites——这一页里已收藏链接的 url_hash 列表。
 // 收藏页的一行（FavoritesController#entry_props）：字段照搜索结果行，标题不带命中 run；snippet 是不超过 160 字的摘要片段
-export type FavoriteEntry = { url_hash: string; publication: Publication; source_name: string; where: { label: string; href: string }; url: string; title: string; title_zh: string | null; snippet: string | null; summary_zh: string | null };
+export type FavoriteEntry = { url_hash: string; publication: Publication; source_name: string; where: { label: string; href: string }; url: string; title: string; title_zh: string | null; snippet: string | null; summary_zh: string | null; reason?: string | null; saved_label?: string };
 
 // P2-① 登录（PRD 5.5）：ApplicationController 的 inertia_share 每页都带的两样，加登录页与设置页的字段
 export type CurrentUser = { display_name: string; avatar_url: string | null; email: string | null; admin: boolean };
@@ -67,7 +67,8 @@ export type ManualRun = { id: string; source_name: string; period_key: string | 
 export type FinishedRun = { id: string; source_name: string; period_key: string | null; status: RunStatus; item_count: number | null; error_summary: string | null };
 export type LatestIssue = { period_key: string; label: string } | null;
 // reasons 只有日刊行才有值（Issue::Administering#admin_reasons）：未发布 / 生成中 / 缺期是 null；周刊行整个键都不带
-export type AdminIssueReasons = { with_reason: number; abstained: number; retained: number; missing: number; ready: boolean; unready_label: string | null; last_assessed_label: string | null };
+export type ReasonProgress = { status: "queued" | "running" | "completed" | "partial" | "failed"; active: boolean; label: string; detail: string; error: string | null };
+export type AdminIssueReasons = { label: string; progress?: ReasonProgress | null; with_reason: number; abstained: number; retained: number; missing: number; ready: boolean; unready_label: string | null; last_assessed_label: string | null };
 export type AdminIssueTranslations = { pending: number; preserved: number; ready: boolean; unready_label: string | null };
 export type AdminIssueRow = { kind: Publication; period_key: string; state: IssueState | "missing"; state_label: string; time_label: string | null; source_marks: string | null; refetchable_sources: { id: string; name: string }[]; reasons?: AdminIssueReasons | null; translations?: AdminIssueTranslations | null };
 export type AdminUserRow = { id: string; display_name: string; email: string | null; role: "admin" | "member"; providers_label: string; last_login_label: string | null };

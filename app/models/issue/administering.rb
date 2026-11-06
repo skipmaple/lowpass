@@ -32,6 +32,7 @@ module Issue::Administering
         issues = daily.where(period_key: first.iso8601..last.iso8601).includes(:fetch_runs).index_by(&:period_key)
         sources = Source.ordered.to_a
         counts = Item.visible.where(issue_id: issues.values.map(&:id)).group(:issue_id, :source_id).count
+        reason_progress = Reasons::Progress.for_issues(issues.values)
         reason_counts = Item.reason_counts_by_issue(issues.values.map(&:id))
         translation_counts = Item.translation_counts_by_issue(issues.values.map(&:id))
         translations_ready = Translations.ready?
@@ -41,8 +42,10 @@ module Issue::Administering
         unready_label = ready ? nil : Reasons.unready_label
         (first..last).to_a.reverse.map do |date|
           issue = issues[date.iso8601]
-          admin_daily_row(date.iso8601, issue, sources, counts, reason_counts, ready: ready, unready_label: unready_label).merge(
+          row = admin_daily_row(date.iso8601, issue, sources, counts, reason_counts, ready: ready, unready_label: unready_label).merge(
             translations: issue&.published? ? translation_counts.fetch(issue.id).merge(translation_state) : nil)
+          row[:reasons][:progress] = reason_progress[issue.id] if row[:reasons] && reason_progress[issue.id]
+          row
         end
       end
 

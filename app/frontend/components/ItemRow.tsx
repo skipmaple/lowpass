@@ -1,19 +1,15 @@
 import type * as React from 'react'
 import { Fragment, useEffect, useState } from 'react'
 
-import Chip from '@/components/Chip'
 import FavoriteButton from '@/components/FavoriteButton'
 import Icon, { type IconName } from '@/components/Icon'
 import WeeklyContent from '@/components/WeeklyContent'
 import { Mixed, absoluteStamp, compactCount, latinLang, relativeAge } from '@/lib/typeset'
+import { useTheme } from '@/lib/theme'
 import type { Adapter, Item } from '@/types/lowpass'
 
-// 十条格式一致的条目（PRD 5.1「条目结构」，不放大首条）：序号、标题、标题译文（HN、Hackaday，D25）、说明、
-// 说明译文（GitHub Trending，D25）、元数据、兴趣标签、推荐理由。日刊时间明确区分提交、发布与收录。
-// 周刊那一版（variant="weekly"）只有序号、标题、摘要与发布时间（D19）。
-// 兴趣标签紧跟标题最后一个词（所有宽度，2026-10-14 O1）：标题元素行内排，标签是它后面的行内小签，放不下就整个换到下一行行首。
-// 日刊操作跟在完整内容后；周刊书签紧跟标题，长文开始前即可收藏。
-// 画布：docs/design/src/pages_front3.py 的 item() 与 item_m()。
+// 三套主题共用一份内容和操作节点；排版改变时不重建收藏或原文的展开状态。
+// 中文解释优先，原文保留；周刊始终展示完整正文，不生成日刊的推荐理由。
 
 const data = { fontFamily: 'var(--font-data)', fontSize: 'var(--fs-13)', color: 'var(--ink2)' } as const
 
@@ -99,12 +95,12 @@ function Comments({ count, url }: { count: number; url?: string }) {
   )
 }
 
-// 今日新增：前三名用原有鼠尾草绿徽章，其余同色等宽。
+// 今日新增：前三名以主题强调色标注，保留真实的榜单排序。
 function StarsToday({ value, highlight }: { value: number; highlight: boolean }) {
   const text = `+${value}`
   if (highlight) {
     return (
-      <span style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--fs-12)', background: 'var(--green)', color: 'var(--ink)', padding: '2px 7px', whiteSpace: 'nowrap' }}>
+      <span style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--fs-12)', background: 'var(--accent-surface)', color: 'var(--on-accent)', padding: '2px 7px', whiteSpace: 'nowrap' }}>
         {text}
       </span>
     )
@@ -132,17 +128,16 @@ function Meta({ item, adapter, rank, variant }: { item: Item; adapter: Adapter; 
     if (item.meta.stars !== undefined) parts.push(<Metric icon="star" label="Star">{compactCount(item.meta.stars)}</Metric>)
     if (item.meta.stars_today !== undefined) parts.push(<StarsToday value={item.meta.stars_today} highlight={rank <= 3} />)
   } else if (item.author) {
-    // RSS 源：作者与 GitHub 的语言名一样属于元数据，整行只有一个字体角色（Maple）
+    // RSS 源：作者与 GitHub 的语言名一样属于元数据，整行只有一个字体角色（数据字体）
     parts.push(<span className="item-meta-text" style={data}>{item.author}</span>)
   }
 
   const timeKind = adapter === 'hacker_news' ? '提交' : item.meta.time_from_fetch ? '收录' : '发布'
+  if (item.published_at) parts.push(<Age published={item.published_at} kind={timeKind} />)
 
   return (
     <span className="item-meta">
       {parts.map((part, index) => <Fragment key={index}>{part}</Fragment>)}
-      <FavoriteButton className="item-save" itemId={item.id} urlHash={item.url_hash} title={item.title} />
-      {item.published_at ? <Age published={item.published_at} kind={timeKind} /> : null}
     </span>
   )
 }
@@ -156,9 +151,7 @@ function hostOf(url: string): string | undefined {
   }
 }
 
-// D25 译文紧跟它译的那段原文：HN 与 Hackaday 在标题下，GitHub Trending 在简介下。不是链接（卡片只有标题可点）。
-// 中文走文楷，夹在里面的产品名、项目名走 Newsreader，跟原文同一字体（设计 skill「译文排进 Newsreader」那条偏差的改法）；
-// 字号与颜色交给 CSS 按断点走。收藏页的行也用它。
+// 收藏等页面保留的混排工具；字体由当前主题令牌指定。
 export function Translation({ text }: { text: string }) {
   return (
     <p className="item-translation">
@@ -169,55 +162,71 @@ export function Translation({ text }: { text: string }) {
 
 // D19：周刊条目不生成推荐理由，也就没有兴趣标签；元数据只剩发布时间。
 // heading 是标题的层级（PRD 6.4「标题层级语义正确」）：日刊页 h1 是日期，条目就是 h2；
-// 周刊页 h1 是周次、h2 是本期主题、h3 是板块；承担本期主题的首条直接用 h2，其余条目按所在位置降一到两级。
+// 周刊页 h1 是周次、h2 是源名、h3 是板块，所以条目按所在位置降一到两级。
 // id 是搜索结果所在期链接的落点（设计 6.3）。
 export type ItemVariant = 'daily' | 'weekly'
-export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4'; intro?: React.ReactNode }
+export type ItemRowProps = { item: Item; adapter: Adapter; rank: number; variant?: ItemVariant; heading?: 'h2' | 'h3' | 'h4'; sourceName?: string; intro?: React.ReactNode }
 
-// 标签也参与父盒的 balance；保留英文末两词的断行关系，避免标签把标题末词独留一行。
-// slice 原文而不重新拼词，空白与可读名称不变；超长片段仍可在自己的宽度上限内折行。
-function TitleText({ text, tagged }: { text: string; tagged: boolean }) {
-  const tail = tagged && latinLang(text) === 'en' ? text.match(/\S+\s+\S+\s*$/u) : null
-  if (!tail || tail.index === undefined) return text
-
-  return <>{text.slice(0, tail.index)}<span className="item-title-tail">{tail[0]}</span></>
-}
-
-export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2', intro }: ItemRowProps) {
-  const weekly = variant === 'weekly'
-  const tagged = !weekly && Boolean(item.interest_tag)
-  const copy = item.summary
+function OriginalClues({ item }: { item: Item }) {
+  const { theme } = useTheme()
+  const [open, setOpen] = useState(() => {
+    const query = theme === 'unfold' ? '(min-width: 1101px)' : '(min-width: 701px)'
+    return typeof window !== 'undefined' && window.matchMedia?.(query).matches === true
+  })
+  const translatedTitle = Boolean(item.title_zh && item.title_zh !== item.title)
+  const translatedSummary = Boolean(item.summary_zh && item.summary_zh !== item.summary)
+  if (!translatedTitle && !translatedSummary) return null
 
   return (
-    <article className={`item-row${weekly ? ' item-row--weekly' : ''}${intro ? ' item-row--lead' : ''}`} id={`item-${item.id}`} tabIndex={weekly ? -1 : undefined}>
-      <span className="item-rank">{rank}</span>
+    <details className="item-original" open={theme === 'daybreak' || open} onToggle={(event) => { if (theme !== 'daybreak') setOpen(event.currentTarget.open) }}>
+      <summary><span>原文线索</span><Icon name="chevron-down" size={14} color="currentColor" /></summary>
+      {translatedTitle ? <p className="item-original-title" lang={latinLang(item.title)}>{item.title}</p> : null}
+      {translatedSummary && item.summary ? <p className="item-original-summary" lang={latinLang(item.summary)}>{item.summary}</p> : null}
+    </details>
+  )
+}
 
+export default function ItemRow({ item, adapter, rank, variant = 'daily', heading: Heading = 'h2', sourceName, intro }: ItemRowProps) {
+  const weekly = variant === 'weekly'
+  const title = weekly ? item.title : item.title_zh || item.title
+  const copy = item.summary_zh || item.summary
+
+  return (
+    <article className={`item-row item-row--${variant}${intro ? ' item-row--lead' : ''}`} id={`item-${item.id}`} tabIndex={weekly ? -1 : undefined}>
+      <div className="item-rail" aria-label={`第 ${rank} 条`}><span className="item-rank">{String(rank).padStart(2, '0')}</span></div>
       <div className="item-body">
-        {/* 第二轮阅读评审：完整显示标题和摘要；外链仍在新标签页打开。标签在标题元素外面：不进标题的可读名称 */}
         <div className="item-heading">
           <Heading className="item-title">
-            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" lang={latinLang(item.title)} data-host={hostOf(item.url)}>
-              <TitleText text={item.title} tagged={tagged} />
-            </a>
+            <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" lang={latinLang(title)} data-host={hostOf(item.url)}>{title}</a>
           </Heading>
-          {tagged ? (
-            <span className="item-tag"><Chip text={item.interest_tag!} variant="outline" className="item-interest-chip" /></span>
-          ) : null}
-          {weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={item.title} /> : null}
+          {weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={title} /> : null}
         </div>
         {intro}
-        {!weekly && item.title_zh ? <Translation text={item.title_zh} /> : null}
-        {/* 周刊正文完整展开、按原文分段（SummaryCleaner.content 一行一段），并按中西文分配字体；日刊摘要完整显示。 */}
-        {weekly ? <WeeklyContent item={item} /> : copy ? <span className="item-summary" lang={latinLang(copy)}>{copy}</span> : null}
-        {!weekly && item.summary_zh ? <Translation text={item.summary_zh} /> : null}
-        {!weekly && item.reason ? (
-          <div className="item-reason">
-            <Mixed text={item.reason} font="latin" size="inherit" color="inherit" weight={400} lineHeight="inherit" />
-          </div>
+        <div className="item-context">
+          {!weekly ? <>
+            {sourceName ? <span className="item-source-name">{sourceName}</span> : null}
+            <div className="item-provenance">
+              <span className="item-domain">{hostOf(item.url)}</span>
+              {item.interest_tag ? <span className="item-tag">{item.interest_tag}</span> : null}
+              <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
+            </div>
+            <OriginalClues item={item} />
+          </> : <Meta item={item} adapter={adapter} rank={rank} variant={variant} />}
+        </div>
+        {weekly ? <WeeklyContent item={item} /> : copy ? <p className="item-summary" lang={latinLang(copy)}>{copy}</p> : null}
+        {!weekly ? (
+          item.reason ? <section className="item-reason-panel" aria-label="值得关注">
+            <p className="item-reason-label">值得关注</p>
+            <p className="item-reason">{item.reason}</p>
+          </section> : <p className="item-reason-missing">暂无推荐理由</p>
         ) : null}
-        <Meta item={item} adapter={adapter} rank={rank} variant={variant} />
       </div>
-
+      <div className="item-actions">
+        <a className="item-original-action" href={item.url} target="_blank" rel="noopener noreferrer">
+          <span>{adapter === 'github_trending' ? '查看仓库' : '阅读原文'}</span><Icon name="arrow-up-right" size={16} color="currentColor" />
+        </a>
+        {!weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={title} /> : null}
+      </div>
     </article>
   )
 }

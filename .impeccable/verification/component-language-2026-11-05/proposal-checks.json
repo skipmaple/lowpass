@@ -1,0 +1,66 @@
+[
+  {
+    "width": 1440,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "inputs": [
+      {
+        "radius": "8px",
+        "height": 48
+      },
+      {
+        "radius": "8px",
+        "height": 48
+      },
+      {
+        "radius": "2px",
+        "height": 48
+      },
+      {
+        "radius": "2px",
+        "height": 48
+      },
+      {
+        "radius": "6px",
+        "height": 48
+      },
+      {
+        "radius": "6px",
+        "height": 48
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "inputs": [
+      {
+        "radius": "8px",
+        "height": 48
+      },
+      {
+        "radius": "8px",
+        "height": 48
+      },
+      {
+        "radius": "2px",
+        "height": 48
+      },
+      {
+        "radius": "2px",
+        "height": 48
+      },
+      {
+        "radius": "6px",
+        "height": 48
+      },
+      {
+        "radius": "6px",
+        "height": 48
+      }
+    ]
+  }
+]

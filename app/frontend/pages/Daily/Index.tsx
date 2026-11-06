@@ -43,7 +43,7 @@ function Row({ day }: { day: ArchiveDay }) {
       <span className="archive-mark">
         <Mark state={day.state} />
       </span>
-      <span className="archive-key">{day.date_label}</span>
+      <span className="archive-key">{day.period_key.slice(5).replace('-', '/')}</span>
       <span className="archive-sub">{day.weekday}</span>
       <span className="archive-label">
         {day.published_label ? (

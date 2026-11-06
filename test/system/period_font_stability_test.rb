@@ -1,38 +1,66 @@
 require "application_system_test_case"
 
 class PeriodFontStabilityTest < ApplicationSystemTestCase
-  teardown { page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride") }
+  teardown do
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
 
-  test "日周刊的日期与说明在普通字库迟到时保持位置" do
+  test "三主题壳字体覆盖真实期头和常驻导航的所有中文字" do
+    weekly = Issue.weekly_props_for("2026-W36").fetch(:issue)
+    daily = Issue.daily_props_for("2026-09-08")
+    labels = [ weekly[:week_label], weekly[:range_label], daily[:date_label], *Issue::Presenting::WEEKDAYS,
+      "日刊周刊收藏搜索管理账户归档上一期下一期阅读主题层叠清晨双声部展开阅读" ]
+    characters = labels.join.scan(/\p{Han}/).uniq
+    declarations = Rails.root.join("app/frontend/styles/fonts.css").read.scan(/@font-face\{([^}]+)\}/).flatten
+
+    %w[A B C].each do |theme|
+      [ 400, 700 ].each do |weight|
+        face = declarations.find { |rule| rule.include?(%(font-family:"Lowpass Chinese #{theme}";font-weight:#{weight};)) }
+        assert face, "主题 #{theme} 必须有 #{weight} 壳字体"
+        ranges = face.match(/unicode-range:([^;]+)/)[1].split(",").map do |part|
+          first, last = part.delete_prefix("U+").split("-").map { |value| value.to_i(16) }
+          first..(last || first)
+        end
+        missing = characters.reject { |character| ranges.any? { |range| range.cover?(character.ord) } }
+        assert_empty missing, "主题 #{theme} #{weight} 的期头不能依赖系统回退或延迟正文分片：#{missing.join}"
+      end
+    end
+  end
+
+  test "三主题日周刊日期与说明不因正文中文字库迟到而移动" do
     sign_in_with_browser(users(:drew))
     observations = []
-    [ 320, 375, 1270, 1920 ].each do |width|
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 846, deviceScaleFactor: 1, mobile: false)
-      [ daily_issue_path("2026-09-08"), weekly_issue_path("2026-W36") ].each do |path|
-        visit path
-        assert_selector ".issue-head-date"
-        settle_fonts
-        delay_ordinary_fonts
-        before = period_geometry
-        release_font("Maple Mono NL")
-        after_data = period_geometry
-        release_font("LXGW WenKai Screen")
-        after_ui = period_geometry
-        observations << { width: width, path: path, before: before, after_data: after_data, after_ui: after_ui }
+    %w[daybreak duet unfold].each do |theme|
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      [ 320, 375, 1270, 1920 ].each do |width|
+        page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 846, deviceScaleFactor: 1, mobile: false)
+        [ daily_issue_path("2026-09-08"), weekly_issue_path("2026-W36") ].each do |path|
+          visit path
+          assert_selector ".calendar-date, .issue-head-date"
+          assert_selector "link[rel=stylesheet][href*=fonts-#{theme}-content-]", visible: :all
+          settle_fonts
+          delay_content_fonts(theme)
+          before = period_geometry
+          execute_script("window.__periodContentFonts.disabled = false")
+          settle_fonts
+          after = period_geometry
+          observations << { theme: theme, width: width, path: path, before: before, after: after }
+        end
       end
     end
 
     puts "PERIOD_FONT_ARRIVAL #{observations.to_json}"
     observations.each do |row|
-      [ :after_data, :after_ui ].each do |phase|
-        %w[ text title stack ].each do |part|
-          %w[ x y width height ].each do |dimension|
-            assert_in_delta row[:before][part][dimension], row[phase][part][dimension], 0.1,
-              "#{row[:width]}px #{row[:path]} #{phase} #{part}.#{dimension}"
-          end
+      %w[ text title stack ].each do |part|
+        assert_operator row[:before][part]["width"], :>, 0, "#{row[:theme]} #{row[:width]}px #{part} 必须实际可见"
+        %w[ x y width height ].each do |dimension|
+          assert_in_delta row[:before][part][dimension], row[:after][part][dimension], 0.1,
+            "#{row[:theme]} #{row[:width]}px #{row[:path]} #{part}.#{dimension}"
         end
       end
     end
+  ensure
+    execute_script("localStorage.removeItem('lowpass-theme')")
   end
 
   private
@@ -40,62 +68,33 @@ class PeriodFontStabilityTest < ApplicationSystemTestCase
       evaluate_async_script("document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(arguments[0])))")
     end
 
-    def delay_ordinary_fonts
-      fonts = evaluate_script(<<~'JS')
+    def delay_content_fonts(theme)
+      # 新字体把期头常用字与正文切片分开；模拟正文 CSS 晚到，期头小字库仍按 HTML 预加载。
+      fonts = evaluate_script(<<~JS, theme)
         (() => {
-          const ui = document.querySelector('link[as="font"][href*="lxgw-wenkai-screen-ui-"]').href
-          window.__ordinaryPeriodFonts = {}
-          const candidates = []
-          for (const sheet of document.styleSheets) {
-            if (!sheet.href || !sheet.href.startsWith(location.origin)) continue
-            for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
-              const rule = sheet.cssRules[i]
-              if (rule.type !== CSSRule.FONT_FACE_RULE) continue
-              const family = rule.style.getPropertyValue('font-family').replace(/["']/g, '')
-              if (!['LXGW WenKai Screen', 'Maple Mono NL'].includes(family)) continue
-              const src = rule.style.getPropertyValue('src')
-              if (src.includes('data:') || !src.includes('url(')) continue
-              const path = /url\(["']?([^"')]+)["']?\)/.exec(src)[1]
-              const url = new URL(path, sheet.href).href
-              candidates.push({ family, url })
-              if (url === ui || family === 'Maple Mono NL') {
-                window.__ordinaryPeriodFonts[family] = { url, range: rule.style.getPropertyValue('unicode-range') }
-              }
-              sheet.deleteRule(i)
-            }
-          }
-          return { fonts: Object.keys(window.__ordinaryPeriodFonts).sort(), ui, candidates }
+          const link = document.querySelector(`link[rel="stylesheet"][href*="fonts-${arguments[0]}-content-"]`)
+          if (!link) return 0
+          const count = [...link.sheet.cssRules].filter(rule => rule.type === CSSRule.FONT_FACE_RULE).length
+          window.__periodContentFonts = link
+          link.disabled = true
+          return count
         })()
       JS
-      puts "PERIOD_FONT_SOURCES #{fonts.to_json}" unless fonts["fonts"].length == 2
-      assert_equal [ "LXGW WenKai Screen", "Maple Mono NL" ], fonts["fonts"]
+      assert_operator fonts, :>, 0, "必须实际延迟当前主题的正文字库：#{evaluate_script("[document.documentElement.dataset.theme, ...document.querySelectorAll(\"link[rel=stylesheet]\")].map(link => link.href || link)").inspect}"
       evaluate_async_script("requestAnimationFrame(() => requestAnimationFrame(arguments[0]))")
-    end
-
-    def release_font(family)
-      result = evaluate_async_script(<<~JS, family)
-        const done = arguments[arguments.length - 1]
-        const source = window.__ordinaryPeriodFonts[arguments[0]]
-        const face = new FontFace(arguments[0], `url('${source.url}')`, { weight: '400', unicodeRange: source.range })
-        face.load().then(() => {
-          document.fonts.add(face)
-          requestAnimationFrame(() => requestAnimationFrame(() => done(true)))
-        }).catch(error => done({ error: error.message }))
-      JS
-      assert_equal true, result
     end
 
     def period_geometry
       evaluate_script(<<~JS)
         (() => {
-          const title = document.querySelector('.issue-head-date')
+          const title = [...document.querySelectorAll('.calendar-date, .issue-head-date')].find(node => node.getClientRects().length)
           const walker = document.createTreeWalker(title, NodeFilter.SHOW_TEXT)
           const range = document.createRange()
           range.selectNodeContents(walker.nextNode())
           return {
             text: range.getBoundingClientRect().toJSON(),
             title: title.getBoundingClientRect().toJSON(),
-            stack: document.querySelector('.issue-head-stack').getBoundingClientRect().toJSON()
+            stack: [...document.querySelectorAll('.calendar-meta > span, .issue-head-stack')].find(node => node.getClientRects().length).getBoundingClientRect().toJSON()
           }
         })()
       JS

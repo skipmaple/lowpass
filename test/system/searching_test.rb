@@ -57,7 +57,7 @@ class SearchingTest < ApplicationSystemTestCase
   test "日刊的所在期落到条目并切到对应来源" do
     visit search_path(q: "terminal")
 
-    click_on "所在期 · 2026年9月8日"
+    click_on "所在期 · 2026/09/08"
 
     assert_current_path daily_issue_path("2026-09-08", source: sources(:hn).id)
     assert_selector "article#item-#{items(:hn_one).id}", text: "Show HN"
@@ -81,7 +81,7 @@ class SearchingTest < ApplicationSystemTestCase
     visit search_path(q: "historyfocus")
     assert_text "16 条结果"
     evaluate_async_script("document.fonts.ready.then(arguments[0])")
-    target = all(".search-links > a:first-child")[12]
+    target = all(".record-issue-link")[12]
     execute_script("arguments[0].scrollIntoView({ block: 'center' }); arguments[0].focus({ preventScroll: true })", target)
     reading_position = evaluate_script("scrollY")
     assert_operator reading_position, :>, 500
@@ -94,7 +94,7 @@ class SearchingTest < ApplicationSystemTestCase
 
     page.go_back
     assert_current_path search_path(q: "historyfocus")
-    assert_selector ".search-row:nth-child(13) .search-links > a:first-child:focus"
+    assert_selector ".search-row:nth-child(13) .record-issue-link:focus"
     wait_until { (evaluate_script("scrollY") - reading_position).abs < 2 }
     assert evaluate_script("(() => { const rect = document.activeElement.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight })()")
     page.driver.browser.switch_to.active_element.send_keys(:tab)
@@ -104,7 +104,7 @@ class SearchingTest < ApplicationSystemTestCase
     page.go_forward
     assert_current_path weekly_issue_path("2026-W36", section: "issue-366-工具")
     page.go_back
-    assert_selector ".search-row:nth-child(13) .search-links > a:first-child:focus"
+    assert_selector ".search-row:nth-child(13) .record-issue-link:focus"
 
     find(".filters").click_on "日刊"
     assert_current_path search_path(q: "historyfocus", type: "daily")
@@ -117,14 +117,14 @@ class SearchingTest < ApplicationSystemTestCase
 
   test "返回搜索后收藏保留结果锚点、未提交草稿与再次往返的焦点" do
     visit search_path(q: "terminal")
-    click_on "所在期 · 2026年9月8日"
+    click_on "所在期 · 2026/09/08"
     assert_current_path daily_issue_path("2026-09-08", source: sources(:hn).id)
 
     page.go_back
     target_id = "search-result-#{items(:hn_one).id}"
     assert_selector "a##{target_id}:focus"
     fill_in "搜索", with: "unfinished draft"
-    find(".search-mark").click
+    find("#result-#{items(:hn_one).id} button.search-mark").click
     assert_selector ".search-mark[data-on]:focus"
     wait_until { users(:drew).favorites.count == 1 }
     wait_for_favorite_requests(1)

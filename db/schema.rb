@@ -251,9 +251,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_181000) do
     t.check_constraint "length(input_field::text) <= 7", name: "model_calls_input_field_len"
     t.check_constraint "length(operation_key::text) <= 36", name: "model_calls_operation_key_len"
     t.check_constraint "length(purpose::text) <= 11", name: "model_calls_purpose_len"
-    t.check_constraint "purpose::text <> 'translation'::text OR operation_key IS NOT NULL AND length(operation_key::text) > 0 AND input_field IS NOT NULL AND (input_field::text = ANY (ARRAY['title'::character varying::text, 'summary'::character varying::text])) AND input_digest IS NOT NULL AND input_digest::text ~ '^[0-9a-f]{64}$'::text", name: "model_calls_translation_target"
-    t.check_constraint "purpose::text = ANY (ARRAY['reason'::character varying::text, 'translation'::character varying::text])", name: "model_calls_purpose"
-    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying::text, 'failed'::character varying::text, 'timed_out'::character varying::text, 'invalid'::character varying::text, 'abstained'::character varying::text])", name: "model_calls_status"
+    t.check_constraint "purpose::text <> 'translation'::text OR operation_key IS NOT NULL AND length(operation_key::text) > 0 AND input_field IS NOT NULL AND (input_field::text = ANY (ARRAY['title'::character varying, 'summary'::character varying]::text[])) AND input_digest IS NOT NULL AND input_digest::text ~ '^[0-9a-f]{64}$'::text", name: "model_calls_translation_target"
+    t.check_constraint "purpose::text = ANY (ARRAY['reason'::character varying, 'translation'::character varying]::text[])", name: "model_calls_purpose"
+    t.check_constraint "status::text = ANY (ARRAY['ok'::character varying, 'failed'::character varying, 'timed_out'::character varying, 'invalid'::character varying, 'abstained'::character varying]::text[])", name: "model_calls_status"
   end
 
   create_table "model_operation_stops", id: { type: :string, limit: 25 }, force: :cascade do |t|
@@ -395,7 +395,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_181000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["item_id", "field"], name: "index_translation_preservations_on_item_id_and_field", unique: true
-    t.check_constraint "field::text = ANY (ARRAY['title'::character varying::text, 'summary'::character varying::text])", name: "translation_preservations_field"
+    t.check_constraint "field::text = ANY (ARRAY['title'::character varying, 'summary'::character varying]::text[])", name: "translation_preservations_field"
     t.check_constraint "input_digest::text ~ '^[0-9a-f]{64}$'::text", name: "translation_preservations_digest"
     t.check_constraint "length(field::text) <= 7", name: "translation_preservations_field_len"
     t.check_constraint "length(id::text) <= 25", name: "translation_preservations_id_len"

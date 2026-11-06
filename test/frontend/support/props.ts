@@ -238,7 +238,7 @@ export function adminRunRow(overrides: Partial<AdminRunRow> = {}): AdminRunRow {
 
 // 后台期列表一行（5.6，Issue::Administering#admin_rows）
 export function adminIssueReasons(overrides: Partial<NonNullable<AdminIssueRow['reasons']>> = {}): NonNullable<AdminIssueRow['reasons']> {
-  return { with_reason: 30, abstained: 0, retained: 0, missing: 0, ready: true, unready_label: null, last_assessed_label: null, ...overrides }
+  return { label: '已生成', with_reason: 30, abstained: 0, retained: 0, missing: 0, ready: true, unready_label: null, last_assessed_label: null, ...overrides }
 }
 
 export function adminIssueRow(overrides: Partial<AdminIssueRow> = {}): AdminIssueRow {

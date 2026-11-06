@@ -1,0 +1,32 @@
+/* Account settings and errors remain available outside the management workspace. */
+.settings-appearance { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(0, 2fr); gap: 32px; padding: 30px 0; border-bottom: 1px solid var(--rule); margin-bottom: 28px; }
+.settings-appearance h2 { margin: 0 0 10px; font: 600 24px/1.3 var(--font-cjk); }
+.settings-appearance p { margin: 0; font: 14px/1.8 var(--font-cjk); color: var(--ink2); max-width: 28em; }
+@media (min-width: 1100px) {
+  .settings-appearance .theme-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .settings-appearance .theme-choice { grid-template-columns: 16px minmax(0, 1fr); gap: 14px; padding: 18px; }
+  .settings-appearance .theme-swatch { grid-column: 2; height: 72px; }
+  .settings-appearance .theme-choice > span:last-child { grid-column: 1 / -1; }
+}
+.settings-rows .kv-row { padding-block: 22px; }
+.settings-rows .kv-value { min-width: 0; overflow-wrap: anywhere; }
+.settings-rows .kv-key { font-size: 14px; }
+[data-theme="unfold"] .settings-rows { background: var(--surface, #24292c); padding: 0 24px; }
+.error-state { display: flex; align-items: flex-start; gap: 24px; padding: 48px 0; }
+.error-state .error-art { padding: 14px; border: 1px solid var(--rule); flex: none; color: var(--ink2); }
+.error-state .error-art svg { width: 32px; height: 32px; }
+.error-state .error-copy { min-width: 0; }
+.error-state .state-line { font-family: var(--font-cjk); font-size: clamp(23px, 2.5vw, 32px); line-height: 1.5; margin: 0 0 24px; }
+[data-theme="daybreak"] .error-state .error-art { color: var(--theme-blue, #075b63); }
+[data-theme="unfold"] .error-state .error-art { color: var(--accent, #ceb573); }
+@media (max-width: 700px) {
+  .settings-appearance { grid-template-columns: minmax(0, 1fr); gap: 22px; padding: 22px 0; }
+  .settings-appearance h2 { font-size: 22px; }
+  [data-theme="unfold"] .settings-rows { padding-inline: 16px; }
+  .error-state { gap: 18px; padding: 30px 0; }
+  .error-state .error-art { padding: 8px; }
+  .error-state .error-art svg { width: 24px; height: 24px; }
+}
+@media (forced-colors: active) {
+  .login-composition { display: none; }
+}

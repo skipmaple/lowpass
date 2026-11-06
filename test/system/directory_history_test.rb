@@ -25,47 +25,57 @@ class DirectoryHistoryTest < ApplicationSystemTestCase
         path, directory, target = reading_case(publication)
         visit search_path
         visit path
-        assert_selector "details:has(##{directory}):not([open])"
-        if width == 375
-          find("details:has(##{directory}) > summary").click
+        if publication == :weekly
+          assert_selector "details:has(##{directory}):not([open])"
+          if width == 375
+            find("details:has(##{directory}) > summary").click
+          else
+            find(".directory-return", match: :first).click
+          end
+          assert_selector "details:has(##{directory})[open]"
         else
-          find(".directory-return", match: :first).click
+          assert_selector "##{directory}"
         end
-        assert_selector "details:has(##{directory})[open]"
         destination = find("##{directory} a", match: :first)
         hash = URI(destination[:href]).fragment
         destination.click
         wait_until { evaluate_script("location.hash") == "##{hash}" }
-        evaluate_async_script("document.fonts.ready.then(arguments[0])")
+        # 原生 hash 导航触发 Inertia 的延后 scrollToAnchor；落定后才模拟继续阅读。
+        evaluate_async_script("document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(arguments[0], 0))))")
         execute_script("window.scrollTo(0, window.scrollY + document.getElementById(arguments[0]).getBoundingClientRect().top - 180)", "item-#{target.id}")
         wait_until { (item_top(target) - 180).abs < 2 }
         position = item_top(target)
         wait_until { (evaluate_script("history.state?.documentScrollPosition?.top || 0") - evaluate_script("scrollY")).abs < 2 }
 
         # 使用真实站内链接，不让 WebDriver 为点击页首搜索先把阅读位置滚回顶部。
-        execute_script("document.querySelector('a[aria-label=搜索]').click()")
+        execute_script("document.querySelector('nav[aria-label=主导航] a[href=\"/search\"]').click()")
         assert_current_path search_path
         page.go_back
         assert_current_path path
-        assert_selector "details:has(##{directory})[open]"
+        assert_selector "details:has(##{directory})[open]" if publication == :weekly
+        assert_selector "##{directory}"
         wait_until { (item_top(target) - position).abs < 2 }
         assert_in_delta position, item_top(target), 2, "#{publication} #{width}px：返回应落在原文的同一位置"
       end
     end
   end
 
-  test "目录深链直接显示落点，普通新访问仍默认收起" do
+  test "目录深链直接显示落点，普通新访问恢复各自目录形式" do
     [ 375, 1440 ].each do |width|
       viewport(width)
       [ :daily, :weekly ].each do |publication|
         path, directory = reading_case(publication)
         visit "#{path}##{directory}"
-        assert_selector "details:has(##{directory})[open]"
+        assert_selector "details:has(##{directory})[open]" if publication == :weekly
         assert_selector "##{directory} a", minimum: 1
         wait_until { evaluate_script("(() => { const rect = document.getElementById('#{directory}').getBoundingClientRect(); return rect.top >= 0 && rect.top < innerHeight })()") }
         visit path
-        assert_selector "details:has(##{directory}):not([open])"
-        assert_no_selector "##{directory}", visible: true
+        if publication == :weekly
+          assert_selector "details:has(##{directory}):not([open])"
+          assert_no_selector "##{directory}", visible: true
+        else
+          assert_selector "##{directory}"
+        end
       end
     end
   end

@@ -7,12 +7,15 @@ class FavoritesController < ApplicationController
   # R-10.6 按收藏时间倒序，每页 20 条；页码超过最后一页（取消后页数变少、手改地址）跳到最后一页。
   # 空列表也算一页：越界的页码不会被带进 OFFSET
   def index
-    scope = Current.user.favorites.listed
-    pages = (scope.count.to_f / Favorite::PER_PAGE).ceil
+    all_favorites = Current.user.favorites.listed
+    scope = all_favorites.matching(query)
+    scope = scope.where(source_id: source_id) if source_id.present?
+    total = scope.count
+    pages = (total.to_f / Favorite::PER_PAGE).ceil
     last_page = [ pages, 1 ].max
 
     if page_number > last_page
-      redirect_to favorites_path(page: last_page)
+      redirect_to favorites_path({ page: last_page, q: query.presence, source: source_id.presence }.compact)
     else
       favorites = scope.newest_first.includes(:source).offset((page_number - 1) * Favorite::PER_PAGE).limit(Favorite::PER_PAGE).to_a
       live = Favorite.live_items(favorites)
@@ -21,7 +24,11 @@ class FavoritesController < ApplicationController
         entries: favorites.map { |favorite| entry_props(favorite, live[favorite.live_key]) },
         favorites: favorites.map(&:url_hash),
         page: page_number,
-        pages: pages
+        pages: pages,
+        total: total,
+        q: query,
+        source: source_id,
+        source_options: Source.where(id: all_favorites.select(:source_id)).order(:sort_order, :name).map { |source| { id: source.id, name: source.name } }
       }.merge(footer_props)
     end
   end
@@ -67,6 +74,14 @@ class FavoritesController < ApplicationController
       @page_number ||= [ Integer(params[:page].to_s, 10, exception: false) || 1, 1 ].max
     end
 
+    def query
+      @query ||= params[:q].is_a?(String) ? params[:q].strip.first(100) : ""
+    end
+
+    def source_id
+      @source_id ||= params[:source].is_a?(String) ? params[:source].strip.first(25) : ""
+    end
+
     # 行的字段照搜索结果行（R-10.6）。条目还在就用它现在的译文：译文可能是收藏之后才生成的（R-9.10）
     def entry_props(favorite, item)
       {
@@ -78,7 +93,9 @@ class FavoritesController < ApplicationController
         title: favorite.title,
         title_zh: (item&.title == favorite.title ? item&.title_zh.presence : nil) || favorite.title_zh,
         snippet: Search::Highlighter.excerpt(SummaryCleaner.stored(favorite.summary)),
-        summary_zh: (item&.summary == favorite.summary ? item&.summary_zh.presence : nil) || favorite.summary_zh
+        summary_zh: (item&.summary == favorite.summary ? item&.summary_zh.presence : nil) || favorite.summary_zh,
+        reason: (item&.reason if favorite.publication == "daily" && item&.title == favorite.title && item&.summary == favorite.summary),
+        saved_label: favorite.created_at.in_time_zone("Asia/Shanghai").strftime("%Y/%m/%d")
       }
     end
 

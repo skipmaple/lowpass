@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-# 真实周刊阅读标题：已载入文楷后量文字行，避免只检查 CSS 属性却漏掉末行孤字。
+# 真实周刊阅读标题：已载入当前主题字体后量文字行，避免只检查 CSS 属性却漏掉末行孤字。
 class SourceBandTitleTest < ApplicationSystemTestCase
   teardown do
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
@@ -71,7 +71,7 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     end
   end
 
-  test "周刊原文链接在屏幕与打印均跟随墨色，屏幕保留透明纸面" do
+  test "周刊原文链接跟随主题来源带颜色，打印转为黑字白底" do
     original_url = "https://github.com/ruanyf/weekly/blob/master/docs/issue-366.md"
     issues(:weekly_w36).items.create!(
       source: sources(:ruanyf), title: "科技爱好者周刊（第 366 期）：慢下来的理由", rank: 1,
@@ -95,9 +95,8 @@ class SourceBandTitleTest < ApplicationSystemTestCase
     diagnostic = "实际媒体与颜色 #{states.to_json}"
     assert_equal [ true, false ], states.fetch("print").values_at("print", "screen"), diagnostic
     assert_equal [ false, true ], states.fetch("screen").values_at("print", "screen"), diagnostic
-    assert_equal "rgb(29, 29, 27)", states.fetch("print").fetch("band"), diagnostic
-    assert_equal "rgb(29, 29, 27)", states.fetch("screen").fetch("band"), diagnostic
-    assert_equal "rgba(0, 0, 0, 0)", states.fetch("screen").fetch("background"), diagnostic
+    assert_equal "rgb(0, 0, 0)", states.fetch("print").fetch("band"), diagnostic
+    refute_equal states.fetch("screen").fetch("background"), states.fetch("screen").fetch("band"), diagnostic
 
     states.each do |media, state|
       expected = state.fetch("band")

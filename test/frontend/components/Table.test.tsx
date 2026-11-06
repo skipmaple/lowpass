@@ -102,7 +102,7 @@ describe('Table responsive focus', () => {
 
   it('手机专有summary消失时回同一行现有入口', () => {
     const resize = media(true)
-    render(<Table headers={focusHeaders} widths={focusWidths} rows={focusRows} mobile={focusMobile} />)
+    render(<Table headers={focusHeaders} widths={focusWidths} rows={focusRows} mobile={{ primary: [1], detailsLabel: '详情' }} />)
     within(focusRow()).getByText('详情').focus()
     resize(false)
     expect(document.activeElement).toHaveAttribute('href', '/Beta/edit')

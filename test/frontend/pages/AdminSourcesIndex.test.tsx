@@ -34,7 +34,7 @@ describe('Admin/Sources/Index', () => {
   it('期头、索引条与表', () => {
     const { container } = show()
 
-    expect(screen.getByRole('heading', { level: 1, name: '管理后台' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: '信息源' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '信息源' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: '新建来源' })).toHaveAttribute('href', '/admin/sources/new')
     const rows = screen.getAllByRole('row')
@@ -57,6 +57,18 @@ describe('Admin/Sources/Index', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: '停用' }))
     expect(router.delete).toHaveBeenCalledWith('/admin/sources/src-hn/enablement', expect.any(Object))
+  })
+
+  it('失败提示指向对应来源的真实记录，正常来源不制造告警', () => {
+    show([
+      adminSourceRow(),
+      adminSourceRow({ id: 'src-hackaday', name: 'Hackaday', health: 'recent_failure', health_label: '最近失败' }),
+    ])
+
+    const notice = screen.getByRole('complementary', { name: '需要关注的信息源' })
+    expect(notice).toHaveTextContent('Hackaday · 最近失败')
+    expect(notice).not.toHaveTextContent('Hacker News')
+    expect(within(notice).getByRole('link', { name: '查看记录 · Hackaday' })).toHaveAttribute('href', '/admin/sources/src-hackaday/runs')
   })
 
   it('停用的源给「启用」，直接 POST', async () => {

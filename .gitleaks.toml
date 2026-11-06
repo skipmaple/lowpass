@@ -1,4 +1,4 @@
-# gitleaks 配置：继承内置规则集（不新增规则，也不关闭任何规则），只在其上按路径豁免下面两个
+# gitleaks 配置：继承内置规则集（不新增规则，也不关闭任何规则），只在其上按路径豁免下面的
 # 已核实的误报。跑法见 config/ci.rb 的 "Security: Secrets" 步（bin/ci 的一部分）。
 
 [extend]
@@ -18,4 +18,9 @@ paths = [
   # test/jobs/fetch_source_job_test.rb 里把它存进局部变量 key2 做相等性断言，纯粹因为熵值高
   # 被 generic-api-key 规则误判，不是密钥。
   '''test/jobs/fetch_source_job_test\.rb''',
+
+  # 已删除的历史图片定位清单（commit 0ab5f961bf）：24 个 key_sha256 均由
+  # HistoricalWeeklyImageIndex 的 Digest::SHA256.hexdigest(JSON.generate(lookup))
+  # 生成，只是条目定位摘要，不是 API key。历史全量扫描仍会扫描到它；仅豁免此文件。
+  '''^config/weekly_image_positions/2026-W43-416\.json$''',
 ]

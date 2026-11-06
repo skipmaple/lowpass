@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, type PropsWithChildren } from 'react'
 import { Mixed } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
-export default function DailySourceSection({ source, children, animate, aliasId }: PropsWithChildren<{ source: SourceSummary; animate: boolean; aliasId?: string }>) {
+export default function DailySourceSection({ source, children, animate, aliasId, first = false }: PropsWithChildren<{ source: SourceSummary; animate: boolean; aliasId?: string; first?: boolean }>) {
   const sectionRef = useRef<HTMLElement>(null)
   const headingId = `source-heading-${source.id}`
 
@@ -69,9 +69,9 @@ export default function DailySourceSection({ source, children, animate, aliasId 
   }, [animate, source.id, source.state])
 
   return (
-    <section ref={sectionRef} id={`source-${source.id}`} className="daily-source print-source" data-adapter={source.adapter} aria-labelledby={headingId} tabIndex={-1}>
+    <section ref={sectionRef} id={`source-${source.id}`} className={`daily-source source-section print-source${first ? ' source-section--first' : ''}`} data-adapter={source.adapter} data-source-id={source.id} data-source-state={source.state} aria-labelledby={headingId} tabIndex={-1}>
       <div className="daily-source-sheet">
-        <header className="daily-source-head">
+        <header className="daily-source-head source-section-head">
           {aliasId ? <span id={aliasId} className="daily-source-anchor" aria-hidden="true" /> : null}
           <div className="daily-source-heading">
             <h2 id={headingId} className="print-source-name">

@@ -1,4 +1,4 @@
-// 表单里的分段选择（画布 seg()）：与 Seg 同样的描边块，但每项是按钮不是链接，aria-pressed 标当前项
+// 表单里的分段选择：与 Seg 共用主题外观，按钮用 aria-pressed 标当前项。
 export type SegButtonOption = { value: string; label: string; disabled?: boolean }
 
 export default function SegButtons({ label, options, value, onChange }: { label: string; options: SegButtonOption[]; value: string; onChange: (value: string) => void }) {

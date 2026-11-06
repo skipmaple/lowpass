@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -31,17 +31,19 @@ function show(overrides: Record<string, unknown> = {}) {
     ...overrides,
   }
   setPageProps({ ...props, flash: {}, errors: {} })
-  return render(<Index {...(props as Parameters<typeof Index>[0])} />)
+  const page = props as Parameters<typeof Index>[0]
+  return { ...render(<Index {...page} />), props: page }
 }
 
 afterEach(() => {
   router.post.mockClear()
   router.reload.mockClear()
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
-// 「理由」格里的反白小签（第 6 格）。整行找会撞上状态格里同样是墨色方块的 Mark
-const reasonChip = (row: HTMLElement) => within(row).getAllByRole('cell')[5].querySelector('span[style*="background: var(--ink)"]')
+// 「理由」格里的静态状态标签；颜色由当前主题决定，不以旧内联墨色识别。
+const reasonChip = (row: HTMLElement) => within(row).getAllByRole('cell')[5].querySelector('.chip-static')
 
 describe('Admin/Issues/Index', () => {
   it('切换刊物类型保留当前历史月份', () => {
@@ -83,7 +85,7 @@ describe('Admin/Issues/Index', () => {
 
     await userEvent.click(screen.getAllByRole('button', { name: '重抓某源' })[0])
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveTextContent('重抓 2026-09-08 的哪个来源？')
+    expect(dialog).toHaveTextContent('重抓 2026/09/08 的哪个来源？')
     await userEvent.click(within(dialog).getByRole('radio', { name: 'GitHub Trending' }))
     await userEvent.click(within(dialog).getByRole('button', { name: '重抓 GitHub Trending' }))
 
@@ -150,12 +152,78 @@ describe('Admin/Issues/Index', () => {
   it('日刊行的理由格与整期重生成', async () => {
     show({ rows: [adminIssueRow({ reasons: adminIssueReasons({ missing: 3 }) }), adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons() })] })
     const rows = screen.getAllByRole('row')
-    // 缺 N 条是反白小签（设计 §6.2）：文字在墨色块里，Mixed 会把中文与数字切成几段，按 textContent 断言
+    // Mixed 会把中文与数字切成几段，按完整状态文案断言。
     expect(reasonChip(rows[1])?.textContent).toBe('缺 3 条')
     expect(within(rows[2]).getAllByRole('cell')[5]).toHaveTextContent('已有理由 30 条')
     expect(reasonChip(rows[2])).toBeNull()
     await userEvent.click(within(rows[1]).getByRole('button', { name: '重生成理由' }))
     expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/reasons', {}, expect.any(Object))
+  })
+
+  it('理由从排队到运行持续刷新，完成后停止轮询并恢复操作', () => {
+    vi.useFakeTimers()
+    const reason = { ...adminIssueReasons(), label: '缺 3 条', missing: 3, ready: true }
+    const queued = { status: 'queued' as const, active: true, label: '已排队', detail: '等待模型任务开始', error: null }
+    const { rerender, props } = show({ rows: [adminIssueRow({ reasons: { ...reason, progress: queued } })] })
+
+    expect(screen.getByText('已排队')).toBeVisible()
+    expect(screen.getByText('等待模型任务开始')).toBeVisible()
+    expect(screen.getByRole('button', { name: '理由排队中…' })).toBeDisabled()
+    act(() => vi.advanceTimersByTime(5000))
+    expect(router.reload).toHaveBeenCalledTimes(1)
+    expect(router.reload.mock.calls[0][0].only).toContain('rows')
+
+    rerender(<Index {...props} rows={[adminIssueRow({ reasons: { ...reason, progress: { ...queued, status: 'running', label: '生成中', detail: '已处理 7 / 27 条' } } })]} />)
+    expect(screen.getByRole('button', { name: '理由生成中…' })).toBeDisabled()
+    expect(screen.getByText('已处理 7 / 27 条')).toBeVisible()
+    act(() => vi.advanceTimersByTime(5000))
+    expect(router.reload).toHaveBeenCalledTimes(2)
+
+    rerender(<Index {...props} rows={[adminIssueRow({ reasons: { ...adminIssueReasons(), label: '已生成', missing: 0, ready: true, progress: { status: 'completed', active: false, label: '已完成', detail: '已生成 27 条', error: null } } })]} />)
+    expect(screen.getByText('已完成')).toBeVisible()
+    expect(screen.getByRole('button', { name: '重生成理由' })).toBeEnabled()
+    act(() => vi.advanceTimersByTime(10000))
+    expect(router.reload).toHaveBeenCalledTimes(2)
+  })
+
+  it('理由与抓取同时运行只开一组轮询，抓取结束后理由继续刷新', () => {
+    vi.useFakeTimers()
+    const rows = [adminIssueRow({ reasons: { ...adminIssueReasons(), label: '缺 3 条', missing: 3, ready: true, progress: { status: 'running', active: true, label: '生成中', detail: '已处理 7 / 27 条', error: null } } })]
+    const { rerender, props } = show({ rows, active_runs: [{ id: 'r1', source_name: 'Hacker News', period_key: '2026-09-08' }] })
+    act(() => vi.advanceTimersByTime(5000))
+    expect(router.reload).toHaveBeenCalledTimes(1)
+    rerender(<Index {...props} active_runs={[]} />)
+    act(() => vi.advanceTimersByTime(5000))
+    expect(router.reload).toHaveBeenCalledTimes(2)
+  })
+
+  it('失败结果保留具体原因，旧理由齐全也进入待处理筛选', () => {
+    vi.useFakeTimers()
+    const progress = { status: 'running' as const, active: true, label: '生成中', detail: '已处理 7 / 27 条', error: null }
+    const reason = { ...adminIssueReasons(), label: '已生成', missing: 0, ready: true }
+    const { rerender, props } = show({ rows: [adminIssueRow({ reasons: { ...reason, progress } })] })
+    fireEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
+    expect(screen.getByRole('button', { name: '理由生成中…' })).toBeInTheDocument()
+    rerender(<Index {...props} rows={[adminIssueRow({ reasons: { ...reason, progress: { status: 'failed', active: false, label: '生成失败', detail: '本次生成 0 条，原理由已保留', error: '模型连接超时' } } })]} />)
+
+    expect(screen.getByText('生成失败')).toBeVisible()
+    expect(screen.getByText('模型连接超时')).toBeVisible()
+    expect(screen.getByText('本次生成 0 条，原理由已保留')).toBeVisible()
+    expect(screen.getByRole('button', { name: '重生成理由' })).toBeEnabled()
+    act(() => vi.advanceTimersByTime(5000))
+    expect(router.reload).not.toHaveBeenCalled()
+  })
+
+  it('部分失败即使没有缺理由也属于待处理，已完成不属于', () => {
+    const reason = { ...adminIssueReasons(), label: '已生成', missing: 0, ready: true }
+    show({ rows: [
+      adminIssueRow({ reasons: { ...reason, progress: { status: 'partial', active: false, label: '部分失败', detail: '成功 24 条，失败 3 条', error: '模型响应不完整' } } }),
+      adminIssueRow({ period_key: '2026-09-07', reasons: { ...reason, progress: { status: 'completed', active: false, label: '已完成', detail: '已生成 27 条', error: null } } }),
+    ] })
+    fireEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
+    expect(screen.getByText('部分失败')).toBeVisible()
+    expect(screen.queryByText('已完成')).toBeNull()
+    expect(screen.getAllByRole('button', { name: '重生成理由' })).toHaveLength(1)
   })
 
   it('生成不了时理由格写明、按钮禁用（看 ready 不看文案）；周刊行没有理由格', () => {
@@ -194,8 +262,8 @@ describe('Admin/Issues/Index', () => {
       adminIssueRow({ period_key: '2026-09-07', reasons: adminIssueReasons({ missing: 1 }) }),
     ] })
     await userEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
-    expect(screen.queryByText('2026-09-08')).toBeNull()
-    expect(screen.getByText('2026-09-07')).toBeInTheDocument()
+    expect(screen.queryByText('2026/09/08')).toBeNull()
+    expect(screen.getByText('2026/09/07')).toBeInTheDocument()
   })
 
   it('只有保留原文仍能进入重评，零目标不能确认，画像为空不影响翻译', async () => {
@@ -241,8 +309,8 @@ describe('Admin/Issues/Index', () => {
       adminIssueRow({ period_key: '2026-09-07', translations: { pending: 0, preserved: 2, ready: true, unready_label: null } }),
     ] })
     await userEvent.click(screen.getByRole('checkbox', { name: '待处理' }))
-    expect(screen.getByText('2026-09-08')).toBeInTheDocument()
-    expect(screen.queryByText('2026-09-07')).toBeNull()
+    expect(screen.getByText('2026/09/08')).toBeInTheDocument()
+    expect(screen.queryByText('2026/09/07')).toBeNull()
     const opener = screen.getByRole('button', { name: '补齐译文' })
     await userEvent.click(opener)
     const dialog = screen.getByRole('dialog')

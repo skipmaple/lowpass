@@ -26,6 +26,8 @@ export default defineConfig({
     include: ['radix-ui'],
   },
   build: {
+    // Keep unicode font shards as cacheable files, including tiny rare-character shards.
+    assetsInlineLimit: 0,
     // vite-plugin-ruby 默认开 sourcemap；生产构建不需要，关掉减小 public/vite 体积。
     sourcemap: false,
   },

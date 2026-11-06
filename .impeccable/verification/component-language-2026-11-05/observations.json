@@ -1,0 +1,4499 @@
+[
+  {
+    "theme": "daybreak",
+    "width": 1440,
+    "search": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 1136,
+        "font": "24px / 36px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "搜索",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 72,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "全部",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "日刊",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "周刊",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "chip-outline",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 98.546875,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "searchFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 1136,
+        "font": "24px / 36px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "themeMenu": [
+      {
+        "text": "阅读主题A层叠清晨明亮色面 · 温润圆黑B双声部黑白对读 · 编辑宋体C展开阅读深色平面 · 清晰荧黑",
+        "tag": "DIV",
+        "cls": "theme-menu-panel",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 293.59375,
+        "width": 300,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "A层叠清晨明亮色面 · 温润圆黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(0, 95, 101)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(238, 232, 214)",
+        "color": "rgb(32, 62, 48)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "B双声部黑白对读 · 编辑宋体",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "C展开阅读深色平面 · 清晰荧黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "accountMenu": [
+      {
+        "text": "drew@example.com账户信息收藏管理登出",
+        "tag": "DIV",
+        "cls": "menu-card",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 231.390625,
+        "width": 220,
+        "font": "14px / 22.4px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.14s cubic-bezier(0.2, 0.7, 0.2, 1) lp-unfold",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "账户信息",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "收藏",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "管理",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "登出",
+        "tag": "BUTTON",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "form": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(252, 250, 242)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 110,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 122.140625,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "GitHub Trending",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 144.734375,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "RSS/Atom",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 103.40625,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "阮一峰周刊",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 105,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 760,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "fieldFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 760,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input field-input-cjk",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 320,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "returnHover": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(198, 159, 71)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(198, 159, 71)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 110,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)"
+        }
+      }
+    ],
+    "dialog": [
+      {
+        "text": "注销后无法恢复。确认注销这个账号？drew@example.com取消确认注销",
+        "tag": "DIV",
+        "cls": "dialog",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 199.796875,
+        "width": 480,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.22s cubic-bezier(0.2, 0.7, 0.2, 1) lp-settle",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialogFocus": [
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "blocked": []
+  },
+  {
+    "theme": "daybreak",
+    "width": 390,
+    "search": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 230,
+        "font": "20px / 30px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "搜索",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "相关度",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 75,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "时间",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "searchFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 230,
+        "font": "20px / 30px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "themeMenu": [
+      {
+        "text": "阅读主题A层叠清晨明亮色面 · 温润圆黑B双声部黑白对读 · 编辑宋体C展开阅读深色平面 · 清晰荧黑",
+        "tag": "DIV",
+        "cls": "theme-menu-panel",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 293.59375,
+        "width": 300,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "A层叠清晨明亮色面 · 温润圆黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(0, 95, 101)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(238, 232, 214)",
+        "color": "rgb(32, 62, 48)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "B双声部黑白对读 · 编辑宋体",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "C展开阅读深色平面 · 清晰荧黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "accountMenu": [
+      {
+        "text": "drew@example.com账户信息收藏管理登出",
+        "tag": "DIV",
+        "cls": "menu-card",
+        "radius": "0px",
+        "border": "1px solid rgb(213, 217, 204)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 231.390625,
+        "width": 220,
+        "font": "14px / 22.4px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.14s cubic-bezier(0.2, 0.7, 0.2, 1) lp-unfold",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "账户信息",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "收藏",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "管理",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "登出",
+        "tag": "BUTTON",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "form": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(252, 250, 242)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 98,
+        "font": "13px / 20.8px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 122.140625,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "GitHub Trending",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 144.734375,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "RSS/Atom",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 103.40625,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "阮一峰周刊",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 105,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "fieldFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input field-input-cjk",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 350,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialog": [
+      {
+        "text": "注销后无法恢复。确认注销这个账号？drew@example.com取消确认注销",
+        "tag": "DIV",
+        "cls": "dialog",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 250, 242)",
+        "color": "rgb(32, 62, 48)",
+        "height": 231.796875,
+        "width": 342,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.22s cubic-bezier(0.2, 0.7, 0.2, 1) lp-settle",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialogFocus": [
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(32, 62, 48)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(32, 62, 48)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(32, 62, 48)",
+        "color": "rgb(252, 250, 242)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "blocked": []
+  },
+  {
+    "theme": "duet",
+    "width": 1440,
+    "search": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 1152,
+        "font": "24px / 36px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "搜索",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 72,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "全部",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "日刊",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "周刊",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "chip-outline",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 88.5625,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "searchFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 1152,
+        "font": "24px / 36px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "themeMenu": [
+      {
+        "text": "阅读主题A层叠清晨明亮色面 · 温润圆黑B双声部黑白对读 · 编辑宋体C展开阅读深色平面 · 清晰荧黑",
+        "tag": "DIV",
+        "cls": "theme-menu-panel",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 252, 250)",
+        "color": "rgb(22, 22, 22)",
+        "height": 293.59375,
+        "width": 300,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "A层叠清晨明亮色面 · 温润圆黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "B双声部黑白对读 · 编辑宋体",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(241, 241, 237)",
+        "color": "rgb(22, 22, 22)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "C展开阅读深色平面 · 清晰荧黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "accountMenu": [
+      {
+        "text": "drew@example.com账户信息收藏管理登出",
+        "tag": "DIV",
+        "cls": "menu-card",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 252, 250)",
+        "color": "rgb(22, 22, 22)",
+        "height": 231.390625,
+        "width": 220,
+        "font": "14px / 22.4px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "0.14s cubic-bezier(0.2, 0.7, 0.2, 1) lp-unfold",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "账户信息",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "收藏",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "管理",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "登出",
+        "tag": "BUTTON",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "form": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 110,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 111.515625,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "GitHub Trending",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 137.203125,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "RSS/Atom",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 95.78125,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "阮一峰周刊",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 105,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 760,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "fieldFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 760,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input field-input-cjk",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 320,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "returnHover": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 110,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)"
+        }
+      }
+    ],
+    "dialog": [
+      {
+        "text": "注销后无法恢复。确认注销这个账号？drew@example.com取消确认注销",
+        "tag": "DIV",
+        "cls": "dialog",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 252, 250)",
+        "color": "rgb(22, 22, 22)",
+        "height": 199.79690551757812,
+        "width": 480,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "0.22s cubic-bezier(0.2, 0.7, 0.2, 1) lp-settle",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialogFocus": [
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "blocked": []
+  },
+  {
+    "theme": "duet",
+    "width": 390,
+    "search": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 230,
+        "font": "20px / 30px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "搜索",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "相关度",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 75,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "时间",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "searchFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 230,
+        "font": "20px / 30px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "themeMenu": [
+      {
+        "text": "阅读主题A层叠清晨明亮色面 · 温润圆黑B双声部黑白对读 · 编辑宋体C展开阅读深色平面 · 清晰荧黑",
+        "tag": "DIV",
+        "cls": "theme-menu-panel",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 252, 250)",
+        "color": "rgb(22, 22, 22)",
+        "height": 293.59375,
+        "width": 300,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "A层叠清晨明亮色面 · 温润圆黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "B双声部黑白对读 · 编辑宋体",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(241, 241, 237)",
+        "color": "rgb(22, 22, 22)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "C展开阅读深色平面 · 清晰荧黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "accountMenu": [
+      {
+        "text": "drew@example.com账户信息收藏管理登出",
+        "tag": "DIV",
+        "cls": "menu-card",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 252, 250)",
+        "color": "rgb(22, 22, 22)",
+        "height": 231.390625,
+        "width": 220,
+        "font": "14px / 22.4px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "0.14s cubic-bezier(0.2, 0.7, 0.2, 1) lp-unfold",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "账户信息",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "收藏",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "管理",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "登出",
+        "tag": "BUTTON",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "form": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 98,
+        "font": "13px / 20.8px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 111.515625,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "GitHub Trending",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 137.203125,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "RSS/Atom",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 95.78125,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "阮一峰周刊",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 105,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "fieldFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input field-input-cjk",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 350,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialog": [
+      {
+        "text": "注销后无法恢复。确认注销这个账号？drew@example.com取消确认注销",
+        "tag": "DIV",
+        "cls": "dialog",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(252, 252, 250)",
+        "color": "rgb(22, 22, 22)",
+        "height": 231.79690551757812,
+        "width": 342,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "0.22s cubic-bezier(0.2, 0.7, 0.2, 1) lp-settle",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialogFocus": [
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(22, 22, 22)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "blocked": []
+  },
+  {
+    "theme": "unfold",
+    "width": 1440,
+    "search": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 992,
+        "font": "24px / 36px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "搜索",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 72,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "全部",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "日刊",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "周刊",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "chip-outline",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 95.53125,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "searchFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 992,
+        "font": "24px / 36px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "themeMenu": [
+      {
+        "text": "阅读主题A层叠清晨明亮色面 · 温润圆黑B双声部黑白对读 · 编辑宋体C展开阅读深色平面 · 清晰荧黑",
+        "tag": "DIV",
+        "cls": "theme-menu-panel",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(17, 21, 21)",
+        "color": "rgb(236, 237, 231)",
+        "height": 293.59375,
+        "width": 300,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "A层叠清晨明亮色面 · 温润圆黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "B双声部黑白对读 · 编辑宋体",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "C展开阅读深色平面 · 清晰荧黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(208, 183, 117)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(35, 41, 42)",
+        "color": "rgb(236, 237, 231)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "accountMenu": [
+      {
+        "text": "drew@example.com账户信息收藏管理登出",
+        "tag": "DIV",
+        "cls": "menu-card",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(17, 21, 21)",
+        "color": "rgb(236, 237, 231)",
+        "height": 231.390625,
+        "width": 220,
+        "font": "14px / 22.4px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.14s cubic-bezier(0.2, 0.7, 0.2, 1) lp-unfold",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "账户信息",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "收藏",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "管理",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "登出",
+        "tag": "BUTTON",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "form": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 110,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 122.140625,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "GitHub Trending",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 144.734375,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "RSS/Atom",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 103.40625,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "阮一峰周刊",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 105,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 760,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "fieldFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 760,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input field-input-cjk",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 320,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "returnHover": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 110,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)"
+        }
+      }
+    ],
+    "dialog": [
+      {
+        "text": "注销后无法恢复。确认注销这个账号？drew@example.com取消确认注销",
+        "tag": "DIV",
+        "cls": "dialog",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(17, 21, 21)",
+        "color": "rgb(236, 237, 231)",
+        "height": 199.796875,
+        "width": 480,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.22s cubic-bezier(0.2, 0.7, 0.2, 1) lp-settle",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialogFocus": [
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "blocked": []
+  },
+  {
+    "theme": "unfold",
+    "width": 390,
+    "search": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 230,
+        "font": "20px / 30px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "搜索",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "相关度",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 75,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "时间",
+        "tag": "A",
+        "cls": "seg-item",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "searchFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "search-input",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "-2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 230,
+        "font": "20px / 30px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "themeMenu": [
+      {
+        "text": "阅读主题A层叠清晨明亮色面 · 温润圆黑B双声部黑白对读 · 编辑宋体C展开阅读深色平面 · 清晰荧黑",
+        "tag": "DIV",
+        "cls": "theme-menu-panel",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(17, 21, 21)",
+        "color": "rgb(236, 237, 231)",
+        "height": 293.59375,
+        "width": 300,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "A层叠清晨明亮色面 · 温润圆黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "B双声部黑白对读 · 编辑宋体",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "C展开阅读深色平面 · 清晰荧黑",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "1px solid rgb(208, 183, 117)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(35, 41, 42)",
+        "color": "rgb(236, 237, 231)",
+        "height": 66,
+        "width": 258,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "accountMenu": [
+      {
+        "text": "drew@example.com账户信息收藏管理登出",
+        "tag": "DIV",
+        "cls": "menu-card",
+        "radius": "0px",
+        "border": "1px solid rgb(70, 80, 76)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(17, 21, 21)",
+        "color": "rgb(236, 237, 231)",
+        "height": 231.390625,
+        "width": 220,
+        "font": "14px / 22.4px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.14s cubic-bezier(0.2, 0.7, 0.2, 1) lp-unfold",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "账户信息",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "收藏",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "管理",
+        "tag": "A",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "登出",
+        "tag": "BUTTON",
+        "cls": "menu-item",
+        "radius": "0px",
+        "border": "0px none rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 218,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear, color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "form": [
+      {
+        "text": "返回列表",
+        "tag": "A",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 98,
+        "font": "13px / 20.8px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "Hacker News",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 122.140625,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "GitHub Trending",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 144.734375,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "RSS/Atom",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 103.40625,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "阮一峰周刊",
+        "tag": "BUTTON",
+        "cls": "seg-item seg-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 105,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "text-decoration-color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "fieldFocus": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input field-input-cjk",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 350,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 350,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 160,
+        "font": "13px / 20.8px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialog": [
+      {
+        "text": "注销后无法恢复。确认注销这个账号？drew@example.com取消确认注销",
+        "tag": "DIV",
+        "cls": "dialog",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(17, 21, 21)",
+        "color": "rgb(236, 237, 231)",
+        "height": 231.796875,
+        "width": 342,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "0.22s cubic-bezier(0.2, 0.7, 0.2, 1) lp-settle",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "dialogFocus": [
+      {
+        "text": "取消",
+        "tag": "BUTTON",
+        "cls": "ctrl",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 60,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "color 0.14s linear",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgb(236, 237, 231)",
+          "transform": "matrix(1, 0, 0, 0, 0, 0)"
+        }
+      },
+      {
+        "text": "确认注销",
+        "tag": "BUTTON",
+        "cls": "btn-primary",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 44,
+        "width": 94,
+        "font": "15px / 24px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ],
+    "blocked": []
+  },
+  {
+    "theme": "daybreak",
+    "width": 1440,
+    "login": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(126, 152, 141)",
+        "outline": "rgb(32, 62, 48) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 48,
+        "width": 448,
+        "font": "16px / 25.6px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(126, 152, 141)",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 48,
+        "width": 448,
+        "font": "16px / 25.6px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "开发登录",
+        "tag": "BUTTON",
+        "cls": "login-button",
+        "radius": "0px",
+        "border": "1px solid rgb(0, 95, 101)",
+        "outline": "rgb(252, 250, 242) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(0, 95, 101)",
+        "color": "rgb(252, 250, 242)",
+        "height": 48.5,
+        "width": 448,
+        "font": "600 15px / 22.5px \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "background-color 0.14s, color 0.14s",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "层叠清晨",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "双声部",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "展开阅读",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(32, 62, 48) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(32, 62, 48)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin A\", \"Lowpass Chinese A\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 1440,
+    "login": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 48,
+        "width": 448,
+        "font": "16px / 25.6px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(119, 119, 114)",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 48,
+        "width": 448,
+        "font": "16px / 25.6px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "开发登录",
+        "tag": "BUTTON",
+        "cls": "login-button",
+        "radius": "0px",
+        "border": "1px solid rgb(22, 22, 22)",
+        "outline": "rgb(252, 252, 250) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(22, 22, 22)",
+        "color": "rgb(252, 252, 250)",
+        "height": 48.5,
+        "width": 448,
+        "font": "600 15px / 22.5px \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "background-color 0.14s, color 0.14s",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "层叠清晨",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "双声部",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "展开阅读",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(22, 22, 22) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(22, 22, 22)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin B\", \"Lowpass Chinese B\", \"Songti SC\", serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 1440,
+    "login": [
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(138, 151, 144)",
+        "outline": "rgb(236, 237, 231) solid 2px",
+        "outlineOffset": "2px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 48,
+        "width": 448,
+        "font": "16px / 25.6px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": true,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "",
+        "tag": "INPUT",
+        "cls": "field-input",
+        "radius": "0px",
+        "border": "1px solid rgb(138, 151, 144)",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 48,
+        "width": 448,
+        "font": "16px / 25.6px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "开发登录",
+        "tag": "BUTTON",
+        "cls": "login-button",
+        "radius": "0px",
+        "border": "1px solid rgb(236, 237, 231)",
+        "outline": "rgb(17, 21, 21) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgb(236, 237, 231)",
+        "color": "rgb(17, 21, 21)",
+        "height": 48.5,
+        "width": 448,
+        "font": "600 15px / 22.5px \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "background-color 0.14s, color 0.14s",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "层叠清晨",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "双声部",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      },
+      {
+        "text": "展开阅读",
+        "tag": "LABEL",
+        "cls": "theme-choice",
+        "radius": "0px",
+        "border": "",
+        "outline": "rgb(236, 237, 231) none 3px",
+        "outlineOffset": "0px",
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(236, 237, 231)",
+        "height": 44,
+        "width": 144,
+        "font": "15px / 24px \"Lowpass Latin C\", \"Lowpass Chinese C\", \"PingFang SC\", sans-serif",
+        "transition": "all",
+        "animation": "none",
+        "focus": false,
+        "before": {
+          "bg": "rgba(0, 0, 0, 0)",
+          "transform": "none"
+        }
+      }
+    ]
+  }
+]

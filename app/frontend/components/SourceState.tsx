@@ -1,11 +1,8 @@
-import { Sunrise } from '@/components/Illustration'
+import Icon from '@/components/Icon'
 import { Mixed } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
-// 栏级状态：一句事实 + 一个时间（设计 skill「状态」）。说「本期」不说「今日」：往期页面上也是这几句。
-// 抓取失败留一幅 130×69 的低通日出加上次成功时间；无新内容只有一句。
-// 生成中不在这里说话——期头的标签已经写着「生成中，约 1 分钟后刷新」。
-// 画布：docs/design/src/pages_front3.py 的 failure_box() 与 message()。
+// 空来源与抓取失败是不同事实；同一文字适配三套主题，不用装饰图替代状态。
 
 export type SourceStateProps = {
   state: SourceSummary['state']
@@ -16,7 +13,7 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
   if (state === 'failed') {
     return (
       <div className="source-state source-state-failed">
-        <Sunrise className="source-state-art" />
+        <Icon name="triangle-alert" size={18} color="currentColor" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span className="state-line">本期抓取失败，已通知管理员</span>
           {lastOkLabel ? <Mixed text={`上次成功 ${lastOkLabel}`} /> : null}
@@ -28,7 +25,7 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
   if (state === 'empty') {
     return (
       <div className="source-state">
-        <span className="state-line">本期无新内容</span>
+        <span className="state-line">本期未收录</span>
       </div>
     )
   }
@@ -42,6 +39,6 @@ export default function SourceState({ state, lastOkLabel }: SourceStateProps) {
     )
   }
 
-  // 这一栏还在抓（期头写着「生成中，约 1 分钟后刷新」）：留一段空白，不再说第二遍
-  return <div className="source-state-pending" />
+  // 连续阅读中，这个来源的等待状态独立可见。
+  return <div className="source-state source-state-pending"><span className="state-line">正在收录</span></div>
 }

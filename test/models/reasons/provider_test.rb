@@ -78,6 +78,93 @@ class Reasons::ProviderTest < ActiveSupport::TestCase
     end
   end
 
+  test "显式开启的开发本机模式兼容文本响应，为推理留出输出额度和读取时间" do
+    Rails.env.stubs(:development?).returns(true)
+    previous = ENV["MODEL_LOCAL_COMPAT"]
+    ENV["MODEL_LOCAL_COMPAT"] = "1"
+    with_model_provider(base_url: "http://localhost:1236/v1") do
+      body = nil
+      stub = stub_request(:post, "http://localhost:1236/v1/chat/completions").with do |request|
+        body = JSON.parse(request.body)
+        true
+      end.to_return(status: 200, body: model_reply(reason: "r", interest_tag: "t"))
+      Net::HTTP.any_instance.expects(:read_timeout=).with(300)
+      Timeout.expects(:timeout).with(300, Reasons::Provider::TimedOut, "模型请求超过截止时间").yields
+
+      Reasons::Provider.chat([], max_tokens: 600)
+
+      assert_requested stub
+      assert_equal({ "type" => "text" }, body["response_format"])
+      assert_equal 8192, body["max_tokens"]
+    end
+  ensure
+    ENV["MODEL_LOCAL_COMPAT"] = previous
+  end
+
+  test "本机兼容开关不改变生产环境、远程端点或未启用的开发调用" do
+    previous = ENV["MODEL_LOCAL_COMPAT"]
+    [ [ false, "1", "http://localhost:1236/v1" ],
+      [ true, "1", "https://model.example/v1" ],
+      [ true, nil, "http://127.0.0.1:1236/v1" ] ].each do |development, enabled, url|
+      Rails.env.stubs(:development?).returns(development)
+      ENV["MODEL_LOCAL_COMPAT"] = enabled
+      with_model_provider(base_url: url) do
+        body = nil
+        stub = stub_request(:post, "#{url}/chat/completions").with do |request|
+          body = JSON.parse(request.body)
+          true
+        end.to_return(status: 200, body: model_reply(reason: "r", interest_tag: "t"))
+        Net::HTTP.any_instance.expects(:read_timeout=).with(20)
+
+        Reasons::Provider.chat([], max_tokens: 320)
+
+        assert_requested stub
+        assert_equal({ "type" => "json_object" }, body["response_format"])
+        assert_equal 320, body["max_tokens"]
+      end
+    end
+  ensure
+    ENV["MODEL_LOCAL_COMPAT"] = previous
+  end
+
+  test "不把思考字段当成最终内容保存" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200,
+        body: { choices: [ { message: { content: "", reasoning_content: '{"reason":"r","interest_tag":"t"}' } } ] }.to_json)
+      assert_equal "模型没有返回内容", assert_raises(Reasons::Provider::Error) { Reasons::Provider.chat([]) }.message
+    end
+  end
+
+  test "输出额度耗尽是不可接纳的截断响应，保留全部 usage 而不读取思考作为答案" do
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: {
+        choices: [ { finish_reason: "length", message: { content: "", reasoning_content: "只供模型内部推理" } } ],
+        usage: { prompt_tokens: 456, completion_tokens: 2047, completion_tokens_details: { reasoning_tokens: 2047 } }
+      }.to_json)
+
+      error = assert_raises(Reasons::Provider::Incomplete) { Reasons::Provider.chat([]) }
+
+      assert_equal "模型输出达到长度上限，未生成完整回复", error.message
+      assert_equal 456, error.prompt_tokens
+      assert_equal 2047, error.completion_tokens
+      assert_not_includes error.message, "只供模型内部推理"
+    end
+  end
+
+  test "截断标记优先于内容，即使 JSON 完整也不能当成功响应" do
+    with_model_provider do
+      reply = JSON.parse(model_reply(reason: "这条理由看起来完整但响应被明确标记为长度截断，不能存入条目。", interest_tag: "AI / LLM"))
+      reply["choices"].first["finish_reason"] = "length"
+      reply.delete("usage")
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: reply.to_json)
+
+      error = assert_raises(Reasons::Provider::Incomplete) { Reasons::Provider.chat([]) }
+
+      assert_equal 0, error.prompt_tokens
+      assert_equal 0, error.completion_tokens
+    end
+  end
+
   test "响应体超过 64 KB：边读边截，读到上限就抛" do
     with_model_provider do
       stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: "x" * 100 * 1024)

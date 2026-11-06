@@ -11,7 +11,7 @@ class WeeklyTypographyTest < ApplicationSystemTestCase
       content: "#{text}\n\n第二段保留完整的中文与 English 内容。", meta: { issue_no: 366, issue_title: "阅读与思考" })
     sign_in_with_browser(users(:drew))
 
-    [ [ 320, 16 ], [ 375, 16 ], [ 1440, 18 ], [ 1920, 18 ] ].each do |width, size|
+    [ [ 320, 17 ], [ 375, 17 ], [ 1440, 18 ], [ 1920, 18 ] ].each do |width, size|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       visit weekly_issue_path("2026-W36")
       paragraph = find("#item-#{item.id} .item-content--weekly p", match: :first)

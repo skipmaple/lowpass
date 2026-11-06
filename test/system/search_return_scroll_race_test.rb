@@ -17,43 +17,47 @@ class SearchReturnScrollRaceTest < ApplicationSystemTestCase
     end
   end
 
-  test "搜索返回的恢复帧延迟时仍保留第十三条阅读位置" do
-    entries = (1..16).map do |rank|
-      Adapters::Entry.new(title: "historyfocus result #{rank}", url: "https://r.example/#{rank}", section: "工具", rank: rank,
-                         meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" })
+  %w[ daybreak duet unfold ].each do |theme|
+    test "#{theme} 搜索返回的恢复帧延迟时仍保留第十三条阅读位置" do
+      entries = (1..16).map do |rank|
+        Adapters::Entry.new(title: "historyfocus result #{rank}", url: "https://r.example/#{rank}", section: "工具", rank: rank,
+                           meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" })
+      end
+      issues(:weekly_w36).replace_section!(sources(:ruanyf), entries, issue_no: 366)
+      @frame_gate_identifier = page.driver.browser.execute_cdp("Page.addScriptToEvaluateOnNewDocument", source: delayed_search_return_frames).fetch("identifier")
+
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      visit search_path(q: "historyfocus")
+      assert_selector "html[data-theme='#{theme}']", visible: :all
+      assert_text "16 条结果"
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      target = all(".record-issue-link")[12]
+      execute_script("arguments[0].scrollIntoView({ block: 'center' }); arguments[0].focus({ preventScroll: true })", target)
+      reading_position = evaluate_script("scrollY")
+      assert_operator reading_position, :>, 500
+      wait_until { evaluate_script("history.state.documentScrollPosition?.top") == reading_position }
+
+      # 用真实周刊滚动触发原生 Back，不让 WebDriver 往返耗掉旧记录的100ms窗口。
+      execute_script("window.__searchReturnRace.backOnWeeklyScroll = true")
+      target.send_keys(:enter)
+      wait_until { evaluate_script("window.__searchReturnRace.released") }
+      assert_current_path search_path(q: "historyfocus")
+      assert_selector ".search-row:nth-child(13) .record-issue-link:focus"
+      evaluate_async_script("requestAnimationFrame(() => requestAnimationFrame(arguments[0]))")
+
+      gate = evaluate_script("window.__searchReturnRace")
+      assert_equal reading_position, gate.fetch("eventTop"), "原生 Back 必须带回原阅读快照：#{gate.inspect}"
+      assert_operator gate.fetch("queued"), :>, 0, "框架恢复帧必须真正经历延迟：#{gate.inspect}"
+      assert gate.fetch("weeklySeen"), "必须经过真实周刊组件与滚动：#{gate.inspect}"
+      assert_equal "pollution-observed", gate.fetch("releaseReason"), "只有实际旧任务覆盖后才释放恢复帧：#{gate.inspect}"
+      refute_equal reading_position, gate.fetch("beforeReleaseTop"), "恢复前必须实际观察到旧滚动任务覆盖快照：#{gate.inspect}"
+      assert_in_delta gate.fetch("yBeforeRelease"), gate.fetch("beforeReleaseTop"), 2
+      assert_in_delta reading_position, evaluate_script("scrollY"), 2, "延迟后仍应恢复第十三条的原阅读位置：#{gate.inspect}"
+      assert_equal reading_position, evaluate_script("history.state.documentScrollPosition?.top")
+    ensure
+      trace = evaluate_script("window.__searchReturnRace ? { gate: window.__searchReturnRace, events: window.__searchReturnRaceEvents } : null")
+      puts "SEARCH_RETURN_SCROLL_RACE #{JSON.generate(trace)}"
     end
-    issues(:weekly_w36).replace_section!(sources(:ruanyf), entries, issue_no: 366)
-    @frame_gate_identifier = page.driver.browser.execute_cdp("Page.addScriptToEvaluateOnNewDocument", source: delayed_search_return_frames).fetch("identifier")
-
-    visit search_path(q: "historyfocus")
-    assert_text "16 条结果"
-    evaluate_async_script("document.fonts.ready.then(arguments[0])")
-    target = all(".search-links > a:first-child")[12]
-    execute_script("arguments[0].scrollIntoView({ block: 'center' }); arguments[0].focus({ preventScroll: true })", target)
-    reading_position = evaluate_script("scrollY")
-    assert_operator reading_position, :>, 500
-    wait_until { evaluate_script("history.state.documentScrollPosition?.top") == reading_position }
-
-    # 用真实周刊滚动触发原生 Back，不让 WebDriver 往返耗掉旧记录的100ms窗口。
-    execute_script("window.__searchReturnRace.backOnWeeklyScroll = true")
-    target.send_keys(:enter)
-    wait_until { evaluate_script("window.__searchReturnRace.released") }
-    assert_current_path search_path(q: "historyfocus")
-    assert_selector ".search-row:nth-child(13) .search-links > a:first-child:focus"
-    evaluate_async_script("requestAnimationFrame(() => requestAnimationFrame(arguments[0]))")
-
-    gate = evaluate_script("window.__searchReturnRace")
-    assert_equal reading_position, gate.fetch("eventTop"), "原生 Back 必须带回原阅读快照：#{gate.inspect}"
-    assert_operator gate.fetch("queued"), :>, 0, "框架恢复帧必须真正经历延迟：#{gate.inspect}"
-    assert gate.fetch("weeklySeen"), "必须经过真实周刊组件与滚动：#{gate.inspect}"
-    assert_equal "pollution-observed", gate.fetch("releaseReason"), "只有实际旧任务覆盖后才释放恢复帧：#{gate.inspect}"
-    refute_equal reading_position, gate.fetch("beforeReleaseTop"), "恢复前必须实际观察到旧滚动任务覆盖快照：#{gate.inspect}"
-    assert_in_delta gate.fetch("yBeforeRelease"), gate.fetch("beforeReleaseTop"), 2
-    assert_in_delta reading_position, evaluate_script("scrollY"), 2, "延迟后仍应恢复第十三条的原阅读位置：#{gate.inspect}"
-    assert_equal reading_position, evaluate_script("history.state.documentScrollPosition?.top")
-  ensure
-    trace = evaluate_script("window.__searchReturnRace ? { gate: window.__searchReturnRace, events: window.__searchReturnRaceEvents } : null")
-    puts "SEARCH_RETURN_SCROLL_RACE #{JSON.generate(trace)}"
   end
 
   private

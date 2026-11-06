@@ -1,5 +1,6 @@
 import Icon from '@/components/Icon'
-import PageHead from '@/components/PageHead'
+import { Head } from '@inertiajs/react'
+import IssueDate from '@/components/IssueDate'
 import { Mixed } from '@/lib/typeset'
 import type { DailyIssue } from '@/types/lowpass'
 
@@ -24,22 +25,13 @@ export function StatusTag({ text }: { text: string }) {
   )
 }
 
-export default function IssueHead({ issue, archiveHref, hrefFor }: IssueHeadProps) {
+export default function IssueHead({ issue }: IssueHeadProps) {
   return (
-    <PageHead
-      big={issue.date_label}
-      title={`日刊 · ${issue.year}年${issue.date_label}`}
-      /* 年份与星期属于日期属性，合成一行；发布时间作为第二层，避免三行窄列的层级混杂。 */
-      top={<>
-        <Mixed text={`${issue.year} 年 · ${issue.weekday}`} className="issue-head-calendar" size="inherit" nowrap />
-        {issue.time_label ? <Mixed text={issue.time_label} className="issue-head-time" size="inherit" nowrap /> : null}
-      </>}
-      tag={issue.status && issue.state === 'published' ? <StatusTag text={issue.status} /> : null}
-      nav={{
-        prevHref: issue.prev_key ? hrefFor(issue.prev_key) : null,
-        nextHref: issue.next_key ? hrefFor(issue.next_key) : null,
-        archiveHref,
-      }}
-    />
+    <header className="issue-head">
+      <Head title={`日刊 · ${issue.period_key.replace(/-/g, '/')}`} />
+      <h1 className="visually-hidden">{issue.period_key.replace(/-/g, '/')} 日刊</h1>
+      <div className="issue-head-calendar-panel"><IssueDate issue={issue} /></div>
+      {issue.status && issue.state === 'published' ? <div className="issue-head-status"><StatusTag text={issue.status} /></div> : null}
+    </header>
   )
 }

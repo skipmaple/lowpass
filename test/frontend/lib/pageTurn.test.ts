@@ -269,9 +269,9 @@ describe('精确 React 提交', () => {
 
 
 describe('native 播放时钟与纸面', () => {
-  it.each([['back', 360, 'cubic-bezier(0.65, 0, 0.35, 1)'], [null, 240, 'cubic-bezier(0.2, 0.7, 0.2, 1)']] as const)('方向 %s 使用 OLD root 同一时间轴与起点', async (direction, duration, easing) => {
+  it.each([['back', 360, 'cubic-bezier(0.65, 0, 0.35, 1)'], [null, 240, 'cubic-bezier(0.2, 0.7, 0.2, 1)'], ['back', 300, 'ease-in-out'], [null, 220, 'ease-out']] as const)('方向 %s 使用 OLD root 同一时间轴、起点及主题时长 %s', async (direction, duration, easing) => {
     const timeline = { currentTime: 160 }
-    const native = { effect: { pseudoElement: '::view-transition-old(root)' }, timeline, startTime: 100 }
+    const native = { effect: { pseudoElement: '::view-transition-old(root)', getKeyframes: () => [{ easing }], getTiming: () => ({ duration, easing: 'linear', fill: 'both' }) }, timeline, startTime: 100 }
     vi.stubGlobal('KeyframeEffect', class { constructor(public target: Element, public frames: unknown, public timing: unknown) {} })
     const animations: { timeline: unknown; startTime: unknown; effect: { frames: unknown; timing: unknown }; cancel: () => void }[] = []
     vi.stubGlobal('Animation', class {
@@ -294,16 +294,23 @@ describe('native 播放时钟与纸面', () => {
     document.body.append(paper)
     vi.spyOn(paper, 'getBoundingClientRect').mockReturnValue({ left: 5, top: 9 } as DOMRect)
     vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({ left: 29, top: 90 } as DOMRect)
+    const hiddenDate = document.createElement('a'), visibleDate = document.createElement('a')
+    hiddenDate.className = visibleDate.className = 'calendar-date'
+    paper.append(hiddenDate, visibleDate)
+    vi.spyOn(visibleDate, 'getClientRects').mockReturnValue([{ left: 42, top: 70 }] as unknown as DOMRectList)
+    vi.spyOn(visibleDate, 'getBoundingClientRect').mockReturnValue({ left: 42, top: 70 } as DOMRect)
     renderHook(() => usePageTurnCommit(target, { current: surface }))
     expect(surface.style.opacity).toBe('0')
     expect(surface.style.backgroundPosition).toBe('-24px -81px')
     t.ready()
     await t.transition.ready
     expect(animations).toHaveLength(1)
+    expect(document.documentElement.style.getPropertyValue('--vt-date-x')).toBe('42px')
+    expect(document.documentElement.style.getPropertyValue('--vt-date-y')).toBe('70px')
     expect(animations[0].timeline).toBe(timeline)
     expect(animations[0].startTime).toBe(native.startTime)
-    expect(animations[0].effect.frames).toEqual([{ opacity: 0 }, { opacity: 1 }])
-    expect(animations[0].effect.timing).toEqual({ duration, easing, fill: 'both' })
+    expect(animations[0].effect.frames).toEqual([{ opacity: 0, easing }, { opacity: 1 }])
+    expect(animations[0].effect.timing).toEqual({ duration, easing: 'linear', fill: 'both' })
     t.finish()
     await t.transition.finished
     expect(surface.style.opacity).toBe('')
@@ -318,9 +325,9 @@ describe('OLD 纸面给真实新报头让出静止窗口', () => {
   it.each([104.375, -5, 10000, null])('ready 使用实际报头 bottom=%s，保留小数并限制视口，终态清理', async (bottom) => {
     vi.stubGlobal('KeyframeEffect', class {})
     vi.stubGlobal('Animation', class { startTime = null; cancel = vi.fn() })
-    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)', getKeyframes: () => [{ easing: 'ease-in-out' }], getTiming: () => ({ duration: 300, easing: 'ease-in-out', fill: 'both' }) }, timeline: {}, startTime: 10 }] })
     const header = document.createElement('header')
-    header.className = 'masthead'
+    header.className = 'site-header'
     if (bottom !== null) document.body.append(header)
     vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({ bottom } as DOMRect)
     const target = targetPage()
@@ -343,9 +350,9 @@ describe('OLD 纸面给真实新报头让出静止窗口', () => {
   it('旧 finished 晚到不清新 token 的裁剪坐标', async () => {
     vi.stubGlobal('KeyframeEffect', class {})
     vi.stubGlobal('Animation', class { startTime = null; cancel = vi.fn() })
-    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)', getKeyframes: () => [{ easing: 'ease-in-out' }], getTiming: () => ({ duration: 300, easing: 'ease-in-out', fill: 'both' }) }, timeline: {}, startTime: 10 }] })
     const header = document.createElement('header')
-    header.className = 'masthead'
+    header.className = 'site-header'
     document.body.append(header)
     const rect = vi.spyOn(header, 'getBoundingClientRect')
     const turns = [fakeTransition(), fakeTransition()]
@@ -374,7 +381,7 @@ describe('pending native 时钟核验', () => {
     let resolveNative!: () => void
     let resolveIncoming!: () => void
     const timeline = {}
-    const native = { effect: { pseudoElement: '::view-transition-old(root)' }, timeline, startTime: null as number | null, ready: new Promise<void>(resolve => { resolveNative = resolve }) }
+    const native = { effect: { pseudoElement: '::view-transition-old(root)', getKeyframes: () => [{ easing: 'ease-in-out' }], getTiming: () => ({ duration: 300, easing: 'ease-in-out', fill: 'both' }) }, timeline, startTime: null as number | null, ready: new Promise<void>(resolve => { resolveNative = resolve }) }
     vi.stubGlobal('KeyframeEffect', class {})
     const animations: { startTime: number | null; play: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> }[] = []
     vi.stubGlobal('Animation', class {
@@ -416,7 +423,7 @@ describe('可信输入收尾', () => {
     const listeners = vi.spyOn(document, 'addEventListener')
     vi.stubGlobal('KeyframeEffect', class {})
     vi.stubGlobal('Animation', class { startTime = null; cancel = vi.fn() })
-    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)', getKeyframes: () => [{ easing: 'ease-in-out' }], getTiming: () => ({ duration: 300, easing: 'ease-in-out', fill: 'both' }) }, timeline: {}, startTime: 10 }] })
     const target = targetPage()
     beforeUpdate(target)
     const t = fakeTransition()
@@ -526,7 +533,7 @@ describe('重叠、取消与拒绝', () => {
   it('原生 Animation 构造拒绝也恢复终态，并吸收 ready reaction 的异常', async () => {
     vi.stubGlobal('Animation', class {})
     vi.stubGlobal('KeyframeEffect', class { constructor() { throw new Error('unsupported effect') } })
-    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)' }, timeline: {}, startTime: 10 }] })
+    Object.defineProperty(document, 'getAnimations', { configurable: true, value: () => [{ effect: { pseudoElement: '::view-transition-old(root)', getKeyframes: () => [{ easing: 'ease-in-out' }], getTiming: () => ({ duration: 300, easing: 'ease-in-out', fill: 'both' }) }, timeline: {}, startTime: 10 }] })
     const target = targetPage()
     beforeUpdate(target)
     const t = fakeTransition()

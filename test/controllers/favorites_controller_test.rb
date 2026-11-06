@@ -13,6 +13,78 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     issues(:daily_0908).replace_section!(sources(:hn), [ Adapters::Entry.new(title: "Another", url: "https://h.example/other", rank: 1) ])
   end
 
+  test "关键词先筛全部收藏再分页，不只筛当前页" do
+    travel_to(Time.utc(2026, 9, 9)) { Favorite.keep(users(:drew), index_item("Needle framework")) }
+    21.times { |n| travel_to(Time.utc(2026, 9, 10, 0, n)) { Favorite.keep(users(:drew), index_item("Other #{n}")) } }
+
+    get favorites_path(q: "Needle")
+
+    assert_response :success
+    assert_equal [ "Needle framework" ], page_props["entries"].pluck("title")
+    assert_equal 1, page_props["total"]
+    assert_equal 1, page_props["pages"]
+    assert_equal "Needle", page_props["q"]
+  end
+
+  test "收藏搜索包含后补译文，同时保持本人和下架边界" do
+    Favorite.keep(users(:drew), @item)
+    @item.update!(title_zh: "新框架的终端查看器")
+    Favorite.keep(users(:guest), index_item("新框架 private"))
+
+    get favorites_path(q: "新框架")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+
+    @item.update!(hidden: true)
+    get favorites_path(q: "新框架")
+    assert_empty page_props["entries"]
+    assert_equal 0, page_props["total"]
+  end
+
+  test "收藏搜索只匹配仍属于快照原文的后补译文" do
+    @item.update!(summary: "Saved description")
+    Favorite.keep(users(:drew), @item)
+    @item.update!(title: "Replacement title", title_zh: "重抓后的新标题", summary_zh: "快照仍匹配的简介")
+
+    get favorites_path(q: "重抓后的新标题")
+    assert_empty page_props["entries"]
+    get favorites_path(q: "快照仍匹配的简介")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+
+    @item.update!(title: TITLE, title_zh: "快照仍匹配的标题", summary: "Replacement description", summary_zh: "重抓后的新简介")
+    get favorites_path(q: "重抓后的新简介")
+    assert_empty page_props["entries"]
+    get favorites_path(q: "快照仍匹配的标题")
+    assert_equal [ @item.url_hash ], page_props["favorites"]
+  end
+
+  test "收藏搜索把 LIKE 通配符当文字，并保留来源和越界分页条件" do
+    Favorite.keep(users(:drew), index_item("100% coverage"))
+    Favorite.keep(users(:drew), @item)
+
+    get favorites_path(q: "%", source: sources(:hn).id)
+    assert_equal [ "100% coverage" ], page_props["entries"].pluck("title")
+    assert_equal sources(:hn).id, page_props["source"]
+    assert_equal [ sources(:hn).id ], page_props["source_options"].pluck("id")
+
+    get favorites_path(q: "%", source: sources(:hn).id, page: 9)
+    assert_redirected_to favorites_path(q: "%", source: sources(:hn).id, page: 1)
+  end
+
+  test "收藏来源筛选只返回该来源，参数异常不会造成查询错误" do
+    Favorite.keep(users(:drew), @item)
+    Favorite.keep(users(:drew), index_item("astral-sh/uv", source: sources(:github)))
+
+    get favorites_path(source: sources(:github).id)
+    assert_equal [ "astral-sh/uv" ], page_props["entries"].pluck("title")
+    assert_equal 1, page_props["total"]
+
+    get favorites_path, params: { q: [ "Rust" ], source: [ sources(:github).id ] }
+    assert_response :success
+    assert_equal 2, page_props["total"]
+    assert_equal "", page_props["q"]
+    assert_equal "", page_props["source"]
+  end
+
   # ── 收藏页 ──
 
   test "没有收藏：空列表，带去最新日刊要的键（AC-10.10）" do
@@ -132,6 +204,18 @@ class FavoritesControllerTest < ActionDispatch::IntegrationTest
     get favorites_path
     assert_equal [ "后补的旧标题译文", "收藏时的简介" ], page_props["entries"].sole.values_at("title_zh", "summary_zh")
     assert_equal before, favorite.reload.attributes
+  end
+
+  test "收藏仅在原文仍匹配快照时显示实时理由" do
+    @item.update!(reason: "可比较终端日志的筛选策略。")
+    Favorite.keep(users(:drew), @item)
+
+    get favorites_path
+    assert_equal @item.reason, page_props["entries"].sole["reason"]
+
+    @item.update!(summary: "A replacement description", reason: "这段理由对应新的简介。")
+    get favorites_path
+    assert_nil page_props["entries"].sole["reason"]
   end
 
   # AC-10.3 重抓把条目行换掉、新内容不含这条链接：收藏仍在，用收藏时的快照；所在期打开那一栏，不带条目锚点

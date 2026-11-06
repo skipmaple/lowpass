@@ -19,6 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  delete document.documentElement.dataset.theme
 })
 
 const hn = () =>
@@ -65,7 +66,7 @@ describe('ItemRow 标题与摘要', () => {
   it('序号照传', () => {
     render(<ItemRow item={hn()} adapter="hacker_news" rank={7} />)
 
-    expect(screen.getByText('7')).toHaveClass('item-rank')
+    expect(screen.getByText('07')).toHaveClass('item-rank')
   })
 
   it('有摘要才有摘要行', () => {
@@ -84,7 +85,7 @@ describe('ItemRow 标题与摘要', () => {
 
     expect(link.textContent).toBe(title)
     expect(link).toHaveAttribute('href', 'https://example.com/termlog')
-    expect(link.closest('h2')?.nextElementSibling).toHaveTextContent('前端开发')
+    expect(container.querySelector('.item-context')).toHaveTextContent('前端开发')
     expect(link.closest('h2')).not.toHaveTextContent('前端开发')
 
     const changed = item({ title: 'Hunting the Wild Vibrotruck', interest_tag: '电子机械与自动化' })
@@ -228,11 +229,11 @@ describe('ItemRow 元数据（按适配器）', () => {
 
   it('GitHub：今日新增只有前三名反白成绿徽章', () => {
     const { unmount } = render(<ItemRow item={gh()} adapter="github_trending" rank={3} />)
-    expect(screen.getByText('+312').getAttribute('style')).toContain('background: var(--green)')
+    expect(screen.getByText('+312').getAttribute('style')).toContain('background: var(--accent-surface)')
     unmount()
 
     render(<ItemRow item={gh()} adapter="github_trending" rank={4} />)
-    expect(screen.getByText('+312').getAttribute('style')).not.toContain('var(--green)')
+    expect(screen.getByText('+312').getAttribute('style')).not.toContain('var(--accent-surface)')
   })
 
   it('RSS：作者与发布时间同属元数据', () => {
@@ -295,73 +296,70 @@ describe('ItemRow 推荐理由与兴趣标签', () => {
     expect(screen.getByText('与你关注的终端工具相关。').closest('.item-reason')).toBeInTheDocument()
     const heading = screen.getByRole('heading', { level: 2 })
     expect(container.querySelector('.item-heading')).not.toHaveClass('item-heading--tagged')
-    expect(heading.nextElementSibling).toHaveClass('item-tag')
+    expect(container.querySelector('.item-context')).toContainElement(screen.getByText('AI'))
     expect(heading).not.toHaveTextContent('AI')
-    expect(container.querySelector('.item-tag .item-interest-chip')).toHaveClass('chip-outline')
+    expect(screen.getByText('AI')).toHaveClass('item-tag')
   })
 })
 
-describe('ItemRow 标题译文（D25）', () => {
-  const translated = () => ({ ...hn(), title_zh: 'Show HN：一个用 Rust 写的终端日志查看器' })
-
-  it('紧跟标题、在元数据之前；只是文字，不是第二个链接', () => {
-    const { container } = render(<ItemRow item={translated()} adapter="hacker_news" rank={1} />)
-
-    const translation = container.querySelector('.item-translation')
-    expect(translation).toHaveTextContent('Show HN：一个用 Rust 写的终端日志查看器')
-    expect(container.querySelector('.item-heading')?.nextElementSibling).toBe(translation)
-    expect(translation?.nextElementSibling).toHaveClass('item-meta')
-    expect(translation?.querySelector('a')).toBeNull()
-    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
-      'https://example.com/termlog',
-      'https://news.ycombinator.com/item?id=41000001',
-    ])
+describe('ItemRow 中文优先与原文线索', () => {
+  it('有标题译文时成为主标题，原标题仍可展开核对', async () => {
+    document.documentElement.dataset.theme = 'unfold'
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const { container } = render(<ItemRow item={{ ...hn(), title_zh: '一个用 Rust 写的终端日志查看器' }} adapter="hacker_news" rank={1} />)
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('一个用 Rust 写的终端日志查看器')
+    expect(screen.getByRole('link', { name: '一个用 Rust 写的终端日志查看器' })).toHaveAttribute('href', hn().url)
+    await user.click(screen.getByText('原文线索'))
+    expect(container.querySelector('.item-original')).toHaveAttribute('open')
+    expect(screen.getByText(hn().title)).toBeVisible()
   })
 
-  // 设计 skill：译文里的中文走文楷，夹着的产品名与项目名跟原标题一样走 Newsreader
-  it('按字符段分配字体：中文段文楷，拉丁段 Newsreader', () => {
-    const { container } = render(<ItemRow item={translated()} adapter="hacker_news" rank={1} />)
+  it('A 的原题直接可读，切回 C 时恢复原来的收起状态且不重建内容', async () => {
+    document.documentElement.dataset.theme = 'unfold'
+    const { container } = render(<ItemRow item={{ ...hn(), title_zh: '终端日志查看器' }} adapter="hacker_news" rank={1} />)
+    const original = container.querySelector('.item-original')!
+    expect(original).not.toHaveAttribute('open')
 
-    const runs = Array.from(container.querySelectorAll<HTMLElement>('.item-translation span span'))
-    expect(runs.find((run) => run.textContent?.includes('终端日志查看器'))?.style.fontFamily).toBe('var(--font-cjk)')
-    expect(runs.find((run) => run.textContent?.includes('Rust'))?.style.fontFamily).toBe('var(--font-latin)')
+    await act(async () => {
+      document.documentElement.dataset.theme = 'daybreak'
+      window.dispatchEvent(new Event('lowpass:theme'))
+    })
+    expect(original).toHaveAttribute('open')
+    expect(screen.getByText(hn().title)).toBeVisible()
+
+    await act(async () => {
+      document.documentElement.dataset.theme = 'unfold'
+      window.dispatchEvent(new Event('lowpass:theme'))
+    })
+    expect(container.querySelector('.item-original')).toBe(original)
+    expect(original).not.toHaveAttribute('open')
   })
 
-  it('Hackaday（RSS 日刊源）的译文同样紧跟标题', () => {
-    const { container } = render(<ItemRow item={{ ...rss(), title_zh: '一部 3D 打印的旋转拨号电话' }} adapter="rss" rank={1} />)
-
-    const translation = container.querySelector('.item-translation')
-    expect(translation).toHaveTextContent('一部 3D 打印的旋转拨号电话')
-    expect(container.querySelector('.item-heading')?.nextElementSibling).toBe(translation)
+  it('有简介译文时作为摘要，原文与中文不会重复排在摘要区', () => {
+    const { container } = render(<ItemRow item={{ ...gh(), summary: 'A tiny CLI tool', summary_zh: '一个用 Rust 写的命令行小工具' }} adapter="github_trending" rank={1} />)
+    expect(container.querySelector('.item-summary')).toHaveTextContent('一个用 Rust 写的命令行小工具')
+    expect(container.querySelector('.item-original')).toHaveTextContent('A tiny CLI tool')
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('openclaw/openclaw')
   })
 
-  // GitHub Trending 的标题是仓库名，译的是简介：译文跟在英文简介后面、元数据之前
-  it('GitHub Trending 的简介译文紧跟英文简介', () => {
-    const { container } = render(
-      <ItemRow item={{ ...gh(), summary: 'A tiny CLI tool', summary_zh: '一个用 Rust 写的命令行小工具' }} adapter="github_trending" rank={1} />,
-    )
-
-    const summary = screen.getByText('A tiny CLI tool')
-    const translation = container.querySelector('.item-translation')
-    expect(translation).toHaveTextContent('一个用 Rust 写的命令行小工具')
-    expect(summary.nextElementSibling).toBe(translation)
-    expect(translation?.nextElementSibling).toHaveClass('item-meta')
-    expect(container.querySelectorAll('.item-translation')).toHaveLength(1)
-  })
-
-  it('没有译文就没有这一行', () => {
+  it('无译文时直接展示原始内容，不产生空的展开控件', () => {
     const { container } = render(<ItemRow item={hn()} adapter="hacker_news" rank={1} />)
-
-    expect(container.querySelector('.item-translation')).toBeNull()
+    expect(container.querySelector('.item-original')).toBeNull()
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(hn().title)
   })
 
-  it('周刊那一版不渲染译文', () => {
-    const { container } = render(
-      <ItemRow item={{ ...translated(), summary: '本周的一条。', summary_zh: '不该出现。' }} adapter="ruanyf_weekly" rank={1} variant="weekly" />,
-    )
+  it('缺理由有事实说明，不把摘要挪作理由', () => {
+    const { container } = render(<ItemRow item={item({ summary: '原始摘要' })} adapter="rss" rank={1} />)
+    expect(screen.getByText('暂无推荐理由')).toBeInTheDocument()
+    expect(container.querySelector('.item-reason')).toBeNull()
+    expect(container.querySelector('.item-summary')).toHaveTextContent('原始摘要')
+  })
 
-    expect(container.querySelector('.item-translation')).toBeNull()
-    expect(screen.queryByText('不该出现。')).toBeNull()
+  it('周刊不采用日刊译文与推荐理由', () => {
+    render(<ItemRow item={item({ title_zh: '不该出现的标题译文', summary: '本周的一条。', summary_zh: '不该出现的简介译文' })} adapter="ruanyf_weekly" rank={1} variant="weekly" />)
+    expect(screen.queryByText('不该出现的标题译文')).toBeNull()
+    expect(screen.queryByText('不该出现的简介译文')).toBeNull()
+    expect(screen.queryByText('暂无推荐理由')).toBeNull()
   })
 })
 
@@ -767,22 +765,16 @@ describe('ItemRow 阅读页不提供重生成入口', () => {
 describe('ItemRow 书签（PRD 5.10）', () => {
   const TITLE = 'Show HN: A terminal log viewer written in Rust'
 
-  it('日刊纯图标收藏跟随评论、位于时间前，可读操作名同步收藏状态', () => {
+  it('日刊收藏在完整正文后，可读操作名同步收藏状态', () => {
     const { container, unmount } = render(
       <FavoritesProvider favorites={[]}>
         <ItemRow item={hn()} adapter="hacker_news" rank={1} />
       </FavoritesProvider>,
     )
     const mark = screen.getByRole('button', { name: `收藏：${TITLE}` })
-    expect(mark).toHaveClass('favorite-button', 'item-save')
-    expect(mark.textContent).toBe('')
-    expect(mark).not.toHaveAttribute('data-on')
-    expect(mark.querySelector('.favorite-line')).toHaveAttribute('aria-hidden', 'true')
-    expect(mark.querySelector('.favorite-ink')).toHaveAttribute('aria-hidden', 'true')
-    expect(mark.closest('.item-meta')).not.toBeNull()
-    expect(mark.previousElementSibling).toBe(screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' }))
-    expect(mark.nextElementSibling).toHaveTextContent('5 小时前提交')
-    expect(container.querySelectorAll('.favorite-button')).toHaveLength(1)
+    expect(mark).toHaveClass('favorite-button', 'item-mark')
+    // Tab 先到标题再到书签：书签在 DOM 里排在正文后面
+    expect(container.querySelector('.item-body')?.nextElementSibling).toContainElement(mark)
     unmount()
 
     render(
@@ -792,10 +784,10 @@ describe('ItemRow 书签（PRD 5.10）', () => {
     )
     const savedMark = screen.getByRole('button', { name: `取消收藏：${TITLE}` })
     expect(savedMark).toHaveAttribute('data-on')
-    expect(savedMark.textContent).toBe('')
+    expect(savedMark).toHaveTextContent('已收藏')
   })
 
-  it('周刊纯图标书签紧随标题，长文阅读前即可操作', () => {
+  it('周刊书签紧随标题，长文阅读前即可操作', () => {
     const { container } = render(
       <FavoritesProvider favorites={[]}>
         <ItemRow item={item({ title: '人生的容错率' })} adapter="ruanyf_weekly" rank={1} variant="weekly" heading="h4" />
@@ -804,12 +796,12 @@ describe('ItemRow 书签（PRD 5.10）', () => {
 
     const mark = screen.getByRole('button', { name: '收藏：人生的容错率' })
     expect(mark).toHaveClass('item-mark')
-    expect(mark.textContent).toBe('')
-    expect(container.querySelector('.item-title')?.nextElementSibling).toBe(mark)
+    expect(mark).toHaveTextContent(mark.hasAttribute('data-on') ? '已收藏' : '收藏')
+    expect(container.querySelector('.item-title')?.nextElementSibling).toContainElement(mark)
     expect(container.querySelector('.item-heading')?.contains(mark)).toBe(true)
   })
 
-  it('日刊键盘依次到标题、评论和收藏；空格收藏保持焦点与同一按钮', async () => {
+  it('日刊键盘依次到标题、评论、原文入口和收藏；空格收藏保持焦点与同一按钮', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 201, json: async () => ({ url_hash: 'hash-termlog' }) } as Response)
     try {
@@ -820,6 +812,8 @@ describe('ItemRow 书签（PRD 5.10）', () => {
       await user.tab()
       expect(screen.getByRole('link', { name: '145 条评论，在 Hacker News 打开' })).toHaveFocus()
       await user.tab()
+      expect(screen.getByRole('link', { name: '阅读原文' })).toHaveFocus()
+      await user.tab()
       const mark = screen.getByRole('button', { name: `收藏：${TITLE}` })
       expect(mark).toHaveFocus()
       await user.keyboard(' ')
@@ -827,7 +821,7 @@ describe('ItemRow 书签（PRD 5.10）', () => {
       expect(screen.getByRole('button', { name: `取消收藏：${TITLE}` })).toBe(mark)
       expect(mark).toHaveFocus()
       expect(mark).toHaveAttribute('data-on')
-      expect(mark.textContent).toBe('')
+      expect(mark).toHaveTextContent(mark.hasAttribute('data-on') ? '已收藏' : '收藏')
       expect(fetchMock).toHaveBeenCalledTimes(1)
     } finally {
       fetchMock.mockRestore()

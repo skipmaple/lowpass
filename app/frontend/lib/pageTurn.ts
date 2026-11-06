@@ -100,7 +100,7 @@ function commitPageTurn(page: Page, surface: HTMLElement): void {
   active.surface = surface
   active.restore = preparePaper(surface)
   document.documentElement.dataset.vt = 'new'
-  document.documentElement.dataset.vtMasthead = String(document.querySelector('.masthead') !== null)
+  document.documentElement.dataset.vtMasthead = String(document.querySelector('.site-header') !== null)
 }
 
 // opacity 建立混合组：临时把外层纸面放到正文后面，图片的 multiply 仍以纸色为底。
@@ -128,7 +128,7 @@ function preparePaper(surface: HTMLElement): () => void {
 
 // 报头铺满视口宽；只裁静止的 root group，OLD 子图仍可横移而不会把纸底带回报头。
 function exposeNewMasthead(): void {
-  const header = document.querySelector('.masthead')
+  const header = document.querySelector('.site-header')
   if (!header) return
   const bottom = Math.min(window.innerHeight, Math.max(0, header.getBoundingClientRect().bottom))
   document.documentElement.style.setProperty('--vt-masthead-bottom', `${bottom}px`)
@@ -145,17 +145,20 @@ function startPageTurnPlayback(token: object): void {
   const turn = active
   turn.stopInput = listenForPageTurnInput(token)
   exposeNewMasthead()
-  positionOldDate(document.querySelector('.issue-head-date')?.getBoundingClientRect() ?? null)
+  const date = Array.from(document.querySelectorAll('.calendar-date, .issue-head-date')).find(element => element.getClientRects().length > 0)
+  positionOldDate(date?.getBoundingClientRect() ?? null)
   const roots = document.getAnimations().filter((animation) => (animation.effect as KeyframeEffect | null)?.pseudoElement === '::view-transition-old(root)')
   const native = roots.length === 1 ? roots[0] : null
   if (!native?.timeline) {
     completePageTurn(token, 'rejected')
     return
   }
-  const timing = turn.direction
-    ? { duration: 360, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'both' as const }
-    : { duration: 240, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'both' as const }
-  const incoming = new Animation(new KeyframeEffect(turn.surface, [{ opacity: 0 }, { opacity: 1 }], timing), native.timeline)
+  // 三主题可定义各自的节奏；NEW 跟随实际 OLD 效果的时长与曲线，共用起点也共用终点。
+  const effect = native.effect as KeyframeEffect
+  const timing = effect.getTiming()
+  // CSSAnimation 的曲线位于关键帧区间；effect 本身通常仍报告 linear。
+  const easing = effect.getKeyframes()[0]?.easing ?? 'linear'
+  const incoming = new Animation(new KeyframeEffect(turn.surface, [{ opacity: 0, easing }, { opacity: 1 }], timing), native.timeline)
   turn.incoming = incoming
   if (native.startTime !== null) {
     incoming.startTime = native.startTime

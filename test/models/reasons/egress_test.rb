@@ -208,6 +208,31 @@ class Reasons::EgressTest < ActiveSupport::TestCase
     end
   end
 
+  test "truncated fallback bills actual cached usage and never repeats the request" do
+    with_egress do
+      ENV["MODEL_FALLBACK_NAME"] = "deepseek-ai/DeepSeek-V4-Flash"
+      travel_to Time.find_zone("Asia/Shanghai").parse("2026-11-06 08:00") do
+        item = items(:hn_one)
+        item.update!(summary: "This technical article explains local log streaming, severity filters, structured event processing, and JSON exports for offline debugging.")
+        primary = stub_request(:post, "#{OPENAI}/chat/completions").to_return(status: 429,
+          body: { error: { code: "credit_balance_exhausted" } }.to_json)
+        fallback = stub_request(:post, "#{FALLBACK}/chat/completions").to_return(body: {
+          choices: [ { finish_reason: "length", message: { content: "" } } ],
+          usage: { prompt_tokens: 1000, completion_tokens: 200, prompt_cache_hit_tokens: 300 }
+        }.to_json)
+        operation = ModelRequests.operation
+        2.times { assert_equal :failed, Reasons::Generator.generate_item!(item, operation: operation) }
+        assert_requested primary, times: 1
+        assert_requested fallback, times: 1
+        call = ModelCall.sole
+        assert_equal [ "failed", "api.siliconflow.cn", "deepseek-ai/DeepSeek-V4-Flash", "CNY", "openai_quota_exhausted", 1000, 200, 300 ],
+          call.attributes.values_at("status", "provider_host", "provider_model", "currency", "fallback_reason", "prompt_tokens", "completion_tokens", "cached_tokens")
+        assert_equal BigDecimal("0.00399"), call.cost
+        assert_nil item.reload.reason
+      end
+    end
+  end
+
   test "SiliconFlow prices follow Shanghai peak hours and stay in CNY" do
     with_egress do
       ENV["MODEL_FALLBACK_NAME"] = "deepseek-ai/DeepSeek-V4-Flash"

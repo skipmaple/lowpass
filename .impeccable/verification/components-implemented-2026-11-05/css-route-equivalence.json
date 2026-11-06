@@ -1,0 +1,422 @@
+[
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/admin/sources",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/admin/sources",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/admin/sources/new",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/admin/sources/new",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/admin/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/admin/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/login",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "daybreak",
+    "path": "/login",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/admin/sources",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/admin/sources",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/admin/sources/new",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/admin/sources/new",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/admin/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/admin/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/login",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "duet",
+    "path": "/login",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/admin/sources",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/admin/sources",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/admin/sources/new",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/admin/sources/new",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/admin/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/admin/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/login",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 1440,
+    "theme": "unfold",
+    "path": "/login",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/admin/sources",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/admin/sources",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/admin/sources/new",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/admin/sources/new",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/admin/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/admin/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/login",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "daybreak",
+    "path": "/login",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/admin/sources",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/admin/sources",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/admin/sources/new",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/admin/sources/new",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/admin/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/admin/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/login",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "duet",
+    "path": "/login",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/admin/sources",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/admin/sources",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/admin/sources/new",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/admin/sources/new",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/admin/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/admin/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/settings",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/settings",
+    "media": "print",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/login",
+    "media": "screen",
+    "differences": []
+  },
+  {
+    "width": 390,
+    "theme": "unfold",
+    "path": "/login",
+    "media": "print",
+    "differences": []
+  }
+]

@@ -38,11 +38,8 @@ describe('Admin/Sources/Runs', () => {
     expect(screen.getByRole('link', { name: '失败' })).toHaveAttribute('href', '/admin/sources/src-had/runs?status=failed')
     const rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(3)
-    // 开始时间、耗时都走 Mixed 按字符段拆分：日期单位与「秒」是文楷，数字与冒号是 Maple——
-    // 整段套 .data（纯 Maple）会让这些汉字掉进操作系统回退字体（Fix round 1）。
-    // Mixed 给 CJK 段的是内联 style.fontFamily，不是 className（lib/typeset.tsx 里核实过没有 className）；
-    // 断言方式与仓库既有的 ItemRow.test.tsx / Footer.test.tsx / typeset.test.tsx 一致。
-    expect(within(rows[1]).getByText('9月8日').style.fontFamily).toBe('var(--font-cjk)')
+    // 日期统一斜线展示；耗时中的中文单位仍采用当前主题的中文字体。
+    expect(rows[1]).toHaveTextContent('09/08')
     expect(within(rows[1]).getByText('秒').style.fontFamily).toBe('var(--font-cjk)')
     expect(within(rows[2]).getByText('连接超时')).toBeInTheDocument()
     expect(within(rows[2]).getByText('3 / 3')).toBeInTheDocument()
@@ -54,7 +51,7 @@ describe('Admin/Sources/Runs', () => {
   it('重抓最新一期：POST refetch 带 source_id；进行中时禁用', async () => {
     show()
 
-    await userEvent.click(screen.getByRole('button', { name: '重抓最新一期 · 9月8日' }))
+    await userEvent.click(screen.getByRole('button', { name: '重抓最新一期 · 09/08' }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认重抓' }))
     expect(router.post).toHaveBeenCalledWith('/admin/issues/2026-09-08/refetch', { source_id: 'src-had' }, expect.any(Object))
 

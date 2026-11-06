@@ -33,7 +33,7 @@ function show(overrides: Partial<DailyShowProps> = {}) {
 
 // 列表区顶上那句事实句（IssueNotice / SourceState 共用 .state-line）
 function noticeText(container: HTMLElement) {
-  return container.querySelector('.issue-body .state-line')?.textContent ?? null
+  return Array.from(container.querySelectorAll('.issue-body .state-line')).find((line) => !line.closest('.daily-source'))?.textContent ?? null
 }
 
 beforeEach(() => {
@@ -67,7 +67,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
     expect(container.querySelector('details.source-directory')).toBeNull()
     expect(overview.queryAllByRole('link')).toHaveLength(0)
-    expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: '本期来源' })).toBeNull()
     expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
     expect(container.querySelectorAll('.item-row')).toHaveLength(0)
   })
@@ -99,7 +99,7 @@ describe('期级状态选哪一句（bodyNotice）', () => {
     expect(overview.getAllByRole('listitem').map((entry) => entry.textContent)).toEqual(['Hacker News抓取失败', 'GitHub Trending抓取失败', 'Hackaday抓取失败'])
     expect(container.querySelector('details.source-directory')).toBeNull()
     expect(overview.queryAllByRole('link')).toHaveLength(0)
-    expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: '本期来源' })).toBeNull()
     expect(container.querySelectorAll('.daily-source')).toHaveLength(0)
   })
 
@@ -114,23 +114,19 @@ describe('期级状态选哪一句（bodyNotice）', () => {
 
 describe('连续阅读与来源目录', () => {
   async function openDirectory() {
-    await userEvent.click(screen.getByText('来源目录', { selector: 'summary' }))
-    return within(screen.getByRole('navigation', { name: '来源' }))
+    return within(screen.getByRole('navigation', { name: '本期来源' }))
   }
 
-  it('目录默认收起，完整正文直接可读；展开后才显示来源导航', async () => {
+  it('主题来源导航直接可用，全部来源正文连续可读', async () => {
     const { container } = show()
-    const directory = container.querySelector('details.source-directory') as HTMLDetailsElement
-    expect(directory.open).toBe(false)
-    expect(directory.querySelector('nav')).not.toBeVisible()
+    expect(container.querySelector('details.source-directory')).toBeNull()
     expect(screen.getByRole('region', { name: 'Hacker News' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toBeVisible()
 
     const navigation = await openDirectory()
-    expect(directory.open).toBe(true)
-    expect(navigation.getAllByRole('link').map((link) => link.textContent)).toEqual(sources.map((source) => source.name))
-    await userEvent.click(navigation.getByRole('link', { name: 'GitHub Trending' }))
-    expect(directory.open).toBe(true)
+    expect(navigation.getAllByRole('link').map((link) => link.querySelector('.source-tab-name')?.textContent)).toEqual(sources.map((source) => source.name))
+    await userEvent.click(navigation.getByRole('link', { name: /GitHub Trending/ }))
+    expect(screen.getByRole('region', { name: 'Hacker News' })).toBeVisible()
   })
 
   it('已发布的失败或无新内容来源仍然可以跳到真实正文', async () => {
@@ -145,31 +141,29 @@ describe('连续阅读与来源目录', () => {
       expect(target).toHaveClass('daily-source')
     }
     expect(screen.getByRole('region', { name: 'GitHub Trending' })).toHaveTextContent('本期抓取失败，已通知管理员')
-    expect(screen.getByRole('region', { name: 'Hackaday' })).toHaveTextContent('本期无新内容')
+    expect(screen.getByRole('region', { name: 'Hackaday' })).toHaveTextContent('本期未收录')
   })
 
-  it('同一期生成完成后来源清单恢复可展开的正文导航', async () => {
+  it('同一期生成完成后来源清单恢复正文导航', async () => {
     const { rerender } = show({ issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
     expect(screen.getByRole('list', { name: '来源' })).toBeInTheDocument()
 
     rerender(<Show issue={dailyIssue()} missing={false} sources={sources} items_by_source={{ 'src-hn': [item()] }} favorites={[]} active_source_id="src-hn" latest_weekly_key="2026-W36" />)
 
     expect(screen.queryByRole('list', { name: '来源' })).toBeNull()
-    expect(screen.getByText('来源目录', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
     const directory = await openDirectory()
     expect(directory.getAllByRole('link')).toHaveLength(3)
     expect(screen.getByRole('region', { name: 'Hacker News' })).toContainElement(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' }))
     expect(screen.queryByText('生成中，约 1 分钟后刷新')).toBeNull()
   })
 
-  it('每栏均可返回并展开来源目录，失败或没有源站外链时也保留入口', async () => {
+  it('每栏均可返回并聚焦来源目录，失败或没有源站外链时也保留入口', async () => {
     show({ sources: [sources[0], { ...sources[1], state: 'failed', home_url: null }, sources[2]] })
     const returns = screen.getAllByRole('link', { name: '返回来源目录' })
     expect(returns).toHaveLength(3)
     for (const link of returns) expect(link).toHaveAttribute('href', '#source-directory')
     await userEvent.click(returns[1])
-    expect(screen.getByText('来源目录', { selector: 'summary' }).closest('details')).toHaveAttribute('open')
-    expect(screen.getByRole('navigation', { name: '来源' })).toHaveFocus()
+    expect(screen.getByRole('navigation', { name: '本期来源' })).toHaveFocus()
   })
 
   it('全部来源按配置顺序同时呈现，展开目录后使用正文的原生锚点', async () => {
@@ -182,7 +176,7 @@ describe('连续阅读与来源目录', () => {
       },
     })
     const directory = await openDirectory()
-    expect(directory.getByRole('link', { name: 'GitHub Trending' })).toHaveAttribute('href', '#source-src-gh')
+    expect(directory.getByRole('link', { name: /GitHub Trending/ })).toHaveAttribute('href', '#source-src-gh')
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Hacker News', 'GitHub Trending', 'Hackaday'])
     expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Show HN: A terminal log viewer written in Rust', 'openclaw/openclaw', 'A rotary phone'])
     expect(screen.getByRole('region', { name: 'GitHub Trending' })).toContainElement(screen.getByText('openclaw/openclaw'))
@@ -197,23 +191,24 @@ describe('连续阅读与来源目录', () => {
     expect(screen.getByRole('link', { name: 'A rotary phone' })).toBeInTheDocument()
   })
 
-  it('条目正文与推荐理由连续阅读，操作元数据位于内容之后', () => {
+  it('中文标题、摘要与推荐理由共同保留，操作紧随完整内容', () => {
     const { container } = show({
       items_by_source: { 'src-hn': [item({ title_zh: '终端日志工具', summary: 'A practical tool for reading logs.', reason: '适合直接查看实现。' })] },
     })
-    const body = container.querySelector('.item-body')!
-    const parts = ['.item-heading', '.item-translation', '.item-summary', '.item-reason', '.item-meta'].map((selector) => body.querySelector(selector)!)
+    const row = container.querySelector('.item-row')!
+    const parts = ['.item-heading', '.item-summary', '.item-reason', '.item-actions'].map((selector) => row.querySelector(selector)!)
     parts.slice(1).forEach((part, index) => {
       expect(parts[index].compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
-    expect(body.querySelector('.item-reason')).toHaveTextContent('适合直接查看实现。')
-    expect(body.querySelector('.item-meta')).toContainElement(screen.getByRole('button', { name: '收藏：Show HN: A terminal log viewer written in Rust' }))
+    expect(row.querySelector('.item-heading')).toHaveTextContent('终端日志工具')
+    expect(row.querySelector('.item-original')).toHaveTextContent('Show HN: A terminal log viewer written in Rust')
+    expect(row.querySelector('.item-actions')).toContainElement(screen.getByRole('button', { name: '收藏：终端日志工具' }))
   })
 
   it('一个来源都没有时只留事实句', () => {
     const { container } = show({ sources: [], active_source_id: null, items_by_source: {}, issue: dailyIssue({ state: 'generating', status: '生成中，约 1 分钟后刷新' }) })
     expect(noticeText(container)).toBe('生成中，约 1 分钟后刷新')
-    expect(screen.queryByRole('navigation', { name: '来源' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: '本期来源' })).toBeNull()
   })
 })
 
@@ -248,10 +243,10 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
     expect(container.querySelector('.source-state-failed')).toBeNull()
   })
 
-  it('本期无新内容只有一句，没有插图', () => {
+  it('本期未收录只有一句，没有插图', () => {
     const { container } = show({ sources: [source({ state: 'empty' })], active_source_id: 'src-hn', items_by_source: {} })
 
-    expect(panel().getByText('本期无新内容')).toBeInTheDocument()
+    expect(panel().getByText('本期未收录')).toBeInTheDocument()
     expect(container.querySelector('.source-state-failed')).toBeNull()
   })
 
@@ -282,7 +277,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
 
     const ranks = Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)
     const titles = Array.from(container.querySelectorAll('.item-title')).map((el) => el.textContent)
-    expect(ranks).toEqual(['1', '2'])
+    expect(ranks).toEqual(['01', '02'])
     expect(titles).toEqual(['第一条', '第二条'])
   })
 
@@ -291,7 +286,7 @@ describe('栏级状态与栏尾外链（SourceBody）', () => {
       items_by_source: { 'src-hn': [item({ id: 'a', rank: null }), item({ id: 'b', rank: null })] },
     })
 
-    expect(Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)).toEqual(['1', '2'])
+    expect(Array.from(container.querySelectorAll('.item-rank')).map((el) => el.textContent)).toEqual(['01', '02'])
   })
 })
 

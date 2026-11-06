@@ -64,6 +64,19 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert entry["snippet_runs"].any? { |run| run["hit"] }
   end
 
+  test "搜索结果保留原文高亮，并提供真实译文和日刊理由" do
+    @item.update!(title_zh: "用 Rust 构建集群控制器", summary_zh: "通过 Rust SDK 管理集群。", reason: "提供自动恢复任务的实现示例。")
+
+    get search_path(q: "rust")
+
+    entry = page_props["results"].find { |result| result["item_id"] == @item.id }
+    assert_equal @item.title_zh, entry["title_zh_runs"].pluck("text").join
+    assert_equal @item.summary_zh, entry["summary_zh_runs"].pluck("text").join
+    assert entry["title_zh_runs"].any? { |run| run["hit"] }
+    assert_equal @item.reason, entry["reason"]
+    assert_equal @item.title, entry["title_runs"].pluck("text").join
+  end
+
   test "日刊搜索结果带已有标题译文，与理由是否存在无关" do
     @item.update!(title_zh: "用 Rust 编写的 Kubernetes 控制器", reason: nil)
     get search_path(q: "kuber rust")
@@ -78,6 +91,8 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     entries = page_props["results"].index_by { |entry| entry["item_id"] }
     assert_equal "一个实用的应用程序", entries.fetch(daily.id)["summary_zh"]
     assert_nil entries.fetch(weekly.id)["title_zh"]
+    assert_nil entries.fetch(weekly.id)["title_zh_runs"]
+    assert_nil entries.fetch(weekly.id)["summary_zh_runs"]
   end
 
   test "周刊搜索结果直达条目，并携带板块以便条目被替换时回退" do

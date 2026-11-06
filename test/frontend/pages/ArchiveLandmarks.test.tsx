@@ -23,7 +23,8 @@ describe('归档页的导航地标', () => {
 
     const primary = screen.getByRole('navigation', { name: '主导航' })
     const archive = screen.getByRole('navigation', { name: '页面导航' })
-    expect(screen.getAllByRole('navigation')).toHaveLength(2)
+    expect(screen.getAllByRole('navigation')).toHaveLength(3)
+    expect(screen.getByRole('navigation', { name: '刊物归档' })).toBeVisible()
     expect(within(primary).getByRole('link', { name: '日刊' })).toHaveAttribute('href', '/')
     expect(within(primary).getByRole('link', { name: '周刊' })).toHaveAttribute('href', '/weekly/2026-W36')
     expect(within(archive).getByRole('link', { name: previous })).toHaveAttribute('href', href)

@@ -1,0 +1,71 @@
+[
+  {
+    "theme": "daybreak",
+    "focused": true,
+    "visible": true,
+    "left": 267,
+    "right": 345,
+    "navLeft": 0,
+    "navRight": 320,
+    "scrollLeft": 0,
+    "overflow": "auto",
+    "linkDisplay": "flex",
+    "focusedRect": {
+      "x": 267,
+      "y": 60,
+      "width": 78,
+      "height": 48,
+      "top": 60,
+      "right": 345,
+      "bottom": 108,
+      "left": 267
+    },
+    "viewport": 320
+  },
+  {
+    "theme": "duet",
+    "focused": true,
+    "visible": true,
+    "left": 254,
+    "right": 332,
+    "navLeft": 20,
+    "navRight": 300,
+    "scrollLeft": 0,
+    "overflow": "auto",
+    "linkDisplay": "flex",
+    "focusedRect": {
+      "x": 254,
+      "y": 88,
+      "width": 78,
+      "height": 48,
+      "top": 88,
+      "right": 332,
+      "bottom": 136,
+      "left": 254
+    },
+    "viewport": 320
+  },
+  {
+    "theme": "unfold",
+    "focused": true,
+    "visible": true,
+    "left": 275,
+    "right": 351,
+    "navLeft": 20,
+    "navRight": 300,
+    "scrollLeft": 0,
+    "overflow": "auto",
+    "linkDisplay": "flex",
+    "focusedRect": {
+      "x": 275,
+      "y": 66,
+      "width": 76,
+      "height": 48,
+      "top": 66,
+      "right": 351,
+      "bottom": 114,
+      "left": 275
+    },
+    "viewport": 320
+  }
+]

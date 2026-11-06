@@ -14,6 +14,32 @@ class Favorite < ApplicationRecord
   # R-10.9 链接有条目被下架（F-29）就不列；收藏记录留着，恢复上架后重新出现
   scope :listed, -> { where.not(url_hash: Item.where(hidden: true).select(:url_hash)) }
 
+  # 搜索先于分页，在本人的收藏快照以及同一期当前条目的后补译文中找回。
+  # 重抓移除原条目后快照仍能命中；LIKE 特殊字符按普通文字处理。
+  scope :matching, ->(query) {
+    if query.present?
+      term = "%#{sanitize_sql_like(query)}%"
+      joins(:source).where(<<~SQL.squish, term: term)
+        concat_ws(' ', favorites.title, favorites.title_zh, favorites.summary, favorites.summary_zh, sources.name) ILIKE :term
+        OR EXISTS (
+          SELECT 1 FROM items
+          INNER JOIN issues ON issues.id = items.issue_id
+          WHERE items.url_hash = favorites.url_hash
+            AND items.source_id = favorites.source_id
+            AND issues.kind = favorites.publication
+            AND issues.period_key = favorites.period_key
+            AND items.hidden = FALSE
+            AND concat_ws(' ',
+              CASE WHEN items.title = favorites.title THEN items.title_zh END,
+              CASE WHEN items.summary IS NOT DISTINCT FROM favorites.summary THEN items.summary_zh END
+            ) ILIKE :term
+        )
+      SQL
+    else
+      all
+    end
+  }
+
   class << self
     # 收藏一条条目。同一链接已经收藏过就返回原来那条：重复提交不报错（R-10.5），收藏时间与所在期也不变
     def keep(user, item)

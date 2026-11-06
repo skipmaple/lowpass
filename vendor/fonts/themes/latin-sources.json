@@ -1,0 +1,58 @@
+[
+  {
+    "family": "bricolage-grotesque",
+    "file": "sources/bricolage-grotesque-latin-standard-normal.woff2",
+    "package": "@fontsource-variable/bricolage-grotesque",
+    "version": "5.3.0",
+    "url": "https://registry.npmjs.org/@fontsource-variable/bricolage-grotesque/-/bricolage-grotesque-5.3.0.tgz",
+    "member": "package/files/bricolage-grotesque-latin-standard-normal.woff2",
+    "bytes": 131548,
+    "sha256": "a756882d8a7802ebd4663b4544a62ebedafc7227c1c159ab95eea61393af3f8e",
+    "license": {
+      "file": "bricolage-grotesque-OFL.txt",
+      "sha256": "923f4ddf0fd39f9b7794ab0df7332f3d95dc43e8ad7ec2289d6d9e8491177f51"
+    }
+  },
+  {
+    "family": "newsreader",
+    "file": "sources/newsreader-latin-standard-normal.woff2",
+    "package": "@fontsource-variable/newsreader",
+    "version": "5.3.0",
+    "url": "https://registry.npmjs.org/@fontsource-variable/newsreader/-/newsreader-5.3.0.tgz",
+    "member": "package/files/newsreader-latin-standard-normal.woff2",
+    "bytes": 132000,
+    "sha256": "6e4f2958c3a7c4a80acde4e5a679abe7e01bc1e30b92be3c7a8b696ef401d101",
+    "license": {
+      "file": "newsreader-OFL.txt",
+      "sha256": "26028ec4e13b650065fa525a09532176f8a668b76ff849ea01c564a7480f91e7"
+    }
+  },
+  {
+    "family": "ibm-plex-sans",
+    "file": "sources/ibm-plex-sans-latin-standard-normal.woff2",
+    "package": "@fontsource-variable/ibm-plex-sans",
+    "version": "5.3.0",
+    "url": "https://registry.npmjs.org/@fontsource-variable/ibm-plex-sans/-/ibm-plex-sans-5.3.0.tgz",
+    "member": "package/files/ibm-plex-sans-latin-standard-normal.woff2",
+    "bytes": 65488,
+    "sha256": "1e875856600a34cb44a406a7deef0e3f9ae70e6f636e0f37fbca2248dec2dca4",
+    "license": {
+      "file": "ibm-plex-sans-OFL.txt",
+      "sha256": "d0283623ef57e722fd0eb688a8041589670c608ab780cd3612d06ba6f153d3fd"
+    }
+  },
+  {
+    "family": "ibm-plex-mono",
+    "file": "sources/ibm-plex-mono-latin-400-normal.woff2",
+    "package": "@fontsource/ibm-plex-mono",
+    "version": "5.3.0",
+    "url": "https://registry.npmjs.org/@fontsource/ibm-plex-mono/-/ibm-plex-mono-5.3.0.tgz",
+    "member": "package/files/ibm-plex-mono-latin-400-normal.woff2",
+    "bytes": 14708,
+    "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7",
+    "license": {
+      "file": "ibm-plex-mono-OFL.txt",
+      "sha256": "23b0a9d0c6d3f140a0b77e483c5cfa6bba574325ef5cb189ed9f2fec4884533f"
+    }
+  }
+]

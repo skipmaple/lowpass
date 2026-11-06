@@ -4,6 +4,12 @@ class SearchInputLayoutTest < ApplicationSystemTestCase
   THEMES = %w[ daybreak duet unfold ].freeze
   HINT = "搜标题、摘要或来源。拼写不准也可以。".freeze
 
+  setup do
+    # 并行 headless 会话可能留下未激活的文档：activeElement 正确但 :focus 不匹配。
+    # 只激活页面，输入框仍须由应用自己聚焦，后续 Tab 与清除断言保持真实键盘操作。
+    page.driver.browser.execute_cdp("Emulation.setFocusEmulationEnabled", enabled: true)
+  end
+
   test "三主题空词不预留清除位置，输入后仍可键盘清除" do
     sign_in_with_browser(users(:drew))
     THEMES.each do |theme|
@@ -151,7 +157,11 @@ class SearchInputLayoutTest < ApplicationSystemTestCase
   end
 
   teardown do
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    begin
+      page.driver.browser.execute_cdp("Emulation.setFocusEmulationEnabled", enabled: false)
+    ensure
+      page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    end
   end
 
   private
@@ -161,5 +171,6 @@ class SearchInputLayoutTest < ApplicationSystemTestCase
       visit search_path
       assert_selector "html[data-theme='#{theme}']", visible: :all
       evaluate_async_script("document.fonts.ready.then(arguments[0])")
+      assert evaluate_script("document.hasFocus()"), "焦点验收需要激活的浏览器文档"
     end
 end

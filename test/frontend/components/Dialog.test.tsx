@@ -147,11 +147,35 @@ it('关闭时恢复触发按钮与背景滚动', async () => {
  const props = { text: '确认删除？', cancel: '取消', confirm: '删除', onCancel: () => {}, onConfirm: () => {} }
  const { rerender } = render(<Dialog open {...props} />)
  expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
+ expect(document.documentElement.style.overflow).toBe('hidden')
  expect(document.body.style.overflow).toBe('hidden')
  expect(trigger).toHaveAttribute('inert')
  rerender(<Dialog open={false} {...props} />)
  expect(trigger).toHaveFocus()
  expect(trigger).not.toHaveAttribute('inert')
+ expect(document.documentElement.style.overflow).toBe('')
  expect(document.body.style.overflow).toBe('')
  trigger.remove()
+})
+
+it.each(['close', 'unmount'] as const)('%s 原样恢复根节点和 body 各自的 overflow 值与优先级', (action) => {
+  const root = document.documentElement, body = document.body
+  root.style.setProperty('overflow-x', 'clip', 'important')
+  root.style.setProperty('overflow-y', 'auto')
+  body.style.setProperty('overflow', 'scroll', 'important')
+  const read = (node: HTMLElement) => ['overflow-x', 'overflow-y'].map(property => [node.style.getPropertyValue(property), node.style.getPropertyPriority(property)])
+  const before = [read(root), read(body)]
+  const props = { text: '确认删除？', cancel: '取消', confirm: '删除', onCancel: () => {}, onConfirm: () => {} }
+  const view = render(<Dialog open {...props} />)
+  try {
+    expect(root.style.overflow).toBe('hidden')
+    expect(body.style.overflow).toBe('hidden')
+    if (action === 'close') view.rerender(<Dialog open={false} {...props} />)
+    else view.unmount()
+    expect([read(root), read(body)]).toEqual(before)
+  } finally {
+    view.unmount()
+    root.style.removeProperty('overflow')
+    body.style.removeProperty('overflow')
+  }
 })

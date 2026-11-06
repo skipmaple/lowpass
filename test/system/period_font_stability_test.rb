@@ -5,6 +5,28 @@ class PeriodFontStabilityTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
+  test "三主题壳字体覆盖真实期头和常驻导航的所有中文字" do
+    weekly = Issue.weekly_props_for("2026-W36").fetch(:issue)
+    daily = Issue.daily_props_for("2026-09-08")
+    labels = [ weekly[:week_label], weekly[:range_label], daily[:date_label], *Issue::Presenting::WEEKDAYS,
+      "日刊周刊收藏搜索管理账户归档上一期下一期阅读主题层叠清晨双声部展开阅读" ]
+    characters = labels.join.scan(/\p{Han}/).uniq
+    declarations = Rails.root.join("app/frontend/styles/fonts.css").read.scan(/@font-face\{([^}]+)\}/).flatten
+
+    %w[A B C].each do |theme|
+      [ 400, 700 ].each do |weight|
+        face = declarations.find { |rule| rule.include?(%(font-family:"Lowpass Chinese #{theme}";font-weight:#{weight};)) }
+        assert face, "主题 #{theme} 必须有 #{weight} 壳字体"
+        ranges = face.match(/unicode-range:([^;]+)/)[1].split(",").map do |part|
+          first, last = part.delete_prefix("U+").split("-").map { |value| value.to_i(16) }
+          first..(last || first)
+        end
+        missing = characters.reject { |character| ranges.any? { |range| range.cover?(character.ord) } }
+        assert_empty missing, "主题 #{theme} #{weight} 的期头不能依赖系统回退或延迟正文分片：#{missing.join}"
+      end
+    end
+  end
+
   test "三主题日周刊日期与说明不因正文中文字库迟到而移动" do
     sign_in_with_browser(users(:drew))
     observations = []

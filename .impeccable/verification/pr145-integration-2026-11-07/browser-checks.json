@@ -127,6 +127,258 @@
       "overflow": 0
     },
     {
+      "theme": "duet",
+      "width": 1440,
+      "page": "daily",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "weekly",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "archive",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "favorites",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "search",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "admin-sources",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "admin-issues",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 1440,
+      "page": "admin-settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "daily",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "weekly",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "archive",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "favorites",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "search",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "admin-sources",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "admin-issues",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "duet",
+      "width": 390,
+      "page": "admin-settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "daily",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "weekly",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "archive",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "favorites",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "search",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "admin-sources",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "admin-issues",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 1440,
+      "page": "admin-settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "daily",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "weekly",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "archive",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "favorites",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "search",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "admin-sources",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "admin-issues",
+      "status": 200,
+      "overflow": 0
+    },
+    {
+      "theme": "unfold",
+      "width": 390,
+      "page": "admin-settings",
+      "status": 200,
+      "overflow": 0
+    },
+    {
       "theme": "daybreak",
       "width": 1440,
       "page": "login",
@@ -143,132 +395,6 @@
     {
       "theme": "duet",
       "width": 1440,
-      "page": "daily",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "weekly",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "archive",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "favorites",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "search",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "admin-sources",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "admin-issues",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
-      "page": "admin-settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "daily",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "weekly",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "archive",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "favorites",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "search",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "admin-sources",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "admin-issues",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 390,
-      "page": "admin-settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "duet",
-      "width": 1440,
       "page": "login",
       "status": 200,
       "overflow": 0
@@ -277,132 +403,6 @@
       "theme": "duet",
       "width": 390,
       "page": "login",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "daily",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "weekly",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "archive",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "favorites",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "search",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "admin-sources",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "admin-issues",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 1440,
-      "page": "admin-settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "daily",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "weekly",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "archive",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "favorites",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "search",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "settings",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "admin-sources",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "admin-issues",
-      "status": 200,
-      "overflow": 0
-    },
-    {
-      "theme": "unfold",
-      "width": 390,
-      "page": "admin-settings",
       "status": 200,
       "overflow": 0
     },
@@ -476,5 +476,27 @@
       "visible_navigation": 1,
       "overflow": 0
     }
-  ]
+  ],
+  "errors": [],
+  "classicScrollbarRegression": {
+    "widths": [
+      320,
+      375,
+      1440,
+      1920
+    ],
+    "themes": [
+      "daybreak",
+      "duet",
+      "unfold"
+    ],
+    "pages": [
+      "daily",
+      "favorites",
+      "search"
+    ],
+    "cases": 36,
+    "reservedWidth": 15,
+    "passed": true
+  }
 }

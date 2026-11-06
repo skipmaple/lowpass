@@ -53,8 +53,12 @@ export default function Dialog({ open, text, cancel, confirm, busyConfirm, busy 
   useEffect(() => {
     if (!open) return
     const previous = document.activeElement as HTMLElement | null
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // 根节点建立容器后，body 的 overflow 不再传播到视口；两处都锁，逐轴保留原值与优先级。
+    const scrollRoots = [document.documentElement, document.body].map(element => ({
+      element,
+      overflow: ['overflow-x', 'overflow-y'].map(property => ({ property, value: element.style.getPropertyValue(property), priority: element.style.getPropertyPriority(property) })),
+    }))
+    scrollRoots.forEach(({ element }) => { element.style.overflow = 'hidden' })
     const background = Array.from(document.body.children).filter((element) => !element.contains(paperRef.current))
     const previousInert = background.map((element) => element.hasAttribute('inert'))
     background.forEach((element) => element.setAttribute('inert', ''))
@@ -80,7 +84,12 @@ export default function Dialog({ open, text, cancel, confirm, busyConfirm, busy 
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
+      scrollRoots.forEach(({ element, overflow }) => {
+        element.style.removeProperty('overflow')
+        overflow.forEach(({ property, value, priority }) => {
+          if (value) element.style.setProperty(property, value, priority)
+        })
+      })
       background.forEach((element, index) => { if (!previousInert[index]) element.removeAttribute('inert') })
       const target = returnFocusRef.current?.() ?? previous
       if (target?.isConnected) target.focus()

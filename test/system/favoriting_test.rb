@@ -23,7 +23,9 @@ class FavoritingTest < ApplicationSystemTestCase
         within(".menu-card") { click_on "收藏" }
 
         assert_current_path favorites_path
-        assert_selector "h1", text: "收藏"
+        # B 将正文标题保留给读屏，视觉标题在报头；两者分别验证，不能把裁剪文本当作页面没提交。
+        assert_equal "收藏", find('h1[aria-label="收藏"]', visible: :all).text(:all)
+        assert_selector theme == "duet" ? ".publication-module" : ".collection-page h1", text: "收藏"
         assert_selector ".search-row", text: TITLE
 
         find("button[aria-label='取消收藏：#{TITLE}']").click
@@ -118,6 +120,7 @@ class FavoritingTest < ApplicationSystemTestCase
       with_viewport(375, 812) do
         visit daily_issue_path("2026-09-08")
 
+        assert_selector "html[data-theme='#{theme}']", visible: :all
         assert_selector ".favorite-button"
         assert_equal 375, evaluate_script("window.innerWidth")
         width, height = evaluate_script("(() => { const box = document.querySelector('.favorite-button').getBoundingClientRect(); return [box.width, box.height] })()")

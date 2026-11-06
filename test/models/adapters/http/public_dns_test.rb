@@ -32,9 +32,8 @@ class Adapters::Http::PublicDnsTest < ActiveSupport::TestCase
   test "数值地址交给原 Surfguard，绝不送外部 DNS" do
     Resolv.expects(:getaddresses).never
     assert_equal "93.184.216.34", Adapters::Http::PublicDns.resolve("93.184.216.34")
-    # Surfguard 将带前导零的点分地址规范成十进制；连接固定返回值，不再让系统重新解释它。
-    assert_equal "177.0.0.1", Adapters::Http::PublicDns.resolve("0177.0.0.1")
-    %w[127.0.0.1 169.254.169.254 198.18.0.86 ::1 ::ffff:127.0.0.1 2130706433 0x7f000001].each do |blocked|
+    # 非规范 IPv4 在 libc 上存在八进制／十进制分歧；一律拒绝，不让平台决定目的地。
+    %w[0177.0.0.1 093.184.216.34 93.184.216.034 93.184.216.34. 127.0.0.1 169.254.169.254 198.18.0.86 ::1 ::ffff:127.0.0.1 2130706433 0x7f000001].each do |blocked|
       assert_raises(Adapters::Http::Unresolvable, blocked) { Adapters::Http::PublicDns.resolve(blocked) }
     end
     assert_not_requested :get, /cloudflare-dns\.com/

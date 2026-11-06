@@ -1,3 +1,4 @@
+require "ipaddr"
 require "json"
 
 module Adapters
@@ -19,6 +20,9 @@ module Adapters
         raise Unresolvable unless @host.is_a?(String) && @host.valid_encoding? && @host.ascii_only?
 
         if numeric_host?
+          # 前导零、整数与十六进制 IPv4 在平台间解析不一致；只接收规范点分形式。
+          raise Unresolvable, @host unless @host.include?(":") || canonical_ipv4?
+
           Surfguard.resolve_public_ips(@host).first or raise Unresolvable, @host
         else
           @host = @host.delete_suffix(".").downcase
@@ -34,6 +38,13 @@ module Adapters
       private
         def numeric_host?
           @host.include?(":") || @host.delete_suffix(".").split(".", -1).all? { |part| part.match?(/\A(?:0[xX][0-9a-fA-F]+|[0-9]+)\z/) }
+        end
+
+        def canonical_ipv4?
+          address = IPAddr.new(@host)
+          address.ipv4? && address.to_s == @host
+        rescue IPAddr::InvalidAddressError
+          false
         end
 
         def valid_name?

@@ -85,15 +85,15 @@ module Translations::Generator
             max_tokens: Translations::Prompt.max_tokens(field), configuration: configuration)
           result = Translations::Parser.parse(response.text, field: field)
         rescue Translations::Parser::Invalid => e
-          record(item, target, operation, configuration, started, "invalid", response, e.message)
+          record(item, target, operation, configuration, started, "invalid", response, e)
         rescue Reasons::Provider::Rejected, Reasons::Provider::Limited => e
-          record(item, target, operation, configuration, started, "failed", nil, e.message)
+          record(item, target, operation, configuration, started, "failed", nil, e)
           ModelRequests.halt(operation, e.is_a?(Reasons::Provider::Limited) ? "limited" : "rejected")
           return :failed
         rescue Reasons::Provider::TimedOut => e
-          record(item, target, operation, configuration, started, "timed_out", nil, e.message)
+          record(item, target, operation, configuration, started, "timed_out", nil, e)
         rescue Reasons::Provider::Error => e
-          record(item, target, operation, configuration, started, "failed", nil, e.message)
+          record(item, target, operation, configuration, started, "failed", nil, e)
         end
         if result
           record(item, target, operation, configuration, started, "ok", response)

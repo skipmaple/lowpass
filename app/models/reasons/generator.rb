@@ -59,7 +59,8 @@ module Reasons::Generator
     def generate_item!(item, names: InterestArea.enabled_names, profile: InterestArea.profile_text, operation: ModelRequests.operation)
       return :failed unless Reasons.ready? && ModelRequests.valid_operation?(operation)
 
-      messages = Reasons::Prompt.messages(item, profile)
+      evidence = nil
+      evidence_loaded = false
       (RETRIES + 1).times do
         outcome = ModelRequests.synchronize do
           return :failed unless ModelRequests.valid_operation?(operation)
@@ -76,31 +77,52 @@ module Reasons::Generator
             return :failed
           end
 
+          if !evidence_loaded && item.summary.to_s.length < Reasons::Evidence::SUMMARY_READ_THRESHOLD
+            evidence = Reasons::Evidence.fetch(item)
+            evidence_loaded = true
+          end
+          return :failed if ModelRequests.stop_reason(operation) || !ModelRequests.valid_operation?(operation)
+          if Reasons::Budget.exhausted?
+            ModelRequests.halt(operation, "budget")
+            alert_budget_exhausted(item.issue)
+            return :failed
+          end
+
+          messages = Reasons::Prompt.messages(item, profile, evidence: evidence)
           configuration = Reasons::Provider.configuration
           started = now_ms
           response = result = nil
           begin
-            response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item), configuration: configuration)
-            result = Reasons::Parser.parse(response.text, names)
+            if item.summary.blank? && evidence&.text.blank?
+              if evidence&.error.to_s.start_with?("原文获取失败")
+                record(item, "failed", nil, started, evidence.error, operation: operation, configuration: configuration, request_made: false)
+                return :failed
+              end
+              # 成功获取但没有可用资料时不花模型额度；本地判断记录保留操作幂等。
+              result = Reasons::Parser::Result.new(decision: "insufficient_evidence", reason: nil, interest_tag: nil, title_zh: nil, summary_zh: nil)
+            else
+              response = Reasons::Provider.chat(messages, max_tokens: Reasons::Prompt.max_tokens(item), configuration: configuration)
+              result = Reasons::Parser.parse(response.text, names)
+            end
           rescue Reasons::Parser::Invalid => e
-            record(item, "invalid", response, started, e.message, operation: operation, configuration: configuration)
+            record(item, "invalid", response, started, e, operation: operation, configuration: configuration)
           rescue Reasons::Provider::Rejected => e
-            record(item, "failed", nil, started, "密钥被拒绝", operation: operation, configuration: configuration)
+            record(item, "failed", nil, started, e, operation: operation, configuration: configuration)
             ModelRequests.halt(operation, "rejected")
             raise
           rescue Reasons::Provider::Limited => e
-            record(item, "failed", nil, started, e.message, operation: operation, configuration: configuration)
+            record(item, "failed", nil, started, e, operation: operation, configuration: configuration)
             ModelRequests.halt(operation, "limited")
             raise
           rescue Reasons::Provider::TimedOut => e
-            record(item, "timed_out", nil, started, e.message, operation: operation, configuration: configuration)
+            record(item, "timed_out", nil, started, e, operation: operation, configuration: configuration)
           rescue Reasons::Provider::Error => e
-            record(item, "failed", nil, started, e.message, operation: operation, configuration: configuration)
+            record(item, "failed", nil, started, e, operation: operation, configuration: configuration)
           end
           # 账本先完成；业务持久化失败上抛，绝不放进请求重试的 rescue。
           if result
             if result.decision == "insufficient_evidence"
-              record(item, "abstained", response, started, operation: operation, configuration: configuration)
+              record(item, "abstained", response, started, evidence&.error, operation: operation, configuration: configuration, request_made: !response.nil?)
               item.record_reason_abstention(assessed_at: Time.current)
               Reasons.recover_if_complete(item.issue)
               :abstained
@@ -142,8 +164,8 @@ module Reasons::Generator
         item.store_generated_reason(generated, generated_at: Time.current)
       end
 
-      def record(item, status, response, started, error = nil, operation:, configuration:)
-        ModelRequests.record(item, status, response, started, error, purpose: "reason", operation: operation, configuration: configuration)
+      def record(item, status, response, started, error = nil, operation:, configuration:, request_made: true)
+        ModelRequests.record(item, status, response, started, error, purpose: "reason", operation: operation, configuration: configuration, request_made: request_made)
       end
 
       def now_ms = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)

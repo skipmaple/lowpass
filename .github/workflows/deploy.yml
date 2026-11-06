@@ -104,6 +104,11 @@ jobs:
           SMTP_AUTHENTICATION: ${{ secrets.SMTP_AUTHENTICATION }}
           SMTP_STARTTLS: ${{ secrets.SMTP_STARTTLS }}
           MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MODEL_OPENAI_PROXY_URL: ${{ secrets.MODEL_OPENAI_PROXY_URL }}
+          MODEL_FALLBACK_NAME: ${{ secrets.MODEL_FALLBACK_NAME }}
+          MODEL_FALLBACK_INPUT_PRICE: ${{ secrets.MODEL_FALLBACK_INPUT_PRICE }}
+          MODEL_FALLBACK_OUTPUT_PRICE: ${{ secrets.MODEL_FALLBACK_OUTPUT_PRICE }}
           BACKUP_BUCKET_URL: ${{ secrets.BACKUP_BUCKET_URL }}
           BACKUP_REGION: ${{ secrets.BACKUP_REGION }}
           BACKUP_ACCESS_KEY_ID: ${{ secrets.BACKUP_ACCESS_KEY_ID }}

@@ -53,6 +53,9 @@ class Admin::SettingsController < Admin::BaseController
       else
         changes = Setting.transaction do
           changes = values.filter_map { |key, value| [ key, [ Setting.get(MODEL_KEYS[key]), value ] ] if Setting.get(MODEL_KEYS[key]) != value }.to_h
+          if given["currency_confirmation"] == "1" && Setting.get("model_currency").blank? && values["currency"].present?
+            changes["legacy_currency_rows"] = ModelCall.where(currency: nil).update_all(currency: values["currency"])
+          end
           values.each { |key, value| Setting.set(MODEL_KEYS[key], value) }
           changes
         end
@@ -66,7 +69,7 @@ class Admin::SettingsController < Admin::BaseController
       current = Setting.get("model_currency")
       if ![ "", "USD", "CNY" ].include?(currency)
         errors["currency"] = [ "请选择 USD 或 CNY" ]
-      elsif currency != current && ModelCall.where.not(cost: 0).exists?
+      elsif currency != current && ModelCall.where(currency: nil).where.not(cost: 0).exists?
         if current.present?
           errors["currency"] = [ "仍有非零历史费用，不能更改币种" ]
         elsif confirmation != "1"

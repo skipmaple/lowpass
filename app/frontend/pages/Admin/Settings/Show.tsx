@@ -283,10 +283,16 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
         {model.conflicted ? <p role="status" className="field-note">服务端设置已有变化，请核对恢复的草稿后保存。</p> : null}
         <div className="kv-row"><span className="kv-key">密钥</span><div className="kv-value"><span className="cjk" style={{ fontSize: 'var(--fs-15)', color: reasons.key_configured ? 'var(--ink)' : 'var(--ink2)' }}>{reasons.key_configured ? '已配置' : '未配置'}</span></div></div>
         <div className="reasons-usage">
-          <span>
+          {reasons.month_usage?.length ? <>
+            <span><Mixed text={`本月 ${reasons.month_calls} 次 · 主模型费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / 上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : reasons.monthly_cap}`} /></span>
+            {reasons.month_usage.map((usage) => <div key={`${usage.provider}-${usage.model}-${usage.currency}`}>
+              <Mixed text={`${usage.model || '历史调用'} · ${usage.calls} 次 · ${usage.cost} ${usage.currency || '未指定币种'}`} />
+              <span className="field-note"><Mixed text={`输入 ${usage.prompt_tokens} / 输出 ${usage.completion_tokens} tokens`} /></span>
+            </div>)}
+          </> : <span>
             <Mixed text={`本月 ${reasons.month_calls} 次 · 费用 ${reasons.month_cost} ${reasons.currency || '未指定币种'} / `} />
             <Mixed text={`上限 ${Number(reasons.monthly_cap) === 0 ? '不限' : `${reasons.monthly_cap} ${reasons.currency || '未指定币种'}`}`} nowrap={Number(reasons.monthly_cap) === 0} />
-          </span>
+          </span>}
           <Mixed text={`今日 ${reasons.today_calls} 次`} />
           <Mixed text={`本月理由 ${reasons.month_reason_calls} 次 · 翻译 ${reasons.month_translation_calls} 次`} />
         </div>
@@ -297,7 +303,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
           <div className="deployment-help">
             <p>在服务器环境中设置，下次启动服务时载入。密钥只保存在服务器环境中，不要填入页面、代码或日志。</p>
             <p>管理员白名单：<code>ADMIN_EMAILS</code>，逗号分隔；变更在下次登录生效。</p>
-            <p>模型密钥：<code>MODEL_API_KEY</code>。接口地址、模型名和价格在上方保存。</p>
+            <p>模型密钥：<code>MODEL_API_KEY</code>；生产 OpenAI 使用独立的 <code>OPENAI_API_KEY</code>。接口地址、模型名和价格在上方保存。</p>
             <p>邮件渠道需要 <code>ALERT_EMAIL_TO</code> 和 <code>SMTP_ADDRESS</code>；发件地址为 <code>ALERT_EMAIL_FROM</code>。SMTP 可配置 <code>SMTP_PORT</code>、<code>SMTP_USERNAME</code>、<code>SMTP_PASSWORD</code>、<code>SMTP_DOMAIN</code>、<code>SMTP_AUTHENTICATION</code>、<code>SMTP_STARTTLS</code>。</p>
             <p>Webhook 渠道：<code>ALERT_WEBHOOK_URL</code>（HTTPS）和 <code>ALERT_WEBHOOK_FORMAT</code>（generic / feishu / wecom / dingtalk）。</p>
             <p>每日备份：<code>BACKUP_BUCKET_URL</code>（S3 兼容存储的桶地址，可带前缀）、<code>BACKUP_REGION</code>、<code>BACKUP_ACCESS_KEY_ID</code> 与 <code>BACKUP_SECRET_ACCESS_KEY</code>（只需写入权限），以及 <code>BACKUP_ENCRYPTION_KEY</code>（<code>openssl rand -hex 32</code>，另在密码管理器里存一份）。</p>

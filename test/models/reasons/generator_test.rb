@@ -159,12 +159,12 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     assert_requested(:post, ReasonsTestHelpers::MODEL_ENDPOINT, times: 2)
   end
 
-  test "正文缺领域后重试成功：invalid 记账，失败译文不流入成功结果" do
+  test "标签不在画像后重试成功：invalid 记账，失败译文不流入成功结果" do
     with_model_provider do
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
       stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(
-        { status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文") },
+        { status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "不存在的领域", title_zh: "失败响应的标题译文") },
         { status: 200, body: model_reply(reason: "新的推荐理由，前端开发相关，值得一读，二十字以上。", interest_tag: "前端开发", prompt_tokens: 200, completion_tokens: 50) }
       )
       assert_equal :generated, Reasons::Generator.generate_item!(@item)
@@ -172,36 +172,36 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
     assert_equal "新的推荐理由，前端开发相关，值得一读，二十字以上。", @item.reload.reason
     assert_nil @item.title_zh
-    assert_equal [ [ "invalid", 100, 40, BigDecimal("0.0005"), "理由未点名领域" ], [ "ok", 200, 50, BigDecimal("0.0007"), nil ] ],
+    assert_equal [ [ "invalid", 100, 40, BigDecimal("0.0005"), "缺领域名" ], [ "ok", 200, 50, BigDecimal("0.0007"), nil ] ],
                  ModelCall.where(item: @item).order(:id).pluck(:status, :prompt_tokens, :completion_tokens, :cost, :error_summary)
   end
 
-  test "正文连续缺领域：最多三次请求，旧字段和时间保留" do
+  test "标签连续不在画像：最多三次请求，旧字段和时间保留" do
     @item.update!(reason: "已有推荐理由，前端开发相关，二十个字以上的完整句子。", interest_tag: "前端开发", title_zh: "已有标题译文", summary_zh: "已有简介译文", reason_generated_at: 1.day.ago)
     before = @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "summary_zh", "reason_generated_at", "updated_at")
     with_model_provider do
-      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文", summary_zh: "失败响应的简介译文"))
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "不存在的领域", title_zh: "失败响应的标题译文", summary_zh: "失败响应的简介译文"))
       assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 3
     end
     assert_equal before, @item.reload.attributes.slice(*before.keys)
-    assert_equal [ [ "invalid", "理由未点名领域" ] ] * 3, ModelCall.where(item: @item).order(:id).pluck(:status, :error_summary)
+    assert_equal [ [ "invalid", "缺领域名" ] ] * 3, ModelCall.where(item: @item).order(:id).pluck(:status, :error_summary)
   end
 
-  test "正文缺领域首次响应耗尽预算：只请求一次并保留旧字段" do
+  test "标签不在画像首次响应耗尽预算：只请求一次并保留旧字段" do
     @item.update!(reason: "已有推荐理由，前端开发相关，二十个字以上的完整句子。", interest_tag: "前端开发", title_zh: "已有标题译文", reason_generated_at: 1.day.ago)
     before = @item.reload.attributes.slice("reason", "interest_tag", "title_zh", "reason_generated_at", "updated_at")
     with_model_provider do
       Setting.set("model_monthly_cap", "0.0005")
       Setting.set("model_input_price", "1")
       Setting.set("model_output_price", "10")
-      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发", title_zh: "失败响应的标题译文"))
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: model_reply(reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "不存在的领域", title_zh: "失败响应的标题译文"))
       assert_equal :failed, Reasons::Generator.generate_item!(@item)
       assert_requested stub, times: 1
     end
     assert Reasons::Budget.exhausted?
     assert_equal before, @item.reload.attributes.slice(*before.keys)
-    assert_equal [ [ "invalid", BigDecimal("0.0005"), "理由未点名领域" ] ], ModelCall.where(item: @item).pluck(:status, :cost, :error_summary)
+    assert_equal [ [ "invalid", BigDecimal("0.0005"), "缺领域名" ] ], ModelCall.where(item: @item).pluck(:status, :cost, :error_summary)
   end
 
   test "超长后重试成功：两次都按实际 usage 记账，失败译文不流入成功结果" do

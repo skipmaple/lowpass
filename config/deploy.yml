@@ -70,6 +70,11 @@ env:
     - SMTP_STARTTLS
     # 推荐理由（P2-④）
     - MODEL_API_KEY
+    - OPENAI_API_KEY
+    - MODEL_OPENAI_PROXY_URL
+    - MODEL_FALLBACK_NAME
+    - MODEL_FALLBACK_INPUT_PRICE
+    - MODEL_FALLBACK_OUTPUT_PRICE
     # 每日备份（P3）：S3 兼容的对象存储与加密密钥，见 docs/development.md「备份」
     - BACKUP_BUCKET_URL
     - BACKUP_REGION

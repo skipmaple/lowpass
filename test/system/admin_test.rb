@@ -135,6 +135,8 @@ class AdminTest < ApplicationSystemTestCase
     Setting.set("model_base_url", "https://model.example/v1")
     Setting.set("model_name", "test-model")
     Reasons::Provider.stubs(:api_key).returns("test-key")
+    Surfguard.stubs(:resolve_public_ips).returns([ "93.184.216.34" ])
+    stub_request(:get, items(:hn_one).url).to_return(body: "<main><article><p>A local terminal log viewer with structured filtering and JSON export for debugging.</p></article></main>", headers: { "Content-Type" => "text/html" })
     stub_request(:post, "https://model.example/v1/chat/completions").to_return(status: 200, body: model_reply(reason: "用 Rust 写的终端日志工具，可供 AI / LLM 读者考察调试流程。", interest_tag: "AI / LLM", title_zh: "Show HN：一个用 Rust 写的终端日志查看器"))
 
     visit admin_issues_path(month: "2026-09")

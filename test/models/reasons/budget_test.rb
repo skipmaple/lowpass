@@ -47,4 +47,16 @@ class Reasons::BudgetTest < ActiveSupport::TestCase
       assert_equal [ 1, 1, "0.2" ], Reasons::Status.props.values_at(:month_calls, :today_calls, :month_cost)
     end
   end
+  test "mixed currency costs are not added and fallback has no primary cap" do
+    Setting.set("model_currency", "USD")
+    Setting.set("model_monthly_cap", "5")
+    ModelCall.create!(status: "ok", cost: 2, currency: "USD", provider_host: "api.openai.com", provider_model: "gpt-6-luna")
+    ModelCall.create!(status: "ok", cost: 8, currency: "CNY", provider_host: "api.siliconflow.cn", provider_model: "deepseek-ai/DeepSeek-V4-Flash")
+    ModelCall.create!(status: "ok", cost: 7) # 币种未知，不可混入 USD。
+    assert_equal BigDecimal("2"), Reasons::Budget.month_cost
+    assert_not Reasons::Budget.exhausted?
+    groups = Reasons::Budget.month_usage
+    assert_equal [ "CNY", "USD" ], groups.filter_map { |group| group[:currency] }.sort
+    assert_equal [ "2.0", "7.0", "8.0" ], groups.map { |group| group[:cost] }.sort
+  end
 end

@@ -48,3 +48,5 @@
 - Local Brakeman analysis: zero warnings; installed 8.1.0 matches the registry checked over IPv4. Its latest-version wrapper cannot complete the local IPv6 TLS request. GitHub must pass the unmodified wrapper.
 - Branch-history gitleaks scan must be clean; the all-ref local scan also sees unrelated unmerged worktree history. No allowlist or CI security gate was relaxed.
 - Production frontend budget remains 300 KiB in this focused release (275.12 KiB measured). The three-theme changes and their separate approved budget remain in PR #145.
+
+- GitHub audit surfaced newer upstream advisories for the existing lockfile. Updated only patch releases of Rails (8.1.4.1), Rack (3.2.8), rails-html-sanitizer (1.7.2), Loofah (2.25.3), Nokogiri (1.19.7), and Addressable (2.9.2); refreshed advisory database reports no vulnerabilities. No security exemptions added.

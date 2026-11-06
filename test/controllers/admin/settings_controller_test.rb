@@ -174,13 +174,14 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "USD", Setting.get("model_currency")
     assert_equal "0.5", Setting.get("model_input_price")
     assert_equal [ "", "USD" ], AuditLog.last.payload["currency"]
+    assert_equal "USD", call.reload.currency
+    assert_equal BigDecimal("1.25"), Reasons::Budget.month_cost
     patch admin_settings_path, params: { model: values.merge(currency: "CNY", currency_confirmation: "1") }
-    follow_redirect!
-    assert page_props.dig("errors", "currency").present?
-    assert_equal "USD", Setting.get("model_currency")
+    assert_equal "CNY", Setting.get("model_currency")
+    assert_equal "USD", call.reload.currency
     assert_equal "1.25", call.reload.cost.to_s("F")
     patch admin_settings_path, params: { model: values.except(:currency) }
-    assert_equal "USD", Setting.get("model_currency")
+    assert_equal "CNY", Setting.get("model_currency")
   end
 
   test "新安装可选择币种，拒绝未知币种，未设置保持明确未指定" do
@@ -193,5 +194,13 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert page_props.dig("errors", "currency").present?
     patch admin_settings_path, params: { model: values.merge(currency: "CNY") }
     assert_equal "CNY", Setting.get("model_currency")
+  end
+  test "known historical currencies remain attached to their calls when changing providers" do
+    Setting.set("model_currency", "CNY")
+    call = ModelCall.create!(status: "ok", cost: "1.25", currency: "CNY")
+    patch admin_settings_path, params: { model: { base_url: "https://api.openai.com/v1", model_name: "gpt-6-luna", input_price: "0.1", output_price: "0.5", monthly_cap: "0", currency: "USD" } }
+    assert_equal "USD", Setting.get("model_currency")
+    assert_equal "CNY", call.reload.currency
+    assert_equal BigDecimal("0"), Reasons::Budget.month_cost
   end
 end

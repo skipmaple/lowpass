@@ -213,6 +213,18 @@ describe('Admin/Settings/Show', () => {
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('本月 12 次 · 费用 0.35 未指定币种 / 上限 10 未指定币种')
     expect(document.querySelector('.reasons-usage')!.textContent).toContain('今日 3 次')
   })
+  it('分币种显示各模型用量，不把美元和人民币相加', () => {
+    show({ reasons: reasonsStatus({ month_calls: 3, month_usage: [
+      { provider: 'api.openai.com', model: 'gpt-6-luna', currency: 'USD', calls: 1, cost: '0.000178', prompt_tokens: 1000, completion_tokens: 200 },
+      { provider: 'api.siliconflow.cn', model: 'deepseek-ai/DeepSeek-V4-Flash', currency: 'CNY', calls: 2, cost: '0.02', prompt_tokens: 2000, completion_tokens: 500 },
+    ] }) })
+    const usage = document.querySelector('.reasons-usage')!
+    expect(usage.textContent).toContain('gpt-6-luna · 1 次 · 0.000178 USD')
+    expect(usage.textContent).toContain('deepseek-ai/DeepSeek-V4-Flash · 2 次 · 0.02 CNY')
+    expect(usage.textContent).toContain('输入 1000 / 输出 200 tokens')
+    expect(usage.textContent).not.toContain('0.020178')
+  })
+
   it('兴趣画像行独立等待，失败保留数据，删除先确认', async () => {
     show()
     const rows = within(screen.getByRole('table', { name: '兴趣画像' })).getAllByRole('row')

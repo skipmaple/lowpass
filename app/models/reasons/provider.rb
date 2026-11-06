@@ -1,16 +1,29 @@
 require "net/http"
 require "timeout"
+require "ipaddr"
 
 # 模型接入层（ADR T8、设计 §4.4、C1）：只认 OpenAI 兼容的 chat completions——地址与模型名在后台，密钥只从环境读。
-# 单条 20 秒（R-9.8）；401 / 403 是密钥被拒绝、429 是被限流（都不追加重试，本期不再继续），其余失败可重试；
+# 单条 20 秒（R-9.8）；401 / 403 与普通 429 不追加重试；生产 OpenAI 的额度耗尽可切换一次供应商，其余失败有限重试；
 # 响应体边读边截，上限 64 KB
 module Reasons::Provider
-  Error = Class.new(StandardError)
+  class Error < StandardError
+    attr_accessor :configuration, :fallback_reason
+  end
+  ConnectionUnavailable = Class.new(Error)
   TimedOut = Class.new(Error)
   Rejected = Class.new(Error)
   Limited = Class.new(Error)
-  Response = Data.define(:text, :prompt_tokens, :completion_tokens)
-  Configuration = Data.define(:base_url, :model_name, :api_key, :input_price, :output_price)
+  QuotaExhausted = Class.new(Limited)
+  Response = Data.define(:text, :prompt_tokens, :completion_tokens, :configuration, :fallback_reason, :cached_tokens, :cache_write_tokens) do
+    def initialize(text:, prompt_tokens:, completion_tokens:, configuration: nil, fallback_reason: nil, cached_tokens: 0, cache_write_tokens: 0)
+      super
+    end
+  end
+  Configuration = Data.define(:base_url, :model_name, :api_key, :input_price, :output_price, :proxy_url, :fallback, :currency, :cached_input_price, :cache_write_price) do
+    def initialize(base_url:, model_name:, api_key:, input_price:, output_price:, proxy_url: nil, fallback: nil, currency: nil, cached_input_price: nil, cache_write_price: nil)
+      super
+    end
+  end
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 20
   REQUEST_TIMEOUT = 20
@@ -21,17 +34,23 @@ module Reasons::Provider
   class << self
     def base_url = Setting.get("model_base_url")
     def model_name = Setting.get("model_name")
-    def api_key = ENV["MODEL_API_KEY"].to_s
+    def api_key(url = base_url) = credential_for(url)
     def key_configured? = api_key.present?
     def configured? = base_url.present? && model_name.present? && key_configured?
 
     def configuration
-      keys = %w[ model_base_url model_name model_input_price model_output_price ]
+      keys = %w[ model_base_url model_name model_input_price model_output_price model_currency ]
       stored = Setting.where(key: keys).pluck(:key, :value).to_h
       # 一个SQL快照配合后台整组事务，避免请求冻结到两版端点/模型/价格的混合值。
       snapshot = keys.index_with { |key| (stored[key].presence || Setting::DEFAULTS.fetch(key)).to_s.dup.freeze }
-      Configuration.new(base_url: snapshot.fetch("model_base_url"), model_name: snapshot.fetch("model_name"), api_key: api_key.to_s.dup.freeze,
-        input_price: snapshot.fetch("model_input_price"), output_price: snapshot.fetch("model_output_price"))
+      url = snapshot.fetch("model_base_url")
+      proxy = ENV["MODEL_OPENAI_PROXY_URL"].presence if production_openai?(url)
+      raise Error, "生产 OpenAI 专用出口未配置" if production_openai?(url) && proxy.nil?
+
+      Configuration.new(base_url: url, model_name: snapshot.fetch("model_name"), api_key: api_key(url).dup.freeze,
+        input_price: snapshot.fetch("model_input_price"), output_price: snapshot.fetch("model_output_price"),
+        proxy_url: proxy&.dup&.freeze, fallback: proxy ? fallback_configuration : nil,
+        currency: snapshot.fetch("model_currency"), **cache_prices(url, snapshot.fetch("model_name"), snapshot.fetch("model_input_price")))
     end
 
     # 基础地址自动追加 /chat/completions；完整端点、查询或片段会改变拼接语义。
@@ -51,36 +70,158 @@ module Reasons::Provider
 
     def chat(messages, temperature: 0.3, max_tokens: 200, configuration: nil)
       config = configuration || self.configuration
-      # 纵深防御：地址在存进 settings 时已经校验过一次，这里发请求之前再看一眼——
-      # 别的写入路径（console、迁移、以后的导入）绕不过这一道
-      raise Error, "地址不合法" unless valid_base_url?(config.base_url)
+      perform(messages, temperature: temperature, max_tokens: max_tokens, config: config)
+    rescue ConnectionUnavailable, QuotaExhausted => e
+      raise unless config.proxy_url && config.fallback
 
-      uri = URI("#{config.base_url.sub(%r{/+\z}, "")}/chat/completions")
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.is_a?(URI::HTTPS)
-      http.open_timeout = OPEN_TIMEOUT
-      http.read_timeout = READ_TIMEOUT
-      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "Authorization" => "Bearer #{config.api_key}", "User-Agent" => Adapters::Http::USER_AGENT)
-      request.body = { model: config.model_name, messages: messages, temperature: temperature, max_tokens: max_tokens, response_format: { type: "json_object" } }.to_json
-      # 块形式：响应体边读边截（同 Adapters::Http#read_capped），上限之前就停手，
-      # 不先把一个几百 KB 的回复整段读进内存再裁
-      Timeout.timeout(REQUEST_TIMEOUT, TimedOut, "模型请求超过截止时间") do
-        http.request(request) do |response|
-          case response
-          when Net::HTTPSuccess then return parse(read_capped(response))
-          when Net::HTTPUnauthorized, Net::HTTPForbidden then raise Rejected, "密钥被拒绝（#{response.code}）"
-          when Net::HTTPTooManyRequests then raise Limited, "模型服务限流（429）"
-          else raise Error, "模型服务 #{response.code}: #{read_head(response, ERROR_BYTES)}"[0, ERROR_BYTES]
-          end
-        end
-      end
-    rescue Timeout::Error => e
-      raise TimedOut, "#{e.class}: #{e.message}"[0, 200]
-    rescue IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError => e
-      raise Error, "#{e.class}: #{e.message}"[0, 200]
+      reason = e.is_a?(QuotaExhausted) ? "openai_quota_exhausted" : "proxy_connect_failed"
+      Rails.logger.warn(event: "model_egress_fallback", reason: reason, model: config.fallback.model_name)
+      fallback = config.fallback
+      prices = Reasons::Pricing.siliconflow(fallback.model_name)
+      fallback = fallback.with(**prices) if prices
+      perform(messages, temperature: temperature, max_tokens: max_tokens, config: fallback,
+        fallback_reason: reason)
     end
 
     private
+      def production_openai?(url)
+        uri = URI(url.to_s)
+        Rails.env.production? && uri.is_a?(URI::HTTPS) && uri.host == "api.openai.com" && uri.port == 443 && uri.userinfo.nil?
+      rescue URI::Error
+        false
+      end
+
+      def credential_for(url)
+        ENV[production_openai?(url) ? "OPENAI_API_KEY" : "MODEL_API_KEY"].to_s
+      end
+
+      def fallback_configuration
+        return if ENV["MODEL_FALLBACK_NAME"].blank? || ENV["MODEL_API_KEY"].blank?
+
+        model = ENV.fetch("MODEL_FALLBACK_NAME").dup.freeze
+        prices = Reasons::Pricing.siliconflow(model) || {
+          input_price: fallback_price("MODEL_FALLBACK_INPUT_PRICE"),
+          output_price: fallback_price("MODEL_FALLBACK_OUTPUT_PRICE")
+        }
+        Configuration.new(base_url: "https://api.siliconflow.cn/v1", model_name: model,
+          api_key: ENV.fetch("MODEL_API_KEY").dup.freeze, currency: "CNY", **prices)
+      end
+
+      def fallback_price(key)
+        price = ENV[key].to_s
+        raise Error, "备用模型需要配置有效单价（#{key}）" unless BigDecimal(price).finite? && BigDecimal(price) >= 0
+
+        price.dup.freeze
+      rescue ArgumentError
+        raise Error, "备用模型需要配置有效单价（#{key}）"
+      end
+
+      def cache_prices(url, model, input_price)
+        if production_openai?(url) && model == "gpt-6-luna"
+          { cached_input_price: (BigDecimal(input_price) * BigDecimal("0.1")).to_s("F"),
+            cache_write_price: (BigDecimal(input_price) * BigDecimal("1.25")).to_s("F") }
+        else
+          {}
+        end
+      end
+
+      def connection(config, direct: false)
+        uri = URI(config.base_url)
+        if config.proxy_url
+          proxy = URI(config.proxy_url)
+          unless proxy.is_a?(URI::HTTP) && proxy.scheme == "http" && proxy.userinfo.nil? && proxy.query.nil? && proxy.fragment.nil? &&
+              [ "", "/" ].include?(proxy.path) && IPAddr.new("100.64.0.0/10").include?(IPAddr.new(proxy.host))
+            raise Error, "模型出口必须是 Tailscale 内网 HTTP 代理"
+          end
+          http = Net::HTTP.new(uri.host, uri.port, proxy.host, proxy.port)
+        else
+          # 只让备用显式直连；开发环境及其他供应商保留原有环境代理行为。
+          http = Net::HTTP.new(uri.host, uri.port, direct ? nil : :ENV)
+        end
+        http.use_ssl = uri.is_a?(URI::HTTPS)
+        http.open_timeout = OPEN_TIMEOUT
+        http.read_timeout = READ_TIMEOUT
+        http.max_retries = 0
+        http
+      rescue URI::Error, IPAddr::Error
+        raise Error, "模型出口地址不合法"
+      end
+
+      def perform(messages, temperature:, max_tokens:, config:, fallback_reason: nil)
+        raise Error, "地址不合法" unless valid_base_url?(config.base_url)
+
+        uri = URI("#{config.base_url.sub(%r{/+\z}, "")}/chat/completions")
+        http = fallback_reason ? connection(config, direct: true) : connection(config)
+        request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "Authorization" => "Bearer #{config.api_key}", "User-Agent" => Adapters::Http::USER_AGENT)
+        payload = { model: config.model_name, messages: messages, temperature: temperature, response_format: { type: "json_object" } }
+        if production_openai?(config.base_url) && config.model_name == "gpt-6-luna"
+          payload.merge!(max_completion_tokens: max_tokens, reasoning_effort: "none")
+        else
+          payload[:max_tokens] = max_tokens
+        end
+        if fallback_reason && config.model_name == "deepseek-ai/DeepSeek-V4-Flash"
+          payload[:enable_thinking] = false
+        end
+        request.body = payload.to_json
+        Timeout.timeout(REQUEST_TIMEOUT, TimedOut, "模型请求超过截止时间") do
+          connect(http)
+          # CONNECT 与 TLS 握手完成之后才发模型请求。此后失败由现有任务重试/记账，不能暗中再调用另一家。
+          http.request(request) do |response|
+            case response
+            when Net::HTTPSuccess then return parse(read_capped(response)).with(configuration: config, fallback_reason: fallback_reason)
+            when Net::HTTPUnauthorized, Net::HTTPForbidden then raise Rejected, "密钥被拒绝（#{response.code}）"
+            when Net::HTTPTooManyRequests then reject_limit(response, config)
+            else raise Error, "模型服务 #{response.code}: #{read_head(response, ERROR_BYTES)}"[0, ERROR_BYTES]
+            end
+          end
+        end
+      rescue Error => e
+        e.configuration = config
+        e.fallback_reason = fallback_reason
+        raise
+      rescue Timeout::Error => e
+        raise routed_error(TimedOut, e, config, fallback_reason)
+      rescue IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError, Net::HTTPBadResponse, Net::HTTPExceptions => e
+        raise routed_error(Error, e, config, fallback_reason)
+      ensure
+        http.finish if http&.started?
+      end
+
+      def connect(http)
+        http.start
+      rescue Timeout::Error, IOError, SystemCallError, SocketError => e
+        raise ConnectionUnavailable, "模型连接失败（#{e.class}）"
+      rescue Net::HTTPExceptions => e
+        # 仅代理无法建立上游连接可回退；403/407 等拒绝不绕过。
+        if %w[ 502 503 504 ].include?(e.response&.code)
+          raise ConnectionUnavailable, "模型代理无法连接上游"
+        elsif %w[ 401 403 407 ].include?(e.response&.code)
+          raise Rejected, "模型代理拒绝连接（#{e.response.code}）"
+        else
+          raise
+        end
+      end
+
+      def reject_limit(response, config)
+        body = read_head(response, 4096)
+        error = JSON.parse(body)["error"] rescue nil
+        code = error["code"] if error.is_a?(Hash)
+        type = error["type"] if error.is_a?(Hash)
+        exhausted = code == "credit_balance_exhausted" || code == "insufficient_quota" || (code.nil? && type == "insufficient_quota")
+        if production_openai?(config.base_url) && exhausted
+          raise QuotaExhausted, "OpenAI 可用额度已耗尽（429）"
+        else
+          raise Limited, "模型服务限流（429）"
+        end
+      end
+
+      def routed_error(type, error, config, fallback_reason)
+        type.new("#{error.class}: #{error.message}"[0, 200]).tap do |failure|
+          failure.configuration = config
+          failure.fallback_reason = fallback_reason
+        end
+      end
+
       # 成功路径：累计到超过上限就抛，后面的字节不再读
       def read_capped(response)
         buffer = "".b
@@ -114,7 +255,10 @@ module Reasons::Provider
         text = json.is_a?(Hash) ? json.dig("choices", 0, "message", "content").to_s : ""
         raise Error, "模型没有返回内容" if text.blank?
         usage = json["usage"].is_a?(Hash) ? json["usage"] : {}
-        Response.new(text: text, prompt_tokens: usage["prompt_tokens"].to_i, completion_tokens: usage["completion_tokens"].to_i)
+        details = usage["prompt_tokens_details"].is_a?(Hash) ? usage["prompt_tokens_details"] : {}
+        Response.new(text: text, prompt_tokens: usage["prompt_tokens"].to_i, completion_tokens: usage["completion_tokens"].to_i,
+          cached_tokens: (details["cached_tokens"] || usage["prompt_cache_hit_tokens"]).to_i,
+          cache_write_tokens: details["cache_write_tokens"].to_i)
       rescue JSON::ParserError
         raise Error, "模型响应不是 JSON"
       end

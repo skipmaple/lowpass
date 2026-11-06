@@ -3,23 +3,11 @@ require "test_helper"
 class Reasons::ParserTest < ActiveSupport::TestCase
   NAMES = [ "AI / LLM", "前端开发" ].freeze
 
-  test "合法标签不能代替正文中缺失的画像领域名" do
-    error = assert_raises(Reasons::Parser::Invalid) do
-      Reasons::Parser.parse({ decision: "generated", reason: "相关度较低，该条目讨论游戏设计而非技术开发。", interest_tag: "前端开发" }.to_json, NAMES)
-    end
-    assert_equal "理由未点名领域", error.message
-  end
-
-  test "正文必须点名标签选择的同一个领域" do
-    assert_raises(Reasons::Parser::Invalid) do
-      Reasons::Parser.parse({ decision: "generated", reason: "这个终端工具可供前端开发读者考察调试流程，相关度中等。", interest_tag: "AI / LLM" }.to_json, NAMES)
-    end
-  end
-
-  test "正文领域名不接受去掉空格的别名" do
-    assert_raises(Reasons::Parser::Invalid) do
-      Reasons::Parser.parse({ decision: "generated", reason: "AI/LLM 推理服务工具，可供部署场景的比较与学习参考。", interest_tag: "AI / LLM" }.to_json, NAMES)
-    end
+  test "具体理由不必复述领域名，合法标签独立校验" do
+    reason = "流式读取日志并按级别筛选，便于检查大文件中的错误记录。"
+    result = Reasons::Parser.parse({ decision: "generated", reason: reason, interest_tag: "前端开发" }.to_json, NAMES)
+    assert_equal reason, result.reason
+    assert_equal "前端开发", result.interest_tag
   end
 
   test "正文领域名在既有空白归一化之后识别" do

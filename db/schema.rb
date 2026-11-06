@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_074100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_06_181000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -215,7 +215,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_074100) do
 
   create_table "model_calls", id: { type: :string, limit: 25 }, force: :cascade do |t|
     t.integer "completion_tokens", default: 0, null: false
-    t.decimal "cost", precision: 10, scale: 4, default: "0.0", null: false
+    t.decimal "cost", precision: 16, scale: 8, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.integer "duration_ms"
     t.string "error_summary", limit: 200
@@ -227,9 +227,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_074100) do
     t.string "operation_key", limit: 36
     t.string "input_field", limit: 7
     t.string "input_digest", limit: 64
+    t.string "provider_host", limit: 253
+    t.string "provider_model", limit: 255
+    t.string "fallback_reason", limit: 32
+    t.boolean "request_made", default: true, null: false
+    t.string "currency", limit: 3
+    t.integer "cached_tokens", default: 0, null: false
+    t.integer "cache_write_tokens", default: 0, null: false
+    t.decimal "input_price", precision: 14, scale: 8
+    t.decimal "output_price", precision: 14, scale: 8
+    t.decimal "cached_input_price", precision: 14, scale: 8
+    t.decimal "cache_write_price", precision: 14, scale: 8
     t.index ["created_at"], name: "index_model_calls_on_created_at"
     t.index ["issue_id"], name: "index_model_calls_on_issue_id"
     t.index ["operation_key", "purpose", "item_id", "input_field"], name: "index_model_calls_on_operation_target"
+    t.check_constraint "cached_tokens >= 0 AND cache_write_tokens >= 0 AND (cached_tokens + cache_write_tokens) <= prompt_tokens", name: "model_calls_cache_tokens_valid"
+    t.check_constraint "char_length(provider_host::text) <= 253", name: "model_calls_provider_host_length"
+    t.check_constraint "char_length(provider_model::text) <= 255", name: "model_calls_provider_model_length"
+    t.check_constraint "currency::text = ANY (ARRAY['USD'::character varying, 'CNY'::character varying]::text[])", name: "model_calls_currency_allowed"
+    t.check_constraint "fallback_reason::text = ANY (ARRAY['proxy_connect_failed'::character varying, 'openai_quota_exhausted'::character varying]::text[])", name: "model_calls_fallback_reason_allowed"
     t.check_constraint "length(error_summary::text) <= 200", name: "model_calls_error_summary_len"
     t.check_constraint "length(input_digest::text) <= 64", name: "model_calls_input_digest_len"
     t.check_constraint "length(input_field::text) <= 7", name: "model_calls_input_field_len"

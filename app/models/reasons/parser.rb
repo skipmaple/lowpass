@@ -25,7 +25,6 @@ module Reasons::Parser
       raise Invalid, "理由太长（#{reason.length} 字）" if reason.length > MAX
       raise Invalid, "缺领域名" unless tag.is_a?(String) && allowed_names.include?(tag)
       raise Invalid, "理由须含汉字" unless reason.match?(/\p{Han}/)
-      raise Invalid, "理由未点名领域" unless reason.include?(tag.strip.gsub(/\s+/, " "))
       Result.new(decision: "generated", reason: reason, interest_tag: tag,
                  title_zh: translation(json["title_zh"], TITLE_MAX), summary_zh: translation(json["summary_zh"], SUMMARY_MAX))
     end

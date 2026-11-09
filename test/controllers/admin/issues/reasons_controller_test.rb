@@ -3,6 +3,18 @@ require "test_helper"
 class Admin::Issues::ReasonsControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as(users(:drew)) }
 
+  test "当日重生成同时冻结缺译文目标，历史重生成不扩大翻译范围" do
+    travel_to Time.zone.local(2026, 9, 8, 12) do
+      with_model_provider do
+        expected = Translations.targets(issues(:daily_0908))
+        assert expected.any?
+        assert_enqueued_with(job: GenerateReasonsJob, args: ->(args) { args.last.fetch("translation_targets") == expected }) do
+          post admin_issue_reasons_path("2026-09-08")
+        end
+      end
+    end
+  end
+
   test "整期重生成：入队 only_missing=false、记审计、提示" do
     with_model_provider do
       assert_enqueued_with(job: GenerateReasonsJob, args: ->(args) { args.first(2) == [ issues(:daily_0908), false ] && args.last.fetch("translation_targets").empty? && ModelRequests.valid_operation?(args.last.fetch("operation")) }) { post admin_issue_reasons_path("2026-09-08") }

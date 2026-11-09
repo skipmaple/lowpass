@@ -20,7 +20,7 @@ class Reasons::PromptTest < ActiveSupport::TestCase
   test "系统提示定规则，用户消息带画像、标题、说明、来源与元数据" do
     messages = Reasons::Prompt.messages(items(:hn_one), InterestArea.profile_text)
     assert_equal %w[ system user ], messages.map { |m| m[:role] }
-    assert_includes messages[0][:content], "20 到 60 字"
+    assert_includes messages[0][:content], "20 到 60 个字符"
     user = messages[1][:content]
     assert_includes user, "AI / LLM：本地模型部署"
     assert_includes user, "标题：Show HN: A terminal log viewer written in Rust"
@@ -56,7 +56,7 @@ class Reasons::PromptTest < ActiveSupport::TestCase
       assert_includes system, '{"decision":"insufficient_evidence"}'
       assert_includes system, "不要为凑满字数编写理由"
       assert_includes system, "不附理由、标签、译文或诊断"
-      assert_includes system, "20 到 60 字"
+      assert_includes system, "20 到 60 个字符"
     end
   end
 

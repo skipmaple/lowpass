@@ -8,6 +8,7 @@ class Translations::PromptTest < ActiveSupport::TestCase
     assert_equal({ "field" => "title", "text" => "Keep this title" }, JSON.parse(messages.last.fetch(:content)))
     assert_not_includes messages.to_json, "PRIVATE_OTHER_FIELD"
     assert_not_includes messages.to_json, item.url
+    assert_match(/json/i, messages.map { |message| message.fetch(:content) }.join(" "))
     assert_equal 320, Translations::Prompt.max_tokens("title")
     assert_equal 600, Translations::Prompt.max_tokens("summary")
   end

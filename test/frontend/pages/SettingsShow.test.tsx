@@ -44,7 +44,7 @@ describe('Settings/Show', () => {
     expect(screen.getByText('管理员')).toBeInTheDocument()
     expect(screen.getByText('邮箱在白名单中')).toBeInTheDocument()
     expect(screen.getByText('已绑定')).toBeInTheDocument()
-    expect(screen.getByText('· 2026-09-08 14:02')).toBeInTheDocument()
+    expect(screen.getByText('· 2026/09/08 14:02')).toBeInTheDocument()
     expect(screen.getByText('未绑定')).toBeInTheDocument()
   })
 
@@ -70,7 +70,7 @@ describe('Settings/Show', () => {
   it('本次会话一行', () => {
     const { container } = show()
 
-    expect(container.textContent).toContain('2026-09-09 08:12 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · 2026-12-08 到期')
+    expect(container.textContent).toContain('2026/09/09 08:12 登录 · 连续 30 天未活动需重新登录，单次会话最长 90 天 · 2026/12/08 到期')
   })
 
   it('登出走 DELETE /session', async () => {

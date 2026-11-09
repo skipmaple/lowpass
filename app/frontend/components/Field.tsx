@@ -2,7 +2,7 @@ import { useId } from 'react'
 
 import Icon from '@/components/Icon'
 
-// 表单字段（画布 field()）：文楷 13 标签在上，至少 44px 描边框，Maple 值（mono）或文楷值，说明与错误文楷 13 次墨
+// 字段共用标签与状态语义；轮廓、表面、错误和焦点由当前主题的控件令牌决定。
 export type FieldProps = {
   label: string
   name: string
@@ -50,8 +50,8 @@ export default function Field({ label, name, value, onChange, note, error, mono 
         onChange={(event) => onChange(event.target.value)}
       />
       {error ? (
-        <span id={`${id}-note`} className="notice-line">
-          <Icon name="triangle-alert" size={14} color="var(--ink2)" />
+        <span id={`${id}-note`} className="notice-line field-error">
+          <Icon name="triangle-alert" size={14} color="currentColor" />
           <span>{error}</span>
         </span>
       ) : note ? (

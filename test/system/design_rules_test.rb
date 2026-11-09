@@ -1,8 +1,8 @@
 require "application_system_test_case"
 require "base64"
 
-# 设计说明 2026-10-14 里能用计算样式与几何量出来的规则。直接把生产 CSS 和最小的 HTML 片段装进一页
-# （同 paper_test），不经 Vite、不登录：量的是样式表本身。动效与打印的样式表还没建时就跳过它们。
+# 共享触控、排版与打印规则用最小 CSS 片段隔离检查。三主题的构图检查使用完整主题样式，
+# 来源导航与序号使用真实页面，避免旧 DOM 的几何断言与已经批准的新布局冲突。
 class DesignRulesTest < ApplicationSystemTestCase
   STYLES = %w[ tokens.css motion.css daily.css weekly.css results.css print.css ].freeze
   PAPER = "rgb(232, 227, 218)".freeze
@@ -21,16 +21,40 @@ class DesignRulesTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "", features: [])
   end
 
-  test "Q1 周刊主题与原文入口使用墨色，次级来源事实保留暖纸背景" do
-    [ 375, 1440 ].each do |width|
-      render_fragment(WEEKLY_HEADER, width: width)
-
-      assert_equal PAPER, style("body", "background-color")
-      assert_equal "rgba(0, 0, 0, 0)", style(".source-band", "background-color")
-      [ ".source-band-title", ".source-band-link", ".source-band-link svg" ].each do |selector|
-        assert_equal INK, style(selector, "color"), "#{width}px #{selector}"
+  test "三主题周刊各断点只呈现一组完整期导航" do
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      [ 390, 760, 1440 ].each do |width|
+        page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1000, deviceScaleFactor: 1, mobile: false)
+        visit weekly_issue_path("2026-W36")
+        assert_selector ".page-head nav[aria-label='期导航']", count: 1
+        assert_selector ".page-head .issue-nav .ctrl", count: 3
+        assert_link "归档", href: weekly_issues_path
+        bounds = evaluate_script(<<~JS)
+          (() => {
+            const nav = document.querySelector('.page-head .issue-nav'), r = nav.getBoundingClientRect()
+            return { left: r.left, right: r.right, controls: [...nav.children].map(e => e.getBoundingClientRect().height) }
+          })()
+        JS
+        assert_operator bounds.fetch("left"), :>=, 0
+        assert_operator bounds.fetch("right"), :<=, width
+        bounds.fetch("controls").each { |height| assert_operator height, :>=, 44 }
       end
-      assert_operator style(".source-band-title", "font-size").to_f, :>, style(".source-band-meta", "font-size").to_f
+    end
+  end
+
+  test "三主题周刊标题、来源事实和原文入口在各自色面上可读" do
+    %w[daybreak duet unfold].each do |theme|
+      [ 375, 1440 ].each do |width|
+        render_fragment(WEEKLY_HEADER, width: width, theme: theme)
+        assert_equal token_color("--paper"), style("body", "background-color")
+        background = style(".source-band", "background-color")
+        [ ".source-band-title", ".source-band-meta", ".source-band-link", ".source-band-link svg" ].each do |selector|
+          assert_operator contrast(style(selector, "color"), background), :>=, 4.5, "#{theme} #{width}px #{selector}"
+        end
+        assert_operator style(".source-band-title", "font-size").to_f, :>, style(".source-band-meta", "font-size").to_f
+      end
     end
   end
 
@@ -66,35 +90,30 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "90deg", style("summary", "rotate", "::before")
   end
 
-  test "来源目录展开后的独立链接保留足够命中面积，窄屏不重叠或溢出" do
-    [ 1440, 375, 320 ].each do |width|
-      render_fragment(<<~HTML, width: width)
-        <details class="source-directory source-tabs-frame">
-          <summary>来源目录</summary>
-          <nav id="source-directory" class="source-links" aria-label="来源" tabindex="-1">
-            <a class="source-link" href="#hn">Hacker News</a>
-            <a class="source-link" href="#gh">GitHub Trending</a>
-            <a class="source-link" href="#rss">Hackaday</a>
-          </nav>
-        </details>
-        <div class="issue-body"><p>x</p></div>
-      HTML
-      assert_no_selector "#source-directory", visible: true
-      find(".source-directory > summary").send_keys(:enter)
-      assert_selector ".source-directory[open] .source-link", count: 3
-      links = evaluate_script("[...document.querySelectorAll('.source-link')].map(link => link.getBoundingClientRect().toJSON())")
-      links.each do |link|
-        assert_operator link.fetch("width"), :>=, 44, "#{width}px"
-        assert_operator link.fetch("height"), :>=, 44, "#{width}px"
-        assert_operator link.fetch("left"), :>=, 0, "#{width}px"
-        assert_operator link.fetch("right"), :<=, width, "#{width}px"
+  test "三主题来源导航保留独立命中面积且窄屏不重叠或溢出页面" do
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      [ 1440, 375, 320 ].each do |width|
+        visit_theme_daily(theme, width: width)
+        assert_selector "#source-directory .source-link", count: 3
+        links = evaluate_script("[...document.querySelectorAll('.source-link')].map(link => link.getBoundingClientRect().toJSON())")
+        links.each do |link|
+          assert_operator link.fetch("width"), :>=, 44, "#{theme} #{width}px"
+          assert_operator link.fetch("height"), :>=, 44, "#{theme} #{width}px"
+        end
+        links.combination(2).each do |a, b|
+          overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
+            [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
+          assert_equal 0, overlap, "#{theme} #{width}px：来源链接不能重叠"
+        end
+        all(".source-link").each do |link|
+          link.click
+          assert_equal link["href"].split("#").last, evaluate_script("location.hash.slice(1)")
+          assert_equal "location", link["aria-current"]
+          assert_equal 1, all(".source-link[aria-current='location']").size
+        end
+        assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
       end
-      links.combination(2).each do |a, b|
-        overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
-          [ 0, [ a.fetch("bottom"), b.fetch("bottom") ].min - [ a.fetch("top"), b.fetch("top") ].max ].max
-        assert_equal 0, overlap, "#{width}px：来源链接不能重叠"
-      end
-      assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
     end
   end
 
@@ -291,24 +310,27 @@ class DesignRulesTest < ApplicationSystemTestCase
     end
   end
 
-  test "T4 序号与标题首行同一条基线；期头小字末行与大字日期同一条基线" do
-    baseline = <<~JS
-      ((selector) => { const el = document.querySelector(selector); const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.prepend(probe); const y = probe.getBoundingClientRect().top; probe.remove(); return y })
-    JS
-
-    [ 320, 375, 1440, 1920 ].each do |width|
-      [ :translated, :weekly ].each do |variant|
-        render_fragment(touch_item("A practical guide to asynchronous systems and readable tools", variant), width: width)
-        assert_in_delta evaluate_script("#{baseline}('.item-rank')"), evaluate_script("#{baseline}('.item-title a')"), 1,
-          "#{width}px #{variant}：序号必须对齐完整标题的首行"
+  test "三主题序号靠近标题开头且不覆盖标题，日历日期保持完整" do
+    url = "https://example.com/theme-rank-weekly"
+    issues(:weekly_w36).items.create!(source: sources(:ruanyf), title: "A practical guide to asynchronous systems and readable tools", section: "工具", rank: 1,
+      url: url, url_hash: Digest::SHA256.hexdigest(url), fetched_at: Time.current,
+      meta: { issue_no: 366, issue_title: "慢下来的理由", anchor: "工具" })
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      [ 320, 375, 1440, 1920 ].each do |width|
+        visit_theme_daily(theme, width: width)
+        assert_rank_near_title(".item-row--daily", theme: theme, width: width)
+        assert_equal "09/08", find(".calendar-date", visible: true).text.gsub(/\s+/, "")
+        assert_equal "nowrap", style(".calendar-date", "white-space")
+        visit weekly_issue_path("2026-W36")
+        evaluate_async_script("document.fonts.ready.then(arguments[0])")
+        assert_rank_near_title(".item-row--weekly", theme: theme, width: width)
+        assert_operator evaluate_script("document.documentElement.scrollWidth"), :<=, width
       end
     end
-
-    render_fragment(%(<header class="page-head"><div class="issue-head-main"><div class="issue-head-title"><h1 class="issue-head-date">10月14日</h1><div class="issue-head-stack"><span class="issue-head-calendar">2026 年 · 星期三</span><span class="issue-head-time">06:00 发布</span></div></div></div></header>))
-    assert_in_delta evaluate_script("#{baseline}('.issue-head-date')"), evaluate_script("#{baseline}('.issue-head-time')"), 1
   end
 
-  test "M 动效令牌就这五个" do
+  test "阅读翻期保留原有动效令牌" do
     render_fragment("<p>x</p>")
 
     root = ->(name) { evaluate_script("getComputedStyle(document.documentElement).getPropertyValue(#{name.to_json}).trim()") }
@@ -319,36 +341,109 @@ class DesignRulesTest < ApplicationSystemTestCase
     assert_equal "cubic-bezier(0.65, 0, 0.35, 1)", root.("--ease-move")
   end
 
-  test "M4 描边按钮悬停时墨从底部漫满、字转纸色；不可点的没有" do
-    render_fragment(%(<div style="padding: 40px"><a class="ctrl" href="#p">前一期</a> <span class="ctrl ctrl-off">后一期</span></div>), hover: true)
-
-    assert_equal "matrix(1, 0, 0, 0, 0, 0)", style(".ctrl:not(.ctrl-off)", "transform", "::before")
-    find("a.ctrl").hover
-    wait_until { style("a.ctrl", "color") == PAPER }
-    wait_until { style("a.ctrl", "transform", "::before") == "matrix(1, 0, 0, 1, 0, 0)" }
-    assert_equal "none", style(".ctrl-off", "content", "::before")
+  test "操作按钮悬停改变表面且不移动布局；禁用按钮保持原样" do
+    %w[daybreak duet unfold].each do |theme|
+      render_fragment(%(<div style="padding: 40px"><button class="ctrl">次操作</button> <button class="ctrl" disabled>不可用</button></div>), theme: theme, hover: true)
+      enabled = ".ctrl:not(:disabled)"
+      normal = style(enabled, "background-color")
+      disabled = style(".ctrl:disabled", "background-color")
+      bounds = evaluate_script("document.querySelector('#{enabled}').getBoundingClientRect().toJSON()")
+      find(enabled).hover
+      wait_until { style(enabled, "background-color") != normal }
+      assert_equal bounds, evaluate_script("document.querySelector('#{enabled}').getBoundingClientRect().toJSON()"), theme
+      assert_equal "none", style(enabled, "content", "::before"), "#{theme}：不恢复通用填满伪元素"
+      find(".ctrl:disabled").hover
+      sleep 0.25
+      assert_equal disabled, style(".ctrl:disabled", "background-color"), theme
+    end
   end
 
-  test "M4 来源目录链接悬停加深下划线，不反白纸面" do
-    render_fragment(%(<details class="source-directory source-tabs-frame" open><summary>来源目录</summary><nav id="source-directory" class="source-links" aria-label="来源" tabindex="-1"><a class="source-link" href="#hn">Hacker News</a></nav></details>), hover: true)
-
-    assert_equal "underline", style(".source-link", "text-decoration-line")
-    refute_equal "rgba(0, 0, 0, 0)", style(".source-link", "text-decoration-color")
-    refute_equal INK, style(".source-link", "text-decoration-color")
-    find(".source-link").hover
-    wait_until { style(".source-link", "text-decoration-color") == INK }
-    assert_not_equal INK, style(".source-link", "background-color")
+  test "三主题来源链接悬停不移动布局且保留当前位置，激活后才更新选中项" do
+    sign_in_with_browser(users(:drew))
+    %w[daybreak duet unfold].each do |theme|
+      visit_theme_daily(theme, width: 1440)
+      selected = find(".source-link[aria-current='location']")
+      link = find(".source-link", text: "GitHub Trending")
+      bounds = link.evaluate_script("this.getBoundingClientRect().toJSON()")
+      link.hover
+      assert_equal bounds, link.evaluate_script("this.getBoundingClientRect().toJSON()"), theme
+      assert_equal "location", selected["aria-current"]
+      assert_nil link["aria-current"]
+      assert_not_equal style(".source-link[aria-current]", "color"), style(".source-link[aria-current]", "background-color"), theme
+      link.click
+      assert_equal "location", link["aria-current"]
+      assert_nil selected["aria-current"]
+      assert_equal link["href"].split("#").last, evaluate_script("location.hash.slice(1)")
+    end
   end
 
-  test "M7 菜单、对话框、提示条带出现动画；减少动态效果时几乎为零" do
-    render_fragment(%(<div class="menu-card">菜单</div><div class="dialog">问句</div><div class="toast">提示</div>))
-    assert_equal "lp-unfold", style(".menu-card", "animation-name")
-    assert_equal "lp-settle", style(".dialog", "animation-name")
-    assert_equal "lp-drop", style(".toast", "animation-name")
+  test "三主题禁用及等待中的文字操作和分段选项不产生悬停反馈" do
+    %w[daybreak duet unfold].each do |theme|
+      render_fragment(<<~HTML, theme: theme, hover: true, reduced_motion: true)
+        <div style="padding: 40px">
+          <button class="link-button" disabled>重生成理由</button>
+          <button class="link-button" disabled aria-busy="true">正在提交</button>
+          <div class="seg"><button class="seg-item seg-button" disabled aria-pressed="false">周刊</button></div>
+        </div>
+      HTML
+      [ ".link-button:not([aria-busy])", ".link-button[aria-busy]", ".seg-button" ].each do |selector|
+        before = %w[color background-color text-decoration-color].map { |property| style(selector, property) }
+        find(selector).hover
+        assert_equal before, %w[color background-color text-decoration-color].map { |property| style(selector, property) }, "#{theme} #{selector} 禁用悬停保持原样"
+      end
+      assert_equal "wait", style(".link-button[aria-busy]", "cursor")
+      assert_equal "not-allowed", style(".link-button:not([aria-busy])", "cursor")
+    end
+  end
 
-    render_fragment(%(<div class="menu-card">菜单</div><a class="ctrl" href="#p">前一期</a>), reduced_motion: true)
-    assert_equal "0.001s", style(".menu-card", "animation-duration")
-    assert_equal "0.001s", style(".ctrl", "transition-duration", "::before")
+  test "后台导航焦点位于滚动区域内且跟随当前项的可读颜色" do
+    [ 1440, 390 ].each do |width|
+      %w[daybreak duet unfold].each do |theme|
+        render_fragment(<<~HTML, width: width, theme: theme)
+          <nav class="admin-nav" style="margin: 0; padding: 0; width: 280px">
+            <a class="admin-nav-item" href="#one" aria-current="page">信息源</a>
+            <a class="admin-nav-item" href="#two">刊物</a>
+          </nav>
+        HTML
+        all(".admin-nav-item").each do |item|
+          page.driver.browser.action.send_keys(:tab).perform
+          assert item.evaluate_script("this === document.activeElement")
+          assert_equal "solid", item.evaluate_script("getComputedStyle(this).outlineStyle")
+          assert_equal "-4px", item.evaluate_script("getComputedStyle(this).outlineOffset")
+          assert_equal item.evaluate_script("getComputedStyle(this).color"), item.evaluate_script("getComputedStyle(this).outlineColor"), "#{theme}/#{width} 焦点线跟随有对比度的前景"
+        end
+      end
+    end
+  end
+
+  test "A 有色页头的等待按钮保留反向文字、边界和图标颜色" do
+    render_fragment(<<~HTML, theme: "daybreak")
+      <header class="admin-page-head"><div class="admin-page-controls">
+        <button class="btn-primary" disabled aria-busy="true"><svg stroke="currentColor"></svg>正在提交</button>
+      </div></header>
+    HTML
+    paper = evaluate_script("getComputedStyle(document.documentElement).getPropertyValue('--paper').trim()")
+    expected = evaluate_script("(() => { const e = document.createElement('span'); e.style.color = #{paper.to_json}; document.body.append(e); return getComputedStyle(e).color })()")
+    %w[color border-top-color].each { |property| assert_equal expected, style(".btn-primary", property) }
+    assert_equal expected, style(".btn-primary svg", "stroke")
+    assert_equal "wait", style(".btn-primary", "cursor")
+  end
+
+  test "浮层按主题短暂出现，减少动态效果保留内容并取消明显运动" do
+    %w[daybreak duet unfold].each do |theme|
+      fragment = %(<div class="menu-card">菜单</div><div class="dialog">问句</div><div class="toast">提示</div>)
+      render_fragment(fragment, theme: theme)
+      %w[.menu-card .dialog .toast].each do |selector|
+        assert_not_equal "none", style(selector, "animation-name"), theme
+        assert_operator style(selector, "animation-duration").to_f, :>, 0
+        assert_operator style(selector, "animation-duration").to_f, :<=, 0.25
+      end
+      render_fragment(fragment, theme: theme, reduced_motion: true)
+      %w[.menu-card .dialog .toast].each do |selector|
+        assert_operator style(selector, "animation-duration").to_f, :<=, 0.001
+        assert_not_equal "hidden", style(selector, "visibility")
+      end
+    end
   end
 
   test "C3 周刊配图在纸面正片叠底，打印时恢复原图" do
@@ -516,6 +611,47 @@ class DesignRulesTest < ApplicationSystemTestCase
   end
 
   private
+    def visit_theme_daily(theme, width:)
+      execute_script("localStorage.setItem('lowpass-theme', #{theme.to_json})")
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 1000, deviceScaleFactor: 1, mobile: false)
+      visit daily_issue_path("2026-09-08")
+      assert_selector "html[data-theme='#{theme}']"
+      evaluate_async_script("document.fonts.ready.then(arguments[0])")
+    end
+
+    def assert_rank_near_title(selector, theme:, width:)
+      assert_selector "#{selector} .item-rank", text: "01"
+      geometry = evaluate_script(<<~JS)
+        (() => {
+          const row = document.querySelector(#{selector.to_json}), rank = row.querySelector('.item-rank').getBoundingClientRect();
+          const title = row.querySelector('.item-title a'), range = document.createRange(); range.selectNodeContents(title);
+          const lines = [...range.getClientRects()].filter(rect => rect.width > 0);
+          return { rank: rank.toJSON(), first: lines[0].toJSON(), overlaps: lines.some(line =>
+            Math.min(rank.right, line.right) > Math.max(rank.left, line.left) && Math.min(rank.bottom, line.bottom) > Math.max(rank.top, line.top)) };
+        })()
+      JS
+      assert_operator geometry.fetch("rank").fetch("top"), :<, geometry.fetch("first").fetch("bottom"), "#{theme} #{width}px：序号靠近标题开头，不沉到正文中间"
+      assert_not geometry.fetch("overlaps"), "#{theme} #{width}px：序号不覆盖标题"
+    end
+
+    def token_color(name)
+      evaluate_script(<<~JS)
+        (() => { const probe = document.createElement('span'); probe.style.color = 'var(#{name})';
+          document.body.append(probe); const color = getComputedStyle(probe).color; probe.remove(); return color; })()
+      JS
+    end
+
+    def contrast(first, second)
+      luminances = [ first, second ].map do |color|
+        channels = color.scan(/[\d.]+/).first(3).map do |channel|
+          value = channel.to_f / 255
+          value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055)**2.4
+        end
+        channels.zip([ 0.2126, 0.7152, 0.0722 ]).sum { |value, weight| value * weight }
+      end
+      (luminances.max + 0.05) / (luminances.min + 0.05)
+    end
+
     def title_touch_rectangle(selector)
       evaluate_script(<<~JS)
         (() => {
@@ -694,15 +830,15 @@ class DesignRulesTest < ApplicationSystemTestCase
 
     # hover: true 把悬停规则外面那层 (hover: hover) and (pointer: fine) 换成 all：那层只是给触屏设备的保护，
     # GitHub Actions 的无头 Chrome 没有指针设备、不匹配它，悬停的效果却正是这里要量的（CDP 也模拟不了这两个媒体特性）
-    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false, preflight: false)
-      css = STYLES.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
-      # 搜索标题的 h2 继承 15px，内部 Mixed 才是 20px；使用应用实际加载的 Tailwind reset。
+    def render_fragment(html, width: 1440, height: 900, reduced_motion: false, media: "", hover: false, theme: nil, preflight: false)
+      styles = theme ? %w[tokens.css motion.css daily.css weekly.css results.css themes.css themes-reading.css themes-library.css themes-controls.css themes-admin-workspace.css print.css] : STYLES
+      css = styles.map { |name| Rails.root.join("app/frontend/styles", name) }.select(&:exist?).map(&:read).join("\n")
       css = Rails.root.join("node_modules/tailwindcss/preflight.css").read + "\n" + css if preflight
       css = css.gsub("@media (hover: hover) and (pointer: fine)", "@media all") if hover
       browser = page.driver.browser
       browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height, deviceScaleFactor: 1, mobile: false)
       browser.execute_cdp("Emulation.setEmulatedMedia", media: media, features: [ { name: "prefers-reduced-motion", value: reduced_motion ? "reduce" : "no-preference" } ])
-      document = "<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><style>#{css}</style></head><body class='paper'>#{html}</body></html>"
+      document = "<!doctype html><html lang='zh-CN'#{theme ? " data-theme='#{theme}'" : ""}><head><meta charset='utf-8'><style>#{css}</style></head><body class='paper'>#{html}</body></html>"
       visit "data:text/html;charset=utf-8;base64,#{Base64.strict_encode64(document)}"
     end
 

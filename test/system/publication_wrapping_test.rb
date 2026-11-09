@@ -2,6 +2,7 @@ require "application_system_test_case"
 
 # T2：实际页面、实际字体和逐字行框；不以 CSS 属性或整体无溢出代替断行验收。
 class PublicationWrappingTest < ApplicationSystemTestCase
+  THEMES = %w[ daybreak duet unfold ].freeze
   setup do
     travel_to Time.utc(2026, 10, 23, 4)
     page.driver.browser.execute_cdp("Network.setBlockedURLs", urls: [ "https://avatars.example/drew.png" ])
@@ -20,7 +21,7 @@ class PublicationWrappingTest < ApplicationSystemTestCase
     layout = text_layout(".source-band-title")
     assert_equal "编程已经面目全非", layout.fetch("text")
     assert_selector ".source-band-issue", text: "第 416 期"
-    assert_equal [ "22px" ], layout.fetch("fontSizes")
+    assert layout.fetch("fontSizes").all? { |size| size.to_f >= 20 }, layout.inspect
     assert_no_orphan layout
     assert layout.fetch("lines").any? { |line| line.include?("编程已经面目全非") },
       "主题能放进一行时，不应把编程拆到期号两边：#{layout.fetch('lines').inspect}"
@@ -64,8 +65,8 @@ class PublicationWrappingTest < ApplicationSystemTestCase
       assert layout.fetch("lines").none? { |line| line.delete(" ") == "·" }, layout.inspect
       assert layout.fetch("lines").none? { |line| line.match?(/·\S/) },
         "同一行的分隔点后仍保留空格：#{layout.fetch('lines').inspect}"
-      assert_match(/Maple/, layout.fetch("glyphs").last.fetch("family"))
-      assert_match(/Newsreader/, layout.fetch("glyphs")[-2].fetch("family"))
+      assert_match(/Lowpass Latin A/, layout.fetch("glyphs").last.fetch("family"))
+      assert_match(/Lowpass Latin A/, layout.fetch("glyphs")[-2].fetch("family"))
       assert_no_overflow layout
     end
   end
@@ -179,6 +180,29 @@ class PublicationWrappingTest < ApplicationSystemTestCase
     end
   end
 
+  test "三主题收藏与搜索标题保留真实译文、完整断行和当前字形" do
+    item = items(:hn_one)
+    title = "把分散的技术线索整理成日后能够找回和继续阅读的资料"
+    item.update!(title: "paragraphbalance turns technical discoveries into a useful reading collection", title_zh: title,
+      summary: "A collection for reading and finding useful technical material later.")
+    Favorite.keep(users(:drew), item)
+    Search::Record.rebuild!
+    sign_in_with_browser(users(:drew))
+
+    THEMES.each do |theme|
+      [ 320, 768, 1440 ].each do |width|
+        [ search_path(q: "paragraphbalance"), favorites_path ].each do |path|
+          render_page path, width: width, target: ".record-title", theme: theme
+          layout = text_layout(".record-title")
+          assert_equal title, layout.fetch("text")
+          assert_no_orphan layout
+          assert_selector ".record-title a[target='_blank'][aria-describedby='new-tab-description']"
+          assert_selector ".record-issue-link"
+        end
+      end
+    end
+  end
+
   private
     def weekly(key, number, title, count:)
       date = PeriodKey.week_range(key).first + 4
@@ -208,9 +232,11 @@ class PublicationWrappingTest < ApplicationSystemTestCase
       end
     end
 
-    def render_page(path, width:, target:)
+    def render_page(path, width:, target:, theme: "daybreak")
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
       visit path
+      assert_selector "html[data-theme='#{theme}']", visible: :all
       assert_selector target
       evaluate_async_script(<<~JS)
         const done = arguments[0]
@@ -250,13 +276,18 @@ class PublicationWrappingTest < ApplicationSystemTestCase
               if (segment.trim()) glyphs.push({text: segment, center, left: rect.left, right: rect.right, family: getComputedStyle(node.parentElement).fontFamily})
             }
           }
+          const letter = { daybreak: 'A', duet: 'B', unfold: 'C' }[document.documentElement.dataset.theme]
+          const primaryFamilies = [...new Set(glyphs.map(glyph => glyph.family.split(',')[0].trim().replace(/["']/g, '')))]
+          const loadedFamilies = new Set([...document.fonts].filter(face => face.status === 'loaded').map(face => face.family.replace(/["']/g, '')))
           return {
             text: element.textContent.trim(), lines: lines.sort((a, b) => a.center - b.center).map(line => line.text.trim()),
             glyphs, fontSizes: [...new Set([element, ...element.querySelectorAll('span')].filter(element => element.childNodes.length && [...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.data.trim())).map(element => getComputedStyle(element).fontSize))],
             overflow: document.documentElement.scrollWidth - innerWidth,
             glyphOverflow: glyphs.some(glyph => glyph.left < bounds.left - 1 || glyph.right > bounds.right + 1),
             fontStatus: document.fonts.status,
-            wenkaiLoaded: [...document.fonts].some(face => face.family.includes('LXGW') && face.status === 'loaded'),
+            theme: document.documentElement.dataset.theme, primaryFamilies,
+            themeFontsLoaded: primaryFamilies.every(family =>
+              [`Lowpass Chinese ${letter}`, `Lowpass Latin ${letter}`].includes(family) && loadedFamilies.has(family)),
           }
         })()
       JS
@@ -293,6 +324,6 @@ class PublicationWrappingTest < ApplicationSystemTestCase
       assert_operator layout.fetch("overflow"), :<=, 0, "视口内显示完整：#{diagnostic}"
       assert_not layout.fetch("glyphOverflow"), "文字不能越出自身的布局框：#{diagnostic}"
       assert_equal "loaded", layout.fetch("fontStatus")
-      assert layout.fetch("wenkaiLoaded"), "实际文楷 face 已加载"
+      assert layout.fetch("themeFontsLoaded"), "当前主题实际字库已加载：#{layout.slice("theme", "primaryFamilies").inspect}"
     end
 end

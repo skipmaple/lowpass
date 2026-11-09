@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import AdminPage, { AdminLayout } from '@/components/AdminPage'
+import PendingLabel from '@/components/PendingLabel'
 import Field from '@/components/Field'
 import InterestAreaRow from '@/components/InterestAreaRow'
 import { useDraftAccount, useDraftForm, useUnsavedChanges } from '@/lib/drafts'
@@ -188,12 +189,12 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
       </nav>
       <Section title="调度" id="schedule">
         <form ref={scheduleRef} onSubmit={submit}>
-          <fieldset className="form-fieldset admin-form-row" disabled={scheduleBusy} style={{ alignItems: 'flex-start' }}>
+          <fieldset className="form-fieldset admin-form-row" disabled={scheduleBusy} aria-busy={scheduleBusy} style={{ alignItems: 'flex-start' }}>
             <Field label="日刊生成时间" name="daily_time" value={form.data.daily_time} onChange={(v) => scheduleChange('daily_time', v)} mono type="time" required width={160} note="Asia/Shanghai，精确到分" error={fieldError(errors, 'daily_time')} />
             <Field label="周刊检查时间" name="weekly_time" value={form.data.weekly_time} onChange={(v) => scheduleChange('weekly_time', v)} mono type="time" required width={160} note="Asia/Shanghai，精确到分" error={fieldError(errors, 'weekly_time')} />
             <div style={{ paddingTop: 26 }}>
-              <button type="submit" className="btn-primary" disabled={scheduleBusy}>
-                {scheduleBusy ? '正在保存…' : '保存调度'}
+              <button type="submit" className="btn-primary" disabled={scheduleBusy} aria-busy={scheduleBusy}>
+                <PendingLabel idle="保存调度" pending="正在保存…" busy={scheduleBusy} />
               </button>
             </div>
           </fieldset>
@@ -219,8 +220,8 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
         <ChannelRow label="邮件" channel={alerts.email} />
         <ChannelRow label="Webhook" channel={alerts.webhook} />
         <div className="admin-actions" style={{ alignItems: 'center' }}>
-          <button type="button" className="btn-primary" disabled={!configured || sending} onClick={sendTestAlert}>
-            {sending ? '发送中…' : '发送测试告警'}
+          <button type="button" className="btn-primary" disabled={!configured || sending} aria-busy={sending} onClick={sendTestAlert}>
+            <PendingLabel idle="发送测试告警" pending="发送中…" busy={sending} />
           </button>
           {configured ? null : <><span className="field-note">未配置告警渠道，无法发送测试。</span><a className="field-note t" href="#deployment">查看部署配置帮助</a></>}
         </div>
@@ -234,8 +235,8 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
         {backup.last_succeeded && backup.last?.status !== 'succeeded' ? <BackupRow label="最近成功" value={backup.last_succeeded} empty="" /> : null}
         {backup.problems.length > 0 ? <span className="field-note"><Mixed text={`配置不完整：${backup.problems.join('；')}`} /></span> : null}
         <div className="admin-actions" style={{ alignItems: 'center' }}>
-          <button type="button" className="btn-primary" disabled={!backup.configured || backup.active || backingUp} onClick={startBackup}>
-            {backup.active || backingUp ? '备份中…' : '立即备份'}
+          <button type="button" className="btn-primary" disabled={!backup.configured || backup.active || backingUp} aria-busy={backingUp} onClick={startBackup}>
+            <PendingLabel idle="立即备份" pending="备份中…" busy={backup.active || backingUp} />
           </button>
           {backup.configured ? null : <><span className="field-note">未配置备份存储，无法立即备份。</span><a className="field-note t" href="#deployment">查看部署配置帮助</a></>}
         </div>
@@ -258,7 +259,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
       <Section title="推荐理由" id="reasons">
         {reasons.configured ? null : <span className="cjk" style={{ fontSize: 'var(--fs-15)', color: 'var(--ink2)' }}>未配置模型供应商</span>}
         <form ref={modelRef} onSubmit={submitModel}>
-          <fieldset className="form-fieldset admin-form-row" disabled={modelBusy} style={{ alignItems: 'flex-start' }}>
+          <fieldset className="form-fieldset admin-form-row" disabled={modelBusy} aria-busy={modelBusy} style={{ alignItems: 'flex-start' }}>
             <Field label="API 基础地址" name="base_url" value={model.data.base_url} onChange={(v) => modelChange('base_url', v)} mono width={320} note="例如 https://api.openai.com/v1；自动追加 /chat/completions。保存配置不会测试连接。" error={fieldError(modelErrors, 'base_url')} />
             <div className="model-name-field">
               <Field label="模型名" name="model_name" value={model.data.model_name} onChange={(v) => modelChange('model_name', v)} mono width={200} error={fieldError(modelErrors, 'model_name')} />
@@ -276,7 +277,7 @@ function Settings({ schedule, whitelist, alerts, reasons, interest_areas, backup
             <Field label="输入单价" name="input_price" value={model.data.input_price} onChange={(v) => modelChange('input_price', v)} mono type="number" min={0} step="any" required width={160} note={`${model.data.currency || '未指定币种'} / 百万 tokens`} error={fieldError(modelErrors, 'input_price')} />
             <Field label="输出单价" name="output_price" value={model.data.output_price} onChange={(v) => modelChange('output_price', v)} mono type="number" min={0} step="any" required width={160} note={`${model.data.currency || '未指定币种'} / 百万 tokens`} error={fieldError(modelErrors, 'output_price')} />
             <Field label="月费用上限" name="monthly_cap" value={model.data.monthly_cap} onChange={(v) => modelChange('monthly_cap', v)} mono type="number" min={0} step="any" required width={160} note={`${model.data.currency || '未指定币种'}；0 = 不限`} error={fieldError(modelErrors, 'monthly_cap')} />
-            <div style={{ paddingTop: 26 }}><button type="submit" className="btn-primary" disabled={modelBusy}>{modelBusy ? '正在保存…' : '保存模型设置'}</button></div>
+            <div style={{ paddingTop: 26 }}><button type="submit" className="btn-primary" disabled={modelBusy} aria-busy={modelBusy}><PendingLabel idle="保存模型设置" pending="正在保存…" busy={modelBusy} /></button></div>
           </fieldset>
         </form>
         <span role="status" className="field-note">{modelStatus || (model.isDirty ? '模型设置有未保存的更改' : '')}</span>

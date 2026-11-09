@@ -1,21 +1,19 @@
 import { createInertiaApp } from '@inertiajs/react'
 
-import Layout from '@/components/Layout'
-import { loadContentFonts } from '@/lib/contentFonts'
 import { restoreHistoryScroll } from '@/lib/historyScroll'
-import { markFirstLoad } from '@/lib/motion'
+import { loadContentFonts } from '@/lib/contentFonts'
+import Layout from '@/components/Layout'
 import { focusMainOnNavigate } from '@/lib/navigationFocus'
 import { crossfadeFor } from '@/lib/pageTurn'
 
-// 登录与常用阅读页随入口加载，避免应用启动后再串行等待页面分片；其他页面仍按需加载。
+// 登录与常用阅读页随入口加载，避免应用启动后再串行等待页面分片。
 import '@/pages/Login/Show'
 import '@/pages/Daily/Show'
 import '@/pages/Weekly/Show'
 
-loadContentFonts()
+void loadContentFonts()
 restoreHistoryScroll()
 focusMainOnNavigate()
-markFirstLoad()
 
 void createInertiaApp({
   pages: "../pages",

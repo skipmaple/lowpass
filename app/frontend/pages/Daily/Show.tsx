@@ -7,9 +7,10 @@ import IssueHead from '@/components/IssueHead'
 import IssueNotice from '@/components/IssueNotice'
 import ItemRow from '@/components/ItemRow'
 import Layout from '@/components/Layout'
+import PendingLabel from '@/components/PendingLabel'
+import SourceTabs from '@/components/SourceTabs'
 import SourceState from '@/components/SourceState'
 import SourceDirectory, { openSourceDirectory } from '@/components/SourceDirectory'
-import DailySourceSection from '@/components/DailySourceSection'
 import { useScrollToHash } from '@/lib/anchors'
 import { FavoritesProvider } from '@/lib/favorites'
 import { DAILY_ARCHIVE, adminIssueBackfillHref, dailyHref, latestWeeklyHref } from '@/lib/paths'
@@ -47,7 +48,7 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
     <>
       <div className="issue-body">
         {source.state === 'ok' ? (
-          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} heading="h3" />)
+          items.map((item, index) => <ItemRow key={item.id} item={item} adapter={source.adapter} rank={item.rank ?? index + 1} heading="h3" sourceName={source.name} />)
         ) : (
           <SourceState state={source.state} lastOkLabel={source.last_ok_label} />
         )}
@@ -56,7 +57,7 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
       {/* 栏尾外链，措辞按第八轮定的「来源名 完整榜单 ↗」；R-8.4 新标签页打开。
           画布 foot_link() 没有下划线——那是栏尾装置，不是正文里的原文链接。
           源的 home_url 算不出来（feed 地址不是 http）时整条不渲染。 */}
-      <div className="source-actions">
+      <div className="source-actions source-tail">
         {source.home_url ? (
           <a className="source-foot" href={source.home_url} target="_blank" rel="noopener noreferrer">
             <Mixed text={`${source.name} 完整榜单`} font="latin" size="var(--fs-15)" color="var(--ink)" />
@@ -64,7 +65,7 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
           </a>
         ) : null}
         <a className="directory-return" href="#source-directory" onClick={openSourceDirectory}>
-          <span aria-hidden="true">↑</span>
+          <Icon name="arrow-up" size={14} color="currentColor" />
           <span>返回来源目录</span>
         </a>
       </div>
@@ -73,15 +74,19 @@ function SourceBody({ source, items }: { source: SourceSummary; items: Item[] })
 }
 
 function Sources({ sources, itemsBySource, notice, fallbackAnchor }: { sources: SourceSummary[]; itemsBySource: Record<string, Item[]>; notice: string | null; fallbackAnchor?: { sourceId: string; id: string } }) {
-  return (
-    <div className="daily-reading">
-      {sources.length > 0 ? <SourceDirectory sources={sources} navigable={!notice} /> : null}
-      {notice ? <IssueNotice text={notice} /> : sources.map((source, index) => (
-        <DailySourceSection key={source.id} source={source} animate={index > 0} aliasId={fallbackAnchor?.sourceId === source.id ? fallbackAnchor.id : undefined}>
-          <SourceBody source={source} items={itemsBySource[source.id] ?? []} />
-        </DailySourceSection>
-      ))}
+  // 已完成但没有条目的来源按空栏展示，保留明确的事实说明。
+  const readingSources = sources.map((source) => source.state === 'ok' && !itemsBySource[source.id]?.length ? { ...source, state: 'empty' as const } : source)
+  if (notice) {
+    return <div className="source-collection">
+      {sources.length > 0 ? <SourceDirectory sources={sources} navigable={false} /> : null}
+      <div className="source-sections"><IssueNotice text={notice} /></div>
     </div>
+  }
+
+  return (
+    <SourceTabs sources={readingSources} fallbackAnchor={fallbackAnchor}>
+      {(source) => <SourceBody source={source} items={itemsBySource[source.id] ?? []} />}
+    </SourceTabs>
   )
 }
 
@@ -123,13 +128,14 @@ export default function Show({ issue, missing, sources, items_by_source, favorit
 
   return (
     <FavoritesProvider favorites={favorites}>
+      <div className="daily-reading">
       <IssueHead issue={issue} archiveHref={DAILY_ARCHIVE} hrefFor={dailyHref} />
 
       {/* 没有记录时不展示来源目录；今日未到生成时间则说明计划时间。 */}
       {missing ? (
         <IssueNotice text={notice ?? ''}>
           <Link className="ctrl" href={latest_daily_key ? dailyHref(latest_daily_key) : DAILY_ARCHIVE}>{latest_daily_key ? '阅读最新日刊' : '查看日刊归档'}</Link>
-          {backfill_available ? <button className="link-button" type="button" disabled={backfilling} onClick={backfill}>{backfilling ? '正在补生成…' : '补生成本期'}</button> : null}
+          {backfill_available ? <button className="link-button" type="button" disabled={backfilling} aria-busy={backfilling} onClick={backfill}><PendingLabel idle="补生成本期" pending="正在补生成…" busy={backfilling} /></button> : null}
           {backfillResult ? <p className="operation-feedback" role="status">{backfillResult}</p> : null}
         </IssueNotice>
       ) : (
@@ -141,6 +147,7 @@ export default function Show({ issue, missing, sources, items_by_source, favorit
           fallbackAnchor={fallbackAnchor}
         />
       )}
+      </div>
     </FavoritesProvider>
   )
 }

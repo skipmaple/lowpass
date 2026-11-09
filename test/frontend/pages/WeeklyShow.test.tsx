@@ -32,10 +32,10 @@ describe('周刊期头', () => {
   it('前后期按周期键拼地址，归档指向 /weekly', () => {
     show({ issue: weeklyIssue({ next_key: '2026-W37' }) })
 
-    for (const link of screen.getAllByRole('link', { name: '前一期' })) {
+    for (const link of screen.getAllByRole('link', { name: '上一期' })) {
       expect(link).toHaveAttribute('href', '/weekly/2026-W35')
     }
-    for (const link of screen.getAllByRole('link', { name: '后一期' })) {
+    for (const link of screen.getAllByRole('link', { name: '下一期' })) {
       expect(link).toHaveAttribute('href', '/weekly/2026-W37')
     }
     for (const link of screen.getAllByRole('link', { name: '归档' })) {

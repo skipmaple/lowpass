@@ -3,7 +3,7 @@ require "timeout"
 require "ipaddr"
 
 # 模型接入层（ADR T8、设计 §4.4、C1）：只认 OpenAI 兼容的 chat completions——地址与模型名在后台，密钥只从环境读。
-# 单条 20 秒（R-9.8）；401 / 403 与普通 429 不追加重试；生产 OpenAI 的额度耗尽可切换一次供应商，其余失败有限重试；
+# 默认单条 20 秒（R-9.8），显式开发本机模式 300 秒；401 / 403 与普通 429 不追加重试；生产 OpenAI 的额度耗尽可切换一次供应商，其余失败有限重试；
 # 响应体边读边截，上限 64 KB
 module Reasons::Provider
   class Error < StandardError
@@ -19,6 +19,18 @@ module Reasons::Provider
       super
     end
   end
+  # 截断仍有实际消耗；携带全部计费信息且不重试相同请求。
+  class Incomplete < Error
+    MESSAGE = "模型输出达到长度上限，未生成完整回复".freeze
+    attr_reader :prompt_tokens, :completion_tokens, :cached_tokens, :cache_write_tokens
+
+    def initialize(prompt_tokens:, completion_tokens:, cached_tokens: 0, cache_write_tokens: 0)
+      @prompt_tokens, @completion_tokens = prompt_tokens, completion_tokens
+      @cached_tokens, @cache_write_tokens = cached_tokens, cache_write_tokens
+      super(MESSAGE)
+    end
+  end
+
   Configuration = Data.define(:base_url, :model_name, :api_key, :input_price, :output_price, :proxy_url, :fallback, :currency, :cached_input_price, :cache_write_price) do
     def initialize(base_url:, model_name:, api_key:, input_price:, output_price:, proxy_url: nil, fallback: nil, currency: nil, cached_input_price: nil, cache_write_price: nil)
       super
@@ -27,6 +39,8 @@ module Reasons::Provider
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 20
   REQUEST_TIMEOUT = 20
+  LOCAL_READ_TIMEOUT = 300
+  LOCAL_MAX_TOKENS = 8192
   MAX_BYTES = 64 * 1024
   ERROR_BYTES = 200            # 非 2xx 时只留一段摘要（error_summary 列也是 200）
   LOCAL_HOSTS = %w[ localhost 127.0.0.1 ].freeze
@@ -84,6 +98,11 @@ module Reasons::Provider
     end
 
     private
+      # 仅显式开发本机服务接受 text；解析与业务字段校验保持一致。
+      def local_development?(uri)
+        Rails.env.development? && ENV["MODEL_LOCAL_COMPAT"] == "1" && LOCAL_HOSTS.include?(uri.host)
+      end
+
       def production_openai?(url)
         uri = URI(url.to_s)
         Rails.env.production? && uri.is_a?(URI::HTTPS) && uri.host == "api.openai.com" && uri.port == 443 && uri.userinfo.nil?
@@ -140,7 +159,7 @@ module Reasons::Provider
         end
         http.use_ssl = uri.is_a?(URI::HTTPS)
         http.open_timeout = OPEN_TIMEOUT
-        http.read_timeout = READ_TIMEOUT
+        http.read_timeout = local_development?(uri) ? LOCAL_READ_TIMEOUT : READ_TIMEOUT
         http.max_retries = 0
         http
       rescue URI::Error, IPAddr::Error
@@ -151,19 +170,20 @@ module Reasons::Provider
         raise Error, "地址不合法" unless valid_base_url?(config.base_url)
 
         uri = URI("#{config.base_url.sub(%r{/+\z}, "")}/chat/completions")
+        local = local_development?(uri)
         http = fallback_reason ? connection(config, direct: true) : connection(config)
         request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "Authorization" => "Bearer #{config.api_key}", "User-Agent" => Adapters::Http::USER_AGENT)
-        payload = { model: config.model_name, messages: messages, temperature: temperature, response_format: { type: "json_object" } }
+        payload = { model: config.model_name, messages: messages, temperature: temperature, response_format: { type: local ? "text" : "json_object" } }
         if production_openai?(config.base_url) && config.model_name == "gpt-6-luna"
           payload.merge!(max_completion_tokens: max_tokens, reasoning_effort: "none")
         else
-          payload[:max_tokens] = max_tokens
+          payload[:max_tokens] = local ? [ max_tokens, LOCAL_MAX_TOKENS ].max : max_tokens
         end
         if fallback_reason && config.model_name == "deepseek-ai/DeepSeek-V4-Flash"
           payload[:enable_thinking] = false
         end
         request.body = payload.to_json
-        Timeout.timeout(REQUEST_TIMEOUT, TimedOut, "模型请求超过截止时间") do
+        Timeout.timeout(local ? LOCAL_READ_TIMEOUT : REQUEST_TIMEOUT, TimedOut, "模型请求超过截止时间") do
           connect(http)
           # CONNECT 与 TLS 握手完成之后才发模型请求。此后失败由现有任务重试/记账，不能暗中再调用另一家。
           http.request(request) do |response|
@@ -252,13 +272,18 @@ module Reasons::Provider
 
       def parse(body)
         json = JSON.parse(body)
-        text = json.is_a?(Hash) ? json.dig("choices", 0, "message", "content").to_s : ""
-        raise Error, "模型没有返回内容" if text.blank?
-        usage = json["usage"].is_a?(Hash) ? json["usage"] : {}
+        choice = json.dig("choices", 0) if json.is_a?(Hash)
+        usage = json.is_a?(Hash) && json["usage"].is_a?(Hash) ? json["usage"] : {}
         details = usage["prompt_tokens_details"].is_a?(Hash) ? usage["prompt_tokens_details"] : {}
-        Response.new(text: text, prompt_tokens: usage["prompt_tokens"].to_i, completion_tokens: usage["completion_tokens"].to_i,
+        tokens = { prompt_tokens: usage["prompt_tokens"].to_i, completion_tokens: usage["completion_tokens"].to_i,
           cached_tokens: (details["cached_tokens"] || usage["prompt_cache_hit_tokens"]).to_i,
-          cache_write_tokens: details["cache_write_tokens"].to_i)
+          cache_write_tokens: details["cache_write_tokens"].to_i }
+        raise Incomplete.new(**tokens) if choice.is_a?(Hash) && choice["finish_reason"] == "length"
+
+        text = choice.is_a?(Hash) ? choice.dig("message", "content").to_s : ""
+        raise Error, "模型没有返回内容" if text.blank?
+
+        Response.new(text: text, **tokens)
       rescue JSON::ParserError
         raise Error, "模型响应不是 JSON"
       end

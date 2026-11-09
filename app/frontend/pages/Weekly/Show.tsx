@@ -125,7 +125,7 @@ function Group({ group, section, directory, aliasId, intro }: { group: WeeklyGro
         </>
       )}
       <a className="directory-return" href={`#${directory}`} onClick={() => openDirectory(directory)}>
-        <span aria-hidden="true">↑</span>
+        <Icon name="arrow-up" size={14} color="currentColor" />
         <span>返回板块目录</span>
       </a>
     </section>

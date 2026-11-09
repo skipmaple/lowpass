@@ -14,7 +14,6 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     within("#source-directory") { click_on sources(:github).name }
     wait_for_reading_anchor("source-#{sources(:github).id}")
     history_length = evaluate_script("history.length")
@@ -33,7 +32,6 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     assert_selector ".daily-source", count: 3
     history_length = evaluate_script("history.length")
     within("#source-directory") { click_on sources(:github).name }
@@ -77,7 +75,6 @@ class ReadingTest < ApplicationSystemTestCase
     Issue.create!(kind: "daily", period_key: "2026-09-07", state: "empty", generation_started_at: Time.utc(2026, 9, 6, 22), published_at: Time.utc(2026, 9, 6, 22, 5), source_states: {})
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     find("#source-directory a", match: :first).send_keys(:left, :right)
     assert_current_path daily_issue_path("2026-09-08")
   end
@@ -88,13 +85,12 @@ class ReadingTest < ApplicationSystemTestCase
     source = sources(:github)
     item = Item.where(issue: issues(:daily_0908), source: source).order(:rank).first!
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     within("#source-directory") { click_on source.name }
     within("#source-#{source.id}") { find("button[aria-label='收藏：#{item.title}']").click }
     wait_until { users(:drew).favorites.exists?(url_hash: item.url_hash) }
     wait_for_favorite_requests(1)
     assert_equal "#source-#{source.id}", evaluate_script("location.hash")
-    execute_script("document.querySelector('a[aria-label=搜索]').click()")
+    execute_script("document.querySelector('nav[aria-label=主导航] a[href=\"/search\"]').click()")
     assert_current_path search_path
     page.go_back
     wait_until { evaluate_script("location.hash") == "#source-#{source.id}" }
@@ -105,7 +101,6 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     find("#source-directory a[href='#source-#{sources(:github).id}']").send_keys(:enter)
     wait_until { evaluate_script("document.activeElement.id") == "source-#{sources(:github).id}" }
     page.driver.browser.switch_to.active_element.send_keys(:tab)
@@ -122,7 +117,6 @@ class ReadingTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: 900, deviceScaleFactor: 1, mobile: false)
       page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "forced-colors", value: forced_colors ? "active" : "none" } ])
       visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
       find("#source-directory a[href='#source-#{source.id}']").send_keys(:enter)
       wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
       state = evaluate_script(<<~JS)
@@ -163,7 +157,6 @@ class ReadingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
     source = sources(:github)
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     find("#source-directory a[href='#source-#{source.id}']").send_keys(:enter)
     wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
     assert_equal "solid", evaluate_script("getComputedStyle(document.activeElement.querySelector('.daily-source-heading')).outlineStyle")
@@ -182,7 +175,6 @@ class ReadingTest < ApplicationSystemTestCase
     sign_in_with_browser(users(:drew))
     source = sources(:github)
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     within("#source-directory") { click_on source.name }
     wait_until { evaluate_script("document.activeElement.id") == "source-#{source.id}" }
     assert_not evaluate_script("document.activeElement.matches(':focus-visible')")
@@ -192,7 +184,6 @@ class ReadingTest < ApplicationSystemTestCase
   test "三个来源连续可读，目录跳转保留之前的内容" do
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     assert_text HN_TITLE
     assert_selector ".daily-source", count: 3
     within("#source-directory") { click_on sources(:github).name }
@@ -201,6 +192,7 @@ class ReadingTest < ApplicationSystemTestCase
     within("#source-#{sources(:github).id}") { assert_text "本期抓取失败，已通知管理员" }
     refresh
     assert_selector ".daily-source", count: 3
+    assert_selector ".source-tab[aria-current='location']", text: sources(:github).name
     assert_current_path(daily_issue_path("2026-09-08")) { |url| url.fragment == "source-#{sources(:github).id}" }
   end
 
@@ -220,7 +212,6 @@ class ReadingTest < ApplicationSystemTestCase
     prepare_continuous_issue
     sign_in_with_browser(users(:drew))
     visit daily_issue_path("2026-09-08")
-    find(".source-directory > summary").click
     within("#source-directory") { click_on sources(:hackaday).name }
     assert_current_path(daily_issue_path("2026-09-08")) { |url| url.fragment == "source-#{sources(:hackaday).id}" }
     wait_for_reading_anchor("source-#{sources(:hackaday).id}")
@@ -228,7 +219,7 @@ class ReadingTest < ApplicationSystemTestCase
     reading_position = evaluate_script("window.scrollY")
     wait_until { evaluate_script("window.history.state.documentScrollPosition?.top") == reading_position }
     # 点击可见导航前浏览器可能会滚回顶部，直接发起同样的 Inertia 访问保存当前位置。
-    execute_script("document.querySelector('a[aria-label=搜索]').click()")
+    execute_script("document.querySelector('nav[aria-label=主导航] a[href=\"/search\"]').click()")
     assert_current_path search_path
     page.go_back
     assert_selector ".daily-source", count: 3
@@ -241,7 +232,7 @@ class ReadingTest < ApplicationSystemTestCase
     visit root_path
 
     assert_current_path daily_issue_path("2026-09-08")
-    assert_text "9月8日"
+    assert_selector ".calendar-date", text: /09\s*\/\s*08/
   end
 
   # 附录 B：「这一页不存在。回到首页」。文案写在页面组件里（没有开 SSR），只有真的渲染出来才看得见
@@ -265,7 +256,7 @@ class ReadingTest < ApplicationSystemTestCase
         evaluate_script(<<~JS)
           (() => {
             const target = document.getElementById(#{id.to_json})
-            const top = target.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(target).scrollMarginTop || 0)
+            const top = target.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(target).scrollMarginTop || 0) - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop || 0)
             const expected = Math.min(top, document.documentElement.scrollHeight - innerHeight)
             return history.state?.page instanceof ArrayBuffer &&
               Math.abs(scrollY - expected) < 2 &&
@@ -273,5 +264,12 @@ class ReadingTest < ApplicationSystemTestCase
           })()
         JS
       end
+    rescue Timeout::Error
+      flunk evaluate_script(<<~JS)
+        (() => {
+          const target = document.getElementById(#{id.to_json})
+          return JSON.stringify({id:#{id.to_json},top:target.getBoundingClientRect().top,margin:getComputedStyle(target).scrollMarginTop,scroll:scrollY,height:innerHeight,total:document.documentElement.scrollHeight,history:history.state?.documentScrollPosition,page:Object.prototype.toString.call(history.state?.page)})
+        })()
+      JS
     end
 end

@@ -1,6 +1,7 @@
 require "test_helper"
 
 class ModelRequestsTest < ActiveSupport::TestCase
+  setup { Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "The tool streams and filters local log files.", url: items(:hn_one).url, error: nil)) }
   test "同一个操作最多三次失败，重放不追加模型请求" do
     operation = ModelRequests.operation
     with_model_provider do

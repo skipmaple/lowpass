@@ -2,16 +2,19 @@ import { createPortal } from 'react-dom'
 import { useEffect, useId, useRef } from 'react'
 import type * as React from 'react'
 
-// 确认对话框（画布 dialog()）：整页 40% 墨色遮罩，480px 纸卡，1px 墨线加 2px 顶线，文楷 20 的问句，
-// 右下「取消」描边 + 确认反白。Escape 取消；打开时焦点进取消按钮，关掉后回到打开前的元素；
-// Tab / Shift+Tab 在纸卡里转圈，不跑到遮罩后面那一页上。
+import PendingLabel from '@/components/PendingLabel'
+
+// 确认对话框共用取消优先、焦点圈和焦点返回；表面与危险操作样式由主题决定。
+// 无法确认与正在执行是两种状态：前者仍允许取消，后者保护执行中的操作。
 export type DialogProps = React.PropsWithChildren<{
   open: boolean
   text: string
   cancel: string
   confirm: string
+  busyConfirm?: string
   busy?: boolean
   confirmDisabled?: boolean
+  tone?: 'default' | 'danger'
   returnFocus?: () => HTMLElement | null
   onCancel: () => void
   onConfirm: () => void
@@ -32,7 +35,7 @@ function tabStops(paper: HTMLElement | null): HTMLElement[] {
   })
 }
 
-export default function Dialog({ open, text, cancel, confirm, busy = false, confirmDisabled = false, returnFocus, onCancel, onConfirm, children }: DialogProps) {
+export default function Dialog({ open, text, cancel, confirm, busyConfirm, busy = false, confirmDisabled = false, tone = 'default', returnFocus, onCancel, onConfirm, children }: DialogProps) {
   const paperRef = useRef<HTMLDivElement>(null)
   const initialFocusRef = useRef<HTMLButtonElement>(null)
   // 问句既是看得见的标题也是纸卡的名字：aria-labelledby 指过去，读屏读到的和眼睛看到的是同一段
@@ -50,8 +53,12 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, conf
   useEffect(() => {
     if (!open) return
     const previous = document.activeElement as HTMLElement | null
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // 根节点建立容器后，body 的 overflow 不再传播到视口；两处都锁，逐轴保留原值与优先级。
+    const scrollRoots = [document.documentElement, document.body].map(element => ({
+      element,
+      overflow: ['overflow-x', 'overflow-y'].map(property => ({ property, value: element.style.getPropertyValue(property), priority: element.style.getPropertyPriority(property) })),
+    }))
+    scrollRoots.forEach(({ element }) => { element.style.overflow = 'hidden' })
     const background = Array.from(document.body.children).filter((element) => !element.contains(paperRef.current))
     const previousInert = background.map((element) => element.hasAttribute('inert'))
     background.forEach((element) => element.setAttribute('inert', ''))
@@ -77,7 +84,12 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, conf
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
+      scrollRoots.forEach(({ element, overflow }) => {
+        element.style.removeProperty('overflow')
+        overflow.forEach(({ property, value, priority }) => {
+          if (value) element.style.setProperty(property, value, priority)
+        })
+      })
       background.forEach((element, index) => { if (!previousInert[index]) element.removeAttribute('inert') })
       const target = returnFocusRef.current?.() ?? previous
       if (target?.isConnected) target.focus()
@@ -92,7 +104,7 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, conf
 
   return createPortal(
     <div className="dialog-shade">
-      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby={textId} aria-busy={busy} tabIndex={-1} ref={paperRef}>
+      <div className="dialog" data-tone={tone} role="dialog" aria-modal="true" aria-labelledby={textId} aria-busy={busy} tabIndex={-1} ref={paperRef}>
         <p className="dialog-text" id={textId}>
           {text}
         </p>
@@ -101,8 +113,8 @@ export default function Dialog({ open, text, cancel, confirm, busy = false, conf
           <button type="button" className="ctrl" ref={initialFocusRef} disabled={busy} onClick={onCancel}>
             {cancel}
           </button>
-          <button type="button" className="btn-primary" disabled={busy || confirmDisabled} onClick={onConfirm}>
-            {confirm}
+          <button type="button" className={`btn-primary${tone === 'danger' ? ' btn-danger' : ''}`} disabled={busy || confirmDisabled} aria-busy={busy} onClick={onConfirm}>
+            {busyConfirm ? <PendingLabel idle={confirm} pending={busyConfirm} busy={busy} /> : confirm}
           </button>
         </div>
       </div>

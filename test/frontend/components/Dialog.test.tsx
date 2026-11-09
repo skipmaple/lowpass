@@ -29,6 +29,22 @@ describe('Dialog', () => {
 
     rerender(<Dialog open text="x" cancel="取消" confirm="好" busy onCancel={() => {}} onConfirm={() => {}} />)
     expect(screen.getByRole('button', { name: '好' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '好' })).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('未满足确认条件时仍可取消，不把不可用误报为正在执行', async () => {
+    const onCancel = vi.fn()
+    const onConfirm = vi.fn()
+    render(<Dialog open text="请选择来源" cancel="取消" confirm="重抓来源" confirmDisabled onCancel={onCancel} onConfirm={onConfirm} />)
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('button', { name: '重抓来源' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '重抓来源' })).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('button', { name: '取消' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onConfirm).not.toHaveBeenCalled()
   })
 
   it.each([false, true])('busy 恢复后纸卡上的焦点按 Tab 进入按钮（shift=%s）', async (shift) => {
@@ -107,6 +123,23 @@ describe('Dialog', () => {
   })
 })
 
+it('等待文案只播报当前状态，等待期间保留确认和取消禁用', async () => {
+  const onCancel = vi.fn()
+  const onConfirm = vi.fn()
+  const props = { open: true, text: '确认注销？', cancel: '取消', confirm: '确认注销', busyConfirm: '正在注销…', onCancel, onConfirm }
+  const { rerender } = render(<Dialog {...props} />)
+  expect(screen.getByRole('button', { name: '确认注销' })).toBeEnabled()
+
+  rerender(<Dialog {...props} busy />)
+  const confirm = screen.getByRole('button', { name: '正在注销…' })
+  expect(confirm).toBeDisabled()
+  expect(confirm).toHaveAttribute('aria-busy', 'true')
+  expect(screen.getByRole('button', { name: '取消' })).toBeDisabled()
+  await userEvent.keyboard('{Escape}')
+  expect(onCancel).not.toHaveBeenCalled()
+  expect(onConfirm).not.toHaveBeenCalled()
+})
+
 it('关闭时恢复触发按钮与背景滚动', async () => {
  const trigger = document.createElement('button')
  document.body.append(trigger)
@@ -114,11 +147,35 @@ it('关闭时恢复触发按钮与背景滚动', async () => {
  const props = { text: '确认删除？', cancel: '取消', confirm: '删除', onCancel: () => {}, onConfirm: () => {} }
  const { rerender } = render(<Dialog open {...props} />)
  expect(screen.getByRole('button', { name: '取消' })).toHaveFocus()
+ expect(document.documentElement.style.overflow).toBe('hidden')
  expect(document.body.style.overflow).toBe('hidden')
  expect(trigger).toHaveAttribute('inert')
  rerender(<Dialog open={false} {...props} />)
  expect(trigger).toHaveFocus()
  expect(trigger).not.toHaveAttribute('inert')
+ expect(document.documentElement.style.overflow).toBe('')
  expect(document.body.style.overflow).toBe('')
  trigger.remove()
+})
+
+it.each(['close', 'unmount'] as const)('%s 原样恢复根节点和 body 各自的 overflow 值与优先级', (action) => {
+  const root = document.documentElement, body = document.body
+  root.style.setProperty('overflow-x', 'clip', 'important')
+  root.style.setProperty('overflow-y', 'auto')
+  body.style.setProperty('overflow', 'scroll', 'important')
+  const read = (node: HTMLElement) => ['overflow-x', 'overflow-y'].map(property => [node.style.getPropertyValue(property), node.style.getPropertyPriority(property)])
+  const before = [read(root), read(body)]
+  const props = { text: '确认删除？', cancel: '取消', confirm: '删除', onCancel: () => {}, onConfirm: () => {} }
+  const view = render(<Dialog open {...props} />)
+  try {
+    expect(root.style.overflow).toBe('hidden')
+    expect(body.style.overflow).toBe('hidden')
+    if (action === 'close') view.rerender(<Dialog open={false} {...props} />)
+    else view.unmount()
+    expect([read(root), read(body)]).toEqual(before)
+  } finally {
+    view.unmount()
+    root.style.removeProperty('overflow')
+    body.style.removeProperty('overflow')
+  }
 })

@@ -4,8 +4,8 @@ import { createPortal } from 'react-dom'
 import Icon, { type IconName } from '@/components/Icon'
 import type { Flash } from '@/types/lowpass'
 
-// 操作反馈（画布 toast()）：页面顶部一行 44px，1px 墨线纸底，图标 + 文楷 15 + 关闭叉；
-// info / ok 5 秒自动收起，鼠标停留或焦点在提示上时暂停；fail 不收（设计 skill「状态」：失败的要留着给人看）。
+// 操作反馈的容器由当前主题与 kind 决定，图标和文案始终保留非颜色线索。
+// info / ok 5 秒自动收起，鼠标停留或焦点在提示上时暂停；fail 保留到读者关闭。
 export type ToastKind = 'info' | 'ok' | 'fail'
 const ICONS: Record<ToastKind, IconName> = { info: 'clock', ok: 'check', fail: 'triangle-alert' }
 const AUTO_HIDE_MS = 5000
@@ -32,15 +32,16 @@ export default function Toast({ kind, text, onClose }: { kind: ToastKind; text: 
   return (
     <div
       className="toast"
+      data-kind={kind}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false) }}
     >
-      <Icon name={ICONS[kind]} size={16} />
+      <Icon name={ICONS[kind]} size={16} color="currentColor" />
       <span className="toast-text">{text}</span>
       <button type="button" className="toast-close" aria-label="关闭" onClick={onClose}>
-        <Icon name="x" size={14} color="var(--ink2)" />
+        <Icon name="x" size={14} color="currentColor" />
       </button>
     </div>
   )

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="daybreak">
   <head>
     <title data-inertia><%= content_for(:title) || "Lowpass" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <%# 设计说明 2026-10-14 D1：简介用附录 B 的登录页一句话；手机浏览器顶栏跟报头墨带同色；分享卡片落在登录页上也成立 %>
     <meta name="description" content="每天一期技术日刊，登录后阅读">
-    <meta name="theme-color" content="#1D1D1B">
+    <meta name="theme-color" content="#FCFAF2">
     <link rel="manifest" href="/manifest.webmanifest">
     <meta property="og:site_name" content="Lowpass">
     <meta property="og:type" content="website">
@@ -28,11 +28,22 @@
     <link rel="icon" href="/icon.svg?v=3" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png?v=3">
 
-    <%# 每页都有的界面字（报头、期头、页脚）在这个文楷子集里：不等 JS 渲染出文字才发现要它（script/subset_fonts） %>
-    <link rel="preload" href="<%= vite_asset_path "fonts/lxgw-wenkai-screen-ui.woff2" %>" as="font" type="font/woff2" crossorigin>
-    <%= latin_font_preload_tag %>
-    <%# 正文字体声明不挡首屏：先 preload，lib/contentFonts.ts 启动时挂成样式表（设计说明 2026-10-14 D3） %>
-    <link rel="preload" as="style" href="<%= vite_asset_path "fonts-content.css" %>" data-content-fonts>
+    <%# Apply the saved theme before styles paint. Storage may be blocked. %>
+    <%= javascript_tag nonce: true do %>
+      var theme = 'daybreak';
+      try {
+        var savedTheme = localStorage.getItem('lowpass-theme');
+        if (['daybreak', 'duet', 'unfold'].includes(savedTheme)) theme = savedTheme;
+      } catch (_) {}
+      document.documentElement.dataset.theme = theme;
+      document.querySelector('meta[name="theme-color"]').content = {daybreak:'#FCFAF2',duet:'#FCFCFA',unfold:'#111515'}[theme];
+      var themeFonts = <%= raw json_escape(theme_font_preloads.to_json) %>;
+      themeFonts[theme].forEach(function(url) {
+        var font = document.createElement('link');
+        font.rel = 'preload'; font.as = 'font'; font.type = 'font/woff2'; font.crossOrigin = ''; font.href = url;
+        document.head.appendChild(font);
+      });
+    <% end %>
 
     <%= search_page_preload_tag %>
 

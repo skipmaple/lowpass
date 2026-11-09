@@ -40,7 +40,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
         (() => {
           const first = arguments[0], second = document.getElementById(`item-${arguments[1]}`);
           const title = second.querySelector('.item-title a'), rect = title.getBoundingClientRect(), bounds = second.getBoundingClientRect();
-          const controls = [...first.querySelectorAll('.item-comments, .item-save')].map(control => {
+          const controls = [...first.querySelectorAll('.item-comments, .favorite-button')].map(control => {
             const r = control.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
             return { width: r.width, height: r.height, bottom: r.bottom,
               hits: [[-21, -21], [21, -21], [-21, 21], [21, 21]].map(([dx, dy]) => document.elementFromPoint(x + dx, y + dy)?.closest('a, button') === control) };
@@ -59,7 +59,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "窄屏短标题可触控且元信息在空间足够时保持同一行" do
+  test "窄屏短标题可触控，元信息与完整内容后的收藏均可读" do
     items(:hn_one).update!(title: "Genie 4", meta: { score: 583, comments: 354, comments_url: "https://news.ycombinator.com/item?id=1" })
     [ 305, 320, 375 ].each do |width|
       viewport(width)
@@ -73,7 +73,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
           const row = arguments[0], link = row.querySelector('.item-title a'), r = link.getBoundingClientRect();
           const x = r.left + r.width / 2, y = r.top + r.height / 2;
           const age = row.querySelector('.item-age').getBoundingClientRect();
-          const bookmark = row.querySelector('.item-save').getBoundingClientRect();
+          const bookmark = row.querySelector('.item-comments').getBoundingClientRect();
           const meta = row.querySelector('.item-meta'), gap = parseFloat(getComputedStyle(meta).columnGap);
           const children = [...meta.children], required = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + gap * (children.length - 1);
           return { height: r.height, hits: [-21.5, 0, 21.5].map(dy => document.elementFromPoint(x, y + dy)?.closest('a') === link),
@@ -84,7 +84,6 @@ class DailyChaptersTest < ApplicationSystemTestCase
       JS
       assert_operator geometry.fetch("height"), :>=, 44, "#{width}px 短标题触控高度"
       assert geometry.fetch("hits").all?, "#{width}px 标题的 44px 区域应命中链接"
-      assert_equal 4, geometry.fetch("gap"), "#{width}px 极窄屏收紧元信息间距" if width < 359
       if geometry.fetch("required") <= geometry.fetch("available") + 0.01
         assert_in_delta geometry.fetch("bookmarkY"), geometry.fetch("ageY"), 1, "#{width}px 空间足够时元信息应在同一行"
       end
@@ -92,35 +91,33 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "桌面与窄屏的全部章节保持原有暖纸与纸纹，普通和减少动态模式下正文都可读" do
-    WIDTHS.each do |width|
+  test "三套主题桌面与窄屏章节保留自己的配色，普通和减少动态模式下正文都可读" do
+    [ 320, 768, 1440 ].each do |width|
       viewport(width)
-      [ "no-preference", "reduce" ].each do |motion|
-        page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: motion } ])
-        visit daily_issue_path("2026-09-08")
-        assert_selector ".daily-source", count: 3
-        all(".daily-source").each do |section|
-          colors = chapter_colors(section)
-          context = "#{width}px #{motion} #{section[:id]}"
-          assert_equal "rgb(232, 227, 218)", colors.fetch("surface"), "章节不得更换暖纸主色；#{context}"
-          refute_equal "none", colors.fetch("texture"), "原有纸纹应继续存在；#{context}"
-          colors.fetch("planes").each do |plane|
-            transparent = plane.fetch("color") == "rgba(0, 0, 0, 0)"
-            assert transparent || plane.fetch("image") == colors.fetch("texture"), "目录与章头不能用纯色层盖住纸纹；#{context} #{plane.inspect}"
+      %w[daybreak duet unfold].each do |theme|
+        [ "no-preference", "reduce" ].each do |motion|
+          page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: motion } ])
+          visit daily_issue_path("2026-09-08")
+          select_theme theme
+          assert_selector ".daily-source", count: 3
+          all(".daily-source").each do |section|
+            colors = chapter_colors(section)
+            context = "#{theme} #{width}px #{motion} #{section[:id]}"
+            assert_equal "none", colors.fetch("texture"), "三主题不恢复已否决的旧纸纹；#{context}"
+            assert_not_empty colors.fetch("text"), context
+            colors.fetch("text").each do |entry|
+              foreground = luminance(entry.fetch("color"))
+              background = luminance(entry.fetch("background"))
+              assert_operator contrast(foreground, background), :>=, 4.5, "正文与数字必须能读清；#{context} #{entry.inspect}"
+            end
           end
-          assert_not_empty colors.fetch("text"), context
-          colors.fetch("text").each do |entry|
-            foreground = luminance(entry.fetch("color"))
-            background = luminance(entry.fetch("background"))
-            assert_operator contrast(foreground, background), :>=, 4.5, "正文与数字必须能读清；#{context} #{entry.inspect}"
-          end
+          assert_no_horizontal_overflow
         end
-        assert_no_horizontal_overflow
       end
     end
   end
 
-  test "无边框图标收藏与评论同组，切换保留可访问名称与稳定命中区" do
+  test "正文后的文字图标收藏切换保留可访问名称与稳定命中区" do
     with_forgery_protection do
       INTERACTION_WIDTHS.each do |width|
         viewport(width)
@@ -132,18 +129,18 @@ class DailyChaptersTest < ApplicationSystemTestCase
         assert_includes time["title"], "Asia/Shanghai"
         assert_equal items(:hn_one).published_at.iso8601, time["datetime"]
 
-        bookmark = row.find(".item-meta .favorite-button")
+        bookmark = row.find(".item-actions .favorite-button")
         execute_script("arguments[0].scrollIntoView({ block: 'center' })", bookmark)
         settle_frames
         assert_controls_independent(row, width)
-        assert_equal "收藏：#{items(:hn_one).title}", bookmark["aria-label"]
+        assert_equal "收藏：#{items(:hn_one).title_zh || items(:hn_one).title}", bookmark["aria-label"]
         assert_nil bookmark["data-on"]
         before = bookmark_geometry(bookmark)
         assert_bookmark_layers(before, width)
 
         bookmark.click
-        assert_selector "#item-#{items(:hn_one).id} .item-save[data-on]"
-        assert_equal "取消收藏：#{items(:hn_one).title}", bookmark["aria-label"]
+        assert_selector "#item-#{items(:hn_one).id} .favorite-button[data-on]"
+        assert_equal "取消收藏：#{items(:hn_one).title_zh || items(:hn_one).title}", bookmark["aria-label"]
         wait_until { users(:drew).favorites.exists?(url_hash: items(:hn_one).url_hash) }
         wait_for_favorite_requests(1)
         wait_until { bookmark.evaluate_script("this.getAnimations().length === 0") }
@@ -155,8 +152,8 @@ class DailyChaptersTest < ApplicationSystemTestCase
         assert_controls_independent(row, width)
 
         bookmark.click
-        assert_selector "#item-#{items(:hn_one).id} .item-save:not([data-on])"
-        assert_equal "收藏：#{items(:hn_one).title}", bookmark["aria-label"]
+        assert_selector "#item-#{items(:hn_one).id} .favorite-button:not([data-on])"
+        assert_equal "收藏：#{items(:hn_one).title_zh || items(:hn_one).title}", bookmark["aria-label"]
         wait_until { users(:drew).favorites.where(url_hash: items(:hn_one).url_hash).empty? }
         wait_for_favorite_requests(2)
         assert_bookmark_layers(bookmark_geometry(bookmark), width)
@@ -165,7 +162,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "目录默认收起，展开后完整提供实际一二四个来源与状态" do
+  test "主题来源导航完整提供实际一二四个来源与状态" do
     issue = issues(:daily_0908)
     extra = Source.create!(name: "Technical Notes", adapter: "rss", publication: "daily", sort_order: 4,
       config: { feed_url: "https://notes.example/feed" })
@@ -176,14 +173,9 @@ class DailyChaptersTest < ApplicationSystemTestCase
         selected = available.first(count)
         issue.update!(source_states: selected.to_h { |source| [ source.id, source == extra ? "empty" : "ok" ] })
         visit daily_issue_path("2026-09-08")
-        assert_selector "details.source-directory:not([open])"
-        assert_no_selector "#source-directory", visible: true
+        assert_selector "#source-directory"
         assert_selector ".daily-source", count: count
         assert_selector "#item-#{items(:hn_one).id} .item-title"
-        summary = find("details.source-directory > summary", text: "来源目录")
-        assert_operator summary.native.rect.height, :>=, 44
-        summary.send_keys(:enter)
-        assert_selector "details.source-directory[open]"
         links = all("#source-directory a.source-link", count: count)
         assert_equal selected.map { |source| "#source-#{source.id}" }, links.map { |link| "##{link[:href].split('#', 2).last}" }
         links.zip(selected).each do |link, source|
@@ -191,7 +183,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
           assert_operator link.native.rect.height, :>=, 44
           assert_operator link.native.rect.width, :>=, 44
         end
-        assert_selector "#source-directory", text: "本期无新内容" if count == 4
+        assert_selector "#source-#{extra.id}", text: "本期未收录" if count == 4
         rectangles = evaluate_script("[...document.querySelectorAll('#source-directory a.source-link')].map(link => link.getBoundingClientRect().toJSON())")
         rectangles.combination(2).each do |a, b|
           overlap = [ 0, [ a.fetch("right"), b.fetch("right") ].min - [ a.fetch("left"), b.fetch("left") ].max ].max *
@@ -203,36 +195,33 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
   end
 
-  test "来源标题与正文共享左对齐的阅读列，栏目开头没有额外空块" do
+  test "三套主题的章节与条目保持完整阅读宽度，来源标题后直接进入正文" do
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
-    WIDTHS.each do |width|
+    [ 320, 768, 1440 ].each do |width|
       viewport(width)
       visit daily_issue_path("2026-09-08")
-      assert_selector ".daily-source", count: 3
-      evaluate_async_script("document.fonts.ready.then(arguments[0])")
-      geometry = evaluate_script(<<~JS)
-        (() => {
-          const rect = element => element.getBoundingClientRect().toJSON();
-          return { sheet: rect(document.querySelector('.sheet-body')), pageHead: rect(document.querySelector('.page-head')),
-            sources: [...document.querySelectorAll('.daily-source')].map(section => {
-              const header = section.querySelector('.daily-source-head'), heading = section.querySelector('.print-source-name');
-              const row = section.querySelector('.item-row'), body = row.querySelector('.item-body'), title = row.querySelector('.item-heading');
-              return { section: rect(section), header: rect(header), heading: rect(heading), row: rect(row), body: rect(body), title: rect(title),
-                titleLine: parseFloat(getComputedStyle(row.querySelector('.item-title')).lineHeight) };
-            }) };
-        })()
-      JS
-      geometry.fetch("sources").each do |source|
-        column, header, heading, row, body, title = source.values_at("section", "header", "heading", "row", "body", "title")
-        assert_in_delta geometry.fetch("pageHead").fetch("left"), column.fetch("left"), 1, "#{width}px：阅读列与期头左对齐"
-        assert_in_delta heading.fetch("left"), body.fetch("left"), 1, "#{width}px：来源名与正文左缘一致"
-        assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{width}px：条目与栏目同列"
-        assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{width}px：条目与栏目同列"
-        assert_in_delta header.fetch("bottom"), row.fetch("top"), 1, "#{width}px：栏首之后不插入空白块"
-        assert_operator title.fetch("top") - heading.fetch("bottom"), :<=, source.fetch("titleLine"), "#{width}px：来源名与首条标题的留白不超过一行正文标题"
-        assert_operator column.fetch("width"), :<, geometry.fetch("sheet").fetch("width") if width >= 1440
+      %w[daybreak duet unfold].each do |theme|
+        select_theme theme
+        geometry = evaluate_script(<<~JS)
+          [...document.querySelectorAll('.daily-source')].map(section => {
+            const rect = element => element.getBoundingClientRect().toJSON();
+            return { section: rect(section), header: rect(section.querySelector('.daily-source-head')),
+              row: rect(section.querySelector('.item-row')), title: rect(section.querySelector('.item-heading')),
+              allowedGap: parseFloat(getComputedStyle(section.querySelector('.item-row')).marginTop) + parseFloat(getComputedStyle(section.querySelector('.item-row')).paddingTop) + section.querySelector('.item-rank').getBoundingClientRect().height + parseFloat(getComputedStyle(section.querySelector('.item-heading')).marginTop) + 2 };
+          })
+        JS
+        geometry.each_with_index do |source, index|
+          column, header, row, title = source.values_at("section", "header", "row", "title")
+          assert_in_delta column.fetch("left"), row.fetch("left"), 1, "#{theme}/#{width}px 条目与栏目同列"
+          assert_in_delta column.fetch("right"), row.fetch("right"), 1, "#{theme}/#{width}px 条目与栏目同列"
+          assert_operator title.fetch("width"), :>, 100, "#{theme}/#{width}px 正文保留可读宽度"
+          if index > 0
+            assert_operator title.fetch("top"), :>=, header.fetch("bottom") - 1
+            assert_operator title.fetch("top") - header.fetch("bottom"), :<=, source.fetch("allowedGap"), "#{theme}/#{width}px 栏首不插入额外空块"
+          end
+        end
+        assert_no_horizontal_overflow
       end
-      assert_no_horizontal_overflow
     end
   end
 
@@ -244,7 +233,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
       sizes = evaluate_script(<<~JS, row)
         (() => {
           const row = arguments[0], size = selector => parseFloat(getComputedStyle(row.querySelector(selector)).fontSize);
-          return { time: size('.item-age'), title: size('.item-title'), translation: size('.item-translation') };
+          return { time: size('.item-age'), title: size('.item-title'), translation: size('.item-original-title') };
         })()
       JS
       assert_equal 12, sizes.fetch("time"), "#{width}px：时间应保持次级字号"
@@ -268,7 +257,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
       evaluate_async_script("document.fonts.ready.then(arguments[0])")
       geometry = evaluate_script(<<~JS, author_element, row)
         (() => {
-          const author = arguments[0], body = arguments[1].querySelector('.item-body').getBoundingClientRect();
+          const author = arguments[0], body = arguments[1].querySelector('.item-provenance').getBoundingClientRect();
           const range = document.createRange(); range.selectNodeContents(author);
           return { body: body.toJSON(), lines: [...range.getClientRects()].filter(rect => rect.width > 0).map(rect => rect.toJSON()) };
         })()
@@ -278,7 +267,7 @@ class DailyChaptersTest < ApplicationSystemTestCase
         assert_operator line.fetch("left"), :>=, geometry.fetch("body").fetch("left") - 0.5, "#{width}px"
         assert_operator line.fetch("right"), :<=, geometry.fetch("body").fetch("right") + 0.5, "#{width}px：实际字形不能越出阅读列"
       end
-      assert_bookmark_layers(bookmark_geometry(row.find(".item-save")), width)
+      assert_bookmark_layers(bookmark_geometry(row.find(".favorite-button")), width)
       assert_no_horizontal_overflow
     end
   end
@@ -288,23 +277,18 @@ class DailyChaptersTest < ApplicationSystemTestCase
       viewport(width)
       visit daily_issue_path("2026-09-08")
       target = "source-#{sources(:github).id}"
-      summary = find("details.source-directory > summary", text: "来源目录")
-      summary.send_keys(:enter)
-      assert_selector "details.source-directory[open]"
       find("#source-directory a[href='##{target}']").send_keys(:enter)
       wait_until { evaluate_script("location.hash") == "##{target}" && evaluate_script("document.activeElement.id") == target }
-      assert_selector "details.source-directory[open]"
+      assert_selector "#source-directory"
       heading = find("##{target} .daily-source-heading")
       visible = evaluate_script("(() => { const r = arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })()", heading)
       assert visible, "#{width}px：目录落点的栏目标题应完整在视口内"
       page.driver.browser.switch_to.active_element.send_keys(:tab)
       assert evaluate_script("document.activeElement.matches('##{target} .item-title a')"), "#{width}px：Tab 应从栏目进入正文"
 
-      summary.send_keys(:enter)
-      assert_selector "details.source-directory:not([open])"
       find("##{target} .directory-return").send_keys(:enter)
       wait_until { evaluate_script("location.hash") == "#source-directory" && evaluate_script("document.activeElement.id") == "source-directory" }
-      assert_selector "details.source-directory[open]"
+      assert_selector "#source-directory"
       page.driver.browser.switch_to.active_element.send_keys(:tab)
       assert_selector "#source-directory a.source-link:first-child:focus"
       assert_no_horizontal_overflow
@@ -341,16 +325,16 @@ class DailyChaptersTest < ApplicationSystemTestCase
             return `rgb(${composite.join(', ')})`;
           }
           const text = [];
-          for (const block of section.querySelectorAll('.print-source-name, .item-rank, .item-title, .item-summary, .item-translation, .item-reason, .item-meta')) {
+          for (const block of section.querySelectorAll('.print-source-name, .item-rank, .item-title, .item-summary, .item-original-title, .item-reason, .item-meta')) {
             const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
             while (walker.nextNode()) {
               const node = walker.currentNode, element = node.parentElement;
-              if (node.textContent.trim() && !element.closest('svg')) {
+              if (node.textContent.trim() && !element.closest('svg') && element.getClientRects().length && !element.closest('.source-section--first .source-section-head')) {
                 text.push({ text: node.textContent.trim(), color: getComputedStyle(element).color, background: background(element) });
               }
             }
           }
-          const directory = document.querySelector('details.source-directory');
+          const directory = document.querySelector('#source-directory');
           const planes = [section, section.querySelector('.daily-source-sheet'), section.querySelector('.daily-source-head'), directory].map(element => {
             const style = getComputedStyle(element);
             return { color: style.backgroundColor, image: style.backgroundImage };
@@ -375,27 +359,22 @@ class DailyChaptersTest < ApplicationSystemTestCase
     end
 
     def assert_controls_independent(row, width)
-      controls = evaluate_script(<<~JS, row)
-        (() => {
-          const row = arguments[0], comments = row.querySelector('.item-comments'), bookmark = row.querySelector('.item-save');
-          const controls = [comments, bookmark].map(element => {
-            const r = element.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-            const width = Math.max(44, r.width), height = Math.max(44, r.height);
-            const points = [[-21, -21], [21, -21], [-21, 21], [21, 21], [0, 0]];
-            return { width, height, left: cx - width / 2, right: cx + width / 2, top: cy - height / 2, bottom: cy + height / 2,
-              hits: points.map(([dx, dy]) => document.elementFromPoint(cx + dx, cy + dy)?.closest('a, button') === element) };
-          });
-          const [a, b] = controls;
-          return { controls, adjacent: comments.nextElementSibling === bookmark, grouped: bookmark.parentElement === comments.parentElement,
-            overlap: Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) };
-        })()
-      JS
-      assert controls.fetch("adjacent"), "#{width}px：收藏应紧跟评论"
-      assert controls.fetch("grouped"), "#{width}px：收藏与评论应在同一元数据行"
-      assert_equal 0, controls.fetch("overlap"), "#{width}px：44px 命中区域不能重叠"
-      controls.fetch("controls").each do |control|
-        assert control.fetch("hits").all?, "#{width}px：44px 区域每个探测点必须命中自己的控件；#{control.inspect}"
+      controls = row.all(".item-comments, .favorite-button")
+      assert_equal 2, controls.length
+      controls.each do |control|
+        execute_script("arguments[0].scrollIntoView({ block: 'center' })", control)
+        settle_frames
+        geometry = control.evaluate_script(<<~JS)
+          (() => {
+            const rect = this.getBoundingClientRect(), x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+            return { width: rect.width, height: rect.height, hits: [[-21,-21],[21,-21],[-21,21],[21,21],[0,0]].map(([dx,dy]) => document.elementFromPoint(x+dx,y+dy)?.closest('a,button') === this) };
+          })()
+        JS
+        assert_operator geometry.fetch("width"), :>=, 44, "#{width}px"
+        assert_operator geometry.fetch("height"), :>=, 44, "#{width}px"
+        assert geometry.fetch("hits").all?, "#{width}px 控件区域应命中自己"
       end
+      assert row.find(".item-actions").has_selector?(".favorite-button"), "#{width}px 收藏位于完整正文后"
     end
 
     def bookmark_geometry(bookmark)
@@ -413,14 +392,24 @@ class DailyChaptersTest < ApplicationSystemTestCase
 
     def assert_bookmark_layers(geometry, width)
       button, line, ink = geometry.values_at("button", "line", "ink")
-      assert_equal "", geometry.fetch("text"), "#{width}px：收藏仅显示图标"
-      assert_equal 0, geometry.fetch("labels"), "#{width}px：收藏不附加文字标签"
-      geometry.fetch("borders").each { |border| assert_equal 0, border, "#{width}px：普通状态不画按钮边框" }
-      assert_in_delta 44, button.fetch("width"), 0.5, "#{width}px"
-      assert_in_delta 44, button.fetch("height"), 0.5, "#{width}px"
-      %w[ x y width height ].each { |key| assert_in_delta line.fetch(key), ink.fetch(key), 0.5, "#{width}px：描线与墨层须重合" }
-      assert_in_delta button.fetch("left") + button.fetch("width") / 2, line.fetch("left") + line.fetch("width") / 2, 0.5, "#{width}px：图标水平居中"
-      assert_in_delta button.fetch("top") + button.fetch("height") / 2, line.fetch("top") + line.fetch("height") / 2, 0.5, "#{width}px：图标垂直居中"
-      assert_operator line.fetch("right"), :<=, button.fetch("right"), "#{width}px：图标应位于按钮内"
+      assert_includes [ "收藏", "已收藏" ], geometry.fetch("text"), "#{width}px 收藏状态保留可读文字"
+      assert_operator button.fetch("width"), :>=, 44, "#{width}px"
+      assert_operator button.fetch("height"), :>=, 44, "#{width}px"
+      %w[ x y width height ].each { |key| assert_in_delta line.fetch(key), ink.fetch(key), 0.5, "#{width}px 描线与墨层须重合" }
+      assert_in_delta button.fetch("top") + button.fetch("height") / 2, line.fetch("top") + line.fetch("height") / 2, 0.5, "#{width}px 图标垂直居中"
+      assert_operator line.fetch("left"), :>=, button.fetch("left"), "#{width}px 图标应位于按钮内"
+      assert_operator line.fetch("right"), :<=, button.fetch("right"), "#{width}px 图标应位于按钮内"
+    end
+
+    def select_theme(theme)
+      find(".theme-menu > summary").click
+      find(".theme-choice[data-preview='#{theme}']").click
+      assert_selector "html[data-theme='#{theme}']", visible: :all
+      evaluate_async_script("const done = arguments[0]; requestAnimationFrame(() => document.fonts.ready.then(done))")
+      find(".theme-menu > summary").send_keys(:escape)
+      evaluate_async_script(<<~JS)
+        const done = arguments[0]
+        Promise.all(document.getAnimations().filter(animation => animation.effect?.target?.closest?.('.daily-reading') && animation.effect.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))).then(done)
+      JS
     end
 end

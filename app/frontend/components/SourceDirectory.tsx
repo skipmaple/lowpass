@@ -1,45 +1,44 @@
-import ReadingDirectory from '@/components/ReadingDirectory'
-import { Mixed } from '@/lib/typeset'
+import type * as React from 'react'
+
+import { latinLang } from '@/lib/typeset'
 import type { SourceSummary } from '@/types/lowpass'
 
 const STATE_LINES: Record<SourceSummary['state'], string | null> = {
   ok: null,
   pending: null,
   failed: '抓取失败',
-  empty: '本期无新内容',
+  empty: '本期未收录',
   no_backfill: '无法回填',
 }
 
-export default function SourceDirectory({ sources, navigable }: { sources: SourceSummary[]; navigable: boolean }) {
-  const entries = sources.map((source) => {
-    const label = (
-      <>
-        <Mixed text={source.name} font="latin" size="inherit" color="inherit" weight={500} />
-        {STATE_LINES[source.state] ? <span className="source-link-state">{STATE_LINES[source.state]}</span> : null}
-      </>
-    )
+type SourceDirectoryProps = {
+  sources: SourceSummary[]
+  navigable: boolean
+  activeId?: string
+  onSelect?: (event: React.MouseEvent<HTMLAnchorElement>, id: string) => void
+}
 
-    // 期级事实替代正文时仍保留来源状态，但不暴露没有落点的链接。
+// 三主题共享原生来源锚点；没有正文时只显示事实，不制造无落点的导航。
+export default function SourceDirectory({ sources, navigable, activeId, onSelect }: SourceDirectoryProps) {
+  const entries = sources.map((source) => {
+    const label = <>
+      <span className="source-tab-name" lang={latinLang(source.name)}>{source.name}</span>
+      {STATE_LINES[source.state] ? <span className="source-tab-state">{STATE_LINES[source.state]}</span> : null}
+    </>
     return navigable ? (
-      <a key={source.id} className="source-link" href={`#source-${source.id}`}>{label}</a>
-    ) : (
-      <div key={source.id} className="source-link" role="listitem">{label}</div>
-    )
+      <a key={source.id} className="source-tab source-link" href={`#source-${source.id}`}
+        aria-current={source.id === activeId ? 'location' : undefined}
+        data-source-state={source.state} data-state={source.id === activeId ? 'active' : 'inactive'}
+        onClick={(event) => onSelect?.(event, source.id)}>{label}</a>
+    ) : <div key={source.id} className="source-tab" role="listitem" data-source-state={source.state}>{label}</div>
   })
 
-  if (!navigable) return <div className="source-facts" role="list" aria-label="来源">{entries}</div>
-
-  return (
-    <ReadingDirectory id="source-directory" label="来源目录" className="source-directory source-tabs-frame">
-      {/* 保留原生 hash 历史；选源后不收起，避免目录高度变化推移落点。 */}
-      <nav id="source-directory" className="source-links" aria-label="来源" tabIndex={-1}>{entries}</nav>
-    </ReadingDirectory>
-  )
+  return <div className="source-tabs-frame">
+    {navigable ? <nav id="source-directory" className="source-tabs" aria-label="本期来源" tabIndex={-1}>{entries}</nav>
+      : <div className="source-tabs source-facts" role="list" aria-label="来源">{entries}</div>}
+  </div>
 }
 
 export function openSourceDirectory() {
-  const nav = document.getElementById('source-directory')
-  const details = nav?.closest('details')
-  if (details) details.open = true
-  nav?.focus({ preventScroll: true })
+  document.getElementById('source-directory')?.focus({ preventScroll: true })
 }

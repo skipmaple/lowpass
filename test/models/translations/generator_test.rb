@@ -76,6 +76,43 @@ class Translations::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "截断计入真实费用且同一操作重放不重复请求" do
+    operation = ModelRequests.operation
+    targets = [ @item.translation_target ]
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      body = { choices: [ { finish_reason: "length", message: { content: "" } } ], usage: { prompt_tokens: 100, completion_tokens: 8192 } }.to_json
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: body)
+      2.times { assert_equal 1, generate(operation: operation, targets: targets).failed }
+      assert_requested stub, times: 1
+      assert_equal [ "failed", 100, 8192, BigDecimal("0.08202") ], ModelCall.sole.attributes.values_at("status", "prompt_tokens", "completion_tokens", "cost")
+      assert_nil @item.reload.title_zh
+    end
+  end
+
+  test "截断费用耗尽预算后停止后续目标，解除月上限也不能重放操作" do
+    second = @item.dup
+    second.assign_attributes(title: "Another English title", url: "https://example.com/another", url_hash: Digest::SHA256.hexdigest("https://example.com/another"), rank: 2)
+    second.save!
+    operation = ModelRequests.operation
+    targets = [ @item.translation_target, second.translation_target ]
+    with_model_provider do
+      Setting.set("model_input_price", "1")
+      Setting.set("model_output_price", "10")
+      Setting.set("model_monthly_cap", "0.08")
+      body = { choices: [ { finish_reason: "length", message: { content: "" } } ], usage: { prompt_tokens: 100, completion_tokens: 8192 } }.to_json
+      stub = stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return(status: 200, body: body)
+      outcome = generate(operation: operation, targets: targets)
+      assert_equal [ 1, 0, "budget" ], [ outcome.failed, outcome.translated, outcome.stop_reason ]
+      Setting.set("model_monthly_cap", "0")
+      assert_equal "budget", generate(operation: operation, targets: targets).stop_reason
+      assert_requested stub, times: 1
+      assert_equal 1, ModelCall.count
+      assert_nil second.reload.title_zh
+    end
+  end
+
   test "429和预算停止整个操作且不能重放绕过" do
     targets = [ @item.translation_target ]
     operation = ModelRequests.operation

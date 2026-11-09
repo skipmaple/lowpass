@@ -1,19 +1,14 @@
 import { Mixed } from '@/lib/typeset'
 
-// 默认是反白小签；阅读页的兴趣标签使用描边变体，降低与当前来源页签的视觉竞争。
-// 文字走 Mixed：中文用文楷，拉丁标签（AI / LLM）落到 Maple。
+// 只读标签与来源筛选按钮分开，避免静态状态继承可点击外观。
+// 形态、文字和表面颜色由主题决定，Mixed 仅负责中英文的字体角色。
 export default function Chip({ text, variant = 'solid', className }: { text: string; variant?: 'solid' | 'outline'; className?: string }) {
-  const outline = variant === 'outline'
-
   return (
     <span
-      className={[outline ? 'chip-outline' : null, className].filter(Boolean).join(' ') || undefined}
-      style={outline ? undefined : {
-        display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px',
-        background: 'var(--ink)', letterSpacing: '0.06em',
-      }}
+      className={['chip-static', className].filter(Boolean).join(' ')}
+      data-variant={variant}
     >
-      <Mixed text={text} size="var(--fs-12)" color={outline ? 'var(--ink2)' : 'var(--paper)'} nowrap />
+      <Mixed text={text} size="var(--fs-12)" color="currentColor" nowrap />
     </span>
   )
 }

@@ -6,7 +6,7 @@ import { Toasts, useToasts } from '@/components/Toast'
 import { FAVORITES, favoriteHref, loginHref } from '@/lib/paths'
 
 // 收藏（PRD 5.10）。页面的 props 带着这一页里已收藏链接的 url_hash 列表；书签点一下先改本地状态
-// （R-10.5：不整页刷新、成功不出提示），请求走 fetch（同 lib/search.ts，CSRF 令牌从布局的 meta 读）。
+// 不整页刷新；本轮确认的成功反馈由条目按钮在原位提供。请求走 fetch，CSRF 令牌从布局的 meta 读。
 // 请求结束后把最新的列表写回 Inertia 当前页（router.replace 只改当前页与历史，不发请求）：
 // 离开再按后退，恢复出来的页面与服务端一致。读者已经离开这一页、或换页的访问还在路上时不写，没写上的不补（设计 §13）。
 // 页面带来新的列表就以它为准，请求还在路上的那几条除外。失败回滚并提示附录 B 的句子。
@@ -16,7 +16,7 @@ export const COPY = {
   limited: '操作过于频繁，请稍后再试。',
 }
 
-export type FavoriteTarget = { urlHash: string; itemId?: string }
+export type FavoriteTarget = { urlHash: string; itemId?: string; onSuccess?: (saved: boolean) => void }
 
 export type Favorites = {
   has: (urlHash: string) => boolean
@@ -136,14 +136,17 @@ export function FavoritesProvider({ favorites, children }: React.PropsWithChildr
 
   // 收藏：书签带着条目 id 来，「恢复」带着取消时拿到的凭据来
   const add = useCallback(
-    (urlHash: string, body: Record<string, string>) => {
+    (urlHash: string, body: Record<string, string>, onSuccess?: (saved: boolean) => void) => {
       if (busy.current.has(urlHash)) return
       busy.current.add(urlHash)
       mark(urlHash, true)
 
       send('POST', FAVORITES, body)
         // 收藏上了，凭据用不着了（已收藏的行不看它，不用重画）
-        .then(() => undo.current.delete(urlHash))
+        .then(() => {
+          undo.current.delete(urlHash)
+          if (mounted.current) onSuccess?.(true)
+        })
         .catch((error: unknown) => {
           mark(urlHash, false)
           fail(error, COPY.addFailed)
@@ -154,7 +157,7 @@ export function FavoritesProvider({ favorites, children }: React.PropsWithChildr
   )
 
   const remove = useCallback(
-    (urlHash: string) => {
+    (urlHash: string, onSuccess?: (saved: boolean) => void) => {
       if (busy.current.has(urlHash)) return
       busy.current.add(urlHash)
       // 这是一次新的取消：之前记下的「凭据到手后接着恢复」不再作数
@@ -170,6 +173,7 @@ export function FavoritesProvider({ favorites, children }: React.PropsWithChildr
           if (token) undo.current.set(urlHash, token)
           else undo.current.delete(urlHash)
           redraw()
+          if (mounted.current) onSuccess?.(false)
         })
         .catch((error: unknown) => {
           undo.current.delete(urlHash)
@@ -188,9 +192,9 @@ export function FavoritesProvider({ favorites, children }: React.PropsWithChildr
     () => ({
       has: (urlHash) => kept.current.has(urlHash),
       removed: (urlHash) => undo.current.has(urlHash) && !kept.current.has(urlHash),
-      toggle: ({ urlHash, itemId }) => {
-        if (kept.current.has(urlHash)) remove(urlHash)
-        else if (itemId) add(urlHash, { item_id: itemId })
+      toggle: ({ urlHash, itemId, onSuccess }) => {
+        if (kept.current.has(urlHash)) remove(urlHash, onSuccess)
+        else if (itemId) add(urlHash, { item_id: itemId }, onSuccess)
       },
       restore: (urlHash) => {
         const token = undo.current.get(urlHash)

@@ -159,7 +159,8 @@ function SourceChips({ draft, sourceOptions }: { draft: FilterDraft; sourceOptio
             aria-pressed={on}
             onClick={() => toggle(source.id)}
           >
-            <Mixed text={source.name} font="latin" size="var(--fs-12)" color={on ? 'var(--paper)' : 'var(--ink2)'} />
+            <span className="chip-check" aria-hidden="true"><Icon name="check" size={14} color="currentColor" /></span>
+            <Mixed text={source.name} font="latin" size="var(--control-label-size)" color="currentColor" />
           </button>
         )
       })}

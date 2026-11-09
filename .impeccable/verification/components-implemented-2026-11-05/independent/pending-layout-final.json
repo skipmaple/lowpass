@@ -1,0 +1,1130 @@
+[
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "path": "/admin/sources",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "path": "/admin/sources/new",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 20,
+        "right": 130,
+        "width": 110,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存",
+        "left": 138,
+        "right": 247,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "path": "/admin/issues",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "生成今日日刊",
+        "left": 20,
+        "right": 172,
+        "width": 152,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 20,
+        "right": 112,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 88,
+        "right": 205,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 20,
+        "right": 112,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 88,
+        "right": 205,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 320,
+    "path": "/admin/settings",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "保存调度",
+        "left": 20,
+        "right": 129,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "发送测试告警",
+        "left": 20,
+        "right": 144,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "立即备份",
+        "left": 20,
+        "right": 114,
+        "width": 94,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存模型设置",
+        "left": 20,
+        "right": 144,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "path": "/admin/sources",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "path": "/admin/sources/new",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 25.640625,
+        "right": 135.640625,
+        "width": 110,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存",
+        "left": 143.640625,
+        "right": 252.640625,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "path": "/admin/issues",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "生成今日日刊",
+        "left": 566.359375,
+        "right": 742.359375,
+        "width": 176,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 25.640625,
+        "right": 117.640625,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 93.640625,
+        "right": 210.640625,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 25.640625,
+        "right": 117.640625,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 93.640625,
+        "right": 210.640625,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "daybreak",
+    "width": 768,
+    "path": "/admin/settings",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "保存调度",
+        "left": 373.640625,
+        "right": 482.640625,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "发送测试告警",
+        "left": 25.640625,
+        "right": 149.640625,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "立即备份",
+        "left": 25.640625,
+        "right": 119.640625,
+        "width": 94,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存模型设置",
+        "left": 199.640625,
+        "right": 323.640625,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "path": "/admin/sources",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "path": "/admin/sources/new",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 20,
+        "right": 130,
+        "width": 110,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存",
+        "left": 138,
+        "right": 247,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "path": "/admin/issues",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "生成今日日刊",
+        "left": 20,
+        "right": 172,
+        "width": 152,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 20,
+        "right": 112,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 88,
+        "right": 205,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 20,
+        "right": 112,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 88,
+        "right": 205,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 320,
+    "path": "/admin/settings",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "保存调度",
+        "left": 20,
+        "right": 129,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "发送测试告警",
+        "left": 20,
+        "right": 144,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "立即备份",
+        "left": 20,
+        "right": 114,
+        "width": 94,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存模型设置",
+        "left": 20,
+        "right": 144,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "path": "/admin/sources",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 145.640625,
+        "right": 197.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 213.640625,
+        "right": 278.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "path": "/admin/sources/new",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 25.640625,
+        "right": 135.640625,
+        "width": 110,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存",
+        "left": 143.640625,
+        "right": 252.640625,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "path": "/admin/issues",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "生成今日日刊",
+        "left": 566.359375,
+        "right": 742.359375,
+        "width": 176,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 25.640625,
+        "right": 117.640625,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 93.640625,
+        "right": 210.640625,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 25.640625,
+        "right": 117.640625,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 93.640625,
+        "right": 210.640625,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "duet",
+    "width": 768,
+    "path": "/admin/settings",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "保存调度",
+        "left": 373.640625,
+        "right": 482.640625,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "发送测试告警",
+        "left": 25.640625,
+        "right": 149.640625,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "立即备份",
+        "left": 25.640625,
+        "right": 119.640625,
+        "width": 94,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存模型设置",
+        "left": 199.640625,
+        "right": 323.640625,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "path": "/admin/sources",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 140,
+        "right": 192,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 208,
+        "right": 273,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "path": "/admin/sources/new",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 20,
+        "right": 130,
+        "width": 110,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存",
+        "left": 138,
+        "right": 247,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "path": "/admin/issues",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "生成今日日刊",
+        "left": 20,
+        "right": 172,
+        "width": 152,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 20,
+        "right": 112,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 88,
+        "right": 205,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 20,
+        "right": 112,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 88,
+        "right": 205,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 320,
+    "path": "/admin/settings",
+    "docWidth": 320,
+    "viewport": 320,
+    "controls": [
+      {
+        "text": "保存调度",
+        "left": 20,
+        "right": 129,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "发送测试告警",
+        "left": 20,
+        "right": 144,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "立即备份",
+        "left": 20,
+        "right": 114,
+        "width": 94,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存模型设置",
+        "left": 20,
+        "right": 144,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "path": "/admin/sources",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 333.640625,
+        "right": 385.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 401.640625,
+        "right": 466.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 333.640625,
+        "right": 385.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 401.640625,
+        "right": 466.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 333.640625,
+        "right": 385.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 401.640625,
+        "right": 466.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "测试抓取",
+        "left": 333.640625,
+        "right": 385.640625,
+        "width": 52,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "停用",
+        "left": 401.640625,
+        "right": 466.640625,
+        "width": 65,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "path": "/admin/sources/new",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "测试抓取",
+        "left": 213.640625,
+        "right": 323.640625,
+        "width": 110,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存",
+        "left": 331.640625,
+        "right": 440.640625,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "path": "/admin/issues",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "生成今日日刊",
+        "left": 566.359375,
+        "right": 742.359375,
+        "width": 176,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 213.640625,
+        "right": 305.640625,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 281.640625,
+        "right": 398.640625,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "补生成",
+        "left": 213.640625,
+        "right": 305.640625,
+        "width": 92,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "重生成理由",
+        "left": 281.640625,
+        "right": 398.640625,
+        "width": 117,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  },
+  {
+    "theme": "unfold",
+    "width": 768,
+    "path": "/admin/settings",
+    "docWidth": 768,
+    "viewport": 768,
+    "controls": [
+      {
+        "text": "保存调度",
+        "left": 561.640625,
+        "right": 670.640625,
+        "width": 109,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "发送测试告警",
+        "left": 213.640625,
+        "right": 337.640625,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "立即备份",
+        "left": 213.640625,
+        "right": 307.640625,
+        "width": 94,
+        "height": 44,
+        "overflow": false
+      },
+      {
+        "text": "保存模型设置",
+        "left": 213.640625,
+        "right": 337.640625,
+        "width": 124,
+        "height": 44,
+        "overflow": false
+      }
+    ]
+  }
+]

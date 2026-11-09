@@ -1,15 +1,17 @@
-import { Head, Link, router, usePage } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type * as React from 'react'
 
 import { Ctrl } from '@/components/Ctrl'
 import Icon from '@/components/Icon'
 import Layout from '@/components/Layout'
+import PageHead from '@/components/PageHead'
 import Pager from '@/components/Pager'
 import SearchFilters, { hasActiveFilters, useFilterDraft } from '@/components/SearchFilters'
 import type { FilterDraft } from '@/components/SearchFilters'
 import SearchResultRow from '@/components/SearchResultRow'
 import Seg from '@/components/Seg'
+import { normalizeDateLabel } from '@/lib/displayDate'
 import { FavoritesProvider } from '@/lib/favorites'
 import { dailyHref, latestWeeklyHref, searchHref } from '@/lib/paths'
 import { searchResultTarget } from '@/lib/searchFocus'
@@ -52,7 +54,7 @@ function hrefOf(q: string, filters: Filters, page = 1) {
   return searchHref({ q, type: filters.type, source: filters.sources, from: filters.from, to: filters.to, range: filters.range, sort: filters.sort, page })
 }
 
-// 期头（画布 search_head()）：搜索图标、文楷 32 的查询词输入框、反白「搜索」按钮；回车与按钮都提交——
+// 查询词输入框和提交按钮；回车与按钮都提交。
 // 由 Inertia 访问 /search（GET），筛选原样带上、页码归 1。草稿由页面持有，让期头和筛选始终使用同一个值。
 function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, unsupported, autoFocus }: { draft: string; setDraft: (value: string) => void; filters: Filters; truncated: boolean; inputRef: React.RefObject<HTMLInputElement | null>; loading: boolean; unsupported: boolean; autoFocus: boolean }) {
   function submit(event: React.FormEvent) {
@@ -68,7 +70,6 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
   return (
     <form className="search-head" role="search" onSubmit={submit}>
       <div className={draft.length ? 'search-field search-field--has-clear' : 'search-field'}>
-        <Icon name="search" size={24} />
         <label className="sr-only" htmlFor="search-query">搜索</label>
         <input
           ref={inputRef}
@@ -88,7 +89,7 @@ function SearchHead({ draft, setDraft, filters, truncated, inputRef, loading, un
           <Icon name="x" size={18} />
         </button>
       </div>
-      <button type="submit" className="btn-primary" disabled={loading}>
+      <button type="submit" className="btn-primary" disabled={loading} aria-busy={loading}>
         搜索
       </button>
       <span id="search-hint" className="search-hint" aria-hidden="true">{COPY.placeholder}</span>
@@ -148,7 +149,7 @@ function Body(props: SearchShowProps & { navigationQuery: string; filterDraft: F
       return latest_daily_key ? (
         <div className="search-entry">
           <Link className="t" href={dailyHref(latest_daily_key)}>
-            <Mixed text={`最新日刊 · ${latest_daily_label ?? latest_daily_key}`} size="var(--fs-15)" color="var(--ink)" />
+            <Mixed text={`最新日刊 · ${normalizeDateLabel(latest_daily_label ?? latest_daily_key)}`} size="var(--fs-15)" color="var(--ink)" />
           </Link>
         </div>
       ) : null
@@ -234,15 +235,15 @@ export default function Show(props: SearchShowProps) {
 
   return (
     <FavoritesProvider favorites={props.favorites}>
-      <Head title={props.q ? `搜索 · ${props.q}` : '搜索'} />
-      {/* PRD 6.4 标题层级：这一页的 h1 是页名「搜索」（PRD 6.2），只给读屏器，视觉上期头本身就是标题；结果标题是 h2 */}
-      <h1 ref={headingRef} className="sr-only" tabIndex={-1}>搜索</h1>
-      <div className="search-reading">
-        <SearchHead draft={draft} setDraft={setDraft} filters={filterDraft.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} autoFocus={!returnTarget} />
-        <SearchFilters q={navigationQuery} draft={filterDraft} sourceOptions={props.source_options} datePresets={props.date_presets} />
-        <div id="search-status" className={loading && props.state !== 'results' ? 'search-loading' : !loading && notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
-        <Body {...props} navigationQuery={navigationQuery} filterDraft={filterDraft} onModifyQuery={modifyQuery} loading={loading} />
-      </div>
+      <section className="library-page discovery-page">
+        <PageHead big="搜索" headingRef={headingRef} title={props.q ? `搜索 · ${props.q}` : '搜索'} />
+        <div className="library-workspace">
+          <SearchHead draft={draft} setDraft={setDraft} filters={filterDraft.filters} truncated={props.truncated} inputRef={inputRef} loading={loading} unsupported={unsupported} autoFocus={!returnTarget} />
+          <SearchFilters q={navigationQuery} draft={filterDraft} sourceOptions={props.source_options} datePresets={props.date_presets} />
+          <div id="search-status" className={loading && props.state !== 'results' ? 'search-loading' : !loading && notice ? 'search-notice state-line' : 'sr-only'} role="status" aria-label="搜索状态" aria-live="polite" aria-atomic="true">{liveText}</div>
+          <Body {...props} navigationQuery={navigationQuery} filterDraft={filterDraft} onModifyQuery={modifyQuery} loading={loading} />
+        </div>
+      </section>
     </FavoritesProvider>
   )
 }

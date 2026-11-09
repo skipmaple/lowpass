@@ -5,6 +5,7 @@ import AdminPage, { AdminLayout } from '@/components/AdminPage'
 import { Ctrl } from '@/components/Ctrl'
 import Field from '@/components/Field'
 import Icon from '@/components/Icon'
+import PendingLabel from '@/components/PendingLabel'
 import SegButtons from '@/components/SegButtons'
 import { useDraftAccount, useDraftForm, useUnsavedChanges } from '@/lib/drafts'
 import { TEST_FETCH_FAILED, testFetch } from '@/lib/admin'
@@ -138,7 +139,7 @@ function SourceFields({ source, adapters }: AdminSourcesFormProps) {
   return (
     <AdminPage section="sources" big={editing ? `编辑来源 · ${source.name}` : '新建来源'} bottom={option.label} controls={<Ctrl href={ADMIN_SOURCES} label="返回列表" icon="chevron-left" side="left" />}>
       <form ref={formRef} onSubmit={submit}>
-        <fieldset className="form-fieldset admin-form" disabled={saving}>
+        <fieldset className="form-fieldset admin-form" disabled={saving} aria-busy={saving}>
           {editing ? (
             <div className="field">
               <span className="field-label">来源类型</span>
@@ -212,10 +213,10 @@ function SourceFields({ source, adapters }: AdminSourcesFormProps) {
           <div className="admin-form-buttons">
             <button type="button" className="ctrl" disabled={testing} aria-busy={testing} onClick={runTest}>
               <Icon name={testing ? 'clock' : result ? (result.ok ? 'check' : 'triangle-alert') : 'refresh-cw'} color="currentColor" />
-              <span>{testing ? '测试中…' : '测试抓取'}</span>
+              <PendingLabel idle="测试抓取" pending="测试中…" busy={testing} />
             </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? '正在保存…' : '保存'}
+            <button type="submit" className="btn-primary" disabled={saving} aria-busy={saving}>
+              <PendingLabel idle="保存" pending="正在保存…" busy={saving} />
             </button>
             {result && !result.ok ? <span className="field-note">尚未通过测试，仍可保存。</span> : null}
           </div>

@@ -1,7 +1,10 @@
 require "test_helper"
 
 class Admin::Items::ReasonsControllerTest < ActionDispatch::IntegrationTest
-  setup { sign_in_as(users(:drew)) }
+  setup do
+    sign_in_as(users(:drew))
+    Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "The tool streams local log files, filters entries by level, and exports matching events as JSON.", url: items(:hn_one).url, error: nil))
+  end
 
   test "理由错误提示不会被较新的翻译账本覆盖" do
     item = items(:hn_one)

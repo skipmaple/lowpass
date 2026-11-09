@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 // 表格（画布 pages_site.py 的 table()）：CSS grid，表头文楷 12 次墨 + 1px 墨线，行间 35% 线；单元格按角色选字体由调用方决定。
 // Management pages reuse the same cells in a compact list on narrow screens, without mounting duplicate controls.
-export type TableRow = { key: string; cells: React.ReactNode[] }
+export type TableRow = { key: string; cells: React.ReactNode[]; tone?: 'attention' | 'muted' }
 type MobileLayout = { primary: number[]; detailsLabel: string }
 type FocusPosition = { row: string | null; control: string | null; expanded: boolean | null; from: HTMLElement }
 const CONTROLS = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]'
@@ -51,26 +51,27 @@ export default function Table({ headers, widths, rows, empty, className = '', mo
   }
 
   if (mobile && compact) {
+    const secondary = headers.map((_, index) => index).filter((index) => !mobile.primary.includes(index))
     return rows.length > 0 ? (
       <ul ref={(node) => { root.current = node }} tabIndex={-1} {...focusEvents} className={`management-list ${className}`}>
         {rows.map((row) => (
-          <li key={row.key} data-table-row-key={row.key} tabIndex={-1} className="management-row">
+          <li key={row.key} className="management-row" data-tone={row.tone} data-table-row-key={row.key} tabIndex={-1}>
             <div className="management-row-primary">
               {mobile.primary.map((index) => (
                 <div key={index} className="management-primary-field" data-column={index}>{content(row.cells[index])}</div>
               ))}
             </div>
-            <details className="management-row-details">
+            {secondary.length > 0 ? <details className="management-row-details">
               <summary data-table-focus="table-details">{mobile.detailsLabel}</summary>
               <dl className="management-secondary-fields">
-                {row.cells.map((cell, index) => mobile.primary.includes(index) ? null : (
+                {secondary.map((index) => (
                   <div key={index}>
                     <dt className="management-field-label">{headers[index]}</dt>
-                    <dd className="management-field-content">{content(cell)}</dd>
+                    <dd className="management-field-content">{content(row.cells[index])}</dd>
                   </div>
                 ))}
               </dl>
-            </details>
+            </details> : null}
           </li>
         ))}
       </ul>
@@ -88,7 +89,7 @@ export default function Table({ headers, widths, rows, empty, className = '', mo
           ))}
         </div>
         {rows.map((row) => (
-          <div key={row.key} data-table-row-key={row.key} tabIndex={-1} className="table-row" role="row" style={{ '--table-columns': columns } as React.CSSProperties}>
+          <div key={row.key} className="table-row" role="row" data-tone={row.tone} data-table-row-key={row.key} tabIndex={-1} style={{ '--table-columns': columns } as React.CSSProperties}>
             {row.cells.map((cell, index) => (
               <div key={index} role="cell" className="table-td">
                 <span className="table-cell-label" aria-hidden="true">{headers[index]}</span>

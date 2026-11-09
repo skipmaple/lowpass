@@ -36,6 +36,7 @@ module Translations::Generator
 
             calls = ModelRequests.calls(item, purpose: "translation", operation: operation, field: target.fetch("field"))
             return :skipped if calls.where(status: "ok").exists?
+            return :failed if calls.where(status: "failed", error_summary: Reasons::Provider::Incomplete::MESSAGE).exists?
             return :failed if calls.count >= ATTEMPTS
 
             if previous = previous_translation(item, target.fetch("field"), reassess: reassess)
@@ -86,6 +87,11 @@ module Translations::Generator
           result = Translations::Parser.parse(response.text, field: field)
         rescue Translations::Parser::Invalid => e
           record(item, target, operation, configuration, started, "invalid", response, e)
+        rescue Reasons::Provider::Incomplete => e
+          # 截断已经消耗输出额度，按本次冻结价格记账；相同操作不重复同样的请求。
+          record(item, target, operation, configuration, started, "failed", e, e)
+          ModelRequests.halt(operation, "budget") if Reasons::Budget.exhausted?
+          return :failed
         rescue Reasons::Provider::Rejected, Reasons::Provider::Limited => e
           record(item, target, operation, configuration, started, "failed", nil, e)
           ModelRequests.halt(operation, e.is_a?(Reasons::Provider::Limited) ? "limited" : "rejected")

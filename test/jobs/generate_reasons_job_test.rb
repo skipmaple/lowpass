@@ -1,6 +1,10 @@
 require "test_helper"
 
 class GenerateReasonsJobTest < ActiveJob::TestCase
+  setup do
+    Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "The tool streams and filters local log files without loading their full contents.", url: items(:hn_one).url, error: nil))
+  end
+
   test "一期一个" do
     assert_equal 1, GenerateReasonsJob.concurrency_limit
     # concurrency_key 是 "GenerateReasonsJob/<id>"（solid_queue 按类名分组），跟

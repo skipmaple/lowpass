@@ -1,0 +1,38 @@
+[
+  {
+    "theme": "daybreak",
+    "width": 1440,
+    "passed": true,
+    "pageErrors": []
+  },
+  {
+    "theme": "duet",
+    "width": 1440,
+    "passed": true,
+    "pageErrors": []
+  },
+  {
+    "theme": "unfold",
+    "width": 1440,
+    "passed": true,
+    "pageErrors": []
+  },
+  {
+    "theme": "daybreak",
+    "width": 390,
+    "passed": true,
+    "pageErrors": []
+  },
+  {
+    "theme": "duet",
+    "width": 390,
+    "passed": true,
+    "pageErrors": []
+  },
+  {
+    "theme": "unfold",
+    "width": 390,
+    "passed": true,
+    "pageErrors": []
+  }
+]

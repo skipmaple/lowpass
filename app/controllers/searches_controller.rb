@@ -101,7 +101,10 @@ class SearchesController < ApplicationController
         title_runs: highlighter.runs(item.title),
         title_zh: (item.title_zh.presence if record.daily?),
         snippet_runs: item.summary.presence && highlighter.snippet(SummaryCleaner.stored(item.summary)),
-        summary_zh: (item.summary_zh.presence if record.daily? && item.summary.present?)
+        summary_zh: (item.summary_zh.presence if record.daily? && item.summary.present?),
+        title_zh_runs: (highlighter.runs(item.title_zh) if record.daily? && item.title_zh.present?),
+        summary_zh_runs: (highlighter.snippet(item.summary_zh) if record.daily? && item.summary.present? && item.summary_zh.present?),
+        reason: (item.reason if record.daily?)
       }
     end
 

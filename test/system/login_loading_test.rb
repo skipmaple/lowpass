@@ -23,27 +23,44 @@ class LoginLoadingTest < ApplicationSystemTestCase
     assert_empty extra_scripts, "登录所需的页面脚本应与入口并行加载"
   end
 
-  test "减少动态时日出从第一次计算样式就呈现终态" do
+  test "三主题减少动态时登录首帧直接显示品牌与可用登录按钮" do
+    visit login_path
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
     @first_frame_script = page.driver.browser.execute_cdp("Page.addScriptToEvaluateOnNewDocument", source: <<~JS).fetch("identifier")
       requestAnimationFrame(function capture() {
-        const sun = document.querySelector('.sunrise-sun')
-        if (!sun) return requestAnimationFrame(capture)
-        const transform = getComputedStyle(sun).transform
-        window.__sunriseFirstFrame = {
-          y: transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42,
-          ray: parseFloat(getComputedStyle(document.querySelector('.sunrise-ray')).strokeDashoffset),
-          wave: parseFloat(getComputedStyle(document.querySelector('.sunrise-wave')).strokeDashoffset),
+        const card = document.querySelector('.login-card')
+        const buttons = [...document.querySelectorAll('.login-button')]
+        if (!card || buttons.length !== 2) return requestAnimationFrame(capture)
+        const elements = [document.querySelector('.login-ground'), card, document.querySelector('.login-band'), document.querySelector('.login-body'), ...buttons]
+        window.__loginFirstFrame = {
+          theme: document.documentElement.dataset.theme,
+          elements: elements.map(element => {
+            const style = getComputedStyle(element)
+            return { opacity: style.opacity, visibility: style.visibility, transform: style.transform, height: element.getBoundingClientRect().height }
+          }),
+          disabled: buttons.some(button => button.disabled),
+          animations: card.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length,
         }
       })
     JS
-    visit login_path
-    assert_selector ".login-button", count: 2
-    wait_until { evaluate_script("window.__sunriseFirstFrame !== undefined") }
-    frame = evaluate_script("window.__sunriseFirstFrame")
+    %w[daybreak duet unfold].each do |theme|
+      execute_script("localStorage.setItem('lowpass-theme', arguments[0])", theme)
+      visit login_path
+      assert_selector ".login-button", count: 2
+      wait_until { evaluate_script("window.__loginFirstFrame !== undefined") }
+      frame = evaluate_script("window.__loginFirstFrame")
 
-    assert_in_delta 0, frame.fetch("y"), 0.01, "减少动态时太阳不先藏在地平线下"
-    assert_in_delta 0, frame.fetch("ray"), 0.01, "减少动态时光芒不先被裁去"
-    assert_in_delta 0, frame.fetch("wave"), 0.01, "减少动态时水纹不先被裁去"
+      assert_equal theme, frame.fetch("theme")
+      frame.fetch("elements").each do |element|
+        assert_equal "1", element.fetch("opacity"), "#{theme} 首帧不能隐藏登录内容"
+        assert_equal "visible", element.fetch("visibility")
+        assert_equal "none", element.fetch("transform")
+        assert_operator element.fetch("height"), :>, 0
+      end
+      assert_not frame.fetch("disabled")
+      assert_equal 0, frame.fetch("animations")
+    end
+  ensure
+    execute_script("localStorage.removeItem('lowpass-theme')")
   end
 end

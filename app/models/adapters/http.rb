@@ -115,7 +115,11 @@ module Adapters
       end
 
       def resolve_public_ip(host)
-        Surfguard.resolve_public_ips(host).first or raise Unresolvable, host
+        if Rails.env.development? && ENV["DEV_PUBLIC_DNS"] == "cloudflare"
+          PublicDns.resolve(host)
+        else
+          Surfguard.resolve_public_ips(host).first or raise Unresolvable, host
+        end
       rescue Surfguard::Unresolvable
         raise Unresolvable, host
       end

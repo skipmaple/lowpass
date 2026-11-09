@@ -1,12 +1,14 @@
 import type * as React from 'react'
+import { Head } from '@inertiajs/react'
 
 import AdminNav, { type AdminSection } from '@/components/AdminNav'
 import Layout from '@/components/Layout'
-import PageHead from '@/components/PageHead'
 import { Toasts, type ToastItem } from '@/components/Toast'
+import '@/styles/themes-admin.css'
+import '@/styles/themes-admin-workspace.css'
 
-// 后台页的骨架（画布 admin_*()）：期头「管理后台」+ Maple「admin」+ 分页名 + 右端按钮，然后是五项索引条。
-// flash 由共享 Layout 呈现；这里仅展示页面自己推的提示（重抓结束、测试抓取）。后台页不要页脚（设计 A8）。
+// 管理导航与工作区共用结构；C 把导航放到页边，A/B 保留横向导航。
+// 页面状态和表单只挂载一次，切换外观不会丢失正在编辑的内容。
 export type AdminPageProps = React.PropsWithChildren<{
   section: AdminSection
   big?: string
@@ -17,14 +19,24 @@ export type AdminPageProps = React.PropsWithChildren<{
   onDismissToast?: (id: string) => void
 }>
 
-export default function AdminPage({ section, big = '管理后台', top, bottom, controls, toasts, onDismissToast, children }: AdminPageProps) {
+export default function AdminPage({ section, big, top, bottom, controls, toasts, onDismissToast, children }: AdminPageProps) {
+  const title = big ?? bottom
   return (
-    <>
+    <div className="admin-workspace">
+      <Head title={big ? `${bottom} · ${big}` : `${bottom} · 管理`} />
       <Toasts items={toasts} onDismiss={onDismissToast} />
-      <div className="admin-page-head"><PageHead big={big} title={`${bottom} · ${big}`} top={top === undefined ? <span className="data">admin</span> : top} bottom={bottom} controls={controls} /></div>
       <AdminNav active={section} />
-      <div className="admin-body">{children}</div>
-    </>
+      <section className="admin-main" aria-labelledby="admin-page-title">
+        <header className="admin-page-head">
+          <div className="admin-page-identity">
+            <h1 id="admin-page-title">{title}</h1>
+            {big || top ? <div className="admin-page-context">{big ? <span>{bottom}</span> : null}{top}</div> : null}
+          </div>
+          {controls ? <div className="admin-page-controls">{controls}</div> : null}
+        </header>
+        <div className="admin-body">{children}</div>
+      </section>
+    </div>
   )
 }
 

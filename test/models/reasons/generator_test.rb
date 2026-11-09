@@ -23,6 +23,8 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     end
     assert_equal 2, messages.length
     assert_match(/79/, messages.last.last.fetch("content"))
+    assert_includes messages.last.last.fetch("content"), "长" * 79
+    assert_includes messages.last.last.fetch("content"), "20到30"
     assert_match(/60/, messages.last.last.fetch("content"))
     assert_includes messages.last.first.fetch("content"), "必须有可用正文"
     assert_equal %w[ invalid ok ], ModelCall.order(:created_at, :id).pluck(:status)

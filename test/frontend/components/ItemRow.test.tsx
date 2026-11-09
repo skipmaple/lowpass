@@ -787,7 +787,7 @@ describe('ItemRow 书签（PRD 5.10）', () => {
     expect(savedMark).toHaveTextContent('已收藏')
   })
 
-  it('周刊书签紧随标题，长文阅读前即可操作', () => {
+  it('周刊书签位于完整正文之后', () => {
     const { container } = render(
       <FavoritesProvider favorites={[]}>
         <ItemRow item={item({ title: '人生的容错率' })} adapter="ruanyf_weekly" rank={1} variant="weekly" heading="h4" />
@@ -797,8 +797,8 @@ describe('ItemRow 书签（PRD 5.10）', () => {
     const mark = screen.getByRole('button', { name: '收藏：人生的容错率' })
     expect(mark).toHaveClass('item-mark')
     expect(mark).toHaveTextContent(mark.hasAttribute('data-on') ? '已收藏' : '收藏')
-    expect(container.querySelector('.item-title')?.nextElementSibling).toContainElement(mark)
-    expect(container.querySelector('.item-heading')?.contains(mark)).toBe(true)
+    expect(container.querySelector('.item-actions')).toContainElement(mark)
+    expect(container.querySelector('.item-heading')?.contains(mark)).toBe(false)
   })
 
   it('日刊键盘依次到标题、评论、原文入口和收藏；空格收藏保持焦点与同一按钮', async () => {
@@ -839,4 +839,17 @@ it('标题链接带域名（打印时印在标题后），去掉 www.', () => {
   render(<ItemRow item={item({ url: 'https://www.example.com/termlog' })} adapter="hacker_news" rank={1} />)
 
   expect(screen.getByRole('link', { name: 'Show HN: A terminal log viewer written in Rust' })).toHaveAttribute('data-host', 'example.com')
+})
+
+
+it('周刊只由标题打开原文，读完正文及配图后再收藏', () => {
+  const { container } = render(<FavoritesProvider favorites={[]}><ItemRow item={item({ title: '读完再收藏', content: '第一段。\n　（1）\n结尾。\n(2)\n最后的段落。' })} adapter="ruanyf_weekly" rank={1} variant="weekly" /></FavoritesProvider>)
+  const content = container.querySelector('.item-content--weekly')!
+  const button = screen.getByRole('button', { name: '收藏：读完再收藏' })
+  expect(container.querySelector('.item-heading')).not.toContainElement(button)
+  expect(content.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(container.querySelector('.item-actions')).toContainElement(button)
+  expect(screen.getAllByRole('link')).toHaveLength(1)
+  expect(screen.getByRole('link', { name: '读完再收藏' })).toHaveAttribute('target', '_blank')
+  expect([...container.querySelectorAll('.weekly-paragraph-number')].map(p => p.textContent)).toEqual(['(1)', '(2)'])
 })

@@ -78,6 +78,9 @@ function WeeklyMedia({ item, indices }: { item: Item; indices?: number[] }) {
 type ReferenceLink = [number, number, number, string]
 
 function Paragraph({ text, emphasized, links = [], skip = 0 }: { text: string; emphasized: boolean; links?: ReferenceLink[]; skip?: number }) {
+  // 独立的小节编号按正文起点排版；只规范展示符号，不回写已发布的正文。
+  const marker = !links.length && text.trim().match(/^[（(](\d+)[）)]$/u)
+  if (marker) return <p className="weekly-paragraph-number">({marker[1]})</p>
   const characters = Array.from(text)
   let cursor = 0
   const mixed = (value: string) => <Mixed text={value} font="latin" size="inherit" color="inherit" weight={emphasized ? 700 : 400} lineHeight="inherit" />

@@ -199,7 +199,6 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
           <Heading className="item-title">
             <a className="t" href={item.url} target="_blank" rel="noopener noreferrer" aria-describedby="new-tab-description" lang={latinLang(title)} data-host={hostOf(item.url)}>{title}</a>
           </Heading>
-          {weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={title} /> : null}
         </div>
         {intro}
         <div className="item-context">
@@ -222,10 +221,10 @@ export default function ItemRow({ item, adapter, rank, variant = 'daily', headin
         ) : null}
       </div>
       <div className="item-actions">
-        <a className="item-original-action" href={item.url} target="_blank" rel="noopener noreferrer">
+        {!weekly ? <a className="item-original-action" href={item.url} target="_blank" rel="noopener noreferrer">
           <span>{adapter === 'github_trending' ? '查看仓库' : '阅读原文'}</span><Icon name="arrow-up-right" size={16} color="currentColor" />
-        </a>
-        {!weekly ? <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={title} /> : null}
+        </a> : null}
+        <FavoriteButton className="item-mark" itemId={item.id} urlHash={item.url_hash} title={title} />
       </div>
     </article>
   )

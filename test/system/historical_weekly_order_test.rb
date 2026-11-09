@@ -143,10 +143,10 @@ class HistoricalWeeklyOrderTest < ApplicationSystemTestCase
       if width == 1440
         execute_script("arguments[0].focus()", row.find(".item-title a"))
         page.driver.browser.switch_to.active_element.send_keys(:tab)
-        assert_selector "#item-#{item.id} .item-mark:focus"
-        page.driver.browser.switch_to.active_element.send_keys(:tab)
         assert_selector "#item-#{item.id} .item-media-original:focus"
         assert_equal "solid", evaluate_script("getComputedStyle(document.activeElement).outlineStyle")
+        page.driver.browser.switch_to.active_element.send_keys(:tab, :tab)
+        assert_selector "#item-#{item.id} .item-mark:focus"
       end
       assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0
     end

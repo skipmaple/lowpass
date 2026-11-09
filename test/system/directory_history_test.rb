@@ -27,11 +27,7 @@ class DirectoryHistoryTest < ApplicationSystemTestCase
         visit path
         if publication == :weekly
           assert_selector "details:has(##{directory}):not([open])"
-          if width == 375
-            find("details:has(##{directory}) > summary").click
-          else
-            find(".directory-return", match: :first).click
-          end
+          find("details:has(##{directory}) > summary").click
           assert_selector "details:has(##{directory})[open]"
         else
           assert_selector "##{directory}"

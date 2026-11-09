@@ -76,13 +76,6 @@ function Anchors({ groups, id }: { groups: WeeklyGroup[]; id: string }) {
   )
 }
 
-function openDirectory(id: string) {
-  const nav = document.getElementById(id)
-  const details = nav?.closest('details')
-  if (details) details.open = true
-  nav?.focus({ preventScroll: true })
-}
-
 function Items({ group, section, heading, intro }: { group: WeeklyGroup; section: WeeklySection; heading: 'h2' | 'h3' | 'h4'; intro?: React.ReactNode }) {
   return (
     <>
@@ -101,7 +94,7 @@ function Items({ group, section, heading, intro }: { group: WeeklyGroup; section
   )
 }
 
-function Group({ group, section, directory, aliasId, intro }: { group: WeeklyGroup; section: WeeklySection; directory: string; aliasId?: string; intro?: React.ReactNode }) {
+function Group({ group, section, aliasId, intro }: { group: WeeklyGroup; section: WeeklySection; aliasId?: string; intro?: React.ReactNode }) {
   // RSS 周刊源没有板块：直接接条目，列表区顶上一条 1px 墨线
   if (!group.name) {
     return (
@@ -124,10 +117,6 @@ function Group({ group, section, directory, aliasId, intro }: { group: WeeklyGro
           <Items group={group} section={section} heading="h4" />
         </>
       )}
-      <a className="directory-return" href={`#${directory}`} onClick={() => openDirectory(directory)}>
-        <Icon name="arrow-up" size={14} color="currentColor" />
-        <span>返回板块目录</span>
-      </a>
     </section>
   )
 }
@@ -169,7 +158,7 @@ function Section({ section, fallback }: { section: WeeklySection; fallback?: { a
           {!lead && named.length > 0 ? <Anchors groups={named} id={directory} /> : null}
           {section.groups.map((group) => (
             <Group
-              key={group.anchor} group={group} section={section} directory={directory}
+              key={group.anchor} group={group} section={section}
               aliasId={fallback?.anchor === group.anchor ? fallback.aliasId : undefined}
               intro={group === lead ? <><SourceMeta section={section} /><Anchors groups={named} id={directory} /></> : undefined}
             />

@@ -36,9 +36,8 @@ class HistoricalWeeklyParagraphsTest < ApplicationSystemTestCase
         assert_selector "#item-#{item.id} .item-mark", visible: true
         assert_selector ".weekly-directory", visible: true
         assert_operator page.evaluate_script("document.documentElement.scrollWidth - innerWidth"), :<=, 0, "#{width}px 横向溢出"
-        row.find(:xpath, "./ancestor::section[1]").find(".directory-return").click
-        assert_selector ".weekly-directory nav:focus"
-        find(".weekly-directory nav:focus").click_on "文章"
+        find(".weekly-directory > summary").click
+        find(".weekly-directory nav").click_on "文章"
         assert_selector "#item-#{item.id}", visible: true
         execute_script("arguments[0].focus()", row.find(".item-title a"))
         page.driver.browser.switch_to.active_element.send_keys(:tab)

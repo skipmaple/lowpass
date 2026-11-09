@@ -42,7 +42,6 @@
   .weekly-reading .item-row--weekly { padding-top: 16px; padding-bottom: 20px; }
   .weekly-reading .item-row--lead { padding-top: 0; }
   .weekly-reading .item-row--lead .weekly-directory { margin-left: 0; }
-  .weekly-reading .directory-return { margin: 4px 0 4px var(--weekly-gutter); }
   .weekly-reading > .issue-body { margin-top: 0; border-top: 0; }
   .weekly-reading > .source-state { margin-left: var(--weekly-gutter); }
   .archive-weekly .archive-label-title, .archive-weekly .archive-label-source { display: block; }

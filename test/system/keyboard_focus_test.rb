@@ -57,7 +57,7 @@ class KeyboardFocusTest < ApplicationSystemTestCase
 
     [ 375, 1440 ].each do |width|
       [ "no-preference", "reduce" ].each do |motion|
-        test "#{theme} #{width}px #{motion} 返回周刊目录及下一次 Tab 的完整焦点轮廓可见" do
+        test "#{theme} #{width}px #{motion} 周刊目录跳转与历史返回 的完整焦点轮廓可见" do
           execute_script("localStorage.setItem('lowpass-theme', #{theme.to_json})")
           url = "https://example.com/directory-focus"
           issues(:weekly_w36).items.create!(
@@ -85,34 +85,24 @@ class KeyboardFocusTest < ApplicationSystemTestCase
           press(:tab)
           assert_selector ".anchor-chip:first-child:focus"
           group_hash = find(".anchor-chip", match: :first)["href"].split("#", 2).last
+          first_chip = directory_focus_state
           history_length = evaluate_script("history.length")
           press(:return)
           wait_until { evaluate_script("location.hash") == "##{group_hash}" }
           assert_equal history_length + 1, evaluate_script("history.length")
 
-          tab_to(".directory-return")
-          directory_hash = find(".directory-return", match: :first)["href"].split("#", 2).last
-          press(:return)
-          assert_selector ".weekly-directory[open] > .anchors:focus"
-          wait_until { evaluate_script("location.hash") == "##{directory_hash}" }
-          assert_equal history_length + 2, evaluate_script("history.length")
-          returned = directory_focus_state
-          press(:tab)
-          assert_selector ".anchor-chip:first-child:focus"
-          first_chip = directory_focus_state
-          states = { width: width, motion: motion, returned: returned, first_chip: first_chip }
-          diagnostic = "DIRECTORY_KEYBOARD_FOCUS #{states.to_json}"
-          puts diagnostic
-
+          assert_no_selector ".weekly-reading .directory-return"
           browser.navigate.back
-          wait_until { evaluate_script("location.hash") == "##{group_hash}" }
+          wait_until { evaluate_script("location.hash") != "##{group_hash}" }
+          states = { width: width, motion: motion, first_chip: first_chip }
+          diagnostic = "DIRECTORY_KEYBOARD_FOCUS #{states.to_json}"
           browser.navigate.forward
-          wait_until { evaluate_script("location.hash") == "##{directory_hash}" }
+          wait_until { evaluate_script("location.hash") == "##{group_hash}" }
           assert_equal weekly_issue_path("2026-W36"), evaluate_script("location.pathname")
           assert_equal width, evaluate_script("innerWidth")
           assert evaluate_script("window.directoryKeys.every(event => event.trusted)"), diagnostic
           assert_operator evaluate_script("window.directoryKeys.filter(event => event.key === 'Enter').length"), :>=, 2, diagnostic
-          [ returned, first_chip ].each do |state|
+          [ first_chip ].each do |state|
             assert state.fetch("focusVisible"), diagnostic
             assert state.fetch("outlineVisible"), diagnostic
             assert_operator state.fetch("perimeter").fetch("top"), :>=, 0, "完整焦点轮廓不能裁在视口上沿；#{diagnostic}"

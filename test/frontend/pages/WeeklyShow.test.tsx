@@ -87,9 +87,7 @@ describe('源节头', () => {
     expect(screen.getByRole('heading', { name: '工具', level: 3 })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '终端工具', level: 4 })).toBeInTheDocument()
 
-    fireEvent.click(screen.getAllByRole('link', { name: '返回板块目录' })[0])
-    expect(container.querySelector('.weekly-directory')).toHaveAttribute('open')
-    expect(container.querySelector('.anchors')).toHaveFocus()
+    expect(screen.queryByRole('link', { name: '返回板块目录' })).toBeNull()
     const ids = [...container.querySelectorAll('[id]')].map((node) => node.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
@@ -428,30 +426,28 @@ describe('按 hash 定位', () => {
   })
 })
 
-it('单条板块与标题重复时只保留一个标题，保留两种深链与返回目录', () => {
+it('单条板块与标题重复时只保留一个标题，保留两种深链与页首目录', () => {
  const group = weeklyGroup({ name: '言论', anchor: 'issue-366-quotes', items: [item({ id: 'quote', title: '言论', published_at: null })] })
  const { container } = show({ sections: [weeklySection({ groups: [group] })] })
  expect(screen.getAllByRole('heading', { name: '言论' })).toHaveLength(1)
  expect(screen.getByRole('heading', { name: '言论', level: 3 })).toBeInTheDocument()
  expect(container.querySelector('#issue-366-quotes')).not.toBeNull()
  expect(container.querySelector('#item-quote')).not.toBeNull()
- const back = screen.getByRole('link', { name: '返回板块目录' })
- expect(back).toHaveClass('directory-return')
- expect(back).not.toHaveClass('source-foot')
- expect(document.getElementById(back.getAttribute('href')!.slice(1))).toHaveAttribute('aria-label', '板块')
+ expect(screen.queryByRole('link', { name: '返回板块目录' })).toBeNull()
+ expect(container.querySelector('.weekly-directory nav')).toHaveAttribute('aria-label', '板块')
 })
 
 
-it.each([false, true])('目录始终默认收起，返回目录会展开并聚焦导航（手机=%s）', (mobile) => {
+it.each([false, true])('目录始终默认收起，可在页首展开（手机=%s）', (mobile) => {
   vi.stubGlobal('matchMedia', () => ({ matches: mobile, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
   try {
     const { container } = show()
     const directory = container.querySelector('details.weekly-directory') as HTMLDetailsElement
     expect(directory).not.toBeNull()
     expect(directory.open).toBe(false)
-    fireEvent.click(screen.getAllByRole('link', { name: '返回板块目录' })[0])
+    fireEvent.click(directory.querySelector('summary')!)
     expect(directory.open).toBe(true)
-    expect(container.querySelector('.anchors')).toHaveFocus()
+    expect(within(directory).getByRole('navigation', { name: '板块' })).toBeVisible()
   } finally {
     vi.unstubAllGlobals()
   }

@@ -161,16 +161,16 @@ html[data-theme="unfold"] .source-section:not([data-source-state="ok"]) .source-
 html[data-theme="unfold"] .source-section:not([data-source-state="ok"]) .source-state { padding-inline: 0; }
 
 /* Long weekly prose stays in a single comfortable measure in all three worlds. */
-html[data-theme] .item-row--weekly { grid-template-columns: 36px minmax(0,1fr); gap: 0 24px; padding: 32px 0; }
+html[data-theme] .item-row--weekly { --weekly-measure: 780px; grid-template-columns: 36px minmax(0,1fr); gap: 0 24px; padding: 32px 0; }
 html[data-theme] .item-row--weekly .item-rail { grid-column: 1; grid-row: 1/3; }
-html[data-theme] .item-row--weekly .item-body { grid-column: 2; display: block; max-width: 78ch; }
+html[data-theme] .item-row--weekly .item-body { grid-column: 2; display: block; max-width: var(--weekly-measure); }
 html[data-theme] .item-row--weekly .item-title { font-size: 28px; line-height: 1.5; }
-html[data-theme] .item-row--weekly .item-heading > .item-mark { margin-top: 8px; }
 html[data-theme] .item-row--weekly .item-content--weekly { font-size: 18px; line-height: 1.9; color: var(--ink); }
 html[data-theme] .item-content--weekly > p { margin: 20px 0 0; }
 html[data-theme] .item-content--weekly > blockquote { margin-top: 20px; }
 html[data-theme] .item-media-frame--sized .item-media-image { max-height: none; }
-html[data-theme] .item-row--weekly .item-actions { grid-column: 2; max-width: 78ch; }
+html[data-theme] .item-row--weekly .item-actions { grid-column: 2; max-width: var(--weekly-measure); justify-content: flex-end; }
+html[data-theme] .weekly-paragraph-number { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-indent: 0; }
 html[data-theme] .item-media { margin-top: 24px; }
 html[data-theme] .item-media-image { max-height: 640px; object-fit: contain; mix-blend-mode: normal; }
 html[data-theme] .source-band-mark { display: none; }
@@ -282,7 +282,7 @@ html[data-theme] .archive-key { font-family: var(--font-latin), var(--font-cjk);
   html[data-theme="unfold"] .item-row--daily .item-actions { margin-top: 16px; }
   html[data-theme="unfold"] .item-reason { font-size: 16px; line-height: 1.9; }
   html[data-theme] .source-section:not([data-source-state="ok"]) .source-state-failed { flex-wrap: wrap; }
-  html[data-theme] .item-row--weekly { grid-template-columns: 28px minmax(0,1fr); gap: 0 12px; padding-block: 28px; }
+  html[data-theme] .item-row--weekly { --weekly-measure: 780px; grid-template-columns: 28px minmax(0,1fr); gap: 0 12px; padding-block: 28px; }
   html[data-theme] .item-row--weekly .item-rank { font-size: 21px; }
   html[data-theme] .item-row--weekly .item-title { font-size: 24px; }
   html[data-theme] .item-row--weekly .item-content--weekly { font-size: 17px; line-height: 1.9; }
@@ -313,4 +313,8 @@ html[data-theme] .archive-key { font-family: var(--font-latin), var(--font-cjk);
   html[data-theme] .item-original > summary { display: none; }
   html[data-theme] .item-original > :not(summary) { content-visibility: visible; }
   html[data-theme] .item-content--weekly { color: #151515; }
+}
+
+@media (min-width: 1920px) {
+  html[data-theme] .item-row--weekly { --weekly-measure: 920px; }
 }

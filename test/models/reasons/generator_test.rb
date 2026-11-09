@@ -11,6 +11,23 @@ class Reasons::GeneratorTest < ActiveSupport::TestCase
     Reasons::Evidence.stubs(:fetch).returns(Reasons::Evidence::Result.new(text: "The tool streams local log files, filters entries by level, and exports matching events as JSON.", url: @item.url, error: nil))
   end
 
+  test "超长重试明确反馈计数与限制，不原样重复请求" do
+    messages = []
+    with_model_provider do
+      stub_request(:post, ReasonsTestHelpers::MODEL_ENDPOINT).to_return do |request|
+        messages << JSON.parse(request.body).fetch("messages")
+        reason = messages.length == 1 ? "长" * 79 : "流式过滤日志避免整份文件载入内存，可借鉴其定位目标事件的方法。"
+        { status: 200, body: model_reply(reason: reason, interest_tag: "前端开发") }
+      end
+      assert_equal :generated, Reasons::Generator.generate_item!(@item)
+    end
+    assert_equal 2, messages.length
+    assert_match(/79/, messages.last.last.fetch("content"))
+    assert_match(/60/, messages.last.last.fetch("content"))
+    assert_includes messages.last.first.fetch("content"), "必须有可用正文"
+    assert_equal %w[ invalid ok ], ModelCall.order(:created_at, :id).pluck(:status)
+  end
+
   test "无说明条目先读正文，只调用一次模型且不改写刊物原字段" do
     evidence = Reasons::Evidence::Result.new(text: "Streams logs with filters and aggregation without loading the full file.", url: @item.url, error: nil)
     before = @item.attributes.slice("title", "url", "summary", "content")

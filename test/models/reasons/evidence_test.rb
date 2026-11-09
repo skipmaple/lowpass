@@ -7,6 +7,36 @@ class Reasons::EvidenceTest < ActiveSupport::TestCase
     @body = "The tool records structured events locally, supports queries by process and severity, and exports matching events as JSON for offline analysis."
   end
 
+  test "带独立文章链接的新闻列表不能被当作产品功能卡片" do
+    stub_page "<main><h1>Latest news</h1><article><h3><a href='/one'>One</a></h3><p>Unrelated first article.</p></article><article><h3><a href='/two'>Two</a></h3><p>Unrelated second article.</p></article></main>"
+    evidence = Reasons::Evidence.fetch(@item)
+    assert_nil evidence.text
+    assert_match(/资料不足/, evidence.error)
+  end
+
+  test "Docusaurus 正文容器有静态说明时不因 noscript 提示拒写" do
+    stub_page "<nav>Unrelated navigation</nav><div id='__docusaurus_skipToContent_fallback'><h1>Desktop Shell</h1><p>Runs on Wayland compositors with a file manager and shared themes.</p></div><noscript>Please enable JavaScript for animations</noscript>"
+    evidence = Reasons::Evidence.fetch(@item)
+    assert_includes evidence.text.to_s, "file manager"
+    assert_not_includes evidence.text.to_s, "Unrelated"
+  end
+
+  test "HN 讨论帖只取主帖，不取评论或导航" do
+    @item.url = "https://news.ycombinator.com/item?id=123"
+    stub_page "<nav>Other news</nav><table class='fatitem'><tr><td class='toptext'>Share the projects you are working on and questions you are exploring.</td></tr></table><div class='comment-tree'>Unverified benchmark claim</div>"
+    evidence = Reasons::Evidence.fetch(@item)
+    assert_includes evidence.text.to_s, "projects"
+    assert_not_includes evidence.text.to_s, "benchmark"
+    assert_not_includes evidence.text.to_s, "Other news"
+  end
+
+  test "单一产品页的功能卡片不是多篇文章，保留 main 的说明与功能" do
+    stub_page "<main><h1>BenchUp</h1><p>Free modeling software for woodworking.</p><article><h3>Draw</h3><p>Draw board outlines and extrude faces.</p></article><article><h3>Measure</h3><p>Enter exact lengths and save portable projects.</p></article></main>"
+    evidence = Reasons::Evidence.fetch(@item)
+    assert_includes evidence.text.to_s, "woodworking"
+    assert_includes evidence.text.to_s, "portable projects"
+  end
+
   test "malformed upstream HTTP stays a recoverable evidence failure" do
     Adapters::Http.stubs(:get).raises(Net::HTTPBadResponse, "malformed status")
     evidence = Reasons::Evidence.fetch(@item)

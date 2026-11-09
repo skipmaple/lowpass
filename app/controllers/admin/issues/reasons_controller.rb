@@ -8,7 +8,7 @@ class Admin::Issues::ReasonsController < Admin::BaseController
       result = issue.with_lock do
         if Reasons::Progress.active?(issue)
           :active
-        elsif GenerateReasonsJob.perform_later(issue, false)
+        elsif GenerateReasonsJob.perform_later(issue, false, Translations.automatic_context(issue, item_ids: issue.items.visible.pluck(:id)))
           Audit.record("issue.regenerate_reasons", "Issue##{issue.period_key}")
           :queued
         else

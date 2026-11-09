@@ -73,15 +73,19 @@ module Reasons::Generator
         attempts_left = RETRIES + 1 - calls.count
         evidence = nil
         evidence_retry = false
+        correction = nil
         attempts_left.times do |attempt|
           return evidence_retry ? :abstained : :failed if request_stopped?(item, operation)
 
-          # 短说明首次就补读；较长摘要先判断，合法拒写后才尝试补充新资料。每条最多抓一次。
-          if attempt.zero? && item.summary.to_s.length < Reasons::Evidence::SUMMARY_READ_THRESHOLD
+          # 短说明或源站截断的摘要首次就补读；较长完整摘要先判断，合法拒写后才尝试补充新资料。每条最多抓一次。
+          if attempt.zero? && (item.summary.to_s.length < Reasons::Evidence::SUMMARY_READ_THRESHOLD || item.summary.to_s.rstrip.end_with?("…", "..."))
             evidence = Reasons::Evidence.fetch(item)
             return :failed if request_stopped?(item, operation)
           end
           messages = Reasons::Prompt.messages(item, profile, evidence: evidence)
+          if correction
+            messages << { role: "user", content: "上次输出未通过校验：#{correction}。请重新输出完整 JSON；reason 必须为20到60个字符（汉字、英文、数字、标点和空格均计入），建议控制在30到45个字符。不截断句子，不添加没有依据的内容；仍使用原有资料和 decision 规则。" }
+          end
           configuration = Reasons::Provider.configuration
           started = now_ms
           response = result = nil
@@ -98,6 +102,7 @@ module Reasons::Generator
               result = Reasons::Parser.parse(response.text, names)
             end
           rescue Reasons::Parser::Invalid => e
+            correction = e.message
             record(item, "invalid", response, started, e, operation: operation, configuration: configuration)
           rescue Reasons::Provider::Incomplete => e
             # 截断保留真实 usage；重放也不重复同样的请求。

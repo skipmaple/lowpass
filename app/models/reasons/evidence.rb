@@ -136,13 +136,19 @@ class Reasons::Evidence
     end
 
     def article_root(document)
-      if URI(@url).host.to_s.downcase == "github.com"
+      if URI(@url).host.to_s.downcase == "news.ycombinator.com" && URI(@url).path == "/item"
+        # 讨论帖只取发帖正文，不把读者评论变成条目本身的事实依据。
+        select_article(document.css(".fatitem .toptext"))
+      elsif URI(@url).host.to_s.downcase == "github.com"
         select_article(document.css("article.markdown-body, #readme article, #readme .markdown-body"))
       else
         mains = document.css("main, [role='main']")
+        mains = document.css("#__docusaurus_skipToContent_fallback") if mains.empty?
         scope = mains.one? ? mains.first : document
         articles = scope.css("article")
-        if articles.empty? && mains.one?
+        heading = scope.at_css("h1")
+        feature_cards = heading && heading.ancestors("article").empty? && articles.all? { |article| article.css("h1,h2,time,h3 a[href],a[href] h3").empty? }
+        if mains.one? && (articles.empty? || feature_cards)
           scope
         else
           select_article(articles)

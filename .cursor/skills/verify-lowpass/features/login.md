@@ -13,14 +13,17 @@ Any signed-out GET of a reader page redirects to `/login`, with `next` set to th
 
 ## Driving it with Chrome
 
-Same Chrome session as `scripts/drive` (headless Chrome, `http://127.0.0.1:3000`).
+```bash
+bundle exec .cursor/skills/verify-lowpass/scripts/drive login
+```
 
 1. Open `http://127.0.0.1:3000/login`.
 2. Click `//button[normalize-space()='以读者身份进入']`. The form method is GET and the action is `/auth/developer/callback`, with hidden `name` `普通读者` and `email` `reader@lowpass.test`.
 3. Wait until the URL matches `/daily/\d{4}-\d{2}-\d{2}`.
-4. Click `button[aria-label="账户"]`, then the menuitem whose text is `账户信息`.
+4. Click `button[aria-label="账户"]`, then the menuitem `账户信息`.
+5. Click `账户` again, then the menuitem `登出`.
 
-Observable end state: the URL is `/settings`, `h1[aria-label="账户信息"]` is present, and the page shows `reader@lowpass.test`. The first successful click inserts a `users` row, an `auth_identities` row (`provider` `developer`, `provider_uid` `reader@lowpass.test`), and a `sessions` row. Confirm those with `bin/rails runner`, not by inserting them. A later doctor with the saved cookie must get Inertia `Settings/Show` for that email.
+Observable end state of steps 1–4: the URL is `/settings`, `h1[aria-label="账户信息"]` reads `账户信息`, and the page shows `reader@lowpass.test`. `AuthIdentity` for `developer` / `reader@lowpass.test` exists and that user has a `sessions` row (`Identity::Resolution` creates the user on the first success and reuses it after). Step 5 lands on `/login` with heading `登录`. The script then signs in again and saves the cookie, so a later doctor still gets Inertia `Settings/Show` for that email.
 
 ## Gotchas
 

@@ -8,9 +8,13 @@
 
 ## How to get to it (user POV)
 
-Sign in with `以读者身份进入`. The site lands on today's issue because login with no `origin` redirects to `/`. The masthead brand `LOWPASS` and the nav link `日刊` both go there. The hidden heading reads `YYYY/MM/DD 日刊` (`h1.visually-hidden`).
+Sign in with `以读者身份进入`. With no `origin`, login redirects to `/`, and `DailyIssuesController#latest` sends that to the latest daily period key, or to today in Asia/Shanghai when no daily issue exists. The masthead brand and the nav link `日刊` both point at `/`. The hidden heading (`h1.visually-hidden`) reads that period key with slashes plus ` 日刊`.
 
 ## Driving it with Chrome
+
+```bash
+bundle exec .cursor/skills/verify-lowpass/scripts/drive daily
+```
 
 Sign in the same way as [login](login.md). Wait for `/daily/YYYY-MM-DD`. Read the period key from the URL. Then read the daily `Issue` row with `bin/rails runner` (`Issue.daily.find_by(period_key:)` and `Issue.daily_props_for`). The screen has to match that row:
 
@@ -18,7 +22,7 @@ Sign in the same way as [login](login.md). Wait for `/daily/YYYY-MM-DD`. Read th
 - No row, at or after `daily_time`: `.state-line` is `本期未生成`.
 - `state` `generating`: `.state-line` is `生成中，约 1 分钟后刷新`.
 - `state` `empty`: `.state-line` is `本期为空刊，管理员已收到通知`.
-- `state` `published`: the page contains the seeded daily source names `Hacker News`, `GitHub Trending`, and `Hackaday`, and `h1.visually-hidden` text content is the period key with slashes plus ` 日刊`.
+- `state` `published`: every name from `Issue.daily_source_summaries` is visible in `.source-tab-name`, and `h1.visually-hidden` text content is the period key with slashes plus ` 日刊`. A finalized issue lists only sources recorded in `source_states` (`Issue::Daily.daily_columns`). The seeded daily sources are Hacker News, GitHub Trending, and Hackaday when those columns were recorded.
 
 A published issue that was generated late also shows that status in `.issue-head-status` (`延迟生成于 HH:MM`). The body and the row disagreeing is a failure.
 

@@ -27,22 +27,28 @@ if "${TMUX[@]}" has-session -t "=$SESSION" 2>/dev/null; then
   exit 1
 fi
 
-if python3 - "$ROOT" <<'PY'
-import sys
-port = 3000
-hexport = f"{port:04X}"
-for path in ("/proc/net/tcp", "/proc/net/tcp6"):
-    with open(path) as fh:
-        next(fh)
-        for line in fh:
-            parts = line.split()
-            local, state = parts[1], parts[3]
-            if local.rsplit(":", 1)[1].upper() == hexport and state == "0A":
-                sys.exit(0)
-sys.exit(1)
+busy="$(python3 <<'PY'
+ports = (3000, 3036)
+busy = []
+for port in ports:
+    hexport = f"{port:04X}"
+    for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+        with open(path) as fh:
+            next(fh)
+            for line in fh:
+                parts = line.split()
+                local, state = parts[1], parts[3]
+                if local.rsplit(":", 1)[1].upper() == hexport and state == "0A":
+                    busy.append(port)
+                    break
+            else:
+                continue
+            break
+print(" ".join(str(port) for port in busy))
 PY
-then
-  echo "port 3000 is already listening. Refusing to start a second Lowpass." >&2
+)"
+if [[ -n "$busy" ]]; then
+  echo "port ${busy} is already listening. Refusing to start a second Lowpass." >&2
   exit 1
 fi
 

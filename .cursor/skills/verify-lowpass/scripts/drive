@@ -1,0 +1,169 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Drives one reader journey against the development server started by scripts/launch.
+# Usage: bundle exec .cursor/skills/verify-lowpass/scripts/drive search
+
+require "fileutils"
+require "json"
+require "open3"
+require "time"
+
+ROOT = File.expand_path("../../../..", __dir__)
+QUERY = "zzzxlowpassverify"
+EXPECTED = "没有找到「#{QUERY}」相关内容。试试更短的关键词，或放宽筛选。"
+
+def abort!(message)
+  warn message
+  exit 1
+end
+
+begin
+  require "selenium-webdriver"
+rescue LoadError
+  abort! "selenium-webdriver is not loaded. Run: bundle exec .cursor/skills/verify-lowpass/scripts/drive search"
+end
+
+feature = ARGV.fetch(0) { abort! "usage: bundle exec .cursor/skills/verify-lowpass/scripts/drive search" }
+abort! "only search is executable; follow features/*.md for the other journeys" unless feature == "search"
+
+meta = File.join(ROOT, "tmp/verify-lowpass/run/meta.env")
+abort! "missing #{meta}; run scripts/launch and scripts/doctor first" unless File.file?(meta)
+info = File.readlines(meta, chomp: true).filter_map { |line|
+  key, value = line.split("=", 2)
+  [key, value] if key && value
+}.to_h
+evidence = info.fetch("evidence_dir")
+dir = File.join(evidence, "search")
+FileUtils.mkdir_p(dir)
+
+def rails_runner(code)
+  out, err, status = Open3.capture3("bin/rails", "runner", code, chdir: ROOT)
+  abort!(err.empty? ? out : err) unless status.success?
+  out.strip
+end
+
+def log_count
+  Integer(rails_runner("puts Search::Log.where(query: #{QUERY.inspect}).count"))
+end
+
+def cookie_field(cookie, key)
+  cookie[key] || cookie[key.to_s]
+end
+
+def cookie_expiry(value)
+  case value
+  when nil then 0
+  when Integer then value
+  when Time then value.to_i
+  else value.respond_to?(:to_time) ? value.to_time.to_i : Integer(value)
+  end
+end
+
+def cookie_jar(driver)
+  lines = ["# Netscape HTTP Cookie File"]
+  driver.manage.all_cookies.each do |cookie|
+    lines << [
+      cookie_field(cookie, :domain).to_s,
+      "TRUE",
+      cookie_field(cookie, :path) || "/",
+      cookie_field(cookie, :secure) ? "TRUE" : "FALSE",
+      cookie_expiry(cookie_field(cookie, :expires)),
+      cookie_field(cookie, :name),
+      cookie_field(cookie, :value)
+    ].join("\t")
+  end
+  "#{lines.join("\n")}\n"
+end
+
+def latest_log
+  raw = rails_runner(<<~RUBY)
+    row = Search::Log.where(query: #{QUERY.inspect}).order(created_at: :desc).first
+    puts row ? { id: row.id, query: row.query, result_count: row.result_count, page: row.page, created_at: row.created_at.utc.iso8601 }.to_json : "null"
+  RUBY
+  JSON.parse(raw)
+end
+
+chrome = ENV["CHROME_BIN"]
+chrome ||= %w[/usr/local/bin/google-chrome /usr/bin/google-chrome /usr/bin/google-chrome-stable /usr/bin/chromium].find { |path| File.executable?(path) }
+abort! "Google Chrome is required (docs/development.md). Set CHROME_BIN if it is elsewhere." unless chrome
+
+options = Selenium::WebDriver::Chrome::Options.new
+options.binary = chrome
+options.add_argument("--headless=new")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--window-size=1400,1400")
+
+before = log_count
+started = Time.now.utc
+driver = Selenium::WebDriver.for :chrome, options: options
+wait = Selenium::WebDriver::Wait.new(timeout: 20)
+error = nil
+
+begin
+  driver.navigate.to "http://127.0.0.1:3000/login"
+  wait.until { driver.find_elements(xpath: "//button[normalize-space()='以读者身份进入']").any? }
+  driver.find_element(xpath: "//button[normalize-space()='以读者身份进入']").click
+  wait.until { driver.current_url.match?(%r{/daily/\d{4}-\d{2}-\d{2}\z}) }
+  File.write(File.join(dir, "after_login_url.txt"), driver.current_url)
+  heading = driver.find_element(css: "h1.visually-hidden").attribute("textContent").to_s.strip
+  File.write(File.join(dir, "after_login_heading.txt"), heading)
+
+  driver.find_element(css: "nav[aria-label='主导航'] a[href='/search']").click
+  wait.until { driver.current_url.include?("/search") }
+  wait.until { driver.find_element(id: "search-query").displayed? }
+  driver.find_element(id: "search-query").send_keys(QUERY)
+  driver.find_element(css: "form[role='search'] button[type='submit']").click
+  wait.until { driver.current_url.include?("q=#{QUERY}") }
+  wait.until { driver.find_element(id: "search-status").text == EXPECTED }
+
+  status = driver.find_element(id: "search-status").text
+  File.write(File.join(dir, "url.txt"), driver.current_url)
+  File.write(File.join(dir, "status.txt"), status)
+  File.write(File.join(dir, "page.html"), driver.page_source)
+  driver.save_screenshot(File.join(dir, "screenshot.png"))
+
+  jar = File.join(ROOT, "tmp/verify-lowpass/run/cookies.txt")
+  File.write(File.join(dir, "cookies.txt"), cookie_jar(driver))
+  File.write(jar, File.read(File.join(dir, "cookies.txt")))
+rescue StandardError => e
+  error = e
+  begin
+    File.write(File.join(dir, "url.txt"), driver.current_url.to_s)
+    File.write(File.join(dir, "page.html"), driver.page_source.to_s)
+    driver.save_screenshot(File.join(dir, "screenshot.png"))
+  rescue StandardError
+    nil
+  end
+ensure
+  driver.quit
+end
+
+if error
+  File.write(File.join(dir, "error.txt"), "#{error.class}: #{error.message}\n#{error.backtrace.join("\n")}\n")
+  abort! "drive search failed: #{error.class}: #{error.message} (see #{dir})"
+end
+
+row = latest_log
+after = log_count
+created = row && Time.iso8601(row.fetch("created_at"))
+ok = File.read(File.join(dir, "status.txt")) == EXPECTED &&
+  File.read(File.join(dir, "url.txt")).include?("q=#{QUERY}") &&
+  after == before + 1 &&
+  row && row["query"] == QUERY && row["result_count"] == 0 && row["page"] == 1 &&
+  created && created >= started - 2
+
+File.write(File.join(dir, "search_log.json"), JSON.pretty_generate(row))
+File.write(File.join(dir, "result.txt"), <<~TEXT)
+  status: #{File.read(File.join(dir, "status.txt"))}
+  url: #{File.read(File.join(dir, "url.txt"))}
+  logs_before: #{before}
+  logs_after: #{after}
+  search_log: #{row}
+  started_at: #{started.iso8601}
+  ok: #{ok}
+TEXT
+
+abort! "drive search observed a mismatch (see #{dir}/result.txt)" unless ok
+puts "drive search ok evidence=#{dir}"

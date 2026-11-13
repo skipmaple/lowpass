@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Read-only check that the lowpass-verify server is the one worth driving."""
+
+import json
+import os
+import re
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[4]
+RUN = ROOT / "tmp" / "verify-lowpass" / "run"
+META = RUN / "meta.env"
+SESSION = "lowpass-verify"
+PAGE_RE = re.compile(r'<script data-page="app"[^>]*>(.*?)</script>', re.S)
+
+checks = []
+
+
+def record(ok, name, detail):
+    checks.append(ok)
+    print(f"{'ok' if ok else 'fail'} {name}: {detail}")
+
+
+def meta():
+    if not META.is_file():
+        return None
+    data = {}
+    for line in META.read_text().splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            data[key] = value
+    return data
+
+
+def ppid(pid):
+    for line in Path(f"/proc/{pid}/status").read_text().splitlines():
+        if line.startswith("PPid:"):
+            return int(line.split()[1])
+    return 0
+
+
+def descendant(pid, ancestor):
+    seen = set()
+    while pid > 1 and pid not in seen:
+        if pid == ancestor:
+            return True
+        seen.add(pid)
+        try:
+            pid = ppid(pid)
+        except OSError:
+            return False
+    return pid == ancestor
+
+
+def listen_pids(port):
+    hexport = f"{port:04X}"
+    inodes = []
+    for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+        lines = Path(path).read_text().splitlines()[1:]
+        for line in lines:
+            parts = line.split()
+            local, state, inode = parts[1], parts[3], parts[9]
+            if local.rsplit(":", 1)[1].upper() == hexport and state == "0A":
+                inodes.append(inode)
+    pids = []
+    for inode in inodes:
+        needle = f"socket:[{inode}]"
+        found = None
+        for entry in os.listdir("/proc"):
+            if not entry.isdigit():
+                continue
+            fd_dir = Path("/proc") / entry / "fd"
+            try:
+                fds = list(fd_dir.iterdir())
+            except OSError:
+                continue
+            for fd in fds:
+                try:
+                    if os.readlink(fd) == needle:
+                        found = int(entry)
+                        break
+                except OSError:
+                    continue
+            if found is not None:
+                break
+        pids.append(found)
+    return pids
+
+
+def fetch(url, cookie=None):
+    command = ["curl", "-sS", "--max-time", "5", "-o", "-", "-w", "\n%{http_code}", url]
+    if cookie:
+        command[1:1] = ["-b", cookie]
+    proc = subprocess.run(command, text=True, capture_output=True, check=False)
+    if proc.returncode != 0:
+        return 0, proc.stderr.strip() or proc.stdout
+    body, _, code = proc.stdout.rpartition("\n")
+    return int(code or "0"), body
+
+
+def page_json(body):
+    match = PAGE_RE.search(body)
+    if not match:
+        return None
+    return json.loads(match.group(1))
+
+
+def tmux(*args):
+    base = ["tmux"]
+    if Path("/exec-daemon/tmux.portal.conf").is_file():
+        base = ["tmux", "-f", "/exec-daemon/tmux.portal.conf"]
+    return subprocess.run(base + list(args), text=True, capture_output=True, check=False)
+
+
+def main():
+    info = meta()
+    if not info:
+        record(False, "run", f"missing {META}; run scripts/launch")
+        print("doctor: fail")
+        return 1
+
+    foreman = int(info.get("foreman_pid") or "0")
+    revision = info.get("revision", "")
+    evidence = info.get("evidence_dir", "")
+    record(bool(evidence), "evidence", evidence or "missing evidence_dir")
+
+    session = tmux("has-session", "-t", f"={SESSION}")
+    record(session.returncode == 0, "session", SESSION if session.returncode == 0 else "not running")
+
+    alive = Path(f"/proc/{foreman}/cmdline").exists() if foreman else False
+    cmdline = ""
+    cwd = ""
+    if alive:
+        cmdline = Path(f"/proc/{foreman}/cmdline").read_bytes().replace(b"\0", b" ").decode()
+        cwd = os.readlink(f"/proc/{foreman}/cwd")
+    record(alive and "foreman" in cmdline, "foreman", f"pid {foreman} {cmdline.strip() or 'dead'}")
+    record(cwd == str(ROOT), "cwd", cwd or "missing")
+
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True, capture_output=True, check=False)
+    current = head.stdout.strip()
+    record(head.returncode == 0 and current == revision, "revision", f"running {revision[:12]} HEAD {current[:12]}")
+
+    pane = tmux("list-panes", "-t", SESSION, "-F", "#{pane_pid}")
+    pane_pid = pane.stdout.strip()
+    record(pane.returncode == 0 and pane_pid == str(foreman), "pane", f"pane {pane_pid or '<none>'} recorded {foreman}")
+
+    for port in (3000, 3036):
+        pids = listen_pids(port)
+        owned = bool(pids) and all(pid and descendant(pid, foreman) for pid in pids)
+        record(owned, f"port-{port}", f"pids {pids or '<none>'}")
+
+    jobs = subprocess.run(["ps", "-eo", "pid,args"], text=True, capture_output=True, check=False)
+    job_pids = []
+    for line in jobs.stdout.splitlines():
+        if "solid-queue" in line and "grep" not in line:
+            job_pids.append(int(line.split()[0]))
+    record(any(descendant(pid, foreman) for pid in job_pids), "jobs", f"solid-queue pids {job_pids or '<none>'}")
+
+    up_code, up_body = fetch("http://127.0.0.1:3000/up")
+    record(up_code == 200 and "background-color: green" in up_body, "up", f"HTTP {up_code}")
+
+    vite_code, _vite_body = fetch("http://localhost:3036/vite-dev/@vite/client")
+    record(vite_code == 200, "vite", f"HTTP {vite_code} http://localhost:3036/vite-dev/@vite/client")
+
+    login_code, login_body = fetch("http://127.0.0.1:3000/login")
+    login = page_json(login_body) if login_code == 200 else None
+    accounts = (login or {}).get("props", {}).get("developer_accounts") or []
+    reader = any(account.get("email") == "reader@lowpass.test" and account.get("role") == "reader" for account in accounts)
+    record(
+        login_code == 200 and login and login.get("component") == "Login/Show" and reader,
+        "auth",
+        "Login/Show offers reader@lowpass.test" if reader else f"HTTP {login_code} component {(login or {}).get('component')}",
+    )
+
+    cookie = RUN / "cookies.txt"
+    if cookie.is_file() and cookie.stat().st_size:
+        settings_code, settings_body = fetch("http://127.0.0.1:3000/settings", cookie=str(cookie))
+        settings = page_json(settings_body) if settings_code == 200 else None
+        email = ((settings or {}).get("props", {}).get("user") or {}).get("email")
+        record(
+            settings_code == 200 and settings and settings.get("component") == "Settings/Show" and email == "reader@lowpass.test",
+            "session",
+            f"HTTP {settings_code} email {email}",
+        )
+    else:
+        record(True, "session", "no cookie yet; login page is the auth check")
+
+    failed = not all(checks)
+    print("doctor: fail" if failed else "doctor: ok")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

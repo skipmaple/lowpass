@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Starts the development server in tmux session lowpass-verify and waits until
+# a reader can load the login page. Does not open a second instance.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
+cd "$ROOT"
+SESSION=lowpass-verify
+RUN="$ROOT/tmp/verify-lowpass/run"
+EVIDENCE_ROOT="$ROOT/.cursor/skills/verify-lowpass/evidence"
+
+if [[ -f /exec-daemon/tmux.portal.conf ]]; then
+  TMUX=(tmux -f /exec-daemon/tmux.portal.conf)
+else
+  TMUX=(tmux)
+fi
+
+for cmd in mise ruby bundle tmux curl python3 git; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "missing $cmd on PATH. From the repo: eval \"\$(mise hook-env -s bash)\" then bin/setup." >&2
+    exit 1
+  fi
+done
+
+if "${TMUX[@]}" has-session -t "=$SESSION" 2>/dev/null; then
+  echo "tmux session $SESSION already exists. Run scripts/doctor, or scripts/cleanup if this run owns it." >&2
+  exit 1
+fi
+
+if python3 - "$ROOT" <<'PY'
+import sys
+port = 3000
+hexport = f"{port:04X}"
+for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+    with open(path) as fh:
+        next(fh)
+        for line in fh:
+            parts = line.split()
+            local, state = parts[1], parts[3]
+            if local.rsplit(":", 1)[1].upper() == hexport and state == "0A":
+                sys.exit(0)
+sys.exit(1)
+PY
+then
+  echo "port 3000 is already listening. Refusing to start a second Lowpass." >&2
+  exit 1
+fi
+
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+EVIDENCE="$EVIDENCE_ROOT/$STAMP"
+mkdir -p "$EVIDENCE" "$RUN"
+printf '%s\n' "$EVIDENCE" > "$RUN/evidence_dir"
+
+CREATED=0
+fail() {
+  local status=$?
+  "${TMUX[@]}" capture-pane -t "$SESSION" -p > "$EVIDENCE/launch.txt" 2>/dev/null || true
+  if [[ "$CREATED" == 1 ]]; then
+    "${TMUX[@]}" kill-session -t "$SESSION" 2>/dev/null || true
+  fi
+  echo "launch failed; pane log is $EVIDENCE/launch.txt" >&2
+  exit "$status"
+}
+
+"${TMUX[@]}" new-session -d -s "$SESSION" -c "$ROOT" -- \
+  env PATH="$PATH" HOME="$HOME" bash --noprofile --norc -c \
+  'cd "$1" && eval "$(mise hook-env -s bash)" && exec bin/dev' \
+  bash "$ROOT"
+CREATED=1
+trap fail ERR
+
+ready() {
+  curl -fsS --max-time 2 http://127.0.0.1:3000/up 2>/dev/null | grep -q 'background-color: green' || return 1
+  curl -fsS --max-time 2 -o /dev/null "http://localhost:3036/vite-dev/@vite/client" || return 1
+  local login
+  login="$(curl -fsS --max-time 2 http://127.0.0.1:3000/login)"
+  grep -q 'Login/Show' <<<"$login" || return 1
+  grep -q 'reader@lowpass.test' <<<"$login" || return 1
+  local pane
+  pane="$("${TMUX[@]}" list-panes -t "$SESSION" -F '#{pane_pid}')"
+  [[ -n "$pane" && -r "/proc/$pane/cmdline" ]] || return 1
+  tr '\0' ' ' < "/proc/$pane/cmdline" | grep -q foreman || return 1
+  ps -eo args | grep -F 'solid-queue' | grep -v grep >/dev/null || return 1
+}
+
+for _ in $(seq 1 90); do
+  if ready; then
+    break
+  fi
+  sleep 1
+done
+ready
+
+PANE="$("${TMUX[@]}" list-panes -t "$SESSION" -F '#{pane_pid}')"
+REV="$(git -C "$ROOT" rev-parse HEAD)"
+cat > "$RUN/meta.env" <<EOF
+session=$SESSION
+foreman_pid=$PANE
+revision=$REV
+evidence_dir=$EVIDENCE
+EOF
+
+{
+  echo "ready $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "foreman_pid=$PANE"
+  echo "revision=$REV"
+  echo "url=http://127.0.0.1:3000"
+  "${TMUX[@]}" capture-pane -t "$SESSION" -p
+} > "$EVIDENCE/launch.txt"
+
+trap - ERR
+echo "launch ok evidence=$EVIDENCE"

@@ -1,0 +1,295 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Usage: bundle exec .cursor/skills/verify-lowpass/scripts/drive <login|daily|search|favorites|weekly>
+
+require "fileutils"
+require "json"
+require "open3"
+require "time"
+
+ROOT = File.expand_path("../../../..", __dir__)
+BASE = "http://127.0.0.1:3000"
+READER = "reader@lowpass.test"
+QUERY = "zzzxlowpassverify"
+EXPECTED = "没有找到「#{QUERY}」相关内容。试试更短的关键词，或放宽筛选。"
+FEATURES = %w[login daily search favorites weekly].freeze
+
+def abort!(message)
+  warn message
+  exit 1
+end
+
+begin
+  require "selenium-webdriver"
+rescue LoadError
+  abort! "selenium-webdriver is not loaded. Run under bundle exec."
+end
+
+feature = ARGV.fetch(0) { abort! "usage: bundle exec .cursor/skills/verify-lowpass/scripts/drive #{FEATURES.join("|")}" }
+abort! "unknown feature #{feature}. Use one of: #{FEATURES.join(", ")}" unless FEATURES.include?(feature)
+
+meta_path = File.join(ROOT, "tmp/verify-lowpass/run/meta.env")
+abort! "missing #{meta_path}; run scripts/launch and scripts/doctor first" unless File.file?(meta_path)
+info = File.readlines(meta_path, chomp: true).filter_map { |line|
+  key, value = line.split("=", 2)
+  [key, value] if key && value
+}.to_h
+evidence = info.fetch("evidence_dir")
+dir = File.join(evidence, feature)
+FileUtils.mkdir_p(dir)
+
+def rails_runner(code)
+  out, err, status = Open3.capture3("bin/rails", "runner", code, chdir: ROOT)
+  abort!(err.empty? ? out : err) unless status.success?
+  out.strip
+end
+
+def cookie_field(cookie, key)
+  cookie[key] || cookie[key.to_s]
+end
+
+def cookie_expiry(value)
+  case value
+  when nil then 0
+  when Integer then value
+  when Time then value.to_i
+  else value.respond_to?(:to_time) ? value.to_time.to_i : Integer(value)
+  end
+end
+
+def cookie_jar(driver)
+  lines = ["# Netscape HTTP Cookie File"]
+  driver.manage.all_cookies.each do |cookie|
+    lines << [
+      cookie_field(cookie, :domain).to_s,
+      "TRUE",
+      cookie_field(cookie, :path) || "/",
+      cookie_field(cookie, :secure) ? "TRUE" : "FALSE",
+      cookie_expiry(cookie_field(cookie, :expires)),
+      cookie_field(cookie, :name),
+      cookie_field(cookie, :value)
+    ].join("\t")
+  end
+  "#{lines.join("\n")}\n"
+end
+
+def write_cookies(driver, dir)
+  body = cookie_jar(driver)
+  File.write(File.join(dir, "cookies.txt"), body)
+  File.write(File.join(ROOT, "tmp/verify-lowpass/run/cookies.txt"), body)
+end
+
+def sign_in(driver, wait)
+  driver.navigate.to "#{BASE}/login"
+  wait.until { driver.find_elements(xpath: "//button[normalize-space()='以读者身份进入']").any? }
+  driver.find_element(xpath: "//button[normalize-space()='以读者身份进入']").click
+  wait.until { driver.current_url.match?(%r{/daily/\d{4}-\d{2}-\d{2}\z}) }
+end
+
+def click_menu(driver, wait, label)
+  driver.find_element(css: "button[aria-label='账户']").click
+  item = wait.until { driver.find_element(xpath: "//*[@role='menuitem' and normalize-space()='#{label}']") }
+  item.click
+end
+
+def text_of(driver, css)
+  driver.find_elements(css: css).map { |element| element.attribute("textContent").to_s.strip }
+end
+
+chrome = ENV["CHROME_BIN"]
+chrome ||= %w[/usr/local/bin/google-chrome /usr/bin/google-chrome /usr/bin/google-chrome-stable].find { |path| File.executable?(path) }
+abort! "Google Chrome is required (docs/development.md). Set CHROME_BIN if it is elsewhere." unless chrome
+
+options = Selenium::WebDriver::Chrome::Options.new
+options.binary = chrome
+options.add_argument("--headless=new")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--window-size=1400,1400")
+
+notes = {}
+error = nil
+driver = Selenium::WebDriver.for :chrome, options: options
+wait = Selenium::WebDriver::Wait.new(timeout: 20)
+
+begin
+  case feature
+  when "login"
+    sign_in(driver, wait)
+    File.write(File.join(dir, "after_login_url.txt"), driver.current_url)
+    click_menu(driver, wait, "账户信息")
+    wait.until { driver.current_url.end_with?("/settings") }
+    heading = driver.find_element(css: "h1[aria-label='账户信息']").attribute("textContent").to_s.strip
+    raise "settings heading #{heading.inspect}" unless heading == "账户信息"
+    raise "settings page missing #{READER}" unless driver.page_source.include?(READER)
+    identity = JSON.parse(rails_runner(<<~RUBY))
+      identity = AuthIdentity.find_by(provider: "developer", provider_uid: #{READER.inspect})
+      session = identity&.user&.sessions&.order(created_at: :desc)&.first
+      puts({ identity: identity&.id, user: identity&.user_id, session: session&.id }.to_json)
+    RUBY
+    raise "no developer identity for #{READER}" unless identity["identity"] && identity["session"]
+    File.write(File.join(dir, "settings_url.txt"), driver.current_url)
+    click_menu(driver, wait, "登出")
+    wait.until { driver.current_url.include?("/login") }
+    login_heading = driver.find_element(css: "h1").attribute("textContent").to_s.strip
+    raise "logout landed on #{driver.current_url} heading #{login_heading.inspect}" unless login_heading == "登录"
+    File.write(File.join(dir, "after_logout_url.txt"), driver.current_url)
+    sign_in(driver, wait)
+    write_cookies(driver, dir)
+    notes = { settings_heading: heading, identity: identity, after_logout: File.read(File.join(dir, "after_logout_url.txt")).strip }
+  when "daily"
+    sign_in(driver, wait)
+    key = driver.current_url[%r{/daily/(\d{4}-\d{2}-\d{2})\z}, 1]
+    raise "daily url #{driver.current_url}" unless key
+    heading_expected = "#{key.tr("-", "/")} 日刊"
+    observed = JSON.parse(rails_runner(<<~RUBY))
+      issue = Issue.daily.find_by(period_key: #{key.inspect})
+      props = Issue.daily_props_for(#{key.inspect}, issue: issue)
+      names = Issue.daily_source_summaries(issue).map { |source| source[:name] }
+      puts({ state: issue&.state, status: props[:status], sources: names, heading: #{heading_expected.inspect} }.to_json)
+    RUBY
+    heading = driver.find_element(css: "h1.visually-hidden").attribute("textContent").to_s.strip
+    raise "heading #{heading.inspect} expected #{observed["heading"].inspect}" unless heading == observed["heading"]
+    case observed["state"]
+    when nil, "generating", "empty"
+      line = text_of(driver, ".state-line").first
+      raise "state-line #{line.inspect} expected #{observed["status"].inspect}" unless line == observed["status"]
+    when "published"
+      visible = text_of(driver, ".source-tab-name")
+      missing = observed["sources"] - visible
+      raise "missing source names #{missing.inspect} from #{visible.inspect}" unless missing.empty?
+      if observed["status"]
+        tag = text_of(driver, ".issue-head-status").join
+        raise "status tag #{tag.inspect} missing #{observed["status"]}" unless tag.include?(observed["status"])
+      end
+    else
+      raise "unexpected issue state #{observed["state"].inspect}"
+    end
+    write_cookies(driver, dir)
+    notes = { url: driver.current_url, heading: heading, issue: observed }
+  when "search"
+    before = Integer(rails_runner("puts Search::Log.where(query: #{QUERY.inspect}).count"))
+    started = Time.now.utc
+    sign_in(driver, wait)
+    File.write(File.join(dir, "after_login_url.txt"), driver.current_url)
+    File.write(File.join(dir, "after_login_heading.txt"), driver.find_element(css: "h1.visually-hidden").attribute("textContent").to_s.strip)
+    driver.find_element(css: "nav[aria-label='主导航'] a[href='/search']").click
+    wait.until { driver.current_url.include?("/search") }
+    wait.until { driver.find_element(id: "search-query").displayed? }
+    driver.find_element(id: "search-query").send_keys(QUERY)
+    driver.find_element(css: "form[role='search'] button[type='submit']").click
+    wait.until { driver.current_url.include?("q=#{QUERY}") }
+    wait.until { driver.find_element(id: "search-status").text == EXPECTED }
+    status = driver.find_element(id: "search-status").text
+    row = JSON.parse(rails_runner(<<~RUBY))
+      row = Search::Log.where(query: #{QUERY.inspect}).order(created_at: :desc).first
+      puts row ? { id: row.id, query: row.query, result_count: row.result_count, page: row.page, created_at: row.created_at.utc.iso8601 }.to_json : "null"
+    RUBY
+    after = Integer(rails_runner("puts Search::Log.where(query: #{QUERY.inspect}).count"))
+    created = row && Time.iso8601(row.fetch("created_at"))
+    raise "search log #{row.inspect} count #{before}->#{after}" unless status == EXPECTED && after == before + 1 && row && row["query"] == QUERY && row["result_count"] == 0 && row["page"] == 1 && created && created >= started - 2
+    File.write(File.join(dir, "search_log.json"), JSON.pretty_generate(row))
+    write_cookies(driver, dir)
+    notes = { status: status, logs_before: before, logs_after: after, search_log: row }
+  when "favorites"
+    sign_in(driver, wait)
+    driver.find_element(css: "nav[aria-label='主导航'] a[href='/favorites']").click
+    wait.until { driver.current_url.split("?").first.end_with?("/favorites") }
+    before = Integer(rails_runner(<<~RUBY))
+      identity = AuthIdentity.find_by!(provider: "developer", provider_uid: #{READER.inspect})
+      puts identity.user.favorites.count
+    RUBY
+    count_text = driver.find_element(css: "p.collection-count").attribute("textContent").to_s.strip
+    raise "count text #{count_text.inspect} for #{before} rows" unless count_text == "#{before} 条收藏"
+    if before.zero?
+      line = text_of(driver, ".state-line").first
+      raise "empty copy #{line.inspect}" unless line == "还没有收藏。"
+      raise "missing 阅读最新日刊" unless driver.find_elements(xpath: "//a[normalize-space()='阅读最新日刊']").any?
+    end
+    driver.find_element(css: "nav[aria-label='主导航'] a[href='/']").click
+    wait.until { driver.current_url.match?(%r{/daily/\d{4}-\d{2}-\d{2}}) }
+    add = driver.find_elements(css: "button[aria-label^='收藏：']")
+    kept = driver.find_elements(css: "button[aria-label^='取消收藏：']")
+    if add.empty? && kept.empty?
+      notes = { count: before, bookmark: "verified-unreachable", route: driver.current_url, prerequisite: "no FavoriteButton on this daily issue" }
+    elsif add.any?
+      button = add.first
+      label = button.attribute("aria-label")
+      button.click
+      wait.until { button.attribute("aria-label").to_s.start_with?("取消收藏：") }
+      after = Integer(rails_runner(<<~RUBY))
+        identity = AuthIdentity.find_by!(provider: "developer", provider_uid: #{READER.inspect})
+        puts identity.user.favorites.count
+      RUBY
+      raise "bookmark #{label} left count at #{after}, expected #{before + 1}" unless after == before + 1
+      driver.find_element(css: "nav[aria-label='主导航'] a[href='/favorites']").click
+      wait.until { driver.find_element(css: "p.collection-count").attribute("textContent").to_s.strip == "#{after} 条收藏" }
+      raise "favorites list has no row" unless driver.find_elements(css: "[id^='favorite-']").any?
+      notes = { count_before: before, count_after: after, bookmark: label }
+    else
+      driver.find_element(css: "nav[aria-label='主导航'] a[href='/favorites']").click
+      wait.until { driver.find_elements(css: "[id^='favorite-']").any? }
+      notes = { count: before, bookmark: "already-saved", kept: kept.length }
+    end
+    write_cookies(driver, dir)
+  when "weekly"
+    sign_in(driver, wait)
+    observed = JSON.parse(rails_runner(<<~RUBY))
+      key = Issue.latest_weekly_key
+      if key.nil?
+        puts({ mode: "archive" }.to_json)
+      else
+        props = Issue.weekly_props_for(key)
+        puts({ mode: "show", key: key, week_label: props[:issue][:week_label], status: props[:issue][:status], sources: props[:sections].map { |section| section[:source][:name] } }.to_json)
+      end
+    RUBY
+    driver.find_element(xpath: "//nav[@aria-label='主导航']//a[normalize-space()='周刊']").click
+    if observed["mode"] == "archive"
+      wait.until { driver.current_url.split("?").first.end_with?("/weekly") }
+      context = text_of(driver, ".page-context").first
+      raise "archive context #{context.inspect}" unless context == "周刊归档"
+    else
+      wait.until { driver.current_url.include?("/weekly/#{observed["key"]}") }
+      label = driver.find_element(css: "h1").attribute("aria-label").to_s
+      raise "week label #{label.inspect} expected #{observed["week_label"].inspect}" unless label == observed["week_label"]
+      if observed["sources"].empty?
+        line = text_of(driver, ".state-line").first
+        raise "empty week #{line.inspect}" unless line == "本周无内容"
+      else
+        body = driver.find_element(css: "body").attribute("textContent").to_s
+        missing = observed["sources"].reject { |name| body.include?(name) }
+        raise "missing weekly sources #{missing.inspect}" unless missing.empty?
+      end
+    end
+    write_cookies(driver, dir)
+    notes = { url: driver.current_url, weekly: observed }
+  end
+  File.write(File.join(dir, "url.txt"), driver.current_url)
+  File.write(File.join(dir, "page.html"), driver.page_source)
+  driver.save_screenshot(File.join(dir, "screenshot.png"))
+rescue StandardError => e
+  error = e
+  begin
+    File.write(File.join(dir, "url.txt"), driver.current_url.to_s)
+    File.write(File.join(dir, "page.html"), driver.page_source.to_s)
+    driver.save_screenshot(File.join(dir, "screenshot.png"))
+  rescue StandardError
+    nil
+  end
+ensure
+  driver&.quit
+end
+
+File.write(File.join(dir, "result.txt"), <<~TEXT)
+  feature: #{feature}
+  url: #{File.exist?(File.join(dir, "url.txt")) ? File.read(File.join(dir, "url.txt")).strip : ""}
+  notes: #{JSON.generate(notes)}
+  ok: #{error.nil?}
+TEXT
+
+if error
+  File.write(File.join(dir, "error.txt"), "#{error.class}: #{error.message}\n#{error.backtrace.join("\n")}\n")
+  abort! "drive #{feature} failed: #{error.class}: #{error.message} (see #{dir})"
+end
+puts "drive #{feature} ok evidence=#{dir}"

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Stops the tmux session this skill started. Does not delete evidence.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
+RUN="$ROOT/tmp/verify-lowpass/run"
+SESSION=lowpass-verify
+META="$RUN/meta.env"
+
+if [[ -f /exec-daemon/tmux.portal.conf ]]; then
+  TMUX=(tmux -f /exec-daemon/tmux.portal.conf)
+else
+  TMUX=(tmux)
+fi
+
+if ! "${TMUX[@]}" has-session -t "=$SESSION" 2>/dev/null; then
+  echo "cleanup: no $SESSION session"
+  exit 0
+fi
+
+if [[ ! -f "$META" ]]; then
+  echo "cleanup: $SESSION is up but $META is missing; not killing a session this run did not record" >&2
+  exit 1
+fi
+
+recorded="$(sed -n 's/^foreman_pid=//p' "$META")"
+pane="$("${TMUX[@]}" list-panes -t "$SESSION" -F '#{pane_pid}')"
+if [[ -z "$recorded" || "$pane" != "$recorded" ]]; then
+  echo "cleanup: pane pid ${pane:-<none>} does not match recorded foreman pid ${recorded:-<none>}; not killing" >&2
+  exit 1
+fi
+
+"${TMUX[@]}" kill-session -t "$SESSION"
+echo "cleanup: stopped $SESSION pid $recorded"
+echo "cleanup: evidence left at $(sed -n 's/^evidence_dir=//p' "$META")"
